@@ -528,7 +528,7 @@ export function apply(ctx: any) {
     });
     const value: any = await response.json();
     if (allowMissing && response.status === 404) return null;
-    if (!response.ok) throw new TaskError('budget_control_failed', value.error || 'Budget service refused request', 409);
+    if (!response.ok) throw new TaskError('budget_control_failed', value?.error || 'Budget service refused request', 409);
     return value;
   }
   async function broker(path: string, payload: unknown) {

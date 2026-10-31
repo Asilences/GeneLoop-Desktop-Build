@@ -413,7 +413,7 @@ function assertProductPresentationOnly(ctx) {
   assert.doesNotMatch(html, /sss-native-confirmation|DeepSeek Harless 任务工作台/);
 }
 
-test('Completed task usage survives a missing or offline budget route while active tasks fail closed',options,async()=>{
+test('Usage observation preserves counters offline but active missing routes still fail closed',options,async()=>{
  const f=await fixture({broker:true});try{
   const task=await f.preview('Preserve historical usage');await f.submit(task);
   Object.assign([...f.registrations.values()][0],{upstream_requests:7,estimated_cost_usd:0.12,prompt_tokens:1234});
@@ -423,7 +423,9 @@ test('Completed task usage survives a missing or offline budget route while acti
   result=await f.api(undefined,'?task_id='+next.task_id);assert.equal(result.status,409);assert.equal(result.value.error.code,'budget_control_failed');
   await f.stopControl();
   result=await f.api(undefined,'?task_id='+task.task_id);assert.equal(result.status,200);assert.equal(result.value.stats.prompt_tokens,1234);assert.equal(result.value.stats.estimated_cost_usd,0.12);
-  result=await f.api(undefined,'?task_id='+next.task_id);assert.notEqual(result.status,200);
+  result=await f.api(undefined,'?task_id='+next.task_id);assert.equal(result.status,200);
+  assert.equal(result.value.status,'running');assert.equal(result.value.stats.usage_sync,'pending');
+  assert.equal(result.value.stats.usage_complete,false);
  }finally{await f.close();}
 });
 
