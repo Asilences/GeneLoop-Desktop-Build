@@ -14,12 +14,12 @@ compat = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(compat)
 REVIEWED = {'src/adapters/geneloop_shell.ts', 'src/adapters/geneloop_fs.ts', 'src/adapters/session_report.py'}
 compat.RELEASES = [
-    ('paper-web-v33', 'paper-web-v35', 'paper-proofreading',
+    ('paper-web-v33', 'paper-web-v36', 'paper-proofreading',
      'scenarios/paper_proofreading/document-read-contracts.json', REVIEWED),
-    ('ppt-master-v30', 'ppt-master-v32', 'ppt',
+    ('ppt-master-v30', 'ppt-master-v33', 'ppt',
      'scenarios/ppt_master/contracts.json', REVIEWED - {'src/adapters/session_report.py'}),
 ]
-compat.REGISTRY_SELECTED = {'paper-web-v33':'paper-web-v34','ppt-master-v30':'ppt-master-v31'}
+compat.REGISTRY_SELECTED = {'paper-web-v33':'paper-web-v35','ppt-master-v30':'ppt-master-v32'}
 compat.ADDITIONAL_LOCKS = {'scripts/reexport-artifact-view-compat.py'}
 original_record, original_prepare = compat.compatibility_record, compat.prepare
 

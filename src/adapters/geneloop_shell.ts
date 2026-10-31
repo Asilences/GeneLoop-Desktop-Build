@@ -75,7 +75,7 @@ export function commandArgv(layout: ReturnType<typeof commandLayout>, command: s
   // later native tool call. Persist only this Session's temp tree, never host /tmp.
   args.push('--proc', '/proc', '--dev', '/dev', '--bind', layout.temp, '/tmp', readOnly ? '--ro-bind' : '--bind', layout.scratch, '/work',
     '--ro-bind', layout.inputs, '/work/inputs', readOnly ? '--ro-bind' : '--bind', layout.outputs, '/work/outputs',
-    '--ro-bind', layout.artifacts, '/artifacts',
+    ...(layout.artifacts ? ['--ro-bind', layout.artifacts, '/artifacts'] : []),
     '--setenv', 'HOME', '/work', '--setenv', 'PATH', `${dirname(python)}:${dirname(node)}:/opt/geneloop/libreoffice/program:/usr/bin:/bin`,
     '--setenv', 'PYTHONDONTWRITEBYTECODE', '1',
     '--setenv', 'LANG', 'C.UTF-8', '--setenv', 'PYTHONUTF8', '1', '--setenv', 'MPLCONFIGDIR', '/tmp/matplotlib',

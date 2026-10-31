@@ -83,6 +83,9 @@ test('Linux commands compute, isolate credentials and sessions, protect inputs, 
   assert.equal(run('cat /artifacts/documents/review.txt').stdout,'checked');
   assert.notEqual(run('printf damaged > /artifacts/documents/review.txt').status,0);
   assert.equal(readFileSync(join(layout.artifacts,'documents','review.txt'),'utf8'),'checked');
+  const legacy={...layout};delete legacy.artifacts;
+  const [legacyBin,...legacyArgs]=commandArgv(legacy,'test ! -e /artifacts','/work','/usr/bin/python3',process.execPath);
+  assert.equal(spawnSync(legacyBin,legacyArgs,{encoding:'utf8',timeout:15000}).status,0);
   assert.equal(run('printf report > /tmp/checker-report.txt').status,0);
   assert.equal(run('cat /tmp/checker-report.txt').stdout,'report');
   const other=commandLayout(root,'session-22222222-2222-4222-8222-222222222222');
