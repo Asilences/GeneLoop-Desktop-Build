@@ -740,12 +740,14 @@ export function apply(ctx: any) {
     let counters;
     try { counters = await control('/tasks/stats?session_id=' + encodeURIComponent(task.budget_session_id), undefined, terminal.has(task.status)); }
     catch (error) {
-      // A replaced budget process may no longer retain an old task route. Its
-      // persisted final usage is still evidence, never a new zero-cost budget.
-      // Active tasks and authorization/response errors remain fail-closed.
-      if (!terminal.has(task.status) || !(error instanceof TypeError || (error as Error).name === 'TimeoutError')) throw error;
+      // This is an observation, not model admission. A temporary transport
+      // failure must not fail a live comparison and detach its subscriber.
+      // Keep the last counters, mark them incomplete, and retry on the next
+      // poll. Register/activate/cancel and HTTP authorization errors still fail.
+      if (!(error instanceof TypeError || (error as Error).name === 'TimeoutError')) throw error;
+      Object.assign(task.stats, {usage_complete: false, usage_sync: 'pending'});
     }
-    if (counters) { const {request_receipts,...stats}=counters.stats??counters;Object.assign(task.stats,stats); }
+    if (counters) { const {request_receipts,...stats}=counters.stats??counters;Object.assign(task.stats,stats,{usage_sync:'current'}); }
     task.stats.model_requests = Number(task.stats.upstream_requests ?? 0);
     task.stats.actual_paid_usd = config.provider_mode === 'mock' ? 0 : null;
     if (task.started_at) task.stats.elapsed_seconds =
