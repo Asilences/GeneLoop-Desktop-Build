@@ -118,3 +118,28 @@ npm run service -- public-confirm --public-config /PRIVATE/public.json \
 仓库 `AGENTS.md` 与 README 明确指定这个入口。后续 AI 必须先读规范，使用 `npm run service`；需要更改启动规则时，修改本入口、增加回归并更新本文件。历史 `.local/deploy*.py` 仅作证据和配置准备参考，其旧启动段不再是发布入口。
 
 规范约束不能阻止一个忽略指令、直接操作服务器的工具。项目通过统一可执行命令、私有进程身份记录、认证检查、失败回退和自动化回归降低误用风险；不能声称所有 AI 都会被技术上强制遵守。
+
+### Fixed hostname and release scene snapshots (2026-10-31)
+
+`public-prepare` / `public-confirm` also accept a private version 2 `managed-tunnel`
+recipe. It pins the cloudflared binary, dedicated token file (0600), exact
+`--protocol http2 run --token-file` argv and previous managed tunnel identity.
+The configured HTTPS origin must match the application gateway. The dashboard
+readback must bind that hostname and tunnel UUID to the existing loopback gateway,
+with the exact HTTP Host header and certificate verification retained. The old
+connection stays available for rollback. Never print the token or place it in argv.
+This does not install an OS boot service or claim multi-server high availability.
+
+For a source release, run `scripts/prepare-release-scenes.py --plan OLD_PLAN
+--output NEW_PRIVATE_DIRECTORY [--public-origin https://example.com]` with the
+existing server Python environment. It imports the selected release's original
+scene factory and library validator, writes new versioned presets, and preserves
+account storage, auth, limits and ledgers. Existing presets and libraries remain.
+The recipe supports registered product libraries; custom private replacements
+need an explicit reviewed preparation recipe.
+
+New starts and restart candidates reject stale scene registry digests, prompt
+snapshots, selected product bundles and source locks before stopping a healthy
+service. Status/adoption and recovery of the previous recorded generation remain
+available. A source-path string replacement is not a substitute for regeneration:
+serialized scene instructions and map keys may still refer to the old release.
