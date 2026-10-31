@@ -68,3 +68,15 @@ def test_invalid_or_unknown_duration_does_not_invent_an_interval():
                     {"request_utc_epoch": 10, "elapsed_seconds": float("inf")},
                     {"request_utc_epoch": True, "elapsed_seconds": 1}):
         assert stress.upstream_interval(receipt) is None
+
+
+@pytest.mark.parametrize("answer,expected", [
+    ("你好！我可以生成 PPTX、重建页面视觉、填充模板。", False),
+    ("你好！可以帮你处理上传资料和数据。", False),
+    ("你好，这份资料和上一轮是同一份 PDF，哈希一致。", True),
+    ("第 1 页完成了视觉复核，其他页未完成。", True),
+    ("其余 10 页的图像分析都未完成。", True),
+    ("用户附件的只读提取结果如下。", True),
+])
+def test_greeting_replay_check_distinguishes_capability_descriptions(answer, expected):
+    assert stress.replays_document_in_greeting(answer) is expected

@@ -57,6 +57,13 @@ def epoch(value):
         return None
 
 
+
+def replays_document_in_greeting(answer):
+    # Generic capability descriptions (e.g. "重建页面视觉") are not replayed
+    # attachments. Match document/coverage claims, not the standalone word.
+    return bool(re.search(r"视觉(?:复核|核验)|(?:图像|视觉)(?:分析|检查).{0,12}(?:未完成|失败|覆盖)|覆盖对齐|哈希一致|这份资料和|同一份\s*PDF|只读提取结果", answer))
+
+
 def load(path):
     return json.loads(Path(path).read_text(encoding="utf-8-sig"))
 
@@ -543,7 +550,7 @@ class Stress:
                 checks["exact_json"] = parse_json_answer(answer) == expected["value"]
             elif expected["kind"] == "greeting":
                 checks["greeting"] = bool(re.search(r"你好|您好|嗨|hello|hi\b", answer, re.I)) and len(answer) < 600
-                checks["no_replayed_document"] = not re.search(r"视觉|覆盖对齐|哈希一致|这份资料和|同一份\s*PDF|只读提取结果", answer)
+                checks["no_replayed_document"] = not replays_document_in_greeting(answer)
             for artifact in lane.get("artifacts", []):
                 if not row.get("comparison_id"):
                     continue
