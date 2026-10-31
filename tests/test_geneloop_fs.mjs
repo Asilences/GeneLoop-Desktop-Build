@@ -149,3 +149,21 @@ test('upstream read/write/edit/read_image use the seam and retain real image att
   await assert.rejects(definitions.get('read_image').execute({file_path:join(f.root,'private-secret')},exec));
  }finally{f.clean();}
 });
+
+// MCP exports and native tools share the owning Session's read-only artifact view.
+test('exported reports are readable but immutable and never cross Sessions',linux,async()=>{
+ const f=fixture();try{
+  mkdirSync(f.host('/artifacts/documents'),{recursive:true});
+  writeFileSync(f.host('/artifacts/documents/review.md'),'checked report');
+  const report=await f.fs.resolve('/artifacts/documents/review.md');
+  assert.equal(await f.fs.readText(report),'checked report');
+  assert.equal(f.fs.processPathFromHostPath(f.host('/artifacts/documents/review.md')),'/artifacts/documents/review.md');
+  await assert.rejects(f.fs.writeText(report,'tampered'),e=>e.code==='FS_SANDBOX_DENIED');
+  assert.throws(()=>geneLoopPath('/artifacts/../work/a'),e=>e.code==='FS_SANDBOX_DENIED');
+  symlinkSync(f.root,f.host('/artifacts/escape'));
+  await assert.rejects(f.fs.resolve('/artifacts/escape'),e=>e.code==='FS_SANDBOX_DENIED');
+  f.owner(other);
+  await assert.rejects(f.fs.readText(report),e=>e.code==='FS_SANDBOX_DENIED');
+  assert.equal(await f.fs.stat(await f.fs.resolve('/artifacts/documents/review.md')),undefined);
+ }finally{f.clean();}
+});
