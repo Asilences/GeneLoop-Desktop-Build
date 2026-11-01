@@ -879,8 +879,9 @@ class ManagedPublicTunnelTests(unittest.TestCase):
     def test_rejects_credential_drift_and_public_secret_file(self):
         self.token.write_text('changed-fixture')
         with self.assertRaisesRegex(RuntimeError,'credential changed'):service.load_public_config(self.public_path,self.plan)
-        self.token.chmod(0o644)
-        with self.assertRaisesRegex(RuntimeError,'mode 600'):service.load_public_config(self.public_path,self.plan)
+        if os.name == 'posix':
+            self.token.chmod(0o644)
+            with self.assertRaisesRegex(RuntimeError,'mode 600'):service.load_public_config(self.public_path,self.plan)
 
     def test_exact_recipe_disallows_credential_env_override_and_extra_arguments(self):
         for mutation in ('environment','arguments','binary','origin'):
