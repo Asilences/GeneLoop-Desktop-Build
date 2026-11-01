@@ -1,3 +1,5 @@
+> 2026-11-02 网页视频集成：权威 V100 服务器代码已与 GitHub main 合并到 `codex/video-web-integration-20261101`，代码与合并检查由 [PR #118](https://github.com/jingyio/GeneLoop/pull/118) 管理。新增 `/video`、固定隔离 Remotion 渲染、实际 MP4/TSX 交付及原生下载；两轮真实网页任务分别通过15项独立检查，增量源码只改标题。视频实验 Motif 未晋级、不发布。另修复原生自定义审计事件造成的旧对话冷恢复拒绝；先完整副本、后带备份与内核锁的维护，不改任务状态、账本或原SDK证据。Paper/PPT兼容包为40/37，原训练IR/schema/manifest/task/来源证据逐字节保留。最终生产回执与并行结果见PR描述及[本轮记录](../experiments/video-web-integration-20261101.md)，正式入口继续由 `GENELOOP_SERVICE_CONFIG` 定位，不沿用下方旧日期的固定版本。
+
 > 2026-10-31 服务器发布验收：正式 bb2abdc（Paper32/PPT29）已通过统一入口发布；修复只读用量查询超时误判整轮失败，原算法/程序/证据保留。5 用户 / 20 对话 / 80 轮最终完成，严格 79/80；峰值 35 任务 / 26 上游，156 文件检查通过，公网 10/10。一次 JSON 多余文字及一次 PPT 人工确认保留；10 秒公网诊断中继仍不稳定。服务器验收分支 codex/postdeploy-stress-20261031，当前未声称推送/合并 main。详见[本轮记录](../experiments/postdeploy-stress-20261031.md)。
 
 > 2026-10-21当前主线：`codex/dsh-native-capabilities` / PR102仍为草稿；当前正式378adec（Paper29/PPT26/File14），候选已完成File15真实认证，正在独立检出做最终全量回归，尚未发布。已接入原生读图、文件工具、上下文与控制器；真实五用户File45/45通过，主聊天/三场景仍有严格失败，PPT双路因旧2MiB传输上限失败，修复后必须新目录复测。所有失败/账本/旧库保留，不重写旧证书。以下较早“正式744”等按其历史日期保留；以本条和[本轮记录](../experiments/dsh-native-capabilities-20261021.md)更新为准。

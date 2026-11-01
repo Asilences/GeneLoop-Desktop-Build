@@ -64,9 +64,10 @@ test('SDK compaction never replaces the different parent user prompt or unmapped
  const {fileEventProjection}=await import('../src/adapters/file_event_projection.ts');const {sdk,parent}=fixture();
  const user=sdk.append('user/message',createUserMessage({content:[{type:'text',text:'generated SDK task contract and private references'}],source:{kind:'user'}}),{surfaceOp:'append'});
  const reply=assistant(sdk,'读取文件完成');checkpoint(sdk,[user.seq,reply.seq]);
- const project=fileEventProjection(parent,1);sdk.snapshotEvents().forEach(project);
+ const audit=[],project=fileEventProjection(parent,1,event=>audit.push(event));sdk.snapshotEvents().forEach(project);
  assert.deepEqual(parent.surface.nodes.map(seq=>parent.deriveEventMessage(parent.eventAt(seq))).map(m=>m.content[0].text),['用户原始要求','读取文件完成']);
- const observation=parent.snapshotEvents().find(e=>e.type==='geneloop/file-compaction');assert.equal(observation.data.projectedSurface,false);
+ const observation=audit.find(e=>e.type==='geneloop/file-compaction');assert.equal(observation.data.projectedSurface,false);
+ assert.equal(parent.snapshotEvents().some(e=>e.type.startsWith('geneloop/')),false);
  assert.equal(parent.snapshotEvents().filter(e=>e.type==='compaction/start').length,1);
  assert.equal(parent.snapshotEvents().filter(e=>e.type==='compaction/end').length,1);
  assert.equal(parent.snapshotEvents().filter(e=>e.type==='compaction/summary').length,0);
@@ -76,12 +77,12 @@ test('SDK compaction never replaces the different parent user prompt or unmapped
 test('only an exactly mapped contiguous history span receives the native checkpoint',options,async()=>{
  const {fileEventProjection}=await import('../src/adapters/file_event_projection.ts');
  for(const interfering of [false,true]){
-  const {sdk,parent}=fixture(),project=fileEventProjection(parent,1);
+  const {sdk,parent}=fixture(),audit=[],project=fileEventProjection(parent,1,event=>audit.push(event));
   const first=assistant(sdk,'已确认原件 SHA256 abc'),firstEvents=sdk.snapshotEvents();firstEvents.forEach(project);
   if(interfering)parent.append('user/message',createUserMessage({content:[{type:'text',text:'不能被 SDK 摘要覆盖的新要求'}],source:{kind:'user'}}),{surfaceOp:'append'});
   const second=assistant(sdk,'待提交审批');sdk.snapshotEvents().slice(firstEvents.length).forEach(project);
   const count=sdk.snapshotEvents().length;checkpoint(sdk,[first.seq,second.seq]);sdk.snapshotEvents().slice(count).forEach(project);
-  assert.equal(parent.snapshotEvents().find(e=>e.type==='geneloop/file-compaction').data.projectedSurface,!interfering);
+  assert.equal(audit.find(e=>e.type==='geneloop/file-compaction').data.projectedSurface,!interfering);
   const replacements=parent.snapshotEvents().filter(e=>e.surfaceOp?.op==='replace');assert.equal(replacements.length,interfering?0:1);
   if(!interfering){const summary=parent.snapshotEvents().find(e=>e.type==='compaction/summary');
    assert.deepEqual(summary.data.shadowedSeqs,[...replacements[0].sourceEventSeqs.slice(2)]);

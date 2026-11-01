@@ -143,3 +143,8 @@ snapshots, selected product bundles and source locks before stopping a healthy
 service. Status/adoption and recovery of the previous recorded generation remain
 available. A source-path string replacement is not a substitute for regeneration:
 serialized scene instructions and map keys may still refer to the old release.
+
+
+### GeneLoop 历史审计事件的冷恢复维护
+
+外部插件观察记录不能直接作为未声明的必需事件写入 DSH 会话。旧版 GeneLoop 的 presented-proof / file-compaction 信封可用 scripts/repair-geneloop-session-events.py 诊断，默认只预览；写入须显式指定 session-root、--write 和全新的私有 backup-root。只支持已验证的 Linux / JSONL v3，使用系统 libzstd 与当前安装的 DSH 原生解析器，旧压缩数据完整备份。未知事件和原生格式守卫不放宽，Session 内核写锁被占用时拒绝，不通过修改任务状态允许维护。先在完整副本验证，再在维护窗口使用，最后重测历史对话和不可变下载。

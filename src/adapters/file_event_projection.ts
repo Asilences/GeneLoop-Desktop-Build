@@ -3,7 +3,7 @@
  */
 import {isCompactCheckpointSource} from '@deepseek-ai/dsh-compaction';
 
-export function fileEventProjection(session:any,turn:number){
+export function fileEventProjection(session:any,turn:number,audit:(event:any)=>void=()=>{}){
  const sequences=new Map<number,number>();let step=0,open=false;
  const summaries=new Map<string,any>(),compactions=new Set<string>();
  const append=(event:any,data:any,metadata:any={})=>{
@@ -34,10 +34,10 @@ export function fileEventProjection(session:any,turn:number){
     summary.data.shadowedRange?.start===range.startSeq&&summary.data.shadowedRange?.end===range.endSeq&&
     span.length===mapped.length&&span.every((seq:number,i:number)=>seq===mapped[i])&&
     event.sourceEventSeqs?.every((seq:number)=>seq===summary.seq||sequences.has(seq));
-   session.append('geneloop/file-compaction',{phase:'summary',compactionId:event.data.source.compactionId,
+   audit({type:'geneloop/file-compaction',time:Date.now(),data:{phase:'summary',compactionId:event.data.source.compactionId,
     summary:summary.data.summary,sourceShadowedRange:summary.data.shadowedRange,sourceShadowedSeqs:original,
     shadowedTokenCount:summary.data.shadowedTokenCount,...(summary.data.usage?{usage:summary.data.usage}:{}),
-    projectedSurface:equivalent,turn});
+    projectedSurface:equivalent,turn}});
    if(equivalent){
     append(summary,{...summary.data,shadowedRange:{start:mapped[0],end:mapped.at(-1)},shadowedSeqs:mapped});
     append(event,event.data,{surfaceOp:{op:'replace',startSeq:mapped[0],endSeq:mapped.at(-1)},sourceEventSeqs:sources(event)});

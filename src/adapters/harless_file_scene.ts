@@ -133,7 +133,7 @@ export function installFileScene(ctx:any,launch:typeof spawn=spawn){
    cwd:root,env:{...process.env,HARLESS_MANAGEMENT_PRIVATE_ROOT:home,...(policy.provider_mode==='mock'?{SSS_MOCK_ENDPOINT:policy.endpoint}:{})},stdio:['pipe','pipe','pipe']});
   children.set(task.session,child);
   let buffer='',result:any=null,approvalBusy=false,bridgeFailed=false;
-  const project=fileEventProjection(agent.session,task.turn);
+  const project=fileEventProjection(agent.session,task.turn,event=>writeFileSync(join(directory,'projection-audit.jsonl'),JSON.stringify(event)+'\n',{flag:'a',mode:0o600}));
   const publish=(row:any)=>{
    if(row.kind==='bound'){task.origin=row.origin;task.out=row.out;task.job_file=row.job_file;store(task);}
    if(row.kind==='event'&&!bridgeFailed){

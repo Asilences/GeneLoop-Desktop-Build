@@ -2138,6 +2138,11 @@ export function apply(ctx: any) {
           model_requests_skipped_verified: 0 } }));
     });
   }, { global: true });
+  ctx.on('geneloop/presented-proof',(session:any,event:any)=>{
+    const task=forSession(session.id);
+    if(!task||task.status!=='running')return;
+    appendFileSync(join(task.output,'events.jsonl'),JSON.stringify(event)+'\n',{mode:0o600});
+  },{global:true});
   ctx.on('session/event', (session: any, event: any) => {
     if(closingTurns.record(session,event))return;
     const task = forSession(session.id); if (!task || task.status !== 'running') return;
