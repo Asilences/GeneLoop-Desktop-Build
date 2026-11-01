@@ -1815,7 +1815,7 @@ export function apply(ctx: any) {
           const accepts = (name: string) => {
             const suffix = extname(name).toLowerCase();
             if (target.adapter === 'ppt') return true;
-            if(target.adapter==='video')return /\.(mp4|mov|mkv|webm|mp3|wav|m4a|aac|ogg|png|jpg|jpeg|webp|gif|svg|txt|md|json)$/i.test(name);
+            if(target.adapter==='video')return /\.(mp4|mov|mkv|webm|mp3|wav|m4a|aac|ogg|png|jpg|jpeg|webp|gif|svg|tsx|txt|md|json)$/i.test(name);
             if (target.id === 'research-data-analysis') return ['.csv','.tsv','.json','.txt','.md'].includes(suffix);
             if (target.id === 'paper-proofreading') return ['.pdf','.docx','.doc','.tex','.bib','.bbl','.log','.md','.txt','.json'].includes(suffix);
             if (target.adapter === 'literature') return suffix === '.pdf';
