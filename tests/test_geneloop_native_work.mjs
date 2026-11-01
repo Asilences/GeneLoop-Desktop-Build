@@ -1,3 +1,4 @@
+import JsonlPersistence from '@deepseek-ai/dsh-session-persistence-jsonl';
 /** Native installed tools, real local files, no provider/model requests. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -38,6 +39,7 @@ async function fixture(){
  const agent=await loop.create('session-'+randomUUID(),{provider:'unused',model:'unused'},{cwd:root});
  agent.session.append('turn/start',{turn:1});
  const events=[],progress=createTaskProgress();
+ ctx.on('geneloop/presented-proof',(session,event)=>{if(session.id===agent.session.id)events.push(event);},{global:true});
  ctx.on('session/event',(session,event)=>{if(session.id===agent.session.id){events.push(event);progress.event(event);}},{global:true});
  return {root,ctx,agent,events,progress,execute:(name,args,id=randomUUID())=>ctx.tools.execute({name,arguments:args,agent,callId:id,signal:new AbortController().signal}),
    async close(){await ctx.fiber.dispose();rmSync(root,{recursive:true,force:true});}};
@@ -93,6 +95,7 @@ test('present only accepts output paths and emits immutable task-bounded proof p
   assert.equal(f.events.filter(e=>e.type==='deliverables/presented').length,0);
   assert.equal((await f.execute('present',{files:[{path:'outputs/report.docx'}]},'approved-delivery')).isError,false);
   assert.equal(f.events.filter(e=>e.type==='deliverables/presented').length,1);
+  assert.equal(f.agent.session.snapshotEvents().some(e=>e.type==='geneloop/presented-proof'),false);
   const eventsPath=join(f.root,'events.jsonl');writeFileSync(eventsPath,f.events.map(e=>JSON.stringify(e)).join('\n'));
   const context={workspace:f.root,eventsPath,startedAt:new Date(Date.now()-60_000).toISOString(),finishedAt:new Date(Date.now()+60_000).toISOString()};
   const proofs=nativePresentedFiles(context);assert.equal(proofs.get(join(output,'report.docx')),sha(Buffer.from('first bytes')));
@@ -124,4 +127,19 @@ test('present proof refuses hardlinks, missing native receipt, foreign workspace
   assert.equal((await f.ctx.tools.execute({name:'present',arguments:{files:[{path:'outputs/result.txt'}]},agent:f.agent,callId:'cancelled',signal:aborted.signal})).isError,true);
   assert.equal(f.events.length,before);
  }finally{await f.close();}
+});
+
+
+test('native present remains cold-readable while application proof still authorizes the exact bytes',async()=>{
+ const f=await fixture(),cold=new Context();try{
+  mkdirSync(join(f.root,'outputs/code'),{recursive:true});writeFileSync(join(f.root,'outputs/code/cold.txt'),'cold proof');
+  assert.equal((await f.execute('present',{files:[{path:'outputs/cold.txt'}]},'cold-delivery')).isError,false);
+  const storage=new JsonlPersistence(cold,{root:join(f.root,'persisted')});
+  const writer=await storage.create(f.agent.session.header);
+  await writer.append(f.agent.session.snapshotEvents());await writer.flush();await writer.close();
+  const reader=await storage.open(f.agent.session.id,'read');const restored=await reader.read();await reader.close();
+  assert.ok(restored.events.some(row=>row.type==='deliverables/presented'));
+  assert.ok(restored.events.every(row=>!row.type.startsWith('geneloop/')));
+  assert.ok(f.events.some(row=>row.type==='geneloop/presented-proof'));
+ }finally{await cold.fiber.dispose();await f.close();}
 });

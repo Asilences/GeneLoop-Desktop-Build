@@ -27,7 +27,7 @@ async function fixture({transient=false,summaryFail=false}={}){
  const ctx=new Context(),requests=[],errors=[],progress=createTaskProgress();let toolSideEffects=0;
  const parent=new Session('native-parent');parent.append('turn/start',{turn:1});
  parent.append('user/message',createUserMessage({content:[{type:'text',text:'用户原始文件要求'}],source:{kind:'user'}}),{surfaceOp:'append'});
- const projection=fileEventProjection(parent,1);
+ const audit=[],projection=fileEventProjection(parent,1,event=>audit.push(event));
  const server=createServer(async(req,res)=>{
   let raw='';for await(const part of req)raw+=part;const value=JSON.parse(raw);
   const summary=JSON.stringify(value.messages.at(-1)?.content).includes('acting as a compaction engine');
@@ -52,7 +52,7 @@ async function fixture({transient=false,summaryFail=false}={}){
  const agent=await loop.create('file-sdk-'+randomUUID(),{provider:'deepseek-official',model:'deepseek-flash',reasoningEffort:'off',maxTokens:1000});
  ctx.on('agent/error',({error})=>errors.push(error),{global:true});
  ctx.on('session/event',(session,event)=>{if(session.id===agent.session.id){projection(event);progress.event(event);}},{global:true});
- return {ctx,agent,parent,engine,requests,errors,progress,sideEffects:()=>toolSideEffects,
+ return {ctx,agent,parent,engine,requests,errors,progress,audit,sideEffects:()=>toolSideEffects,
   async run(){agent.followup(createUserMessage({source:{kind:'user'},content:[{type:'text',text:'SDK generated frozen task contract '+ 'original document facts '.repeat(1200)}]}));await agent.whenIdle();},
   async close(){await ctx.fiber.dispose();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
 }
@@ -79,7 +79,7 @@ test('actual File native compaction uses the same routed session, keeps original
   original.forEach((row,index)=>assert.equal(JSON.stringify(f.agent.session.eventAt(index)),row));
   assert.ok(f.agent.session.snapshotEvents().some(row=>row.surfaceOp?.op==='replace'));
   assert.deepEqual(f.parent.surface.nodes,parentBefore,'different SDK contract must not overwrite parent user history');
-  assert.equal(f.parent.snapshotEvents().find(row=>row.type==='geneloop/file-compaction').data.projectedSurface,false);
+  assert.equal(f.audit.find(row=>row.type==='geneloop/file-compaction').data.projectedSurface,false);
   assert.equal(f.progress.snapshot().progress.label,'上下文已整理，继续处理请求');
  }finally{await f.close();}
 });

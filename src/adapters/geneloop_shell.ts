@@ -33,7 +33,7 @@ export function commandLayout(output: string, session: string) {
   for (const suffix of ['inputs', 'code', 'outputs/code', 'command-tmp']) mkdirSync(join(work, suffix), { recursive: true, mode: 0o700 });
   return { work: fixedDirectory(work), scratch: fixedDirectory(join(work, 'code')),
     inputs: fixedDirectory(join(work, 'inputs')), outputs: fixedDirectory(join(work, 'outputs/code')),
-    temp:fixedDirectory(join(work,'command-tmp')) };
+    artifacts:fixedDirectory(join(work,'outputs')), temp:fixedDirectory(join(work,'command-tmp')) };
 }
 export function commandArgv(layout: ReturnType<typeof commandLayout>, command: string, cwd: string,
     python = process.env.SSS_PYTHON ?? '/usr/bin/python3', node = process.execPath, readOnly = false,
@@ -75,6 +75,7 @@ export function commandArgv(layout: ReturnType<typeof commandLayout>, command: s
   // later native tool call. Persist only this Session's temp tree, never host /tmp.
   args.push('--proc', '/proc', '--dev', '/dev', '--bind', layout.temp, '/tmp', readOnly ? '--ro-bind' : '--bind', layout.scratch, '/work',
     '--ro-bind', layout.inputs, '/work/inputs', readOnly ? '--ro-bind' : '--bind', layout.outputs, '/work/outputs',
+    ...(layout.artifacts ? ['--ro-bind', layout.artifacts, '/artifacts'] : []),
     '--setenv', 'HOME', '/work', '--setenv', 'PATH', `${dirname(python)}:${dirname(node)}:/opt/geneloop/libreoffice/program:/usr/bin:/bin`,
     '--setenv', 'PYTHONDONTWRITEBYTECODE', '1',
     '--setenv', 'LANG', 'C.UTF-8', '--setenv', 'PYTHONUTF8', '1', '--setenv', 'MPLCONFIGDIR', '/tmp/matplotlib',

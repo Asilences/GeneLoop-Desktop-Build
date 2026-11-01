@@ -38,7 +38,7 @@ export function sceneOptions(value: unknown, scene: Scene): SceneOptions {
   if (value === undefined) return {};
   if (value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return {};
   const permitted = scene.adapter === 'ppt' ? ['slides', 'template', 'allow_output'] :
-    (scene.adapter === 'files' || scene.id === 'paper-proofreading') ? ['allow_output'] : [];
+    (scene.adapter === 'files' || scene.adapter === 'video' || scene.id === 'paper-proofreading') ? ['allow_output'] : [];
   if (!permitted.length || !value || typeof value !== 'object' || Array.isArray(value) ||
       Object.keys(value).some(key => !permitted.includes(key))) throw Error('invalid_scene_options');
   const row = value as SceneOptions;
@@ -127,7 +127,7 @@ export async function bindSceneInputs(ctx: any, agent: any, workspace: string, s
     // Literal LaTeX references resolve original flat filenames, not renamed doc_N files.
     const original = basename(ref.name);
     const safeOriginal = original === ref.name && /^[\p{L}\p{N}._-]{1,120}$/u.test(original) && !original.startsWith('.');
-    const leaf = scene.id === 'paper-proofreading' && safeOriginal ? original : `doc_${inputs.length + 1}-${original.replace(/[^\p{L}\p{N}._-]/gu, '_').slice(-120)}`;
+    const leaf = (scene.id === 'paper-proofreading'||scene.adapter==='video') && safeOriginal ? original : `doc_${inputs.length + 1}-${original.replace(/[^\p{L}\p{N}._-]/gu, '_').slice(-120)}`;
     if (preparedFiles.some(file => file.path === join(workspace, 'inputs', leaf))) throw Error('duplicate_scene_filename');
     const path = join(workspace, 'inputs', leaf);
     preparedFiles.push({ path, data });
@@ -303,5 +303,6 @@ export function scopeDigest(workspace: string, scene: Scene): string | null {
       scene.adapter === 'files' ? sha(readFileSync(join(workspace, 'file-task.json'))) :
       scene.id === 'paper-proofreading' ? sha(readFileSync(join(workspace,'paper-output-grant.json'))) :
       scene.adapter === 'literature' ? sha(readFileSync(join(workspace,'literature/task.json'))) :
-      scene.adapter === 'data-report' ? sha(readFileSync(join(workspace,'report/request.txt'))) : null }));
+      scene.adapter === 'data-report' ? sha(readFileSync(join(workspace,'report/request.txt'))) :
+      scene.adapter === 'video' ? sha(readFileSync(join(workspace,'video-output-grant.json'))) : null }));
 }

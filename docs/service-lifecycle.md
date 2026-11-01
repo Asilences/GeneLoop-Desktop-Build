@@ -118,3 +118,33 @@ npm run service -- public-confirm --public-config /PRIVATE/public.json \
 仓库 `AGENTS.md` 与 README 明确指定这个入口。后续 AI 必须先读规范，使用 `npm run service`；需要更改启动规则时，修改本入口、增加回归并更新本文件。历史 `.local/deploy*.py` 仅作证据和配置准备参考，其旧启动段不再是发布入口。
 
 规范约束不能阻止一个忽略指令、直接操作服务器的工具。项目通过统一可执行命令、私有进程身份记录、认证检查、失败回退和自动化回归降低误用风险；不能声称所有 AI 都会被技术上强制遵守。
+
+### Fixed hostname and release scene snapshots (2026-10-31)
+
+`public-prepare` / `public-confirm` also accept a private version 2 `managed-tunnel`
+recipe. It pins the cloudflared binary, dedicated token file (0600), exact
+`--protocol http2 run --token-file` argv and previous managed tunnel identity.
+The configured HTTPS origin must match the application gateway. The dashboard
+readback must bind that hostname and tunnel UUID to the existing loopback gateway,
+with the exact HTTP Host header and certificate verification retained. The old
+connection stays available for rollback. Never print the token or place it in argv.
+This does not install an OS boot service or claim multi-server high availability.
+
+For a source release, run `scripts/prepare-release-scenes.py --plan OLD_PLAN
+--output NEW_PRIVATE_DIRECTORY [--public-origin https://example.com]` with the
+existing server Python environment. It imports the selected release's original
+scene factory and library validator, writes new versioned presets, and preserves
+account storage, auth, limits and ledgers. Existing presets and libraries remain.
+The recipe supports registered product libraries; custom private replacements
+need an explicit reviewed preparation recipe.
+
+New starts and restart candidates reject stale scene registry digests, prompt
+snapshots, selected product bundles and source locks before stopping a healthy
+service. Status/adoption and recovery of the previous recorded generation remain
+available. A source-path string replacement is not a substitute for regeneration:
+serialized scene instructions and map keys may still refer to the old release.
+
+
+### GeneLoop 历史审计事件的冷恢复维护
+
+外部插件观察记录不能直接作为未声明的必需事件写入 DSH 会话。旧版 GeneLoop 的 presented-proof / file-compaction 信封可用 scripts/repair-geneloop-session-events.py 诊断，默认只预览；写入须显式指定 session-root、--write 和全新的私有 backup-root。只支持已验证的 Linux / JSONL v3，使用系统 libzstd 与当前安装的 DSH 原生解析器，旧压缩数据完整备份。未知事件和原生格式守卫不放宽，Session 内核写锁被占用时拒绝，不通过修改任务状态允许维护。先在完整副本验证，再在维护窗口使用，最后重测历史对话和不可变下载。

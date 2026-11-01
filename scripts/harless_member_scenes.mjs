@@ -162,14 +162,14 @@ export function memberSceneDeployment(policy, deployment) {
   };
   const scenes = policy.scenes.map(scene => {
     if (scene.unavailable_reason) return structuredClone(scene);
-    if (!['ppt','workspace','files','literature','data-report'].includes(scene.adapter) || Object.keys(scene.environment_references ?? {}).length)
+    if (!['ppt','workspace','files','literature','data-report','video'].includes(scene.adapter) || Object.keys(scene.environment_references ?? {}).length)
       throw Error('Member scene requires a local Session adapter without inherited credentials');
     const rows = structuredClone(scene.mcp_rows);
     if (!Array.isArray(rows) || !rows.length) throw Error('Member scene has no MCP deployment');
     for (const row of rows) {
       const cfg=row.config;
       if (row.name !== '@deepseek-ai/dsh-mcp-client' || cfg?.transport !== 'stdio' || cfg.cwd !== root ||
-          !['ppt','ppt_master','workspace','paper_checks','paper_trace_rsi','data_analysis','research_report','file_management','literature_web'].includes(cfg.serverName) ||
+          !['ppt','ppt_master','workspace','paper_checks','paper_trace_rsi','data_analysis','research_report','file_management','literature_web','remotion'].includes(cfg.serverName) ||
           !(cfg.command === 'node' || cfg.command === deployment.pythonExecutable || realpathSync(cfg.command) === binary) ||
           !Array.isArray(cfg.args) || !cfg.args.length || !inside(join(root,'scenarios'), cfg.args[cfg.args[0]==='--experimental-strip-types'?1:0]))
         throw Error('Member MCP deployment is outside approved scene code');
@@ -191,11 +191,14 @@ export function memberSceneDeployment(policy, deployment) {
       if(scene.adapter==='data-report' && (cfg.serverName!=='research_report' || cfg.args.length!==1 ||
           cfg.args[0]!==join(root,'scenarios/data_analysis/report_session.py') || cfg.env?.HARLESS_REPORT_WORKSPACE!=='__HARLESS_SESSION_WORKSPACE__'))
         throw Error('Member data report requires the registered Session adapter');
+      if(scene.adapter==='video'&&(cfg.serverName!=='remotion'||cfg.args.length!==2||
+          cfg.args[0]!==join(root,'scenarios/remotion_edit/web_server.py')||cfg.args[1]!=='__HARLESS_SESSION_WORKSPACE__/inputs'))
+        throw Error('Member video MCP requires its exact Session adapter');
       cfg.command=cfg.command === 'node' ? 'node' : executable;
       cfg.cwd='/app'; cfg.args=cfg.args.map(translate);
       const env=cfg.env ?? {};
       const parserEnv=['HARLESS_PDF_TOOLCHAIN_ROOT','HARLESS_ANTIWORD_BIN','ANTIWORDHOME','GENELOOP_PDF_OCR_ROOT'];
-      const permittedEnv=scene.adapter==='data-report'?['HARLESS_REPORT_WORKSPACE','HARLESS_PRIVATE_ROOT','HARLESS_REPORT_FONT',...parserEnv]:scene.adapter==='literature' ? ['SSS_PDF_WEB_TASK','PATH','LD_LIBRARY_PATH'] :
+      const permittedEnv=scene.adapter==='video'?['HARLESS_PRIVATE_ROOT']:scene.adapter==='data-report'?['HARLESS_REPORT_WORKSPACE','HARLESS_PRIVATE_ROOT','HARLESS_REPORT_FONT',...parserEnv]:scene.adapter==='literature' ? ['SSS_PDF_WEB_TASK','PATH','LD_LIBRARY_PATH'] :
         scene.adapter==='files' ? ['FM_WEB_WORKSPACE','FM_TASK_FILE','FM_OUTPUT'] :
         cfg.serverName==='paper_checks'?['HARLESS_REPORT_FONT',...parserEnv]:
         cfg.serverName==='paper_trace_rsi'?['HARLESS_PRIVATE_ROOT']:

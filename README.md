@@ -1,5 +1,8 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-02：已合并服务器运行版本与 GitHub main，并新增网页 `/video` 视频剪辑入口；每条视频任务需选择该场景，不带场景命令的消息仍按普通 Chat 执行。实现与验收范围见 [视频场景集成记录](docs/experiments/video-web-integration-20261101.md)。视频实验 Motif 尚未发布。
+
+
 新增[视频程序复用与复用形式RSI实验](scenarios/remotion_edit/structured/README.md)：从正常视频工具轨迹学习参数化TSX，并让目录/类型化工具、调用策略和下一轮编译方式进入可验证的外环。普通基线保留同样的源码写入与渲染融合能力；当前实现及实际效果边界见[实验记录](docs/experiments/remotion-program-rsi-20261030-v1.md)，尚未部署正式服务。
 
 新增独立的 Artifact Motif 实验：从真实任务中学到可换输入的 Python 计算／排版程序，经独立输入认证后，通过原生 Bash 复用并保留逐次回执。它仍是显式启用的实验入口，不替换正式服务或默认库；费用下降与反例一起记录。见[接口与复现](docs/interfaces.md#artifact-motif-独立实验接口2026-10-21)和[三场景成本学习](docs/experiments/three-scene-motif-cost-learning-20261021.md)。

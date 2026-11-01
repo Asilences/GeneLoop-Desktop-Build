@@ -70,6 +70,7 @@ def test_source_bound_review_exports_pdf_and_markdown_without_changing_input(tmp
     result=report.export('Source review', [{'heading':'Numerical consistency','paragraphs':['The source states 40 minus 2 is 39; the correct count is 38. This arithmetic does not establish causation.']}],versions)
     assert result['exported'] and result['page_count']>=1
     for row in result['artifacts']:
+        assert result['read_paths'][row['name']]=='/artifacts/'+row['name'].removeprefix('outputs/')
         path=root.parent/row['name'];assert hashlib.sha256(path.read_bytes()).hexdigest()==row['sha256']
     import fitz
     pdf=next(root.parent/r['name'] for r in result['artifacts'] if r['name'].endswith('.pdf'))

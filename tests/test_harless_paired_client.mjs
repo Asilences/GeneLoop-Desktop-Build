@@ -1084,3 +1084,16 @@ test('sandbox output and scratch paths resolve only to approved files, including
  f.dispose();const ambiguous=fixture(undefined,value);await flush();ambiguous.render();
  assert.equal(ambiguous.all(row=>ambiguous.isMarkdown(row))[0].props.fileMentions.resolve('pelican.html'),undefined);ambiguous.dispose();
 });
+
+
+test('media download starts an authenticated native request inside the click without waiting for a Blob', async () => {
+  const value = comparison(); value.presentation = 'single'; delete value.lanes.motif;
+  value.lanes.baseline.artifacts = [{...artifact,id:'media-file',name:'outputs/video/task/video.mp4'}];
+  const f = fixture(url => { assert.ok(!url.includes('&file='), 'native browser owns the file transfer'); return Response.json(value); }, value);
+  await flush(); f.render();
+  f.all(row => row.type === 'a' && row.props.download)[0].props.onClick({ preventDefault() {} });
+  assert.equal(f.downloaded.length,1,'download starts synchronously with user activation');
+  assert.equal(f.downloaded[0].name,'video.mp4');
+  assert.equal(f.downloaded[0].href,'/api/harless/comparisons?session_id=session-a&id=comparison-a&lane=baseline&file=media-file');
+  assert.ok(f.requests.every(row => !row.url.includes('&file='))); f.dispose();
+});

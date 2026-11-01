@@ -819,3 +819,160 @@ class LinuxLifecycleTests(PlanTests):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+
+class ManagedPublicTunnelTests(unittest.TestCase):
+    def setUp(self):
+        PublicRecoveryTests.setUp(self)
+        config=service.read(self.config);config['publicOrigin']='https://geneloop.fixture';service.save(self.config,config)
+        self.record['digest']=service.plan_digest(self.plan);service.save(self.lifecycle.state_path,self.record)
+        self.token=self.root/'tunnel-token';self.token.write_text('synthetic-tunnel-credential');self.token.chmod(0o600)
+        self.origin=config['publicOrigin'];self.direct_good=False
+        self.public.update(version=2,mode='managed-tunnel',public_origin=self.origin,
+                           tunnel_id='12345678-1234-1234-1234-123456789abc')
+        self.public['tunnel'].update(argv=[sys.executable,'tunnel','--no-autoupdate','--protocol','http2','run','--token-file',str(self.token)],
+            token_file=str(self.token),token_sha256=service.hashlib.sha256(self.token.read_bytes()).hexdigest())
+        self.candidate['argv_sha256']=service.hashlib.sha256(b'\0'.join(os.fsencode(v) for v in self.public['tunnel']['argv'])+b'\0').hexdigest()
+        service.save(self.public_path,self.public)
+        service.save(self.lifecycle.root/'public-current.json',{'process':self.old,'upstream_origin':self.public['previous_origin']})
+
+    environment=PublicRecoveryTests.environment
+    launch=PublicRecoveryTests.launch
+
+    def probe(self, origin, *_args, **_kwargs):
+        if origin.startswith('http://127.0.0.1:') or self.good:return self.expected
+        return {p:{'status':530} for p in self.expected}
+
+    def evidence(self, **changes):
+        value={'version':1,'method':'cloudflare-dashboard-tunnel','public_origin':self.origin,
+               'tunnel_id':self.public['tunnel_id'],'service':'http://127.0.0.1:%s'%service.read(self.config)['port'],
+               'http_host_header':'geneloop.fixture','tls_verification_disabled':False,**changes}
+        path=self.root/'managed-evidence.json';service.save(path,value);return path
+
+    def test_fixed_hostname_prepare_confirm_preserves_backend_and_old_tunnel(self):
+        before=self.lifecycle.state_path.read_bytes();task=self.protected.read_bytes()
+        with self.environment():
+            result=self.lifecycle.run('public-prepare',self.public_path)
+            self.assertEqual(result['candidate_origin'],self.origin)
+            self.assertFalse(result['candidate_direct_verified'])
+            self.assertEqual(service.read(self.lifecycle.root/'public-current.json')['process'],self.old)
+            with self.assertRaisesRegex(RuntimeError,'exact upstream'):
+                self.lifecycle.run('public-confirm',self.public_path,self.evidence(service='http://127.0.0.1:1'))
+            with self.assertRaisesRegex(RuntimeError,'do not match'):
+                self.lifecycle.run('public-confirm',self.public_path,self.evidence())
+            self.good=True
+            self.assertTrue(self.lifecycle.run('public-confirm',self.public_path,self.evidence())['public_healthy'])
+            self.cloudflare.assert_not_called();self.kill.assert_not_called();self.child.terminate.assert_not_called()
+            self.assertNotIn('synthetic-tunnel-credential',str(self.popen.call_args))
+        self.assertEqual(self.lifecycle.state_path.read_bytes(),before)
+        self.assertEqual(self.protected.read_bytes(),task)
+        self.assertEqual(service.read(self.lifecycle.root/'public-current.json')['process'],self.candidate)
+
+    def test_rejects_changed_previous_identity_before_any_launch(self):
+        service.save(self.lifecycle.root/'public-current.json',{'process':{**self.old,'pid':3},'upstream_origin':self.public['previous_origin']})
+        with self.environment():
+            with self.assertRaisesRegex(RuntimeError,'managed public record'):
+                self.lifecycle.run('public-prepare',self.public_path)
+            self.popen.assert_not_called()
+
+    def test_rejects_credential_drift_and_public_secret_file(self):
+        self.token.write_text('changed-fixture')
+        with self.assertRaisesRegex(RuntimeError,'credential changed'):service.load_public_config(self.public_path,self.plan)
+        if os.name == 'posix':
+            self.token.chmod(0o644)
+            with self.assertRaisesRegex(RuntimeError,'mode 600'):service.load_public_config(self.public_path,self.plan)
+
+    def test_exact_recipe_disallows_credential_env_override_and_extra_arguments(self):
+        for mutation in ('environment','arguments','binary','origin'):
+            value=json.loads(json.dumps(self.public))
+            if mutation=='environment':value['tunnel']['env']['TUNNEL_TOKEN']='other-credential'
+            if mutation=='arguments':value['tunnel']['argv']+=['--url','http://foreign.example']
+            if mutation=='binary':value['tunnel']['binary_sha256']='0'*64
+            if mutation=='origin':value['public_origin']='https://foreign.example'
+            service.save(self.public_path,value)
+            with self.assertRaises(RuntimeError):service.load_public_config(self.public_path,self.plan)
+
+
+class PublicProbeRetryTests(unittest.TestCase):
+    def response(self):
+        response=mock.MagicMock();response.__enter__.return_value=response
+        response.status=200;response.read.return_value=b'fixture';return response
+
+    def test_transport_retry_keeps_first_failure_and_requests_are_get_only(self):
+        opener=mock.Mock();opener.open.side_effect=[TimeoutError(),self.response(),self.response()]
+        with mock.patch.object(service,'public_opener',return_value=opener),mock.patch.object(service.time,'sleep'):
+            result=service.public_probe('https://fixture.example')
+        attempts=result['/login']['attempts'];self.assertEqual(len(attempts),2)
+        self.assertEqual(attempts[0]['error_type'],'TimeoutError');self.assertEqual(attempts[1]['status'],200)
+        self.assertTrue(all(call.args[0].get_method()=='GET' and call.kwargs['timeout']==30 for call in opener.open.call_args_list))
+
+    def test_authentication_failure_is_not_retried(self):
+        import io
+        opener=mock.Mock();opener.open.side_effect=[service.urllib.error.HTTPError('https://fixture.example/login',403,'forbidden',{},io.BytesIO(b'forbidden')),self.response()]
+        with mock.patch.object(service,'public_opener',return_value=opener),mock.patch.object(service.time,'sleep') as sleep:
+            result=service.public_probe('https://fixture.example')
+        self.assertEqual(len(result['/login']['attempts']),1);self.assertEqual(result['/login']['status'],403)
+        self.assertEqual(opener.open.call_count,2);sleep.assert_not_called()
+
+    def test_persistent_transport_failure_never_passes(self):
+        opener=mock.Mock();opener.open.side_effect=TimeoutError()
+        with mock.patch.object(service,'public_opener',return_value=opener),mock.patch.object(service.time,'sleep'):
+            result=service.public_probe('https://fixture.example')
+        self.assertFalse(service.probe_matches(result,result))
+        self.assertTrue(all(row['status'] is None and len(row['attempts'])==2 for row in result.values()))
+
+class SceneSnapshotTests(unittest.TestCase):
+    setUp = PlanTests.setUp
+    def scene_fixture(self):
+        import hashlib
+        source=self.root/'app';(source/'config').mkdir(parents=True)
+        (source/'motif-libraries/current').mkdir(parents=True)
+        (source/'prompt.md').write_text('current scene')
+        (source/'config/geneloop-capabilities.md').write_text('current common')
+        (source/'motif-libraries/current/library.json').write_text('{}')
+        registry={'schema_version':1,'scenes':[{'id':'ppt','adapter':'ppt','ppt_execution_strategy':'ppt_master',
+            'instructions':'prompt.md','rsi':{'runtime_bundle':'motif-libraries/current'}}]}
+        service.save(source/'config/harless-scenes.json',registry)
+        instructions='current scene\n\ncurrent common'
+        scene={'id':'ppt','instructions':instructions,'instructions_sha256':hashlib.sha256(instructions.encode()).hexdigest(),
+            'runtime_library':str(source/'motif-libraries/current/library.json'),
+            'certified_code_locks':{str(source/'prompt.md'):hashlib.sha256((source/'prompt.md').read_bytes()).hexdigest()}}
+        policy={'output':str(self.output),'scenes':[scene],
+            'scene_registry_sha256':hashlib.sha256((source/'config/harless-scenes.json').read_bytes()).hexdigest()}
+        service.save(self.policy,policy)
+        gateway=service.read(self.config);gateway.update(memberPolicy=policy,memberSceneDeployment={'projectRoot':str(source)})
+        service.save(self.config,gateway)
+        return source
+
+    def test_current_snapshot_and_stale_registry(self):
+        source=self.scene_fixture();service.assert_scene_snapshot(self.plan)
+        with (source/'config/harless-scenes.json').open('a') as file:file.write('\n')
+        with self.assertRaisesRegex(RuntimeError,'registry snapshot is stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_stale_prompt_rejected_even_when_its_own_digest_matches(self):
+        source=self.scene_fixture();(source/'config/geneloop-capabilities.md').write_text('new common')
+        with self.assertRaisesRegex(RuntimeError,'instructions are stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_old_library_path_rejected(self):
+        self.scene_fixture();gateway=service.read(self.config)
+        gateway['memberPolicy']['scenes'][0]['runtime_library']=str(self.root/'old/library.json')
+        service.save(self.config,gateway)
+        with self.assertRaisesRegex(RuntimeError,'bundle snapshot is stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_old_source_lock_rejected(self):
+        self.scene_fixture();gateway=service.read(self.config)
+        path=self.root/'old-code.py';path.write_text('old')
+        import hashlib
+        gateway['memberPolicy']['scenes'][0]['certified_code_locks']={str(path):hashlib.sha256(path.read_bytes()).hexdigest()}
+        service.save(self.config,gateway)
+        with self.assertRaisesRegex(RuntimeError,'source lock is stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_stale_candidate_fails_before_live_stop(self):
+        self.scene_fixture();lifecycle=service.Lifecycle(self.plan)
+        record={'plan':self.plan,'digest':service.plan_digest(self.plan),'processes':{'owner':{'pid':1},'gateway':{'pid':2}}}
+        with mock.patch.object(lifecycle,'current',return_value=record), mock.patch.object(lifecycle,'inspect'), \
+             mock.patch.object(service,'assert_scene_snapshot',side_effect=RuntimeError('stale candidate')), \
+             mock.patch.object(lifecycle,'stop_record') as stop, mock.patch.object(service,'assert_idle') as idle:
+            with self.assertRaisesRegex(RuntimeError,'stale candidate'):lifecycle.restart()
+            stop.assert_not_called();idle.assert_not_called()

@@ -31,12 +31,12 @@ export function geneLoopPath(path:string,cwd='/work'):string {
   if(typeof path!=='string'||!path.trim()||/[\\\x00-\x1f]/.test(path)||/^[a-z][a-z0-9+.-]*:/i.test(path))throw denied();
   if(!cwd.startsWith('/')||/[\\\x00-\x1f]/.test(cwd))throw denied();
   const logical=posix.resolve(cwd,path);
-  if(!['/work','/tmp','/opt/geneloop/ppt-master'].some(root=>logical===root||logical.startsWith(root+'/')))throw denied();
+  if(!['/work','/tmp','/artifacts','/opt/geneloop/ppt-master'].some(root=>logical===root||logical.startsWith(root+'/')))throw denied();
   // A path may normalize inside the workspace, but may never climb above its mount.
   const raw=path.startsWith('/')?path:cwd+'/'+path;
   const isBelow=(root:string)=>raw===root||raw.startsWith(root+'/');
   const mount=isBelow('/work/inputs')?'/work/inputs':isBelow('/work/outputs')?'/work/outputs':
-    isBelow('/tmp')?'/tmp':isBelow('/opt/geneloop/ppt-master')?'/opt/geneloop/ppt-master':'/work';
+    isBelow('/artifacts')?'/artifacts':isBelow('/tmp')?'/tmp':isBelow('/opt/geneloop/ppt-master')?'/opt/geneloop/ppt-master':'/work';
   let depth=0;for(const part of raw.slice(mount.length).split('/')){
     if(part==='..'){if(--depth<0)throw denied();}else if(part&&part!=='.')depth++;
   }
@@ -60,6 +60,7 @@ export function geneLoopMounts(config:GeneLoopFsConfig,session:string):Mount[] {
   const layout=commandLayout(config.output,session);
   const mounts:Mount[]=[{logical:'/work/inputs',host:layout.inputs,writable:false},
     {logical:'/work/outputs',host:layout.outputs,writable:true},
+    {logical:'/artifacts',host:layout.artifacts,writable:false},
     {logical:'/work',host:layout.scratch,writable:true},{logical:'/tmp',host:layout.temp,writable:true}];
   const skill=pptMasterInstallation(config.command_resources?.pptMasterRoot,config.command_resources?.projectRoot);
   if(skill)mounts.push({logical:skill.target,host:skill.source,writable:false});

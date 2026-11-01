@@ -68,7 +68,8 @@ export function installNativePresentation(ctx:any) {
       files.push({path:file.path,name:'outputs/code/'+logical.slice('/work/outputs/'.length),sha256:sha(bytes),bytes:bytes.byteLength});
     }
     exec.signal.throwIfAborted();
-    exec.agent.session.append('geneloop/presented-proof',{callId:exec.callId,files});
+    // Application evidence stays outside DSH's closed persisted event vocabulary.
+    ctx.emit('geneloop/presented-proof',exec.agent.session,{type:'geneloop/presented-proof',time:Date.now(),data:{callId:exec.callId,files}});
     return result;
   },{global:true});
 }
