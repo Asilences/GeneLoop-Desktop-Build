@@ -482,6 +482,15 @@ window.__ModuleLoader__.load({
         if (/^(txt|json|jsonl|log|tex|bib|py|js|ts|tsx|css|yaml|yml|xml|html|htm)$/.test(ext)) return 'text';
         return 'unsupported';
       };
+      // Start media downloads in the original user gesture. The authenticated
+      // attachment route verifies account ownership and immutable file bytes.
+      // Preview and all non-media downloads retain client-side integrity checks.
+      function nativeMediaDownload(value, lane, file) {
+        if (!['video', 'audio'].includes(previewType(file.name))) return false;
+        const link = document.createElement('a'); link.href = comparisonUrl(value, lane, file);
+        link.download = artifactName(file); link.hidden = true;
+        document.body.appendChild(link); link.click(); link.remove(); return true;
+      }
       // CSV keeps quoted delimiters and embedded newlines. Rendering uses text nodes.
       function previewTable(text, delimiter = ',') {
         const rows = []; let row = [], cell = '', quoted = false;
@@ -692,6 +701,7 @@ window.__ModuleLoader__.load({
         const downloadCurrent = async () => {
           if (busy.current || !state.file) return; busy.current = true; setDownloadState('正在准备下载…');
           try {
+            if (nativeMediaDownload(state.current, identity.lane, state.file)) { setDownloadState('已请求下载，请查看浏览器下载列表。'); return; }
             const blob = await withDeadline(tab.signal, 60000, signal => readArtifact(state.current, identity.lane, state.file, signal));
             if (tab.signal.aborted) return;
             const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; link.hidden = true;
@@ -1003,6 +1013,7 @@ window.__ModuleLoader__.load({
           const state = row => { if (alive.current) setDownloads(old => ({ ...old, [key]: row })); };
           state({ phase: 'pending', message: '正在准备下载…' });
           try {
+            if (nativeMediaDownload(value, lane, file)) { state({ phase: 'success', message: '已请求下载，请查看浏览器下载列表。' }); return; }
             const blob = await withDeadline(abort.signal, 60000, requestSignal => readArtifact(value, lane, file, requestSignal));
             if (abort.signal.aborted) return;
             const url = URL.createObjectURL(blob), link = document.createElement('a');
