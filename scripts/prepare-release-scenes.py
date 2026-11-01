@@ -38,7 +38,7 @@ def prepare(plan_path, output, public_origin=None):
     environment = {'SSS_PYTHON': deployment['pythonExecutable']}
     mapping = {'pptMasterRoot':'GENELOOP_PPT_MASTER_ROOT','pdfToolchainRoot':'HARLESS_PDF_TOOLCHAIN_ROOT',
                'pdfOcrRoot':'GENELOOP_PDF_OCR_ROOT','fontRoot':'HARLESS_PPT_FONT_ROOT',
-               'rendererRoot':'HARLESS_PPT_RENDERER_ROOT','paperRendererRoot':'HARLESS_PAPER_RENDERER_ROOT'}
+               'rendererRoot':'HARLESS_PPT_RENDERER_ROOT','paperRendererRoot':'HARLESS_PAPER_RENDERER_ROOT','videoRendererConfig':'GENELOOP_VIDEO_RENDERER_CONFIG'}
     for key, env in mapping.items():
         if deployment.get(key): environment[env] = deployment[key]
     if deployment.get('antiwordRoot'):
@@ -74,6 +74,7 @@ def prepare(plan_path, output, public_origin=None):
         selected=next(row for row in scenes if row['id']==default_id)
         policy.update(scenes=scenes,allowed_tools=selected['allowed_tools'],
                       scene_registry_sha256=hashlib.sha256(registry_path.read_bytes()).hexdigest())
+    if deployment.get('videoRenderer'):gateway['ownerCommandOutput']=owner['output']
     old_patch=old['owner']['argv'][old['owner']['argv'].index('--patch')+1]
     patch=read(old_patch)
     default_preset=next(row['preset'] for row in owner['scenes'] if row['id']==owner['capability_profile'])

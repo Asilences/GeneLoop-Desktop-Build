@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "name": "remotion_web",
+  "prompt": "web-prompt.md",
+  "servers": [
+    {
+      "server_name": "remotion",
+      "transport": "stdio",
+      "command": "${PYTHON}",
+      "args": [
+        "${PROJECT_ROOT}/scenarios/remotion_edit/web_server.py",
+        "${SESSION_WORKSPACE}/inputs"
+      ],
+      "cwd": "${PROJECT_ROOT}",
+      "tool_call_timeout_ms": 300000
+    }
+  ],
+  "allowed_tools": [
+    "mcp__remotion__list_assets",
+    "mcp__remotion__pin_asset",
+    "mcp__remotion__probe_media",
+    "mcp__remotion__probe_asset",
+    "mcp__remotion__read_source",
+    "mcp__remotion__inspect_render",
+    "mcp__remotion__write_source",
+    "mcp__remotion__render_composition",
+    "mcp__remotion__write_notes",
+    "mcp__remotion__render_source"
+  ]
+}

@@ -14,7 +14,7 @@ export type Scene = {
   design_skill_sha256?: string;
   skill_package_sha256?: string;
   ppt_execution_strategy?: 'host_delivery' | 'baseline_steps' | 'ppt_master';
-  unavailable_reason?: string; adapter?: 'ppt' | 'workspace' | 'files' | 'literature' | 'data-report';
+  unavailable_reason?: string; adapter?: 'ppt' | 'workspace' | 'files' | 'literature' | 'data-report' | 'video';
   mcp_rows?: any[]; environment_references?: Record<string, string>;
   rsi_unavailable_reason?: string; matching_policy?: 'structural_only'; binding_policy?: 'ppt_uploaded_sources_v1' | 'ppt_uploaded_sources_v2' | 'uploaded_source_handles_v1' | 'approved_uploaded_reads_v1' | 'ppt_master_sources_v1';
   certification_path?: string; certification_sha256?: string; certified_code_locks?: Record<string,string>;
@@ -29,7 +29,7 @@ export type Scene = {
 };
 export type Selection = { scene: string; mode: ExecutionMode; rsi: boolean };
 const shortcutNames: Record<string, string> = { ppt: 'ppt', 'paper-proofreading': 'paper',
-  'research-data-analysis': 'data', 'new-scene': 'chat' };
+  'research-data-analysis': 'data', 'video-editing':'video', 'new-scene': 'chat' };
 export function sceneShortcut(scene: Scene): string { return shortcutNames[scene.id] ?? scene.id; }
 /** Only a leading, complete scene token is a control; paths and prose stay text. */
 export function parseSceneShortcut(text: string, scenes: readonly Scene[]) {
@@ -56,7 +56,7 @@ export function sceneCatalog(rows: unknown): Scene[] {
           row.common_tools.some((name: string) => !COMMON_TOOLS.includes(name) || !row.allowed_tools.includes(name)))) ||
         new Set(row.allowed_tools).size !== row.allowed_tools.length ||
         (row.unavailable_reason !== undefined && !/^[a-z][a-z0-9_]{0,127}$/.test(row.unavailable_reason)) ||
-        (row.adapter !== undefined && (!['ppt', 'workspace', 'files', 'literature', 'data-report'].includes(row.adapter) || !Array.isArray(row.mcp_rows))) ||
+        (row.adapter !== undefined && (!['ppt', 'workspace', 'files', 'literature', 'data-report', 'video'].includes(row.adapter) || !Array.isArray(row.mcp_rows))) ||
         (row.instructions !== undefined && (typeof row.instructions !== 'string' || row.instructions.length > 100000))) {
       throw new SettingsError('invalid_registry', '场景 ID、工具或 preset 无效');
     }

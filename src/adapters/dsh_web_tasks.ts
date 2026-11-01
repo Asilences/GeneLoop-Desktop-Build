@@ -323,7 +323,11 @@ export function apply(ctx: any) {
     if (sessionId) await ensureOwned(sessionId);
     settingsView(sessionId); // ownership before mutation
     const current = sessionId ? selections.get(sessionId) ?? defaults : defaults;
-    const next = changeSelection(current, patch, scenes, executeUnavailable);
+    // The video scene has no published Motif library: choose ordinary execution atomically.
+    const requested=patch as any;
+    const selectedPatch=requested?.scene==='video-editing'&&requested.mode===undefined&&requested.rsi===undefined
+      ? {...requested,mode:'baseline',rsi:false}:patch;
+    const next = changeSelection(current, selectedPatch, scenes, executeUnavailable);
     if (next.scene !== current.scene && sceneFor(next.scene).unavailable_reason)
       throw new TaskError('scene_not_connected', '该场景暂不可用：' + sceneFor(next.scene).unavailable_reason, 409);
     if (sessionId) {
@@ -1283,9 +1287,11 @@ export function apply(ctx: any) {
     const reuseWorkspace = previousTask && scene.adapter && !firstSources;
     const sceneInputs = reuseWorkspace ? previousTask.scene_inputs : scene.adapter ? await bindSceneInputs(ctx, agents.get(request.session_id), workspace, scene,
       request.content, options, delivery.filter(part => part.type === 'text').map(part => (part as any).text).join('\n'), taskId) : [];
+    if(scene.adapter==='video')json(join(workspace,'video-output-grant.json'),{schema_version:1,task_id:taskId,allow_output:options.allow_output===true});
     const files = request.content.filter((part: any) => part.type === 'file');
     const contextInputFiles = reuseWorkspace ? [] : sceneInputs.filter((_row: any, index: number) =>
-      !internal.inherited_receipts?.has((files[index] as any)?.receiptId)).map((row: any) => row.file);
+      !internal.inherited_receipts?.has((files[index] as any)?.receiptId)).map((row: any) => row.file)
+      .filter((name:string)=>scene.adapter!=='video'||/\.(txt|md|json|pdf|docx?)$/i.test(name));
     // All approved originals stay bound for tools, but a historical source is
     // not a file uploaded by the user in this turn.
     const humanDelivery = delivery.filter((part: any) => part.type !== 'file' || !(internal.hidden_receipts??internal.inherited_receipts)?.has(part.receiptId));
@@ -1675,7 +1681,7 @@ export function apply(ctx: any) {
         }).filter((row:any)=>row.verification==='code-output-v1')
           .map((row:any)=>({turn:'native-'+task.request.task_id,task:task.request.task_id,lane:'baseline',row})));
       const result = await comparisons.admit(request.sessionId, { ...request, content }, {
-        scene: selected.scene, options: {...(scene.adapter === 'ppt' ? {allow_output:true} : {}),...(optionSelections.get(request.sessionId)?.[selected.scene] ?? {})},
+        scene: selected.scene, options: {...(['ppt','video'].includes(scene.adapter??'') ? {allow_output:true} : {}),...(optionSelections.get(request.sessionId)?.[selected.scene] ?? {})},
         prior_context_by_lane: readBranchInputs(request.sessionId)?.context,
         prior_evidence_by_lane:priorEvidenceByLane,
         presentation: config.comparison_scenes?.includes(selected.scene) ? 'paired' : 'single',
@@ -1809,6 +1815,7 @@ export function apply(ctx: any) {
           const accepts = (name: string) => {
             const suffix = extname(name).toLowerCase();
             if (target.adapter === 'ppt') return true;
+            if(target.adapter==='video')return /\.(mp4|mov|mkv|webm|mp3|wav|m4a|aac|ogg|png|jpg|jpeg|webp|gif|svg|txt|md|json)$/i.test(name);
             if (target.id === 'research-data-analysis') return ['.csv','.tsv','.json','.txt','.md'].includes(suffix);
             if (target.id === 'paper-proofreading') return ['.pdf','.docx','.doc','.tex','.bib','.bbl','.log','.md','.txt','.json'].includes(suffix);
             if (target.adapter === 'literature') return suffix === '.pdf';

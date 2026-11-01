@@ -1,7 +1,7 @@
 /** Immutable, account-local result copies. Never expose inputs, logs, or runtime credentials. */
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, realpathSync, readdirSync, readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
-import { join, resolve, relative, sep } from 'node:path';
+import { join, resolve, relative, sep, dirname, basename } from 'node:path';
 import {nativePresentedFiles} from './geneloop_native_work.ts';
 const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const within = (root: string, path: string) => { const rel = relative(realpathSync(root), realpathSync(path)); return rel && !rel.startsWith('..' + sep) && rel !== '..' && !rel.startsWith(sep); };
@@ -9,7 +9,7 @@ const valid = (id: string) => /^[a-zA-Z0-9-]{1,100}$/.test(id);
 export function comparisonArtifacts(output: string) {
   const root = join(output, 'comparison-artifacts'); mkdirSync(root, { recursive: true, mode: 0o700 });
   return {
-    snapshot(turn: string, lane: string, attempt: number, workspace: string, approvedFiles?:Set<string>, recoverEmpty = false, codeFiles = new Set<string>(), timeWindow?: {start:number;end:number}, expectedHashes=new Map<string,string>()) {
+    snapshot(turn: string, lane: string, attempt: number, workspace: string, approvedFiles?:Set<string>, recoverEmpty = false, codeFiles = new Set<string>(), timeWindow?: {start:number;end:number}, expectedHashes=new Map<string,string>(), deliveryKind:'data-report-delivery-v1'|'video-delivery-v1'='data-report-delivery-v1') {
       if (!valid(turn) || !['baseline', 'motif'].includes(lane) || !Number.isInteger(attempt) || attempt < 0) throw Error('artifact_identity_invalid');
       const destination = join(root, turn, lane, String(attempt));
       const index = join(destination, 'index.json');
@@ -18,12 +18,12 @@ export function comparisonArtifacts(output: string) {
       // task-bound evidence can migrate their public list and add verified files.
       if (previous && !approvedFiles) return previous;
       if (previous && !recoverEmpty) return previous.filter((row:any)=>
-        ['data-report-delivery-v1','code-output-v1'].includes(row.verification)||approvedFiles!.has(join(workspace,row.name)));
+        ['data-report-delivery-v1','video-delivery-v1','code-output-v1'].includes(row.verification)||approvedFiles!.has(join(workspace,row.name)));
       mkdirSync(destination, { recursive: true, mode: 0o700 });
       const rows: any[] = previous ? previous.filter((row:any)=>row.verification==='code-output-v1'||
         approvedFiles!.has(join(workspace,row.name))&&existsSync(join(workspace,row.name))&&
         sha(readFileSync(join(workspace,row.name)))===row.sha256).map((row:any)=>({...row,
-          verification:row.verification==='code-output-v1'?'code-output-v1':'data-report-delivery-v1'})) : [];
+          verification:row.verification==='code-output-v1'?'code-output-v1':row.verification==='video-delivery-v1'?'video-delivery-v1':'data-report-delivery-v1'})) : [];
       let total = rows.reduce((sum,row)=>sum+row.bytes,0), nextIndex = previous?.length ?? 0;
       const copy = (path: string, name: string) => {
         const commandFile = name.startsWith('outputs/code/') || name.startsWith('code/');
@@ -40,7 +40,7 @@ export function comparisonArtifacts(output: string) {
         while(existsSync(join(destination,id)))id=digest.slice(0,32)+'-'+nextIndex++;
         writeFileSync(join(destination, id), bytes, { mode: 0o600, flag: 'wx' });
         rows.push({ id, name, bytes: bytes.length, sha256: digest, attempt,
-          ...(commandFile ? {verification:'code-output-v1'} : approvedFiles?{verification:'data-report-delivery-v1'}:{}) }); total += bytes.length;
+          ...(commandFile ? {verification:'code-output-v1'} : approvedFiles?{verification:deliveryKind}:{}) }); total += bytes.length;
       };
       const scan = (directory: string, prefix: string, depth: number) => {
         if (!existsSync(directory) || depth > 5) return;
@@ -51,7 +51,7 @@ export function comparisonArtifacts(output: string) {
           if (st.isSymbolicLink() || !within(workspace, path)) continue;
           if (st.isDirectory()) { scan(path, prefix + name + '/', depth + 1); continue; }
           if (!st.isFile() || st.nlink !== 1 || st.size > 30 * 1024 * 1024 || total + st.size > 80 * 1024 * 1024) continue;
-          if (!expectedHashes.has(path) && !/\.(?:pdf|pptx|png|jpg|svg|csv|tsv|html|md|tex|bib|txt)$/i.test(name) &&
+          if (!expectedHashes.has(path) && !/\.(?:pdf|pptx|png|jpg|svg|csv|tsv|html|md|tex|bib|txt|mp4|webm|tsx)$/i.test(name) &&
               !((prefix.startsWith('outputs/code/') || prefix.startsWith('code/')) && /\.(?:docx|xlsx|json|zip|py|js)$/i.test(name))) continue;
           copy(path, prefix + name);
         }
@@ -164,9 +164,9 @@ export function captureComparisonDeliveries(service: ReturnType<typeof compariso
 }) {
   // Retrospective recovery needs a scene-specific proof format. A directory
   // scan of a persistent Session could otherwise pick up a later turn's files.
-  if (context.recoverMissing && context.adapter !== 'data-report') return [];
+  if (context.recoverMissing && !['data-report','video'].includes(context.adapter??'')) return [];
   if (!['completed','failed','budget_exhausted','cancelled'].includes(context.status)) return [];
-  if(context.status!=='completed'&&context.adapter!=='data-report')return [];
+  if(context.status!=='completed'&&!['data-report','video'].includes(context.adapter??''))return [];
   let approved: Set<string> | undefined;
   const codeFiles = new Set<string>();
   const start = Date.parse(context.startedAt ?? ''), end = Date.parse(context.finishedAt ?? '');
@@ -196,8 +196,9 @@ export function captureComparisonDeliveries(service: ReturnType<typeof compariso
     for(const path of codeFiles)approved.add(path);
     if ((context.status !== 'completed'||context.recoverMissing)&&!approved.size)return [];
   }
+  if(context.adapter==='video'){approved=verifiedVideoFiles(context.workspace,context.eventsPath);if(!approved.size)return [];}
   return service.snapshot(context.turn, context.lane, context.attempt, context.workspace, approved, context.recoverMissing === true, codeFiles,
-    context.adapter === 'workspace' && Number.isFinite(start) && Number.isFinite(end) ? {start,end} : undefined,presented);
+    context.adapter === 'workspace' && Number.isFinite(start) && Number.isFinite(end) ? {start,end} : undefined,presented,context.adapter==='video'?'video-delivery-v1':'data-report-delivery-v1');
 }
 
 function taskReportDeliveries(context: { eventsPath?: string; startedAt?: string; finishedAt?: string }, reviewWorkspace?:string) {
@@ -230,4 +231,27 @@ function taskReportDeliveries(context: { eventsPath?: string; startedAt?: string
     } catch { /* Invalid historical events never authorize a file. */ }
   }
   return found;
+}
+
+/** Only a task-bound successful render may publish media; never expose project assets. */
+export function verifiedVideoFiles(workspace:string,eventsPath?:string){
+ const allowed=new Set<string>();
+ const task=eventsPath&&basename(dirname(eventsPath));
+ if(!task||!/^[a-f0-9]{32}$/.test(task))return allowed;
+ const directory=join(workspace,'outputs/video',task),receipt=join(directory,'delivery.json');
+ try{
+  const st=lstatSync(receipt);if(!st.isFile()||st.isSymbolicLink()||st.nlink!==1||st.size>256*1024||!within(workspace,receipt))return allowed;
+  const value=JSON.parse(readFileSync(receipt,'utf8'));
+  if(value.schema_version!==1||value.kind!=='video-delivery-v1'||value.task_id!==task||value.full_video_decode!==true||!Array.isArray(value.files)||value.files.length!==2)return allowed;
+  const expected=['source.tsx','video.mp4'];
+  if(value.files.map((r:any)=>basename(r.name??'')).sort().join(',')!==expected.join(','))return allowed;
+  for(const row of value.files){
+   if(row.name!==`outputs/video/${task}/${basename(row.name)}`||!/^[a-f0-9]{64}$/.test(row.sha256))return new Set<string>();
+   const path=join(workspace,row.name),file=lstatSync(path);
+   if(!file.isFile()||file.isSymbolicLink()||file.nlink!==1||file.size!==row.bytes||file.size>30*1024*1024||!within(workspace,path)||sha(readFileSync(path))!==row.sha256)return new Set<string>();
+   if(row.name.endsWith('.tsx')&&row.sha256!==value.source_version)return new Set<string>();
+   allowed.add(path);
+  }
+ }catch{return new Set<string>();}
+ return allowed;
 }
