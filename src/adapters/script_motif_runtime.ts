@@ -5,7 +5,9 @@ import {join,relative,resolve,isAbsolute,extname} from 'node:path';
 import {digest,syntheticToolStreamBatch} from '../motif_core/online_skill_runtime.mjs';
 import {loopbackSimilarity} from './dsh_online_motif.mjs';
 import {fileURLToPath} from 'node:url';
+import {inflateSync} from 'node:zlib';
 import {createScriptExecutionFrontier} from './script_execution_frontier.ts';
+import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools';
 
 const sha=(s:any)=>createHash('sha256').update(s).digest('hex');
 const grants=new Map<string,{session:string;versions:any[];body:any;expires:number}>();
@@ -36,10 +38,10 @@ export function registerScriptCache(options:any){
  if(options.frontier){
   const notice=options.frontier.takeNotice('initial_stable_prefix'),offered=new Set(options.frontier.offeredProgramIds?.()??[]);
   const fallback=library.programs.filter((p:any)=>!offered.has(p.id));
-  return '可复用检查由 Runtime 按本次文件绑定，详细候选见当前选择通知；只选择本次任务确实需要的操作。执行回执是证据，最终判断仍由你完成。其他需要的检查可使用原生工具。必要时原有 bash 可调用 geneloop-cache '+
+  return (options.compactContext?'只读执行候选如下；其余工作仍可用原生工具。\n':'可复用检查由 Runtime 按本次文件绑定，详细候选见当前选择通知；只选择本次任务确实需要的操作。执行回执是证据，最终判断仍由你完成。其他需要的检查可使用原生工具。必要时原有 bash 可调用 geneloop-cache '+
   "'{\"calls\":[{\"id\":\"当前候选中的 script_ID\",\"paths\":[\"/work/实际文件\"],\"argv\":[]}]}'"+
-  '；paths按算子inputs顺序，禁止附加管道或重定向。不要重做已有且版本未变的检查。\n'+
-  (fallback.length?'仍可由你显式绑定和选择的缓存算子（未进入当前自动选择）：'+JSON.stringify(fallback.map((p:any)=>({id:p.id,operation:p.interface??p.description,inputs:p.inputs,argv_contract:p.argv_contract,network_policy:p.network_policy})))+'\n':'')+notice;
+  '；paths按算子inputs顺序，禁止附加管道或重定向。不要重做已有且版本未变的检查。\n')+
+  (fallback.length?(options.compactContext?'显式缓存格式：geneloop-cache '+JSON.stringify({calls:[{id:'script_ID',paths:['/work/实际文件'],argv:[]}]})+'。必须独立命令，不能追加管道。\n':'')+'仍可由你显式绑定和选择的缓存算子（未进入当前自动选择）：'+JSON.stringify(fallback.map((p:any)=>({id:p.id,operation:p.interface??p.description,inputs:p.inputs,argv_contract:p.argv_contract,network_policy:p.network_policy})))+'\n':'')+notice;
  }
  return '可复用脚本库（真实历史代码；输出是证据，不代表文献判断正确）。按当前任务选择需要的操作，用原有 bash 调用，不必重写等价脚本。允许批量 calls，仍由你选择查询对象、判断来源与撰写最终报告。命令格式：geneloop-cache '+
   "'{\"calls\":[{\"id\":\"script_ID\",\"paths\":[\"/work/实际文件\"],\"argv\":[]}]}'"+
@@ -50,7 +52,7 @@ export function prepareCacheInvocation(session:string,command:string){
  if(/\bgeneloop-reuse\s/.test(command)){
   const reuse=reuseMediators.get(session);if(!reuse)throw Error('reuse_mediation_not_admitted');return reuse.prepare(command);
  }
- if(command.trim().startsWith('geneloop-resolve ')){
+ if(command.trim().replace(/^cd\s+(?:'\/work'|"\/work"|\/work)\s*&&\s*/, '').startsWith('geneloop-resolve ')){
   const frontier=caches.get(session)?.frontier;
   if(!frontier)throw Error('semantic_frontier_not_admitted');
   return frontier.prepare(command);
@@ -106,6 +108,39 @@ export function observeScriptCache(session:string,execution:any,result:any){
  return facts;
 }
 export function programIdentity(p:any){return {version:p.version,language:p.language,template:p.template,inputs:p.inputs,...(p.argv_contract?{argv_contract:p.argv_contract}:{}),...(p.network_policy?{network_policy:p.network_policy}:{})};}
+/** Bounded lossless transport avoids native Bash's pre-policy stdout clipping.
+ * Decoding is not certification: the caller must still verify nonce, call,
+ * program, current input versions and every evidence digest.
+ */
+export function decodeScriptReceipt(value:any){
+ if(value?.kind==='script_motif_receipt')return value;
+ if(value?.kind!=='script_motif_envelope'||value.encoding!=='zlib_base64_v1'||
+  digest(Object.keys(value).sort())!==digest(['encoding','kind','payload','sha256'])||typeof value.payload!=='string'||
+  value.payload.length>48000||!value.payload.match(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)||
+  typeof value.sha256!=='string'||!value.sha256.match(/^[a-f0-9]{64}$/))throw Error('invalid_script_receipt_envelope');
+ const bytes=inflateSync(Buffer.from(value.payload,'base64'),{maxOutputLength:256000});
+ if(sha(bytes)!==value.sha256)throw Error('script_receipt_envelope_digest_changed');
+ const receipt=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+ if(receipt.kind!=='script_motif_receipt')throw Error('nested_or_foreign_script_receipt');return receipt;
+}
+/** Infer transport shape from BOTH independent executions, never field truth.
+ * Different object keys stay opaque; do not publish source-specific data keys.
+ */
+export function witnessedOutputSchema(outputs:string[]){
+ try{
+  const values=outputs.map(s=>JSON.parse(s));if(values.length<2)return;
+  function schema(rows:any[],depth=0):any{
+   const types=rows.map(v=>v===null?'null':Array.isArray(v)?'array':typeof v);
+   if(new Set(types).size!==1||!['object','array','string','number','boolean','null'].includes(types[0]))throw Error('unstable_output_type');
+   const type=types[0];if(type!=='object')return {type};
+   const keys=Object.keys(rows[0]).sort();
+   if(depth>=4||!keys.length||keys.length>32||keys.some(k=>k.length>80||['__proto__','constructor','prototype'].includes(k))||rows.some(r=>digest(Object.keys(r).sort())!==digest(keys)))return {type:'object'};
+   return {type:'object',required:keys,additionalProperties:false,properties:Object.fromEntries(keys.map(k=>[k,schema(rows.map(r=>r[k]),depth+1)]))};
+  }
+  const result=schema(values);
+  if(result.type==='object'&&result.properties&&Buffer.byteLength(JSON.stringify(result))<=8000)return result;
+ }catch{}
+}
 export function scriptCommand(program:any,paths:string[],versions:string[],nonce:string,options:any={}){
   if(paths.length!==program.inputs.length||paths.some(p=>!p.startsWith('/work/')||p.includes('\n')))throw Error('invalid_script_binding');
   let source=program.template;
@@ -116,8 +151,11 @@ export function scriptCommand(program:any,paths:string[],versions:string[],nonce
   const http=program.network_policy?`import urllib.request as _sm_http\n_sm_cache=${JSON.stringify(options.http??{})}\n_sm_pending=[]\nclass _sm_Demand(BaseException): pass\ndef _sm_fetch(request, data=None, timeout=None, **kwargs):\n    url=request.full_url if isinstance(request,_sm_http.Request) else request\n    assert data is None and (not isinstance(request,_sm_http.Request) or request.get_method()=='GET'), 'GET_only'\n    assert isinstance(url,str) and len(url)<=4096, 'bounded_url'\n    if url not in _sm_cache:\n        _sm_pending.append(url)\n        raise _sm_Demand()\n    row=_sm_cache[url]\n    payload=open(row['file'],'rb').read()\n    assert _sm_hash.sha256(payload).hexdigest()==row['sha256'], 'http_evidence_changed'\n    return _sm_io.BytesIO(payload)\n_sm_http.urlopen=_sm_fetch\n`:'';
   const header=`import io as _sm_io, contextlib as _sm_context, hashlib as _sm_hash, json as _sm_json, resource as _sm_resource, sys as _sm_sys\n_sm_resource.setrlimit(_sm_resource.RLIMIT_CPU, (20,20))\nif _sm_sys.platform != 'darwin':\n    _sm_resource.setrlimit(_sm_resource.RLIMIT_AS, (536870912,536870912))\n_sm_sys.argv=${JSON.stringify(['cached-script',...(options.argv??[])])}\n_sm_paths=${JSON.stringify(paths)}\n_sm_expected=${JSON.stringify(versions)}\ndef _sm_versions():\n    return [_sm_hash.sha256(open(p,'rb').read()).hexdigest() for p in _sm_paths]\nassert _sm_versions()==_sm_expected, 'input_changed'\n${http}def _sm_program():\n`;
   const invoke=program.network_policy?`try:\n    with _sm_context.redirect_stdout(_sm_buffer):\n        _sm_program()\nexcept _sm_Demand: pass\nif _sm_pending:\n    print(_sm_json.dumps({'kind':'script_http_demand','url':_sm_pending[0]}))\n    _sm_sys.exit(0)\n`:`with _sm_context.redirect_stdout(_sm_buffer):\n    _sm_program()\n`;
-  const footer=`\n_sm_buffer=_sm_io.StringIO()\n${invoke}assert _sm_versions()==_sm_expected, 'input_changed'\n_sm_output=_sm_buffer.getvalue()\nassert 0<len(_sm_output.encode())<=16000, 'output_bound'\nprint(_sm_json.dumps({'kind':'script_motif_receipt','nonce':${JSON.stringify(nonce)},'program_id':${JSON.stringify(program.id)},'versions':_sm_expected,'output':_sm_output,'output_sha256':_sm_hash.sha256(_sm_output.encode()).hexdigest()},ensure_ascii=False))\n`;
-  return "python3 - <<'SCRIPT_MOTIF_BOUNDARY'\n"+header+source.split('\n').map((s:string)=>'    '+s).join('\n')+footer+'SCRIPT_MOTIF_BOUNDARY';
+  const receiptExpression=`_sm_json.dumps({'kind':'script_motif_receipt','nonce':${JSON.stringify(nonce)},'program_id':${JSON.stringify(program.id)},'versions':_sm_expected,'output':_sm_output,'output_sha256':_sm_hash.sha256(_sm_output.encode()).hexdigest()},ensure_ascii=False)`;
+  const footer=`\n_sm_buffer=_sm_io.StringIO()\n${invoke}assert _sm_versions()==_sm_expected, 'input_changed'\n_sm_output=_sm_buffer.getvalue()\nassert 0<len(_sm_output.encode())<=16000, 'output_bound'\n`;
+  const transport=options.compactReceipt?'_sm_receipt='+receiptExpression+'\n'+
+   "import zlib as _sm_zlib, base64 as _sm_b64\n_sm_payload=_sm_receipt.encode('utf-8')\nassert len(_sm_payload)<=256000, 'receipt_bound'\n_sm_compact=_sm_b64.b64encode(_sm_zlib.compress(_sm_payload)).decode('ascii')\nassert len(_sm_compact)<=48000, 'compressed_receipt_bound'\nprint(_sm_json.dumps({'kind':'script_motif_envelope','encoding':'zlib_base64_v1','payload':_sm_compact,'sha256':_sm_hash.sha256(_sm_payload).hexdigest()}))\n":'print('+receiptExpression+')\n';
+  return "python3 - <<'SCRIPT_MOTIF_BOUNDARY'\n"+header+source.split('\n').map((s:string)=>'    '+s).join('\n')+footer+transport+'SCRIPT_MOTIF_BOUNDARY';
 }
 function shape(v:any,depth=0):any{
   if(v===null)return 'null';if(Array.isArray(v))return v.length&&depth<3?{array:shape(v[0],depth+1)}:'array';
@@ -174,6 +212,7 @@ export function loadScriptLibrary(path:string){
   const locked=scriptCodeLocks;
   if(!library.code_locks||locked.some(p=>sha(readFileSync(join(root,p)))!==library.code_locks[p]))throw Error('script_runtime_changed');
   for(const p of library.programs){
+    if(p.certification?.receipt_protocol!==undefined&&p.certification.receipt_protocol!=='bounded_zlib_v1')throw Error('unsupported_script_receipt_protocol');
     if(!p.certification?.passed||p.certification.cases<2||p.certification.source_equivalent!==true||
        p.certification.program_sha256!==digest(programIdentity(p))||
        p.id!=='script_'+p.certification.program_sha256.slice(0,24))throw Error('uncertified_script');
@@ -181,7 +220,7 @@ export function loadScriptLibrary(path:string){
   return library;
 }
 export const scriptCodeLocks=['src/adapters/script_learning_store.ts','src/adapters/reuse_snapshot.py','scripts/learn-script-motifs.py','src/adapters/script_motif_compiler.py','src/adapters/script_dataflow_compiler.py','src/adapters/reuse_mediation.ts','src/adapters/script_motif_runtime.ts','src/adapters/script_execution_frontier.ts','src/adapters/script_negative_runtime.ts','src/adapters/negative_field_runtime.ts','src/adapters/geneloop_shell.ts','src/adapters/script_motif_shell.ts','src/adapters/script_motif_macos.ts','src/adapters/script_motif_web.ts','scripts/script-motif-web.py','scripts/certify-script-motifs.mjs','scripts/run-certified-script.mjs','scripts/fetch-script-evidence.py'];
-export function createScriptInterceptor({library,workspace,session,goal,mode,endpoint,model,minSimilarity=.88,minMargin=.04,minGoalSimilarity=.6,negativeGoals=[],audit,similarity,demandBound=false,executionFrontier=false}:any){
+export function createScriptInterceptor({library,workspace,session,goal,mode,endpoint,model,minSimilarity=.88,minMargin=.04,minGoalSimilarity=.6,negativeGoals=[],audit,similarity,demandBound=false,executionFrontier=false,compactContext=false}:any){
   if(!['cache','shadow','execute'].includes(mode))throw Error('invalid_script_mode');
   if(!Number.isFinite(minSimilarity)||minSimilarity<.5||minSimilarity>1||!Number.isFinite(minMargin)||minMargin<.01||minMargin>1)throw Error('invalid_script_threshold');
   if(!Number.isFinite(minGoalSimilarity)||minGoalSimilarity<.5||minGoalSimilarity>1||!Array.isArray(negativeGoals)||negativeGoals.length>9||negativeGoals.some((s:any)=>typeof s!=='string'||!s.trim()||s.length>16000))throw Error('invalid_script_goal_policy');
@@ -198,23 +237,52 @@ export function createScriptInterceptor({library,workspace,session,goal,mode,end
   }
   const used=new Set();let pending:any=null;let halted=false;let history:any[]=[];let userEnvelope:string|undefined;
   if(executionFrontier&&mode!=='execute')throw Error('frontier_requires_explicit_execute');
-  const frontier=executionFrontier?createScriptExecutionFrontier({library,goal,audit,
+  const frontier=executionFrontier?createScriptExecutionFrontier({library,goal,audit,compactContext,
     bind:(program:any)=>bindScript(program,workspace),verify:(b:any)=>{
       try{return sha(fixedInput(workspace,b.host))===b.sha256;}catch{return false;}
     }}):null;
   function issue(winner:any,origin='matched'){
     const nonce=randomUUID(),callId='sss-script-'+randomUUID();
-    const body=scriptCommand(winner.program,winner.bound.map((b:any)=>b.path),winner.bound.map((b:any)=>b.sha256),nonce);
+    const body=scriptCommand(winner.program,winner.bound.map((b:any)=>b.path),winner.bound.map((b:any)=>b.sha256),nonce,{compactReceipt:compactContext&&winner.program.certification?.receipt_protocol==='bounded_zlib_v1'});
     const command='geneloop-script '+winner.program.id+' '+nonce;
     used.add(winner.key);pending={...winner,nonce,callId,command,origin};grants.set(sha(command),{session,versions:winner.bound,body,expires:Date.now()+30000});
     audit({kind:'script_bypass_attempt',program_id:winner.program.id,input_versions:winner.bound.map((b:any)=>b.sha256),score:winner.score,origin,fragment_id:winner.fragment_id});
-    return syntheticToolStreamBatch([{callId,proposal:{tool:'bash',arguments:{command,description:'复用已认证的只读脚本：'+JSON.stringify(winner.program.interface??winner.program.description)}}}]);
+    return syntheticToolStreamBatch([{callId,proposal:{tool:'bash',arguments:{command,description:compactContext?'执行当前已选择的只读检查':'复用已认证的只读脚本：'+JSON.stringify(winner.program.interface??winner.program.description)}}}]);
+  }
+  function verifiedReceipt(p:any,execution:any,result:any){
+   try{
+    if(!p||!consumed.has(sha(p.command))||result.isError===true||execution.name!=='bash'||execution.callId!==p.callId||execution.arguments?.command!==p.command)return null;
+    const text=(result.content??[]).filter((b:any)=>b.type==='text').map((b:any)=>b.text).join('\n');
+    const raw=p.projection&&digest(result.content)===p.projection.content_digest?p.projection.receipt:
+     text.split('\n').map((line:string)=>{try{return JSON.parse(line);}catch{return null;}}).find((r:any)=>['script_motif_receipt','script_motif_envelope'].includes(r?.kind));
+    if(raw?.kind==='script_motif_envelope'&&p.program.certification?.receipt_protocol!=='bounded_zlib_v1')return null;
+    const receipt=decodeScriptReceipt(raw);
+    if(!(receipt?.nonce===p.nonce&&receipt.program_id===p.program.id&&sha(receipt.output)===receipt.output_sha256&&
+     digest(receipt.versions)===digest(p.bound.map((b:any)=>b.sha256))&&p.bound.every((b:any)=>sha(fixedInput(workspace,b.host))===b.sha256)))return null;
+    if(p.program.certification?.output_schema&&validateJsonSchemaValue(p.program.certification.output_schema,JSON.parse(receipt.output)).length){audit({kind:'script_result_schema_mismatch',program_id:p.program.id});return null;}
+    return receipt;
+   }catch{return null;}
   }
   return {
     frontier,
     frontierPrompt(){return frontier?.prompt()??'';},
     frontierNotice(){return frontier?.takeNotice()??'';},
     dispose(){if(pending){const key=sha(pending.command);grants.delete(key);consumed.delete(key);}caches.delete(session);pending=null;halted=true;},
+    projectResult(execution:any,result:any){
+      if(!compactContext)return;
+      const receipt=verifiedReceipt(pending,execution,result);if(!receipt)return;
+      // Do not change the canonical Bash value or any stdout. Full proof is
+      // durably audited BEFORE the public post-execute content replacement.
+      const content=[{type:'text',text:JSON.stringify({kind:'verified_script_evidence',program:pending.program.id,inputs:pending.bound.map((b:any)=>({path:b.path,sha256:b.sha256})),stdout:receipt.output,semantic_quality_accepted:false})}];
+      const saved=Buffer.byteLength(JSON.stringify(result.content))-Buffer.byteLength(JSON.stringify(content));
+      // A compressed envelope must become readable stdout even when decoding
+      // expands it. This option never exposes encoded proof as model evidence.
+      if(saved<=0&&pending.program.certification?.receipt_protocol!=='bounded_zlib_v1')return;
+      audit({kind:'script_evidence_raw',call_id:execution.callId,program_id:pending.program.id,content:result.content,content_sha256:digest(result.content),...(pending.program.certification?.receipt_protocol==='bounded_zlib_v1'?{decoded_receipt:receipt}:{})});
+      pending.projection={receipt,content_digest:digest(content)};
+      audit({kind:'script_evidence_context_projected',call_id:execution.callId,utf8_bytes_removed:saved,stdout_complete:true,scope:'model_content_only_canonical_value_and_raw_audit_preserved'});
+      return content;
+    },
     observe(id:string,execution:any,result:any){
       if(id!==session)return;
       frontier?.observe(execution,result);
@@ -224,18 +292,13 @@ export function createScriptInterceptor({library,workspace,session,goal,mode,end
       history.push({tool:execution.name,program_id:anchor?.id,bound:facts.at(-1)?.bound??(pending&&pending.callId===execution.callId?pending.bound:[]),ok:result?.isError!==true,intent:anchor?.intent??(typeof execution.arguments?.description==='string'?execution.arguments.description.slice(0,240):execution.name)});history=history.slice(-6);
       if(!pending||execution.callId!==pending.callId)return facts;
       const p=pending;pending=null;grants.delete(sha(p.command));
-      let verified=false;
-      try{
-        const text=(result.content??[]).filter((b:any)=>b.type==='text').map((b:any)=>b.text).join('\n');
-        const receipt=text.split('\n').map((line:string)=>{try{return JSON.parse(line);}catch{return null;}}).find((r:any)=>r?.kind==='script_motif_receipt');
-        verified=consumed.has(sha(p.command))&&result.isError!==true&&execution.name==='bash'&&execution.arguments?.command===p.command&&
-          receipt?.nonce===p.nonce&&receipt.program_id===p.program.id&&sha(receipt.output)===receipt.output_sha256&&
-          digest(receipt.versions)===digest(p.bound.map((b:any)=>b.sha256))&&p.bound.every((b:any)=>sha(fixedInput(workspace,b.host))===b.sha256);
-      }catch{}
+      const receipt=verifiedReceipt(p,execution,result),verified=!!receipt;
       consumed.delete(sha(p.command));
       audit({kind:verified?'script_model_request_skipped_verified':'script_result_unverified',program_id:p.program.id,library_digest:library.digest});
       if(p.origin==='frontier')frontier?.finish(p.program.id,verified);
       if(!verified)halted=true;
+      if(verified)facts.push({program:p.program,bound:p.bound,output:receipt.output});
+      return facts;
     },
     async intercept(id:string,options:any,next:any){
       if(id!==session||halted||pending||mode==='cache'||!options.tools?.some((t:any)=>t.name==='bash'))return next();

@@ -1,4 +1,92 @@
 # 论文校对 当前交接
+
+## 2026-10-23：回执传输独立 main 修复
+
+- 目标与范围：用户同意依次推进传输小PR、明确反例下的候选失效、成本决定。第一步从最新 main `62cb9787` 新建 `codex/script-receipt-transport-20261023`，只整理有界无损回执，不带入尚未发布的集合/关系/反馈实验。原实验分支 `codex/paper-evidence-split-20261023` 在 `fd7f98c9` 完整保留，Desktop脏工作区、生产、原件及旧库未动。
+- 已完成：Runtime校验并解码 `bounded_zlib_v1`，仅显式compactContext和新认证标记共同启用；模型始终看到可读stdout，包括解码结果更大的情况。认证器对来源/独立输入核对完整明文/压缩回执等价。原stdout、权限、版本和一次性授权守卫不变，旧明文路径保留；代码锁仍须实际重认证，不能直接补hash。接口见docs/interfaces，范围见[独立记录](../experiments/script-receipt-transport-20261023-v1.md)。
+- 已验证：40项定向通过；完整Python1519通过/235跳过，Node1372通过/15跳过/1失败。未修改网关的大上传ECONNRESET在原样main私有独立检出也8/9失败，已定位为main同现问题，未借本PR改网关。smoke/motif:check通过、0模型。12个原历史程序重新沙箱认证，ID/模板/描述不变，私有transport-main-library摘要 `beb12ae8…`；未更新生产库。
+- 费用与配置：本步骤API0/USD0，累计6697/USD12.048783156，unknown13/pending2保留，非账单；本地/人工成本未货币量化。原始日志、原样main诊断检出、认证、state及PR材料放 `.local/paper-candidate-guard-20261023-v1/`。真实论文回执失败的付费回归属于先前实验分支，不把本次合成传输诊断称新论文效果。
+- 接手下一步：仅推送/提传输PR供审阅，不合并/部署；远端CI需独立查看。其后另开分支做当前程序/输入/任务目标绑定的明确质量反例，不将相似结果、未选、重写或单次任务失败直接编译为错误原因；关系扩展继续暂停。无后台付费，heartbeat保持暂停。
+
+## 2026-10-21：PR106 已提交，主线同步核验
+
+- 范围与代码：`codex/paper-evidence-handoff-20261021`已推送，[PR106](https://github.com/jingyio/GeneLoop/pull/106)以main为base，供审阅，未合并或部署。远端main核对为`5373b0e5`，已是本分支祖先；`git merge origin/main`返回Already up to date，无冲突，无新增机制代码。
+- 依赖：PR104尚未合并，本PR目前包含其Positive描述/Negative提示型RSI和DSH基础兼容改动；PR正文明确列出，建议先审104再收敛增量，不自动合并或关闭旧PR。不要将父PR的绿灯当作本PR CI。
+- 验证：复用当前源码的五篇十次真实结果和源快照一致性核验，不重复付费测试。最近本地Python1519通过/235跳过、相关Node94通过/2跳过、smoke/motif通过；完整Node1368通过/15跳过/1项未修改gateway的ECONNRESET失败保留。远端Ubuntu/Windows检查以PR106当前head为准。
+- 数据与费用：PR仅含代码、题面及匿名指标/结论，私人原件、凭证、原始轨迹未提交。PR准备新增真实模型调用0，累计仍6559请求/USD11.741008680保守估费，旧与新增共10 unknown/2 pending继续待核，不能称最终净降本。私有准备/提交记录在`.local/paper-main-pr-20261021-v1/`，十次证据见下一节。
+- 接手下一步：审阅PR106当前检查及#104依赖；确认合并方式后再同步main。生产与公共默认关闭状态不变，不自动扩大自动学习、执行或外部写入范围。
+
+## 2026-10-21：修复后五篇论文十次真实复测
+
+- 目标与范围：按用户要求重启原五篇完整BibTeX文件任务，每篇两次，仅Motif；沿用旧10次Baseline与旧10次Motif，不新增普通缓存或Baseline。固定代码/库、不在中途改规则或回灌测试轨迹。
+- 分支 / 代码：`codex/paper-evidence-handoff-20261021`，运行提交`ca1bbdcc`、接入修复`fe41cd39`。只新增实验记录，本地提交未推送/PR/合并/部署；原Desktop/SSS和生产未动。
+- 已完成与验证：10/10正常结束、核心9/10正确；44工具Schema/顺序与旧Baseline一致、十次源码快照一致、题面/来源hash一致、原件未变。真实DeepSeek Flash/off，输出8192、300秒，cap/request=null、reset_history=false；原生压力检查点策略不变。无机制/接口改动，复用前轮相关94通过/2跳过、smoke/motif通过记录，未重复全量测试；旧gateway超大上传ECONNRESET失败仍保留。
+- 实验结论：见[本轮复测](../experiments/paper-multipaper-retest-20261021-v1.md)及[十次指标](../experiments/paper-multipaper-retest-20261021-v1.csv)。Baseline195请求/94785输出Token，本轮110/52100（-43.59%/-45.03%）；未缓存输入288898→284698（-1.45%），上轮冷输入大增未重现。核心9/10与Baseline同通过率，但失败类型不同，不能称无损。
+- 机制与反例：4/10任务实际接管21程序，8种程序、4种跨论文复用；Prefix两轮均正确，54→10请求、USD0.069582→0.024544。QLoRA首轮实际修正管道后接管4程序。其余6次未提交选择/缓存命令，不能将全部请求下降归因于自动接管或Embedding。S4第二轮模型原生解析器将8条有year记录误报缺失，明确保留；不是漏报一条缺失年份。最终执行后仍14次已知用量模型请求，包含必要总结，不能全算可省。
+- 配置与数据：私有`.local/paper-multipaper-retest-20261021-v1/`保留protocol/授权、run.py、固定sidecar、结果/回答/Breakdown、comparison、mechanism-audit、verification；原生事件/账本在各web run。复用`execute-transport.json`的冻结原12程序/1复用契约/1Negative，库digest `02a887057fc0…`，compactContext=true、阈值不变。自动学习关闭、模型学习0、Embedding0、Negative提示0；这是消费已有学习成果的执行回归，不是新的RSI学习验收。
+- 权限与费用：新增110请求，已知用量估费USD0.170113848；DDPM两笔502无用量，完整保留USD0.107458800预约，保守合计USD0.277572648，比Baseline USD0.243661320高13.92%，最终净费下降尚未确认。累计6559请求/USD11.741008680，旧8 unknown/2 pending保留，新增2 unknown/0 pending；账单未核。上轮137请求/USD0.336523500开发验证另列，不能隐藏或宣称本十次已摊销。
+- 接手下一步：核对两笔未知账单；优先检查为何六次没有选用候选以及原生解析结果的覆盖/失效机制，采用局部回归，不重跑相同Baseline。少量同输入观察不能证明稳定一般收益，不直接发布或自动提PR。
+- 回退与风险：本轮未改机制或生产配置，移除实验sidecar即可走原生路径；保留全部失败与累计历史。十次真实任务及runner全部结束，无后台继续付费；未联网核验文献真实性、未做PDF或全部文字人工盲评，仅本地macOS验收。
+
+## 2026-10-21：上下文、输出字段与选择传输修复
+
+- 目标与范围：接续五篇评测的冷输入/重复解析归因，在独立分支`codex/paper-evidence-handoff-20261021`开发；实现提交`a62a037f`、`73e3e224`、`fe41cd39`，仅本地，未推送/PR/合并/部署，Desktop/SSS脏工作区未改。
+- 已完成：compactContext默认关闭，短候选ID/共享输入绑定/延迟无用协议；DSH公开post-execute保留全部stdout并私存完整证明；可选JSON形状认证及结果向原数据复用器传递；依赖切片标记常量输出并修正生成标签误判。选择入口支持固定`cd /work &&`，带管道的显式选择整体不执行，只提供一次保留原选择的重试命令；模型重交后才走原守卫。不改上游核心、生产、工具集合、阈值、原件或权限。
+- 已验证：新增传输分支定向Node94通过/2平台跳过。最终npm test为Python1519通过/235跳过、Node1368通过/15跳过/1失败；未改动的gateway在途超大上传413测试发生ECONNRESET，隔离复跑同项仍失败，未宣称全量绿。smoke/motif:check通过。日志位于私有`final-test.log`等。所有库按当前源码实际重新认证，阶段3固定原12个模板/描述/输入契约及原复用/Negative规则；无改锁绕过。检查是免费诊断，不能冒充模型效果。
+- 真实结果：本轮14次启动，4次冻结对象错误在调用API前失败，10次真实完成、核心8/10正确；阶段1四次均正确，阶段2及阶段3各有一次QLoRA漏第三组标题重复。阶段3 DDPM确实经历错误管道→诊断→模型修正→3程序连续接管，10请求/USD0.015021336；QLoRA直接写原生程序，10请求/USD0.023140296且漏检，不计合格降本。不是完整论文联网核验/PDF，也不是独立盲评。见[完整记录](../experiments/paper-context-handoff-20261021-v1.md)及[逐次指标](../experiments/paper-context-handoff-20261021-v1.csv)。
+- 归因更新：原10次Motif+本轮前8次共18次中，3次已selected但带旧入口不识别的包装、均未接管，不能统一解释为模型未选择；任意中间shell前缀仍不支持。字段齐全/程序未崩不等于正确解析；QLoRA原生路径发现引号问题后只修语法检查，未重算已受影响的标题分组。字段覆盖/依赖失效仍未完整实现，不能把提示当验收机制。
+- 配置与复现：`.local/paper-context-handoff-20261021-v1/`保留授权、各阶段protocol、全部失败/学习、认证/库、results/all-attempts/analysis/metrics/final-verification和原runner输出。入口沿用`run-script-motif-experiment.py --real-model --mode execute --script-config "$PRIVATE_CONFIG"`；当前`execute-transport.json`的库摘要`02a887057fc0…`。真实DeepSeek Flash/off，输出8192，300秒；原完整DDPM/QLoRA输入及公共bibliography-integrity题面，只做Motif局部回归、不新跑Baseline。阶段2新增JSON候选漏检，不推广该私有库。
+- 权限与费用：沿用本地持续授权cap_usd:null / uncapped_user_authorized / reset_history:false。Agent136请求/USD0.335993232，另描述学习1请求/USD0.000530268（超原描述预算，未接受）；新增137/USD0.336523500，累计6449/USD11.463436032，均为保守代理估费而非账单。新2笔502保留USD0.113826300预约，旧6 unknown/2 pending保留；没有新增Baseline、后台继续付费或模型学习成果虚报。
+- 接手下一步：先审阅字段读取覆盖与结果依赖；自动学到的程序需要能够区分“字段存在”“值是常量”“实际完成检查”。旧解析修正后，相关旧结果应局部失效/重算，不能只用更强提示告诉模型完成。传输修复已有真实路径证据，整体同质量稳定净降本仍未证明，不急于新增PR或更多全量运行。
+- 回退与风险：移除实验sidecar走原生路径；旧库和所有历史失败留存，生产/认证库/原材料不受影响。仅本地macOS沙箱验收，未声明Windows或Linux真实效果。人工、本地计算及供应商账单尚未量化/核对。
+
+## 2026-10-21：五篇论文 BibTeX 文件任务真实评测
+
+- 目标与范围：用户要求给导师提供最新版论文场景效果，选择5篇论文的完整BibTeX文件完整性/重复检查，随后明确取消普通缓存组。仅Baseline与Script Motif，各篇各2次，共20次；不是联网真实性、正文对应或PDF交付评测。
+- 分支 / 代码：`codex/paper-multipaper-eval-20261021`，运行提交`8c2e2d61`，包含启动时最新main `5373b0e5`及PR104的`b19bda66`；题面/结果记录在当前分支。未新增PR、未合并、未部署，当前评测记录仅本地提交；原Desktop/SSS脏工作区未改。
+- 已完成：复用原`run-script-motif-experiment.py`；冻结并实际再认证12 Script算子/1契约/1提示型Negative，模型学习新增0。5份公开arXiv v1原始文件共598条，训练库无相同完整输入hash，未注入错误或截取。两轮顺序反转，测试轨迹不回灌当前库。公共题面为`scenarios/paper-submission/bibliography-integrity.prompt.md`。
+- 已验证：20次真实DeepSeek Flash/off，输出8192，300秒期限内均原生结束；实际source hash/原件未改/模型配置均核对；所有src/scripts快照及44工具schema一致。独立bibtexparser1.4.3与条目头计数一致，按固定JSON字段离线验收；没有全部文字的独立人工盲评。仅新增文档/题面和指标，未改机制代码，不重复完整npm test或付费全场景。
+- 实验结论：见[完整评测](../experiments/paper-multipaper-eval-20261021-v1.md)及[20次指标](../experiments/paper-multipaper-eval-20261021-v1.csv)。Baseline195请求/USD0.243661320，Motif165/USD0.240745620；请求-15.38%、输出Token-18.89%、Agent时间-29.22%，费用仅-1.20%，核心完全正确9/10→8/10。双方核心正确的7配对中Motif反高7.85%，只作事后诊断。未证明同质量稳定净降本。
+- 机制证据：6/10 Motif任务发生42次认证结构执行，10种程序、8种跨至少两篇复用，覆盖4篇；不是净少42次API。Embedding/Negative提示实际0次，不能归因于它们。片段完成后仍98次模型请求、USD0.10982431；Prefix两轮都接管8程序但实际8→38请求，后续路径差异显著。
+- 失败与归因：QLoRA两次均漏同一组标题重复；同轨迹已有一个解析器返回3组，另一个只认花括号字段返回2组，最终取211计数却保留2组，冲突证据未统一验收。S4首轮Baseline拒绝已存在且hash一致的当前输入、返回null，不能称正确对照。Mac原生文件IO的Linux descriptor限制为B8/M5次，M另1次其他错误；全部保留，不能代表Linux生产。
+- 费用核算：命中输入-515200省USD0.0030912，输出-17907省0.0214884，冷输入+72213增0.0216639；首请求已有23268冷输入增量，余48945来自后续路径，不能全归为目录或纯算法开销。历史描述/Negative学习15请求/USD0.013573896另列，若全部摊到当前十次使用不再净省。历史14来源/认证任务127请求/USD0.164169312另列，不混分母。
+- 冷输入追查：仅离线重算20次既有日志，无新付费。首请求+23268，后续扣除上一模型输出的净上下文增长代理量+53980，既有上下文未命中剩余量反而-5035，合计+72213。每任务初始system固定多8036字节，其中2353为本轮零调用的数据复用协议；没有观察到反复system更新。42次自动结果61691字节，普通结果另232263字节，相比Baseline全部192676字节显著膨胀；DDPM接管后误解析产生16750/7157字节结果。完整源码已用句柄隐藏，不能将问题归为重复注入代码。具体计量/边界见同一实验记录；私有analyze-cold-input.py/cold-input-analysis.json可复核。字节不是Token，未把分析当成实测节省。
+- 配置与数据：`.local/paper-multipaper-eval-20261021-v1/`保存protocol/授权、下载可用性、原始文件/预生成oracle、固定库/编译状态、逐次log/回答/Breakdown、results/analysis/enriched/final-verification及复现脚本；原始事件/账本仍在各web run。库digest `70bfa012…`，阈值.88/.04/.6不变；压缩为native-pressure-checkpoint-v1。凭证/原始资料/日志不提交。V100拒绝SSH，按既有授权本地运行。
+- 权限与预算：cap_usd:null / uncapped_user_authorized / reset_history:false；新增360请求/USD0.484406940，累计6312/USD11.126912532保守估费，非账单；新pending/unknown0，旧6 unknown/2 pending及V100旧账继续待核。所有任务及本轮Embedding进程已结束，无后台继续付费，未改原件/生产/公共库。
+- 接手下一步：先让完整范围和字段级结果可验收，对2组/3组冲突局部核验并确保最终不丢失已有证据；再减少不接管时目录冷输入及片段完成后的重复脚本。不要以库数量、42次结构执行或单次便宜结果代替净降本结论。若改变机制/模型/平台，另开实验ID；不要覆盖这轮失败。
+- 回退与风险：本轮仅独立实验和记录，停止/移除私有sidecar不影响生产；保留全部原始来源、历史库和累计账本。私有库不构成公开自包含benchmark包，未声明Windows/Linux真实模型效果。
+
+## 2026-10-21：数据驱动证据程序复用实验
+
+- 分支`codex/motif-cost-learning-20261021`，实现`76ca3e2`；新增从真实原生代码及前后快照学习的配对证据程序，独立新输入认证，TypeScript按模型选择、当前输入和版本守卫执行。不是模型权重训练。
+- 最新匹配25→16次请求，864,346→501,764总Token，USD0.03208103→0.02229210，实际认证执行1次。全部数字／p95／配对t区间及判定用独立实现复算一致；没有人工科研盲评，不宣称稳定同质降本。
+- 此例仅覆盖固定配对协议的证据复算，研究问题与审阅判断仍由模型完成，不替换原校对／Script RSI库。普通路径、File SDK和上游DSH保留；实验默认关闭，线上仍7e167ed。
+- Linux完整Python1718／Node1359通过（各4skip），smoke/motif通过。所有旧失败、训练／认证／机械重放和费用见[成本学习记录](../experiments/three-scene-motif-cost-learning-20261021.md)；本地可审阅包位于`.local/deliverables/geneloop-motif-cost-learning-20261021/`，私有原轨迹不提交。
+- 后续扩大稿件与协议覆盖；先用[接口](../interfaces.md#artifact-motif-独立实验接口2026-10-21)独立复测，正式发布仍走统一服务入口。以下段落按其历史日期保留。
+
+## 2026-10-21：提示型 Script RSI 闭环
+
+- 更新时间与交接人：2026-10-21，Codex。
+- 目标与本次范围：只接通提示型Negative Motif自动生成/独立审核/发布/后继使用的小闭环。沿用已有编译器与同一私有store；未扩大自动早停、生产或外部写入权限。前轮Positive描述闭环及费用保留在Git历史与对应实验中。
+- 分支 / 代码：`codex/paper-negative-learning-loop-20261021`，基于本地`40d015ca`，已通过`3a295837`同步main `73591f62`并保留两侧文档，兼容实现为`99e1b031`。已推送并创建[PR104](https://github.com/jingyio/GeneLoop/pull/104)，未合并/部署；远端CI以该PR当前检查为准。父PR100状态不等于本分支CI。Desktop/SSS的其他脏工作区未动。
+- 已完成：`script_negative_learning.py`复用当前原生失败编译，两个不同任务且工具源码一致才有候选；有界模型生成+独立审核，强制prompt_only，审核缓存与失败不自动付费重试。`advance-script-motifs.py`区分完成任务Positive历史和已结束任务Negative历史，发布同一不可变round。`script_learning_store.ts`接入negative_file/digest与冻结加载；Runtime实际失败后投递建议。默认无negative-learning.json不启用。
+- 接线修复：自动生成12个Positive算子而实验未配置Embedding，曾因Invalid URL连带停用整个Runtime；`optionalScriptRuntime`现对空库直接跳过，对非空匹配器初始化失败仅局部回退，Negative/Reuse和原生Agent继续。完整配置下原cache catalog保持可用。库摘要/来源/代码锁失败仍保守拒绝。初判为空库已纠正，不以新增算子数量称收益。
+- 已验证：最终完整Python1359通过/213跳过，最终完整Node1206通过/5跳过；相关Python35、Node34定向通过，smoke与motif:check通过。确定性测试仅作诊断。完整Node曾有1项既有MCP子进程5秒期限失败，单独7项复跑及停付费任务后的完整Node均通过，未放宽超时、未删除失败日志；并行负载原因尚属推测。
+- main兼容更新：使用DSH的`isAgentLoopRequest`标记绕过compaction等辅助请求；自动提示规则逐失败见证绑定目标参数schema，无关工具新增允许提示复用，目标变化仍失效，早停规则不放宽。合并后Python1517通过/235跳过、Node1357通过/15跳过；相关Python38/Node38、smoke/motif通过。见[main兼容记录](../experiments/paper-rsi-main-compat-20261021-v1.md)。
+- Windows CI修复：首轮2项失败定位为worker发布指针使用系统反斜杠，违背共享POSIX路径协议，继承时被拒绝。已统一三种资产指针为`as_posix()`并保留安全校验，原发布/继承回归补充格式检查；首轮失败不删除，远端结果以PR104最新提交为准。该序列化修复不另跑付费实验。
+- 真实结论：见[Negative闭环验收](../experiments/paper-negative-rsi-20261021-v1.md)。同论文两种历史失败候选，非七篇独立论文。A/B任务传输失败但原生结构错误仍自动采集；学习400后做了一次局部worker恢复。C自动发布5da69dc7…，D精确消费并提示；D结束自动重新生成/审核提示，另编译12个正面算子。E局部发现组件接线问题。第二次局部重编译/当前loader认证后，最终F/G均在当前代码下真实命中并投递，F自动发布a21a7de1…由G精确加载，源码与冻结快照一致。两次人工worker恢复单列，不冒充自动触发。
+- 质量与限制：C/D均有实际7页PDF及工具交付回执，但在最后组件隔离修复前；最终F/G为45秒投递检查，主动取消，未重复完整恢复。没有重检文献真实性或逐页视觉验收，不能称完整论文质量合格。D仍尝试不合法单章重组且保留旧说明；提示不保证修复成功。A通用summary把原论文图片PDF算成报告，本轮已按真实documents产物纠正统计，未改旧原始summary。
+- 费用：本轮Agent157请求/USD0.514436304保守估费；学习5请求（1次400失败+两组生成/审核）/USD0.004753800，合计162/USD0.519190104。已知观测费用USD0.271771704，其余预约保留。新增未知用量3笔、E汇总时1笔pending，旧3笔继续待核；供应商账单与V100历史未核。本轮无完整请求skip、无自动早停、无净降本证明；局部取消与完整恢复不共用分母。累计5918请求/USD10.425416136，历史不清零，人工与本地计算未货币量化。
+- main兼容真实检查：两次60/180秒局部任务均取消，无报告PDF；第一次未到失败匹配，第二次精确加载前次自动发布库，在44工具环境送达5次Negative提示，无skip/早停/fallback，无人工worker恢复。未证明恢复成功或净降本。新增学习2请求、Agent32请求，合计34/USD0.217089456；累计5952/USD10.642505592保守估费，新增pending1/unknown0，旧6笔unknown及1笔pending保留。当前压缩为`native-pressure-checkpoint-v1`，不可沿用前轮关闭压缩配置；所有新快照与账本在`.local/paper-rsi-main-compat-20261021-v1/`。
+- 配置与数据：`.local/paper-negative-rsi-20261021-v1/`包含授权、计划、A–G日志、两次manual-recovery、learning-store、请求/响应、审核、所有失败、aggregate、final-verification；逐run配置/源码快照在`.local/script-motif-experiments/<run_id>/`，原始事件与报告在对应web runs中。真实DeepSeek Flash/off；Agent输出32768，学习1536/max_rules1；正面mode shadow、Negative prompt（有干预）；未调用Embedding，压缩关闭。原恢复prompt SHA443bd3f6…、来源SHA4bd41694…，均沿用历史真实输入。私人材料/日志/凭证未提交。
+- 最短入口：按README项目环境启动现有`run-script-motif-experiment.py`，同一`--learning-store`与私有sidecar，store放严格配置`negative-learning.json`：schema_version1、implementation_files为受信工具实现相对路径列表、model deepseek-flash、max_output_tokens1536、max_rules1、cap_usd null。完整有效JSON、变量化复现命令见接口及实验。必须保留既有无限额实验授权和账本；不是公共产品付费默认。
+- 权限与预算：沿用已授权本地真实API实验，cap_usd:null / uncapped_user_authorized / reset_history:false；请求不限、输出有界、全部失败/重试/预约累计。本轮没有新自动execute，原生工具只写授权隔离报告产物；未改原件、投稿、生产或外部应用。已停止本轮所有真实任务，不安排后台继续付费。
+- 未完成：自动学习仍只生成有依据的历史检查建议，未生成执行失败谓词/早停权限或通用因果机制；仅一个结构错误家族与同论文恢复变体。正面匹配器因无Embedding配置在最终局部任务中停用，不能据12算子评估正面执行收益。
+- 接手下一步：兼容回归、局部实测及PR104提交已完成；检查其CI并由用户决定是否合并，不自动合并/部署。若继续降本，先分析提示后重写完整参数/报告的调用，设计一次有类型局部修订交接；不重跑完整Baseline，不扩大到其他场景或用库数量代替收益。
+- 回退与风险：移除新store中的negative-learning.json可停用负面学习；已有自动负面指针仍会加载，若需完全停用同时从实验sidecar移除learningStore与negativeLibrary并停用worker环境。保留历史store与账本，不清空.local。旧库迁移必须实际重编译/认证，不能改hash绕过。仅本地macOS验收，未宣称跨平台生产支持。
+
+## 2026-10-20：批量控制与PR100历史记录
+
 - 更新时间与交接人：2026-10-20，Codex。
 - 目标与本次范围：本轮优化批量选择、连续执行与完成交接，保持同库做真实BibTeX局部任务。用户最新明确以RSI闭环跑通作为本轮验收目标，报告质量不作为当前阻塞项；现有真实局部验证足够，本轮不再追加完整论文、全场景或Baseline测试。未部署。
 - 分支 / 代码：实现提交30ee31d，基于a590080（已跑通自动Script RSI），验收说明50f1b5c。[PR100](https://github.com/jingyio/GeneLoop/pull/100)已按用户授权合并至main，merge commit为1055a4f；合并前Ubuntu/Windows的push及PR四项CI全部通过。未部署生产，原Desktop/SSS工作区未改。

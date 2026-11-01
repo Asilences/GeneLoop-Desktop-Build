@@ -567,15 +567,15 @@
     "public_native_tools_in_certified_mcp_schema": false,
     "public_native_tools_learned_or_certified": false,
     "changed_code_locks": [
-      "src/adapters/dsh_web_tasks.ts"
+      "src/adapters/harless_file_scene.ts"
     ],
     "additional_code_locks": [
-      "scripts/reexport-usage-observation-compat.py"
+      "scripts/reexport-file-cost-metadata-compat.py"
     ],
     "previous_code_lock_differences": {
-      "src/adapters/dsh_web_tasks.ts": {
-        "previous": "bca9417b44242cc7078cd171edb886703f67bdc47b313fa65d6c71c1b927f2f0",
-        "current": "ac558f04c6531603975d37e9425d4e3838cb2a30a27b14390851904918060cc1"
+      "src/adapters/harless_file_scene.ts": {
+        "previous": "6e094a0730df6d0e443ed4297a41e766bcc1703a9ae54bd5561227a05b143132",
+        "current": "27f134dd378968c518923b38aeff1df8e8cdc34e6c8e05da380341de500ad8ae"
       }
     },
     "unchanged_artifact_sha256": {
@@ -586,16 +586,15 @@
       "source-evidence.json": "76ddb181021106915fea64ee02117c78db8fb3ef9d6324cb35a488fc9f459629"
     },
     "repairs": [
-      "usage_transport_timeout_does_not_fail_live_task",
-      "retain_last_usage_and_mark_incomplete_until_next_successful_read"
+      "distinguish_observed_file_fee_from_unknown_reservation"
     ],
     "raw_traces_replayed": false,
     "new_training_tasks": 0,
     "model_requests": 0,
     "quality_cost_promoted": false,
     "net_cost_reduction_proven": false,
-    "validation_record": "docs/experiments/postdeploy-stress-20261031.md",
+    "validation_record": "docs/experiments/dsh-native-capabilities-20261021.md",
     "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
-    "runtime_delta": "Read-only usage polling tolerates temporary transport failure. Model admission, cancellation, authentication/HTTP errors, permissions and all Motif matching/learning/version guards remain unchanged."
+    "runtime_delta": "Only the independent File public fee projection changes: observed usage requires the same scoped sealed record, otherwise cost_usd remains null and its original reservation upper amount is retained. Paper/PPT execution, learned IR, MCP schemas and historical evidence remain unchanged. This compatibility export performs no learning, model call or quality promotion."
   }
 }

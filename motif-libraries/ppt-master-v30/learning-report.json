@@ -467,8 +467,8 @@
   },
   "native_capabilities_compatibility": {
     "method": "reexport_certified_serialized_library",
-    "previous_release": "ppt-master-v29",
-    "previous_certification_sha256": "095c2f621c07bc81c0f84ef2c4f2d6717c692dbdbf0c13182d21ebb4eb1007d5",
+    "previous_release": "ppt-master-v28",
+    "previous_certification_sha256": "bee60365b728491e500daea093638742dcd975ac974acea577bbb13a530a6cd8",
     "same_library_and_evidence": true,
     "same_online_program": true,
     "same_mcp_schema": true,
@@ -497,20 +497,15 @@
     "public_native_tools_in_certified_mcp_schema": false,
     "public_native_tools_learned_or_certified": false,
     "changed_code_locks": [
-      "config/geneloop-capabilities.md",
-      "scenarios/ppt_master/prompt.md"
+      "src/adapters/harless_file_scene.ts"
     ],
     "additional_code_locks": [
-      "scripts/reexport-release-readiness-compat.py"
+      "scripts/reexport-file-cost-metadata-compat.py"
     ],
     "previous_code_lock_differences": {
-      "config/geneloop-capabilities.md": {
-        "previous": "133231d4a16d400eb9baaa2a76af1ee5d072cbb2eba669af84027041c3b6e8d5",
-        "current": "d420d37ba8c7e0d868c0378aaaaca617482727564b038a6d9ca6f70e17a09bef"
-      },
-      "scenarios/ppt_master/prompt.md": {
-        "previous": "f034a67866e06f2af16b389ffaf82a8240db27a72026ddfcedd1fe3af0c7a4fb",
-        "current": "db541dc9cb5e647ee46139cb4c0b8b2603efe3b83a55742b75282eb0af76b369"
+      "src/adapters/harless_file_scene.ts": {
+        "previous": "6e094a0730df6d0e443ed4297a41e766bcc1703a9ae54bd5561227a05b143132",
+        "current": "27f134dd378968c518923b38aeff1df8e8cdc34e6c8e05da380341de500ad8ae"
       }
     },
     "unchanged_artifact_sha256": {
@@ -521,17 +516,16 @@
       "source-evidence.json": "87d64e6fff3b57926271b650b13d877d1c4e68c3cc426d1a520e5e698b890dd8"
     },
     "repairs": [
-      "respect_explicit_output_format_over_progress_prose",
-      "honor_user_delegated_reversible_design_choices"
+      "distinguish_observed_file_fee_from_unknown_reservation"
     ],
     "raw_traces_replayed": false,
     "new_training_tasks": 0,
     "model_requests": 0,
     "quality_cost_promoted": false,
     "net_cost_reduction_proven": false,
-    "validation_record": "docs/experiments/release-readiness-20261031.md",
+    "validation_record": "docs/experiments/dsh-native-capabilities-20261021.md",
     "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
-    "runtime_delta": "Both lanes receive clarified user interaction guidance. Explicit machine-readable output excludes progress prose; delegated reversible design choices do not require duplicate questions. Necessary information and permission questions, all tool guards and Motif algorithms remain unchanged."
+    "runtime_delta": "Only the independent File public fee projection changes: observed usage requires the same scoped sealed record, otherwise cost_usd remains null and its original reservation upper amount is retained. Paper/PPT execution, learned IR, MCP schemas and historical evidence remain unchanged. This compatibility export performs no learning, model call or quality promotion."
   },
   "common_native_tools": [
     "web_search",
@@ -556,5 +550,73 @@
     "update_goal"
   ],
   "common_native_tools_in_certified_mcp_schema": false,
-  "common_capabilities_compatibility_scope": "Public native tools are separately admitted by current code-locked policy; they are not mined, certified, replayed, or claimed as newly learned by this MCP-only compatibility re-export."
+  "common_capabilities_compatibility_scope": "Public native tools are separately admitted by current code-locked policy; they are not mined, certified, replayed, or claimed as newly learned by this MCP-only compatibility re-export.",
+  "matching_cleanup_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "previous_release": "ppt-master-v29",
+    "previous_certification_sha256": "17964324918e9d7d5d6b0224b6d632007215b6a7061657b92a39629f81682ab1",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "same_mcp_schema": true,
+    "public_native_tools": [
+      "web_search",
+      "web_fetch",
+      "bash",
+      "job_list",
+      "job_output",
+      "job_kill",
+      "read",
+      "read_image",
+      "write",
+      "edit",
+      "glob",
+      "grep",
+      "ask_user_question",
+      "todo_write",
+      "skill",
+      "present",
+      "subagent",
+      "exit_plan_mode",
+      "get_goal",
+      "update_goal"
+    ],
+    "public_native_tools_in_certified_mcp_schema": false,
+    "public_native_tools_learned_or_certified": false,
+    "changed_code_locks": [
+      "src/adapters/dsh_online_motif.mjs",
+      "src/motif_core/online_skill_runtime.mjs"
+    ],
+    "additional_code_locks": [],
+    "previous_code_lock_differences": {
+      "src/adapters/dsh_online_motif.mjs": {
+        "previous": "997d3370e9284d52ac7b813d46b3f177b358e4297c3df0b84ae92a68c152b8d5",
+        "current": "148c3fed20a0c18d0c0a8fee1a45b3e9f0b3641cad60889a13aef875c9c01321"
+      },
+      "src/motif_core/online_skill_runtime.mjs": {
+        "previous": "d951e7d0ab15ba49c00f99726f82c328e0bb283fd40af0d6eb0252c80d4e54ec",
+        "current": "7d26af278af8e231fea1e28ddad4b9ce75afdbf871e85ee85892a9419fe2ef2d"
+      }
+    },
+    "unchanged_artifact_sha256": {
+      "library.json": "94273935f2d94e9217c1d79679bad44cf8de889a07483391505d5174071131c7",
+      "online-manifest.json": "093dd70cd6ef8c349ae3e620637a6efbecb20887805d261d1da0016cd92b9c62",
+      "task.json": "7cf5b20765a0fd634053c0382476595eeaff15029b84d18b2d3ae8a669cddb4f",
+      "tool-schemas.json": "2f3fe69c8124c84933e8b3cef33087f4e05842e239603fe1ab1df1ce403b13d8",
+      "source-evidence.json": "87d64e6fff3b57926271b650b13d877d1c4e68c3cc426d1a520e5e698b890dd8"
+    },
+    "repairs": [
+      "shared_single_and_batch_matcher",
+      "session_owned_history",
+      "remove_unused_batch_margin",
+      "repeated_parameter_values_allowed"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "net_cost_reduction_proven": false,
+    "validation_record": "docs/experiments/motif-matching-cleanup-20261030-v1.md",
+    "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
+    "scope": "matching_cleanup_compatibility_without_new_training_or_raw_trace_replay"
+  }
 }
