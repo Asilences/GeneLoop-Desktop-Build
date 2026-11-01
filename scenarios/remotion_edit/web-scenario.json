@@ -25,6 +25,7 @@
     "mcp__remotion__write_source",
     "mcp__remotion__render_composition",
     "mcp__remotion__write_notes",
-    "mcp__remotion__render_source"
+    "mcp__remotion__render_source",
+    "mcp__remotion__run_command"
   ]
 }

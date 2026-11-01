@@ -26,7 +26,7 @@ def test_video_tools_use_source_hashes_and_reload_task_grants(tmp_path):
 async def check_tools(tmp_path):
     work,inputs=workspace(tmp_path);server=adapter().create_server(inputs)
     tools=await server.list_tools();names={row.name for row in tools}
-    assert names=={'list_assets','pin_asset','probe_media','probe_asset','read_source','inspect_render','write_source','render_composition','write_notes','render_source'}
+    assert names=={'list_assets','pin_asset','probe_media','probe_asset','read_source','inspect_render','write_source','render_composition','write_notes','render_source','run_command'}
     assert next(row for row in tools if row.name=='inspect_render').input_schema['properties']['seconds']['type']=='array'
     result=await server.call_tool('list_assets',{})
     assert 'clip.mp4' in str(result)
@@ -34,6 +34,8 @@ async def check_tools(tmp_path):
         await server.call_tool('pin_asset',{'name':'../private.mp4'})
     with pytest.raises(Exception,match='output permission'):
         await server.call_tool('render_composition',{'source_version':'0'*64})
+    with pytest.raises(Exception,match='timeout'):
+        await server.call_tool('run_command',{'command':'true','timeout_seconds':0})
     before=(work/'remotion/public/clip.mp4').read_bytes()
     (inputs/'clip.mp4').write_bytes(b'changed')
     with pytest.raises(Exception):

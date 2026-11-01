@@ -73,6 +73,18 @@ def create_server(inputs):
             return scene.workspace.emit('run_command',{'command':text,'timeout_seconds':timeout_seconds},result,started)
         finally:conn.close()
     scene.workspace.run_command=command
+    broker_command=command
+    def run_command(command:str,timeout_seconds:int=180)->dict:
+        """Run foreground media analysis in this Session's fixed renderer container.
+
+        /work is the current Remotion project; ffmpeg, ffprobe, Node and the
+        installed Remotion runtime are available. No network, credentials,
+        foreign Sessions or writable user originals. Use this for actual audio
+        samples/volume measurements, not native Bash dependency downloads.
+        """
+        if type(timeout_seconds) is not int or not 1<=timeout_seconds<=240:
+            raise ToolError('media command timeout must be 1..240 seconds')
+        return broker_command(command,timeout_seconds)
     source=project/'src/index.tsx'
     if not source.exists():
         source.write_text("import React from 'react';import {registerRoot,Composition} from 'remotion';const Main=()=>null;registerRoot(()=> <Composition id=\"Main\" component={Main} width={640} height={360} fps={30} durationInFrames={180}/>);\n")
@@ -104,7 +116,7 @@ def create_server(inputs):
         return call
     server=MCPServer('GeneLoop video editing')
     readers=[scene.list_assets,scene.pin_asset,scene.probe_media,scene.probe_asset,scene.read_source,scene.inspect_render]
-    for fn in readers+[scene.write_source,render_composition,scene.write_notes,render_source]:
+    for fn in readers+[scene.write_source,render_composition,scene.write_notes,render_source,run_command]:
         server.tool(annotations=ToolAnnotations(readOnlyHint=fn in readers,destructiveHint=False))(wrapped(fn))
     return server
 if __name__=='__main__':create_server(Path(sys.argv[1])).run(transport='stdio')
