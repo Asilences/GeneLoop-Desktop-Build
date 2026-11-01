@@ -454,6 +454,188 @@ class FileWorkerIdentityTests(unittest.TestCase):
                 service.file_worker_running(42, self.home, namespace_home, self.proc)
 
 
+class PublicRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        PlanTests.setUp(self)
+        config=service.read(self.config);config['publicOrigin']='https://app.example.workers.dev';service.save(self.config,config)
+        self.lifecycle=service.Lifecycle(self.plan)
+        self.backend={'owner':{'pid':111,'start_ticks':'11','argv_sha256':'owner','cwd':str(self.root)},
+                      'gateway':{'pid':112,'start_ticks':'12','argv_sha256':'gateway','cwd':str(self.root)}}
+        self.origin='https://candidate-fixture.trycloudflare.com'
+        argv=[sys.executable,'tunnel','--no-autoupdate','--protocol','http2','--url',
+              'http://127.0.0.1:%s' % config['port'],'--http-host-header','app.example.workers.dev']
+        self.old={'pid':51042,'start_ticks':'605440366','argv_sha256':service.hashlib.sha256(
+            b'\0'.join(os.fsencode(v) for v in argv)+b'\0').hexdigest(),'cwd':str(self.root)}
+        self.candidate={**self.old,'pid':19999,'start_ticks':'99'}
+        self.public={'version':1,'public_origin':config['publicOrigin'],
+                     'previous_origin':'https://old-fixture.trycloudflare.com','previous_process':self.old,
+                     'tunnel':{'argv':argv,'cwd':str(self.root),'env':{'PATH':str(self.root)},
+                               'binary_sha256':service.hashlib.sha256(Path(sys.executable).read_bytes()).hexdigest()}}
+        self.public_path=self.root/'public.json';service.save(self.public_path,self.public)
+        self.record={'plan':self.plan,'digest':service.plan_digest(self.plan),'processes':self.backend}
+        service.save(self.lifecycle.state_path,self.record)
+        self.expected={p:{'status':200,'sha256':p,'bytes':99} for p in ('/login','/assets/geneloop-spiral.svg')}
+        self.good=False;self.direct_good=True
+        self.child=mock.Mock(pid=19999);self.child.poll.return_value=None
+        self.protected=self.output/'active-task.json';service.save(self.protected,{'status':'running','paid':19})
+
+    def evidence(self, **changes):
+        value={'version':1,'method':'cloudflare-dashboard','public_origin':self.public['public_origin'],
+               'worker_name':'app','binding_name':'UPSTREAM_ORIGIN','binding_type':'plain_text',
+               'upstream_origin':self.origin,'worker_code_unchanged':True,'other_bindings_unchanged':True,**changes}
+        path=self.root/'route-evidence.json';service.save(path,value);return path
+
+    def probe(self, origin, *_args, **_kwargs):
+        if origin.startswith('http://127.0.0.1:') or origin==self.origin and self.direct_good or self.good:
+            return self.expected
+        return {p:{'status':530,'error_body':'error 1033'} for p in self.expected}
+
+    def launch(self, *_args, **kwargs):
+        kwargs['stdout'].write((self.origin+'\nRegistered tunnel connection\n').encode());return self.child
+
+    def environment(self):
+        from contextlib import ExitStack
+        stack=ExitStack()
+        stack.enter_context(mock.patch.object(self.lifecycle,'lock',return_value=nullcontext()))
+        stack.enter_context(mock.patch.object(self.lifecycle,'inspect',return_value=self.backend))
+        stack.enter_context(mock.patch.object(self.lifecycle,'health',return_value={'model_requests':0}))
+        stack.enter_context(mock.patch.object(service,'identity',side_effect=lambda pid:self.old if pid==51042 else self.candidate))
+        stack.enter_context(mock.patch.object(service,'command_matches',return_value=True))
+        stack.enter_context(mock.patch.object(service,'public_probe',side_effect=self.probe))
+        stack.enter_context(mock.patch.object(service,'assert_idle',side_effect=AssertionError('must not inspect or block active tasks')))
+        stack.enter_context(mock.patch.object(self.lifecycle,'stop_record',side_effect=AssertionError('must not stop backend')))
+        self.popen=stack.enter_context(mock.patch.object(service.subprocess,'Popen',side_effect=self.launch))
+        self.kill=stack.enter_context(mock.patch.object(service.os,'kill',side_effect=AssertionError('must not signal legacy/foreign PID')))
+        self.cloudflare=stack.enter_context(mock.patch.object(service,'CloudflareWorkerSettings'))
+        return stack
+
+    def test_manual_prepare_confirm_preserves_backend_active_tasks_and_foreign_tunnels(self):
+        before=self.lifecycle.state_path.read_bytes();task=self.protected.read_bytes();runtime=self.pointer.read_bytes()
+        with self.environment():
+            prepared=self.lifecycle.run('public-prepare',self.public_path)
+            self.assertTrue(prepared['awaiting_route_update']);self.assertEqual(prepared['candidate_origin'],self.origin)
+            self.assertFalse((self.lifecycle.root/'public-current.json').exists())
+            self.good=True;result=self.lifecycle.run('public-confirm',self.public_path,self.evidence())
+            self.assertTrue(result['public_healthy']);self.cloudflare.assert_not_called();self.kill.assert_not_called()
+            self.child.terminate.assert_not_called();self.assertEqual(self.popen.call_count,1)
+        self.assertEqual(self.lifecycle.state_path.read_bytes(),before)
+        self.assertEqual(self.protected.read_bytes(),task);self.assertEqual(self.pointer.read_bytes(),runtime)
+        saved=service.read(self.lifecycle.root/'public-current.json')
+        self.assertEqual(saved['confirmation']['method'],'manual-dashboard-attestation')
+        self.assertEqual(saved['process'],self.candidate)
+
+    def test_proxy_domain_rejection_is_retained_as_unverified_prepare_not_success(self):
+        self.direct_good=False
+        with self.environment():
+            result=self.lifecycle.run('public-recover',self.public_path)
+            self.assertTrue(result['awaiting_route_update']);self.assertFalse(result['candidate_direct_verified'])
+            self.assertNotIn('public_healthy',result);self.child.terminate.assert_not_called()
+            with self.assertRaisesRegex(RuntimeError,'awaits route update'):
+                self.lifecycle.run('public-prepare',self.public_path)
+            self.assertEqual(self.popen.call_count,1)
+
+    def test_healthy_public_recovery_is_noop_and_check_has_no_side_effects(self):
+        self.good=True
+        with self.environment():
+            self.assertTrue(self.lifecycle.run('public-check',self.public_path)['public_healthy'])
+            self.assertTrue(self.lifecycle.run('public-recover',self.public_path)['already_running'])
+            self.popen.assert_not_called();self.cloudflare.assert_not_called();self.kill.assert_not_called()
+
+    def test_changed_old_generation_refuses_before_candidate_or_cloudflare_write(self):
+        with self.environment(),mock.patch.object(service,'identity',return_value={**self.old,'start_ticks':'reused'}):
+            with self.assertRaisesRegex(RuntimeError,'generation changed'):
+                self.lifecycle.run('public-prepare',self.public_path)
+            self.popen.assert_not_called();self.cloudflare.assert_not_called();self.kill.assert_not_called()
+
+    def test_confirm_requires_exact_candidate_dashboard_evidence_and_real_public_bytes(self):
+        with self.environment():
+            self.lifecycle.run('public-prepare',self.public_path)
+            for evidence in (None,self.evidence(upstream_origin='https://foreign.trycloudflare.com')):
+                with self.assertRaises(RuntimeError):self.lifecycle.run('public-confirm',self.public_path,evidence)
+            with self.assertRaisesRegex(RuntimeError,'do not match'):
+                self.lifecycle.run('public-confirm',self.public_path,self.evidence())
+            self.good=True
+            with mock.patch.object(service,'identity',return_value={**self.candidate,'start_ticks':'reused'}):
+                with self.assertRaisesRegex(RuntimeError,'identity changed'):
+                    self.lifecycle.run('public-confirm',self.public_path,self.evidence())
+            self.child.terminate.assert_not_called();self.assertFalse((self.lifecycle.root/'public-current.json').exists())
+
+    def test_public_config_rejects_foreign_target_extra_shell_flags_and_binary_drift(self):
+        for mutation in ('port','flags','binary'):
+            value=json.loads(json.dumps(self.public))
+            if mutation=='port':value['tunnel']['argv'][6]='http://127.0.0.1:33100'
+            if mutation=='flags':value['tunnel']['argv']+=['--exec','shell']
+            if mutation=='binary':value['tunnel']['binary_sha256']='0'*64
+            service.save(self.public_path,value)
+            with self.assertRaisesRegex(RuntimeError,'verified cloudflared'):
+                service.load_public_config(self.public_path,self.plan)
+
+    def test_failed_candidate_start_cleans_only_this_exact_child(self):
+        def no_origin(*_args,**kwargs):return self.child
+        with self.environment(),mock.patch.object(service.subprocess,'Popen',side_effect=no_origin), \
+                mock.patch.object(service.time,'monotonic',side_effect=[0,91]):
+            with self.assertRaisesRegex(RuntimeError,'did not pass direct'):
+                self.lifecycle.run('public-prepare',self.public_path)
+            self.child.terminate.assert_called_once_with();self.child.wait.assert_called_once_with(timeout=45)
+            self.kill.assert_not_called();self.cloudflare.assert_not_called()
+            self.assertFalse((self.lifecycle.root/'public-pending.json').exists())
+
+    def test_public_operation_uses_the_same_lifecycle_lock(self):
+        with mock.patch.object(self.lifecycle,'lock',side_effect=RuntimeError('Another service operation is running')), \
+                mock.patch.object(self.lifecycle,'public_operation') as operation:
+            with self.assertRaisesRegex(RuntimeError,'Another service operation'):
+                self.lifecycle.run('public-prepare',self.public_path)
+            operation.assert_not_called()
+
+
+class CloudflarePublicSettingsTests(unittest.TestCase):
+    def test_adapter_has_one_fixed_authority_and_preserves_single_binding_scope(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            token=Path(temporary).resolve()/'token';token.write_text('synthetic-fixture-token');token.chmod(0o600)
+            config={'account_id':'a'*32,'script_name':'app','api_token_file':str(token)}
+            client=service.CloudflareWorkerSettings(config)
+            response=mock.MagicMock();response.__enter__.return_value=response
+            response.read.return_value=b'{"success":true,"result":{"accepted":true}}'
+            opener=mock.Mock();opener.open.return_value=response
+            with mock.patch.object(service,'public_opener',return_value=opener):
+                self.assertEqual(client.request('/settings',{'bindings':[{'name':'UPSTREAM_ORIGIN',
+                    'type':'plain_text','text':'https://candidate.trycloudflare.com'}]}),{'accepted':True})
+            request=opener.open.call_args.args[0]
+            self.assertEqual(request.full_url,'https://api.cloudflare.com/client/v4/accounts/'+'a'*32+'/workers/scripts/app/settings')
+            self.assertEqual(request.method,'PATCH');self.assertEqual(request.get_header('Authorization'),'Bearer synthetic-fixture-token')
+            self.assertIn(b'name="settings"',request.data);self.assertNotIn(b'synthetic-fixture-token',request.data)
+            self.assertIsNone(service.NoRedirect().redirect_request(None,None,302,None,None,None))
+
+    def test_settings_adapter_refuses_unknown_bindings_and_concurrent_deployment_changes(self):
+        client=service.CloudflareWorkerSettings({'account_id':'a'*32,'script_name':'app'})
+        for bindings in ([{'name':'UPSTREAM_ORIGIN','type':'secret_text'}],
+                         [{'name':'UPSTREAM_ORIGIN','type':'plain_text','text':'old'},{'name':'OTHER','type':'plain_text','text':'keep'}]):
+            with mock.patch.object(client,'request',side_effect=[{'deployments':[{'id':'old-version'}]},{'bindings':bindings}]):
+                with self.assertRaisesRegex(RuntimeError,'single plain'):client.snapshot()
+        with mock.patch.object(client,'snapshot',return_value={'deployment_id':'changed'}), \
+                mock.patch.object(client,'request') as request:
+            with self.assertRaisesRegex(RuntimeError,'changed before publication'):
+                client.replace({'deployment_id':'previous'},'https://candidate.trycloudflare.com')
+            request.assert_not_called()
+
+
+class PublicProbeHeaderTests(unittest.TestCase):
+    def test_probes_set_explicit_user_agent_and_preserve_host(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.return_value = b'application-fixture'
+        opener = mock.Mock()
+        opener.open.return_value = response
+        with mock.patch.object(service, 'public_opener', return_value=opener):
+            result = service.public_probe('http://127.0.0.1:31332', host='app.fixture.workers.dev')
+        self.assertEqual(len(result), 2)
+        for call in opener.open.call_args_list:
+            request = call.args[0]
+            self.assertEqual(request.get_header('User-agent'), 'Mozilla/5.0 GeneLoop-Service-Check')
+            self.assertEqual(request.get_header('Host'), 'app.fixture.workers.dev')
+
+
 class StartupListenerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -637,3 +819,159 @@ class LinuxLifecycleTests(PlanTests):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+
+class ManagedPublicTunnelTests(unittest.TestCase):
+    def setUp(self):
+        PublicRecoveryTests.setUp(self)
+        config=service.read(self.config);config['publicOrigin']='https://geneloop.fixture';service.save(self.config,config)
+        self.record['digest']=service.plan_digest(self.plan);service.save(self.lifecycle.state_path,self.record)
+        self.token=self.root/'tunnel-token';self.token.write_text('synthetic-tunnel-credential');self.token.chmod(0o600)
+        self.origin=config['publicOrigin'];self.direct_good=False
+        self.public.update(version=2,mode='managed-tunnel',public_origin=self.origin,
+                           tunnel_id='12345678-1234-1234-1234-123456789abc')
+        self.public['tunnel'].update(argv=[sys.executable,'tunnel','--no-autoupdate','--protocol','http2','run','--token-file',str(self.token)],
+            token_file=str(self.token),token_sha256=service.hashlib.sha256(self.token.read_bytes()).hexdigest())
+        self.candidate['argv_sha256']=service.hashlib.sha256(b'\0'.join(os.fsencode(v) for v in self.public['tunnel']['argv'])+b'\0').hexdigest()
+        service.save(self.public_path,self.public)
+        service.save(self.lifecycle.root/'public-current.json',{'process':self.old,'upstream_origin':self.public['previous_origin']})
+
+    environment=PublicRecoveryTests.environment
+    launch=PublicRecoveryTests.launch
+
+    def probe(self, origin, *_args, **_kwargs):
+        if origin.startswith('http://127.0.0.1:') or self.good:return self.expected
+        return {p:{'status':530} for p in self.expected}
+
+    def evidence(self, **changes):
+        value={'version':1,'method':'cloudflare-dashboard-tunnel','public_origin':self.origin,
+               'tunnel_id':self.public['tunnel_id'],'service':'http://127.0.0.1:%s'%service.read(self.config)['port'],
+               'http_host_header':'geneloop.fixture','tls_verification_disabled':False,**changes}
+        path=self.root/'managed-evidence.json';service.save(path,value);return path
+
+    def test_fixed_hostname_prepare_confirm_preserves_backend_and_old_tunnel(self):
+        before=self.lifecycle.state_path.read_bytes();task=self.protected.read_bytes()
+        with self.environment():
+            result=self.lifecycle.run('public-prepare',self.public_path)
+            self.assertEqual(result['candidate_origin'],self.origin)
+            self.assertFalse(result['candidate_direct_verified'])
+            self.assertEqual(service.read(self.lifecycle.root/'public-current.json')['process'],self.old)
+            with self.assertRaisesRegex(RuntimeError,'exact upstream'):
+                self.lifecycle.run('public-confirm',self.public_path,self.evidence(service='http://127.0.0.1:1'))
+            with self.assertRaisesRegex(RuntimeError,'do not match'):
+                self.lifecycle.run('public-confirm',self.public_path,self.evidence())
+            self.good=True
+            self.assertTrue(self.lifecycle.run('public-confirm',self.public_path,self.evidence())['public_healthy'])
+            self.cloudflare.assert_not_called();self.kill.assert_not_called();self.child.terminate.assert_not_called()
+            self.assertNotIn('synthetic-tunnel-credential',str(self.popen.call_args))
+        self.assertEqual(self.lifecycle.state_path.read_bytes(),before)
+        self.assertEqual(self.protected.read_bytes(),task)
+        self.assertEqual(service.read(self.lifecycle.root/'public-current.json')['process'],self.candidate)
+
+    def test_rejects_changed_previous_identity_before_any_launch(self):
+        service.save(self.lifecycle.root/'public-current.json',{'process':{**self.old,'pid':3},'upstream_origin':self.public['previous_origin']})
+        with self.environment():
+            with self.assertRaisesRegex(RuntimeError,'managed public record'):
+                self.lifecycle.run('public-prepare',self.public_path)
+            self.popen.assert_not_called()
+
+    def test_rejects_credential_drift_and_public_secret_file(self):
+        self.token.write_text('changed-fixture')
+        with self.assertRaisesRegex(RuntimeError,'credential changed'):service.load_public_config(self.public_path,self.plan)
+        self.token.chmod(0o644)
+        with self.assertRaisesRegex(RuntimeError,'mode 600'):service.load_public_config(self.public_path,self.plan)
+
+    def test_exact_recipe_disallows_credential_env_override_and_extra_arguments(self):
+        for mutation in ('environment','arguments','binary','origin'):
+            value=json.loads(json.dumps(self.public))
+            if mutation=='environment':value['tunnel']['env']['TUNNEL_TOKEN']='other-credential'
+            if mutation=='arguments':value['tunnel']['argv']+=['--url','http://foreign.example']
+            if mutation=='binary':value['tunnel']['binary_sha256']='0'*64
+            if mutation=='origin':value['public_origin']='https://foreign.example'
+            service.save(self.public_path,value)
+            with self.assertRaises(RuntimeError):service.load_public_config(self.public_path,self.plan)
+
+
+class PublicProbeRetryTests(unittest.TestCase):
+    def response(self):
+        response=mock.MagicMock();response.__enter__.return_value=response
+        response.status=200;response.read.return_value=b'fixture';return response
+
+    def test_transport_retry_keeps_first_failure_and_requests_are_get_only(self):
+        opener=mock.Mock();opener.open.side_effect=[TimeoutError(),self.response(),self.response()]
+        with mock.patch.object(service,'public_opener',return_value=opener),mock.patch.object(service.time,'sleep'):
+            result=service.public_probe('https://fixture.example')
+        attempts=result['/login']['attempts'];self.assertEqual(len(attempts),2)
+        self.assertEqual(attempts[0]['error_type'],'TimeoutError');self.assertEqual(attempts[1]['status'],200)
+        self.assertTrue(all(call.args[0].get_method()=='GET' and call.kwargs['timeout']==30 for call in opener.open.call_args_list))
+
+    def test_authentication_failure_is_not_retried(self):
+        import io
+        opener=mock.Mock();opener.open.side_effect=[service.urllib.error.HTTPError('https://fixture.example/login',403,'forbidden',{},io.BytesIO(b'forbidden')),self.response()]
+        with mock.patch.object(service,'public_opener',return_value=opener),mock.patch.object(service.time,'sleep') as sleep:
+            result=service.public_probe('https://fixture.example')
+        self.assertEqual(len(result['/login']['attempts']),1);self.assertEqual(result['/login']['status'],403)
+        self.assertEqual(opener.open.call_count,2);sleep.assert_not_called()
+
+    def test_persistent_transport_failure_never_passes(self):
+        opener=mock.Mock();opener.open.side_effect=TimeoutError()
+        with mock.patch.object(service,'public_opener',return_value=opener),mock.patch.object(service.time,'sleep'):
+            result=service.public_probe('https://fixture.example')
+        self.assertFalse(service.probe_matches(result,result))
+        self.assertTrue(all(row['status'] is None and len(row['attempts'])==2 for row in result.values()))
+
+class SceneSnapshotTests(unittest.TestCase):
+    setUp = PlanTests.setUp
+    def scene_fixture(self):
+        import hashlib
+        source=self.root/'app';(source/'config').mkdir(parents=True)
+        (source/'motif-libraries/current').mkdir(parents=True)
+        (source/'prompt.md').write_text('current scene')
+        (source/'config/geneloop-capabilities.md').write_text('current common')
+        (source/'motif-libraries/current/library.json').write_text('{}')
+        registry={'schema_version':1,'scenes':[{'id':'ppt','adapter':'ppt','ppt_execution_strategy':'ppt_master',
+            'instructions':'prompt.md','rsi':{'runtime_bundle':'motif-libraries/current'}}]}
+        service.save(source/'config/harless-scenes.json',registry)
+        instructions='current scene\n\ncurrent common'
+        scene={'id':'ppt','instructions':instructions,'instructions_sha256':hashlib.sha256(instructions.encode()).hexdigest(),
+            'runtime_library':str(source/'motif-libraries/current/library.json'),
+            'certified_code_locks':{str(source/'prompt.md'):hashlib.sha256((source/'prompt.md').read_bytes()).hexdigest()}}
+        policy={'output':str(self.output),'scenes':[scene],
+            'scene_registry_sha256':hashlib.sha256((source/'config/harless-scenes.json').read_bytes()).hexdigest()}
+        service.save(self.policy,policy)
+        gateway=service.read(self.config);gateway.update(memberPolicy=policy,memberSceneDeployment={'projectRoot':str(source)})
+        service.save(self.config,gateway)
+        return source
+
+    def test_current_snapshot_and_stale_registry(self):
+        source=self.scene_fixture();service.assert_scene_snapshot(self.plan)
+        with (source/'config/harless-scenes.json').open('a') as file:file.write('\n')
+        with self.assertRaisesRegex(RuntimeError,'registry snapshot is stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_stale_prompt_rejected_even_when_its_own_digest_matches(self):
+        source=self.scene_fixture();(source/'config/geneloop-capabilities.md').write_text('new common')
+        with self.assertRaisesRegex(RuntimeError,'instructions are stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_old_library_path_rejected(self):
+        self.scene_fixture();gateway=service.read(self.config)
+        gateway['memberPolicy']['scenes'][0]['runtime_library']=str(self.root/'old/library.json')
+        service.save(self.config,gateway)
+        with self.assertRaisesRegex(RuntimeError,'bundle snapshot is stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_old_source_lock_rejected(self):
+        self.scene_fixture();gateway=service.read(self.config)
+        path=self.root/'old-code.py';path.write_text('old')
+        import hashlib
+        gateway['memberPolicy']['scenes'][0]['certified_code_locks']={str(path):hashlib.sha256(path.read_bytes()).hexdigest()}
+        service.save(self.config,gateway)
+        with self.assertRaisesRegex(RuntimeError,'source lock is stale'):service.assert_scene_snapshot(self.plan)
+
+    def test_stale_candidate_fails_before_live_stop(self):
+        self.scene_fixture();lifecycle=service.Lifecycle(self.plan)
+        record={'plan':self.plan,'digest':service.plan_digest(self.plan),'processes':{'owner':{'pid':1},'gateway':{'pid':2}}}
+        with mock.patch.object(lifecycle,'current',return_value=record), mock.patch.object(lifecycle,'inspect'), \
+             mock.patch.object(service,'assert_scene_snapshot',side_effect=RuntimeError('stale candidate')), \
+             mock.patch.object(lifecycle,'stop_record') as stop, mock.patch.object(service,'assert_idle') as idle:
+            with self.assertRaisesRegex(RuntimeError,'stale candidate'):lifecycle.restart()
+            stop.assert_not_called();idle.assert_not_called()
