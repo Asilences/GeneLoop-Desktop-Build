@@ -3,7 +3,7 @@
 - 更新时间与交接人：2026-11-02，Codex；本会话负责 A（计量正确性），B（Paper 真实闭环）由用户另开分支。
 - 目标与本次范围：修复 F1/F2/F4/F5，补请求发出前的归属登记和独立导出；不增加模型构造循环，不接管聊天、不做生产发布。
 - 分支 / commit / 工作区：`codex/rsi-real-acceptance-20261102`，基于已合并 PR #121 的 `71e3b7c`；本轮代码以本记录所在提交为准。私人 `reference/` 不跟踪，原库、失败日志、证书和累计账本保留。
-- 提交与发布：A仅在当前分支本地提交，未推送、未创建新PR、未部署；并行会话的未提交改动保留。
+- 提交与发布：A为`eba71e6`，B为`5efa221`；均已推送至[PR #122](https://github.com/jingyio/GeneLoop/pull/122)，目标main，未合并/部署。私人`reference/`保留且未提交；CI以PR当前head为准。
 - 已完成：`efficiency_rsi_measurement.py` 分离全 cell 预算与首成功成本，保留质量观察和未知费用，十进制计量；registry v2 冻结请求的 owner/cell/category；`efficiency_rsi_registry.py` 用宿主 journal 登记并导出，`CumulativeProposalGate(..., study_registry=...)` 在原 booking 边界接线。接口及版本迁移见[评价协议](../efficiency-rsi-evaluation.md)。
 - 已验证：本地完整 `npm test`：1835 Python 通过/237 跳过，1509 Node 通过/19 跳过，0 失败；最后路径预登记调整后本地/Linux定向各 69 项通过。`rsi:efficiency:check` 210 Python + 93 Node 通过；无模型 smoke 通过。它们是诊断回归，不是模型效果验收。旧上传 ECONNRESET 已在 main 中修复，不再列为当前未解决项。
 - 本轮实验记录：[计量反例与修复](../experiments/efficiency-rsi-measurement-20261102.md)。未重新计算历史收益，不将新口径追写成旧实验结果；本轮真实模型请求和费用新增均为 0，账单、人工与维护总成本仍未采集。
