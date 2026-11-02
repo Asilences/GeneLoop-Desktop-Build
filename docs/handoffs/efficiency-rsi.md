@@ -1,6 +1,7 @@
 # 效率驱动 RSI 当前交接
 
 - 更新时间与交接人：2026-11-02，Codex。
+- Windows CI修复：PR #121的Windows失败根因为反馈模块直接import fcntl，6项测试收集失败；已改用现有跨平台文件锁，提案账本同样复用，并补齐新模块UTF-8文本边界和Docker参数诊断uid/gid。最小59项回归通过/1项跳过，真实跨平台结果以PR最新head为准。详见[修复记录](../experiments/pr121-windows-ci-20261102.md)。上传ECONNRESET属于另一个问题，工作区并行网关改动未混入本次提交。
 - PR状态：已推送并创建[PR #121](https://github.com/jingyio/GeneLoop/pull/121)，包含此前未推送的公共Capability/Source/Script接线；已合并main `e6b6f12`（PR #119）。本轮未合并PR、未部署。
 - 合并后验证：Python1809通过/237跳过，Node1506通过/19跳过/1旧上传typed413 ECONNRESET失败；该文件独立复核8通过/1同错误失败，完整日志在`.local/efficiency-rsi-pr-20261102/`，未改传输代码。smoke和motif:check通过。合并前1793 Python/1495 Node全通过及Linux原生证据按原记录保留，不称合并后完整全绿。
 - main兼容：main与本分支独立使用过Paper v41/PPT v38编号，合并保留main版本。现按原重导出器从main Paper v42/PPT v39生成v43/v40，精确审阅容器归属、Source单次解码及版本绑定三处变化；五项程序/证据文件逐字节保留。58项兼容回归通过，旧版本全部保留。

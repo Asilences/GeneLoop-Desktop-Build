@@ -3,6 +3,7 @@ import atexit
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import pytest
@@ -49,6 +50,9 @@ def test_optional_nonce_changes_only_ownership_fields_of_existing_launcher(tmp_p
     if with_media_tools:monkeypatch.setenv('REMOTION_MEDIA_TOOLS',str(tmp_path/'tools'))
     else:monkeypatch.delenv('REMOTION_MEDIA_TOOLS',raising=False)
     monkeypatch.setattr(atexit,'register',lambda *args:None)
+    # Command assembly is diagnostic on Windows too; Docker execution is Linux.
+    monkeypatch.setattr(os,'getuid',lambda:1234,raising=False)
+    monkeypatch.setattr(os,'getgid',lambda:1234,raising=False)
     nonce='a'*32
     def launch(scoped):
         if scoped:

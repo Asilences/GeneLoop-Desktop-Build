@@ -50,4 +50,4 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('manifest','trace','specification'):parser.add_argument('--'+name,type=Path,required=True)
     args=parser.parse_args()
-    print(json.dumps(verify(*[json.loads(getattr(args,name).read_text()) for name in ('manifest','trace','specification')]),ensure_ascii=False))
+    print(json.dumps(verify(*[json.loads(getattr(args,name).read_text(encoding='utf-8')) for name in ('manifest','trace','specification')]),ensure_ascii=False))

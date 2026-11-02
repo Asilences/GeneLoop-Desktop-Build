@@ -20,7 +20,7 @@ def fixture(tmp_path,monkeypatch):
     routes=put(tmp_path/'routes.json',{'format':'source_learning_routes_v1','owner':'owner','routes':[
         {'scope':'source-test','backend':'source_program','runs':[{'run':str(tmp_path/'native'),
          'role':'training','context':context,'evidence':[evidence]}]}]})
-    ledger=tmp_path/'ledger';ledger.mkdir();put(ledger/'budget-checkpoint.json',{'request_count':19,'reserved_usd':1.5});(ledger/'cost-ledger.jsonl').write_text('original-ledger\n')
+    ledger=tmp_path/'ledger';ledger.mkdir();put(ledger/'budget-checkpoint.json',{'request_count':19,'reserved_usd':1.5});(ledger/'cost-ledger.jsonl').write_text('original-ledger\n', encoding='utf-8')
     adapter=SimpleNamespace(plan={'owner':'owner','id':'diagnostic','learning_routes':routes,'ledger_root':str(ledger)},
         materials=CapabilityMaterials(tmp_path/'materials','owner'),opportunity_key=lambda j:'original-opportunity')
     job={'id':'job','execution_scope':'source-test'}
@@ -67,6 +67,6 @@ def test_missing_or_incompatible_evidence_never_dispatches(tmp_path,monkeypatch)
     result['construction_gap']['reason']='insufficient_evidence'
     assert module.acquire_source(adapter,job,result,attempt)['status']=='deferred' and not calls
     result['construction_gap']['reason']='missing_primitive'
-    (tmp_path/'native-evidence.json').write_text('{}')
+    (tmp_path/'native-evidence.json').write_text('{}', encoding='utf-8')
     with pytest.raises(ValueError,match='evidence_changed'):module.acquire_source(adapter,job,result,attempt)
     assert not calls

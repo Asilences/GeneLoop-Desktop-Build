@@ -28,8 +28,8 @@ for(let i=0;i<2;i++){
  for(const [name,value] of [['trace',result.execution],['args',args],['snapshot',snapshot]])writeFileSync(run+'/'+name+'.json',JSON.stringify(value));
 }
 """
-    subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',script,str(tmp_path)],cwd=ROOT,check=True,capture_output=True,text=True)
-    snapshot=json.loads((tmp_path/'seed.json').read_text());contract=json.loads((tmp_path/'contract.json').read_text())
+    subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',script,str(tmp_path)],cwd=ROOT,check=True,capture_output=True,text=True, encoding='utf-8')
+    snapshot=json.loads((tmp_path/'seed.json').read_text(encoding='utf-8'));contract=json.loads((tmp_path/'contract.json').read_text(encoding='utf-8'))
     template=put(tmp_path/'publication-inputs.json',{
         'validation':{'id':'validation','input':{'rows':[{'group':'A'},{'group':'A'}]}},
         'followup':{'id':'followup','input':{'rows':[{'group':'B'}]}}})
@@ -66,8 +66,8 @@ def test_second_scene_uses_common_discovery_controller_feedback_and_real_store(t
 
 def test_changed_host_adapter_dependency_blocks_before_import_or_model(tmp_path):
     plan,_,_=setup(tmp_path)
-    dependency=tmp_path/'host-module.py';dependency.write_text('# original')
-    plan['scene_dependencies']=[file_ref(dependency)];dependency.write_text('# changed')
+    dependency=tmp_path/'host-module.py';dependency.write_text('# original', encoding='utf-8')
+    plan['scene_dependencies']=[file_ref(dependency)];dependency.write_text('# changed', encoding='utf-8')
     with pytest.raises(ValueError,match='evidence_changed'):load_scene_adapter(plan)
 
 
@@ -88,7 +88,7 @@ def test_failed_then_successful_same_input_keeps_negative_evidence(tmp_path):
     # Same input has a failed predecessor and later success. Preserve both;
     # their repetition does not create two independent supporting inputs.
     first=Path(plan['discovery'][0]['run']);second=Path(plan['discovery'][1]['run'])
-    trace=json.loads((first/'trace.json').read_text());trace['status']='failed';put(first/'trace.json',trace)
+    trace=json.loads((first/'trace.json').read_text(encoding='utf-8'));trace['status']='failed';put(first/'trace.json',trace)
     for name in ('args.json','snapshot.json'): (second/name).write_bytes((first/name).read_bytes())
     trace['status']='succeeded';trace['task_id']='later';trace['result']={'counts':{'diagnostic-0':1}};put(second/'trace.json',trace)
     adapter=load_scene_adapter(plan);directory=tmp_path/'preview';directory.mkdir()

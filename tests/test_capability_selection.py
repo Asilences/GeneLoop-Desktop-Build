@@ -29,14 +29,14 @@ def test_feedback_selection_is_dispatched_and_quality_returns_to_selection(tmp_p
             'specification':str(tmp_path/'specification.json'),'output':str(Path(private)/'run')}
         output,result=selector.select(plan)  # actual existing TS Store export, no model
         assert result['root']==b
-        manifest=json.loads((output/'manifest.json').read_text())
+        manifest=json.loads((output/'manifest.json').read_text(encoding='utf-8'))
         assert manifest['grant']['root']==b
         assert manifest['grant']['arguments_sha256']==capability_digest({'value':5})
         calls=[]
         def diagnostic_child(command,**kwargs):
             calls.append(command)
             if '--root' in command:
-                assert json.loads(Path(command[command.index('--root')+1]).read_text())==b
+                assert json.loads(Path(command[command.index('--root')+1]).read_text(encoding='utf-8'))==b
                 kwargs['stdout'].write(json.dumps({'status':'succeeded','root':b}))
             else:
                 kwargs['stdout'].write(json.dumps({'passed':quality_passed,'checks':[{'status':'passed' if quality_passed else 'failed'}]}))

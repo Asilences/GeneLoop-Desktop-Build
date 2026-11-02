@@ -13,7 +13,7 @@ from jsonschema import Draft202012Validator
 from src.adapters.capability_contract import capability_digest, capability_ref, validate_capability_snapshot
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = json.loads((ROOT/'schemas/capability-improvement-v1.schema.json').read_text())
+SCHEMA = json.loads((ROOT/'schemas/capability-improvement-v1.schema.json').read_text(encoding='utf-8'))
 
 
 def validate(kind, value):
@@ -29,7 +29,7 @@ def save(path, value):
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding='utf-8'))
 
 
 def evidence(ref):

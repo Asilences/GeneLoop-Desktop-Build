@@ -11,7 +11,7 @@ from tests.test_capability_builder import setup
 
 
 def put(path,value):
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding='utf-8')
     return {'path':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
@@ -59,7 +59,7 @@ class Adapter:
         return {'status':'published','publication_sha256':self.head,'evidence_ref':ref}
 
 
-def events(plan):return [json.loads(line) for line in (Path(plan['output'])/'events.jsonl').read_text().splitlines()]
+def events(plan):return [json.loads(line) for line in (Path(plan['output'])/'events.jsonl').read_text(encoding='utf-8').splitlines()]
 
 
 def test_native_material_change_restarts_builder_with_fresh_snapshot_not_repair(tmp_path):
@@ -183,7 +183,7 @@ def test_tampered_evidence_fails_before_adapter_and_existing_run_never_replayed(
     plan,_,_=plan_at(tmp_path)
     run_improvement(plan,None)
     with pytest.raises(FileExistsError):run_improvement(plan,None)
-    Path(plan['jobs'][0]['task']['path']).write_text('{}')
+    Path(plan['jobs'][0]['task']['path']).write_text('{}', encoding='utf-8')
     with pytest.raises(ValueError,match='evidence_changed'):run_improvement(plan,None)
 
 
@@ -225,7 +225,7 @@ def test_corrupted_catalog_never_reaches_builder(tmp_path):
     adapter.snapshot=create_capability_snapshot('owner',snapshot['roots'],caps)
     with pytest.raises(ValueError,match='not_certified'):run_improvement(plan,adapter,execute=True)
     assert not adapter.calls
-    assert json.loads((Path(plan['output'])/'result.json').read_text())['status']=='failed'
+    assert json.loads((Path(plan['output'])/'result.json').read_text(encoding='utf-8'))['status']=='failed'
 
 
 def test_repeat_signature_compares_location_and_candidate_without_claiming_progress(tmp_path):

@@ -1,5 +1,7 @@
 """Offline mechanism diagnostics; synthetic evidence is not empirical RSI benefit."""
 import copy
+import builtins
+import importlib.util
 import json
 from pathlib import Path
 import pytest
@@ -8,6 +10,7 @@ from src.adapters.capability_contract import capability_ref, create_capability_s
 from src.adapters.capability_builder import compile_proposal
 from src.adapters.capability_authoring import authoring_context, aliases
 from tests.test_capability_builder import setup
+from src.adapters.file_lock import exclusive_lock
 
 
 def fixture(tmp_path):
@@ -15,7 +18,7 @@ def fixture(tmp_path):
     caps=[{**c,'certification':'certified','lifecycle':'active'} for c in snapshot['capabilities']]
     snapshot=create_capability_snapshot('owner',snapshot['roots'],caps)
     library={'snapshot':snapshot,'catalog':[],'head':None}
-    path=tmp_path/'evidence.json';path.write_text('{"diagnostic":true}')
+    path=tmp_path/'evidence.json';path.write_text('{"diagnostic":true}', encoding='utf-8')
     return CapabilityFeedback(tmp_path/'feedback','owner'),library,file_ref(path),proposal
 
 
@@ -51,7 +54,7 @@ def test_failed_attempt_cost_changes_next_opportunity_order_and_facts_deduplicat
     assert len(manager.read()['facts'])==1
     assert [j['id'] for j in manager.prioritize([{'id':'a'},{'id':'b'}])]==['b','a']
     assert CapabilityFeedback(tmp_path/'feedback','other').read()['facts']=={}
-    Path(evidence['path']).write_text('{}')
+    Path(evidence['path']).write_text('{}', encoding='utf-8')
     with pytest.raises(ValueError,match='evidence_changed'):manager.prioritize([{'id':'a'}])
 
 
@@ -71,7 +74,7 @@ def test_withdraw_transitive_closure_preserves_unrelated_root_and_old_bytes(tmp_
     assert library==original
     manager.withdraw(b,'version_changed',evidence)
     assert manager.project(library)['snapshot'] is None
-    assert len(json.loads((manager.directory/'recovery-queue.json').read_text()))==4
+    assert len(json.loads((manager.directory/'recovery-queue.json').read_text(encoding='utf-8')))==4
 
 
 def test_recovery_requires_checked_new_publication_and_archive_retains_material(tmp_path):
@@ -93,3 +96,24 @@ def test_recovery_requires_checked_new_publication_and_archive_retains_material(
 def test_cost_not_silently_coerced(tmp_path,cost):
     manager,library,evidence,_=fixture(tmp_path)
     with pytest.raises(ValueError,match='cost_invalid'):fact(manager,library['snapshot']['roots'][0],evidence,cost=cost)
+
+
+def test_feedback_import_does_not_require_posix_fcntl(monkeypatch):
+    original=builtins.__import__
+    def portable_import(name,*args,**kwargs):
+        if name=='fcntl':raise ModuleNotFoundError("No module named 'fcntl'")
+        return original(name,*args,**kwargs)
+    monkeypatch.setattr(builtins,'__import__',portable_import)
+    spec=importlib.util.spec_from_file_location('src.adapters.feedback_portability_diagnostic',
+        Path(__file__).resolve().parents[1]/'src/adapters/capability_feedback.py')
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    assert module.CapabilityFeedback
+
+
+def test_busy_feedback_lock_refuses_write_and_unicode_facts_roundtrip(tmp_path):
+    manager,library,evidence,_=fixture(tmp_path);ref=library['snapshot']['roots'][0]
+    with exclusive_lock(manager.directory/'writer.lock'):
+        with pytest.raises(BlockingIOError):fact(manager,ref,evidence)
+    assert manager.read()['facts']=={}
+    manager.observe(stage='execution',subject=ref,scope='中文场景与重复键检查',status='passed',evidence=[evidence])
+    assert next(iter(manager.read()['facts'].values()))['scope']=='中文场景与重复键检查'

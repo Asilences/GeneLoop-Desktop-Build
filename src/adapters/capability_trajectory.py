@@ -28,10 +28,10 @@ def project_web_task(task, owner):
     boundaries={}
     if boundary_path.exists():
         refs.append(reference(boundary_path))
-        for row in map(json.loads,boundary_path.read_text().splitlines()):
+        for row in map(json.loads,boundary_path.read_text(encoding='utf-8').splitlines()):
             if row['call_id'] in boundaries:raise ValueError('trajectory_duplicate_boundary')
             boundaries[row['call_id']]=row
-    events=[json.loads(line) for line in (task/'events.jsonl').read_text().splitlines() if line]
+    events=[json.loads(line) for line in (task/'events.jsonl').read_text(encoding='utf-8').splitlines() if line]
     calls={};steps=[]
     start=effective.get('trace_start_index',0)
     if type(start) is not int or not 0<=start<=len(events):raise ValueError('trajectory_trace_boundary_invalid')

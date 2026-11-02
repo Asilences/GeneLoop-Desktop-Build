@@ -181,9 +181,9 @@ def test_changed_or_incomplete_evidence_fails_closed(tmp_path, mutate, error):
 
 
 def test_changed_artifact_and_evaluator_files_rejected(tmp_path):
-    x = example(tmp_path); (tmp_path/'candidate.txt').write_text('mutated')
+    x = example(tmp_path); (tmp_path/'candidate.txt').write_text('mutated', encoding='utf-8')
     with pytest.raises(ValueError, match='evidence_changed'): run(x, tmp_path)
-    x = example(tmp_path); (tmp_path/'checker.py').write_text('mutated')
+    x = example(tmp_path); (tmp_path/'checker.py').write_text('mutated', encoding='utf-8')
     with pytest.raises(ValueError, match='evidence_changed'): run(x, tmp_path)
 
 
@@ -209,8 +209,8 @@ def test_over_budget_success_not_counted_as_budget_unlock(tmp_path):
 
 
 def test_cli_validates_without_model_call(tmp_path):
-    x = example(tmp_path); path = tmp_path/'plan.json'; path.write_text(json.dumps(x[0]))
-    output = subprocess.check_output([sys.executable, str(Path(__file__).resolve().parents[1]/'scripts/measure-efficiency-rsi.py'), '--study', str(path)], text=True)
+    x = example(tmp_path); path = tmp_path/'plan.json'; path.write_text(json.dumps(x[0]), encoding='utf-8')
+    output = subprocess.check_output([sys.executable, str(Path(__file__).resolve().parents[1]/'scripts/measure-efficiency-rsi.py'), '--study', str(path)], text=True, encoding='utf-8')
     assert json.loads(output)['paid_requests'] == 0
 
 
@@ -236,9 +236,9 @@ def test_budget_scope_excludes_overhead_and_is_explicit(tmp_path):
 def test_cli_measures_export_without_execution(tmp_path):
     x = example(tmp_path)
     for name, value in zip(('plan', 'obs', 'registry'), x):
-        (tmp_path / (name+'.json')).write_text(json.dumps(value))
+        (tmp_path / (name+'.json')).write_text(json.dumps(value), encoding='utf-8')
     output = subprocess.check_output([sys.executable,
         str(Path(__file__).resolve().parents[1]/'scripts/measure-efficiency-rsi.py'),
         '--study', str(tmp_path/'plan.json'), '--observations', str(tmp_path/'obs.json'),
-        '--registry', str(tmp_path/'registry.json'), '--evidence-root', str(tmp_path)], text=True)
+        '--registry', str(tmp_path/'registry.json'), '--evidence-root', str(tmp_path)], text=True, encoding='utf-8')
     assert json.loads(output)['comparisons'][0]['category'] == 'both_success'

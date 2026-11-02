@@ -20,7 +20,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def put(path,value):
-    path.write_text(json.dumps(value,ensure_ascii=False));return reference(path)
+    path.write_text(json.dumps(value,ensure_ascii=False), encoding='utf-8');return reference(path)
 
 
 def case(tmp_path):
@@ -45,7 +45,7 @@ def test_checker_recomputes_duplicate_records_and_detects_wrong_final_counts(tmp
 def test_checker_does_not_accept_boolean_counts_or_input_version_changes(tmp_path):
     manifest,trace,spec=case(tmp_path);trace['result']['entry_count']=True
     assert not verify(manifest,trace,spec)['passed']
-    (tmp_path/'inputs/a.bib').write_text('changed')
+    (tmp_path/'inputs/a.bib').write_text('changed', encoding='utf-8')
     with pytest.raises(ValueError,match='input_changed'):verify(manifest,trace,spec)
 
 
@@ -58,20 +58,20 @@ def test_paper_native_certification_composition_publication_and_next_builder(tmp
     for label,keys in [('heldout',['X','Y','Y']),('source',['A','B'])]:
         work=tmp_path/label
         for part in ('inputs','code','outputs/code','command-tmp'):(work/part).mkdir(parents=True,exist_ok=True)
-        (work/'inputs/source.bib').write_text('\n'.join('@article{'+key+',title={Example}}' for key in keys)+'\n')
+        (work/'inputs/source.bib').write_text('\n'.join('@article{'+key+',title={Example}}' for key in keys)+'\n', encoding='utf-8')
         script="import {sandboxRun} from './scripts/certify-script-motifs.mjs';process.stdout.write(sandboxRun(process.argv[1],process.argv[2]));"
-        stdout=subprocess.check_output(['node','--input-type=module','-e',script,str(work),command],cwd=ROOT,text=True)
+        stdout=subprocess.check_output(['node','--input-type=module','-e',script,str(work),command],cwd=ROOT,text=True, encoding='utf-8')
         p=observe(command,'diagnostic BibTeX inventory',str(work),stdout,label,'diagnostic-call')
         p['witness']['events_sha256']='0'*64
         rows.append({'task_id':label,'workspace':str(work),'candidates':[p] if label=='source' else []})
     put(tmp_path/'observations.json',rows);native=tmp_path/'native';native.mkdir()
-    subprocess.run(['node','scripts/certify-script-motifs.mjs',str(tmp_path/'observations.json'),str(native)],cwd=ROOT,check=True,capture_output=True,text=True)
-    catalog=json.loads(subprocess.check_output(['node','scripts/run-script-capability.mjs','--catalog','--library',str(native/'library.json'),'--owner','owner'],cwd=ROOT,text=True))
+    subprocess.run(['node','scripts/certify-script-motifs.mjs',str(tmp_path/'observations.json'),str(native)],cwd=ROOT,check=True,capture_output=True,text=True, encoding='utf-8')
+    catalog=json.loads(subprocess.check_output(['node','scripts/run-script-capability.mjs','--catalog','--library',str(native/'library.json'),'--owner','owner'],cwd=ROOT,text=True, encoding='utf-8'))
     assert len(catalog['capabilities'])==1
     leaf=catalog['capabilities'][0];contract={**leaf['contract'],'output_schema':leaf['contract']['output_schema']['properties']['value']}
     publication={'libraries':[reference(native/'library.json')]}
     for label,keys in [('validation',['P','P','Q','R']),('followup',['S','T','T','U','V'])]:
-        path=tmp_path/(label+'.bib');path.write_text('\n'.join('@article{'+key+',title={Example}}' for key in keys)+'\n')
+        path=tmp_path/(label+'.bib');path.write_text('\n'.join('@article{'+key+',title={Example}}' for key in keys)+'\n', encoding='utf-8')
         virtual='/work/inputs/'+path.name
         publication[label]={'id':label,'inputs':[{'path':virtual,'source':reference(path)}],
             'input':{'paths':[virtual]},'specification':{'kind':'bibtex_inventory_v1','source_path':virtual,

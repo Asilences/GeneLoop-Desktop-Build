@@ -145,7 +145,7 @@ class CapabilityImprovementAdapter:
             index=Path(directory)/'index.json';save(index,self.materials.export())
             result = subprocess.run(['node', '--experimental-strip-types',
                 'scripts/export-capability-construction-library.mjs', self.plan['store'], self.plan['seed']['path'],str(index)],
-                cwd=ROOT, capture_output=True, text=True, check=True)
+                cwd=ROOT, capture_output=True, text=True, encoding='utf-8', check=True)
         value = json.loads(result.stdout)
         value['source_catalog'] = {'seed':self.seed_catalog,'admitted_materials':value.pop('material_catalog',[])}
         return value

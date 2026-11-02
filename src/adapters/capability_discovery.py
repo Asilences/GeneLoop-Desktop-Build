@@ -41,16 +41,16 @@ def discover_jobs(entries,owner,directory,*,inspector,min_support=2):
         job_id='discovered-'+identity[:20];context=selected[0]['context']
         task={'id':job_id,'instruction':'根据以下真实任务轨迹，构造可复用能力以处理同类当前输入。自行选择能力、参数流和输出；不得硬编码历史答案。失败证据可以帮助识别缺口，不能当作正确实现。该机会不是已证实的降本结果。',
               'contract':context['contract'],'learning_evidence':[o['trace'] for o in selected]}
-        task_path=directory/(job_id+'-task.json');task_path.write_text(json.dumps(task,ensure_ascii=False,indent=2));task_path.chmod(0o600)
+        task_path=directory/(job_id+'-task.json');task_path.write_text(json.dumps(task,ensure_ascii=False,indent=2),encoding='utf-8');task_path.chmod(0o600)
         observation_rows=[]
         for index,o in enumerate(selected):
             path=directory/(job_id+'-evidence-'+str(index)+'.json')
             # Retain original references, not just copied summaries.
-            path.write_text(json.dumps(o,ensure_ascii=False,indent=2));path.chmod(0o600)
+            path.write_text(json.dumps(o,ensure_ascii=False,indent=2),encoding='utf-8');path.chmod(0o600)
             observation_rows.append({'task_id':o['task_id'],'kind':'task_failure' if o['status']=='failed' else 'repeated_structure',
                 'split':o['role'],'summary':'自动从场景真实记录提取；收益未知。','evidence':file_ref(path)})
         jobs.append({'id':job_id,'feedback_key':key,'execution_scope':context['scope'],'objective':'capability_acquisition','task':file_ref(task_path),
                      'publication_plan':context['publication_plan'],'observations':observation_rows,
                      'source_evidence':[ref for o in selected for ref in o['evidence']]})
-    (directory/'discovery.json').write_text(json.dumps({'jobs':[j['id'] for j in jobs],'ignored':ignored},indent=2))
+    (directory/'discovery.json').write_text(json.dumps({'jobs':[j['id'] for j in jobs],'ignored':ignored},indent=2),encoding='utf-8')
     return jobs

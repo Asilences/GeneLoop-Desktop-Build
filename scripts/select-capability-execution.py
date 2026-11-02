@@ -13,13 +13,13 @@ from src.adapters.capability_scene import run_child
 
 
 def select(plan):
-    seed=json.loads(Path(plan['seed']).read_text());owner=plan['owner']
+    seed=json.loads(Path(plan['seed']).read_text(encoding='utf-8'));owner=plan['owner']
     if seed['owner']!=owner:raise ValueError('selection_owner_changed')
-    raw=subprocess.run(['node','--experimental-strip-types','scripts/export-capability-construction-library.mjs',plan['store'],plan['seed']],cwd=ROOT,capture_output=True,text=True,check=True)
+    raw=subprocess.run(['node','--experimental-strip-types','scripts/export-capability-construction-library.mjs',plan['store'],plan['seed']],cwd=ROOT,capture_output=True,text=True,check=True, encoding='utf-8')
     library=json.loads(raw.stdout)
     feedback=CapabilityFeedback(plan['feedback_directory'],owner)
     root,projected=feedback.select_execution(library,plan['eligible'],plan['scope'])
-    manifest=json.loads(Path(plan['manifest']).read_text());args=json.loads(Path(plan['args']).read_text())
+    manifest=json.loads(Path(plan['manifest']).read_text(encoding='utf-8'));args=json.loads(Path(plan['args']).read_text(encoding='utf-8'))
     if manifest['owner']!=owner:raise ValueError('selection_owner_changed')
     if manifest['grant'].get('revoked') is not False:raise ValueError('selection_grant_revoked')
     output=Path(plan['output']).resolve()
@@ -31,7 +31,7 @@ def select(plan):
     manifest['registry_path']=str(output/'snapshot.json')
     for name,value in [('manifest',manifest),('snapshot',snapshot),('args',args),('root',root)]:save(output/(name+'.json'),value)
     if plan.get('specification'):
-        save(output/'specification.json',json.loads(Path(plan['specification']).read_text()))
+        save(output/'specification.json',json.loads(Path(plan['specification']).read_text(encoding='utf-8')))
     result={'format':'capability_execution_selection_v1','root':root,'feedback_sha256':projected['feedback_sha256'],
             'scope':plan['scope'],'eligible':plan['eligible'],'quality':'not_evaluated','model_calls':0}
     save(output/'selection.json',result)
@@ -47,7 +47,7 @@ def execute(plan,output,result):
             '--args',str(output/'args.json'),'--root',str(output/'root.json')],cwd=ROOT,env=env,stdout=out,stderr=err)
     result['runtime_exit_code']=code
     refs=[file_ref(output/name) for name in ('selection.json','trace.json','manifest.json','args.json','specification.json')]
-    trace=json.loads((output/'trace.json').read_text())
+    trace=json.loads((output/'trace.json').read_text(encoding='utf-8'))
     passed=False
     if code==0 and trace.get('status')=='succeeded':
         # Fixed host checker; a plan cannot supply arbitrary validator code.
@@ -57,7 +57,7 @@ def execute(plan,output,result):
                 '--specification',str(output/'specification.json'),'--output',str(output/'qa')],cwd=ROOT,env=env,stdout=out,stderr=err)
         refs.append(file_ref(output/'validation.json'))
         if code==0:
-            qa=json.loads((output/'validation.json').read_text())
+            qa=json.loads((output/'validation.json').read_text(encoding='utf-8'))
             passed=qa.get('passed') is True and bool(qa.get('checks')) and all(c.get('status')=='passed' for c in qa['checks'])
     result['quality']='passed_mechanical_checks' if passed else 'not_passed'
     feedback=CapabilityFeedback(plan['feedback_directory'],plan['owner'])
@@ -73,7 +73,7 @@ def main():
     def interrupted(signum,frame):raise KeyboardInterrupt('selection_interrupted')
     signal.signal(signal.SIGTERM,interrupted)
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--plan',type=Path,required=True);parser.add_argument('--execute',action='store_true')
-    args=parser.parse_args();plan=json.loads(args.plan.read_text())
+    args=parser.parse_args();plan=json.loads(args.plan.read_text(encoding='utf-8'))
     if args.execute and not plan.get('specification'):parser.error('--execute requires an independent specification in the host plan')
     output,result=select(plan)
     if args.execute:

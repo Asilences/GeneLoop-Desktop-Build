@@ -36,9 +36,9 @@ def test_actual_discovery_adapter_jobs_enter_common_controller(tmp_path):
     adapter.discover_jobs=lambda directory:discover_jobs(entries,'owner',directory/'discovery')
     result=run_improvement(plan,adapter,execute=True)
     assert [r['status'] for r in result['outcomes']]==['published']
-    jobs=json.loads((Path(plan['output'])/'resolved-jobs.json').read_text())
+    jobs=json.loads((Path(plan['output'])/'resolved-jobs.json').read_text(encoding='utf-8'))
     assert len(jobs)==1 and len(jobs[0]['observations'])==2
-    task=json.loads(Path(jobs[0]['task']['path']).read_text())
+    task=json.loads(Path(jobs[0]['task']['path']).read_text(encoding='utf-8'))
     assert 'steps' not in task and len(task['learning_evidence'])==2
 
 
@@ -46,15 +46,15 @@ def test_renamed_identical_input_not_independent_support(tmp_path):
     _,_,_,entries=records(tmp_path)
     # Duplicate evidence, despite a different task ID and directory.
     args={'value':0};run=Path(entries[1]['run']);put(run/'args.json',args)
-    trace=json.loads((run/'trace.json').read_text());trace['arguments_sha256']=capability_digest(args);put(run/'trace.json',trace)
-    qa=json.loads((run/'validation.json').read_text());qa['evidence_binding']['trace_sha256']=file_ref(run/'trace.json')['sha256'];put(run/'validation.json',qa)
+    trace=json.loads((run/'trace.json').read_text(encoding='utf-8'));trace['arguments_sha256']=capability_digest(args);put(run/'trace.json',trace)
+    qa=json.loads((run/'validation.json').read_text(encoding='utf-8'));qa['evidence_binding']['trace_sha256']=file_ref(run/'trace.json')['sha256'];put(run/'validation.json',qa)
     assert discover_jobs(entries,'owner',tmp_path/'discovery')==[]
 
 
 @pytest.mark.parametrize('mutation',['owner','mode','args','quality','heldout','unrelated_qa'])
 def test_invalid_or_heldout_observations_cannot_generate_jobs(tmp_path,mutation):
     _,_,_,entries=records(tmp_path);run=Path(entries[0]['run'])
-    trace=json.loads((run/'trace.json').read_text())
+    trace=json.loads((run/'trace.json').read_text(encoding='utf-8'))
     if mutation=='owner':trace['owner']='other'
     if mutation=='mode':trace['mode']='validate'
     if mutation=='args':trace['arguments_sha256']='0'*64
@@ -71,7 +71,7 @@ def test_source_change_detected_and_repeated_opportunity_stable_across_output_pa
     second=discover_jobs(entries,'owner',tmp_path/'two')[0]
     assert first['task']['path']!=second['task']['path']
     assert SourceImprovementAdapter.opportunity_key(first)==SourceImprovementAdapter.opportunity_key(second)
-    source=Path(entries[0]['run'])/'args.json';source.write_text('{}')
+    source=Path(entries[0]['run'])/'args.json';source.write_text('{}', encoding='utf-8')
     with pytest.raises(ValueError,match='evidence_changed'):discover(first)
 
 
@@ -80,7 +80,7 @@ def test_existing_native_witness_collector_is_used_and_source_pinned(tmp_path):
     entry['kind']='native_source';task={'id':'native','partition':'training','instruction':'diagnostic'}
     work=run/'native';(work/'src').mkdir(parents=True);(work/'out/render-1').mkdir(parents=True)
     (run/'qa').mkdir();source='export default function Demo() { return null; }'
-    (work/'src/index.tsx').write_text(source)
+    (work/'src/index.tsx').write_text(source, encoding='utf-8')
     import hashlib
     digest=hashlib.sha256(source.encode()).hexdigest()
     put(run/'effective.json',{'task':task});put(run/'result.json',{'status':'completed'})
@@ -90,7 +90,7 @@ def test_existing_native_witness_collector_is_used_and_source_pinned(tmp_path):
     observed=inspect_run(entry,'owner')
     assert observed['trace']['witness']['source_sha256']==digest
     assert str(work/'src/index.tsx') in [r['path'] for r in observed['evidence']]
-    (work/'src/index.tsx').write_text('changed')
+    (work/'src/index.tsx').write_text('changed', encoding='utf-8')
     with pytest.raises(ValueError,match='not_witnessed'):inspect_run(entry,'owner')
 
 
@@ -112,7 +112,7 @@ def test_feedback_admission_uses_original_evidence_and_actual_failed_attempts(tm
     ('capability_legacy_changed',True),('source_task_input_changed',False)])
 def test_ordinary_execution_feedback_is_ingested_and_only_version_guard_quarantines(tmp_path,reason,withdrawn):
     plan,snapshot,_,entries=records(tmp_path);run=Path(entries[0]['run'])
-    trace=json.loads((run/'trace.json').read_text());trace.update(status='rejected',receipts=[{'reason':reason}]);put(run/'trace.json',trace)
+    trace=json.loads((run/'trace.json').read_text(encoding='utf-8'));trace.update(status='rejected',receipts=[{'reason':reason}]);put(run/'trace.json',trace)
     adapter=object.__new__(SourceImprovementAdapter)
     adapter.plan={**plan,'discovery':entries};adapter.seed=snapshot;adapter.seed_catalog={};adapter.templates={}
     adapter.feedback=CapabilityFeedback(tmp_path/'feedback','owner')
@@ -130,7 +130,7 @@ def test_changed_original_evidence_after_build_blocks_publication(tmp_path):
     construct=adapter.construct
     def changing(*args):
         result=construct(*args)
-        (Path(entries[0]['run'])/'args.json').write_text('{}')
+        (Path(entries[0]['run'])/'args.json').write_text('{}', encoding='utf-8')
         return result
     adapter.construct=changing
     with pytest.raises(ValueError,match='evidence_changed'):run_improvement(plan,adapter,execute=True)
@@ -143,7 +143,7 @@ def test_published_contribution_feeds_both_values_and_skips_identical_opportunit
     adapter=object.__new__(SourceImprovementAdapter);adapter.feedback=CapabilityFeedback(tmp_path/'feedback','owner')
     fake=Adapter(snapshot,proposal);attempt=tmp_path/'attempt'
     result=fake.construct({},fake.library(),attempt,None,None)
-    candidate=json.loads((attempt/'candidate.json').read_text());outcome=fake.publish(job,candidate,attempt,None)
+    candidate=json.loads((attempt/'candidate.json').read_text(encoding='utf-8'));outcome=fake.publish(job,candidate,attempt,None)
     adapter.record_outcome(job,attempt,result,candidate,outcome)
     facts=list(adapter.feedback.read()['facts'].values())
     assert sum(f['stage']=='construction' for f in facts)==2

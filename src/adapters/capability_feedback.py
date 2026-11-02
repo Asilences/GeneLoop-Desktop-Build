@@ -5,7 +5,6 @@ only orders host-admitted alternatives; similarity of schemas is not equivalence
 """
 from __future__ import annotations
 import copy
-import fcntl
 import hashlib
 import json
 import math
@@ -14,6 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 from .capability_contract import capability_digest, capability_ref, create_capability_snapshot, validate_capability_snapshot
+from .file_lock import exclusive_lock
 
 
 def file_ref(path):
@@ -35,7 +35,7 @@ class CapabilityFeedback:
 
     def read(self):
         if not self.path.exists():return {'format':'capability_feedback_v1','owner':self.owner,'facts':{},'blocked':{},'archived':[],'history':[]}
-        value=json.loads(self.path.read_text())
+        value=json.loads(self.path.read_text(encoding='utf-8'))
         if value.get('format')!='capability_feedback_v1' or value.get('owner')!=self.owner:raise ValueError('feedback_owner_changed')
         for fact in value['facts'].values():
             for ref in fact['evidence']:verify(ref)
@@ -43,13 +43,12 @@ class CapabilityFeedback:
 
     @contextmanager
     def update(self):
-        with (self.directory/'writer.lock').open('a') as lock:
-            fcntl.flock(lock,fcntl.LOCK_EX)
+        with exclusive_lock(self.directory/'writer.lock'):
             state=self.read()
             yield state
             temp=self.directory/('.state-'+uuid4().hex)
             try:
-                with temp.open('x') as f:
+                with temp.open('x',encoding='utf-8') as f:
                     os.chmod(temp,0o600);json.dump(state,f,ensure_ascii=False,allow_nan=False);f.flush();os.fsync(f.fileno())
                 os.replace(temp,self.path)
             finally:
@@ -125,7 +124,7 @@ class CapabilityFeedback:
         # Persist even when all roots are unavailable, so recovery is actionable.
         target=self.directory/('recovery-'+uuid4().hex)
         try:
-            with target.open('x') as f:
+            with target.open('x',encoding='utf-8') as f:
                 os.chmod(target,0o600);json.dump(result['recovery_queue'],f,ensure_ascii=False);f.flush();os.fsync(f.fileno())
             os.replace(target,self.directory/'recovery-queue.json')
         finally:

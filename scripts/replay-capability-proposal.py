@@ -42,7 +42,7 @@ def repair_wrappers(proposal):
 
 def replay(answer_path,task_path,snapshot_path,output,repair=False):
     output=Path(output);output.mkdir(parents=True,exist_ok=False,mode=0o700)
-    raw=Path(answer_path).read_text();task=json.loads(Path(task_path).read_text());snapshot=json.loads(Path(snapshot_path).read_text())
+    raw=Path(answer_path).read_text(encoding='utf-8');task=json.loads(Path(task_path).read_text(encoding='utf-8'));snapshot=json.loads(Path(snapshot_path).read_text(encoding='utf-8'))
     summary={'format':'capability_proposal_replay_v1','model_calls':0,'execution_calls':0,'published':False,
              'scope':'offline_diagnostic_not_agent_repair','sources':{label:hashlib.sha256(Path(p).read_bytes()).hexdigest() for label,p in [('answer',answer_path),('task',task_path),('snapshot',snapshot_path)]},
              'code_sha256':{name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in ['scripts/replay-capability-proposal.py','src/adapters/capability_authoring.py','src/adapters/capability_builder.py','src/adapters/capability_contract.py','scenarios/remotion_edit/structured/run_capability_loop.py']}}

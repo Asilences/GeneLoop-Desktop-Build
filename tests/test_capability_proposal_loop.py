@@ -89,10 +89,10 @@ def test_partial_and_malformed_answers_preserve_failed_attempts(tmp_path, monkey
         fake_harness(monkeypatch, 'private unfinished source text', complete=complete)
         result = pilot.propose_once(task=task, catalog=catalog, snapshot=snapshot, output=tmp_path/name, gate=DiagnosticGate())
         assert result['status'] == 'failed' and result['request_ids'] == [123]
-        assert (tmp_path/name/'answer.txt').read_text() == 'private unfinished source text'
+        assert (tmp_path/name/'answer.txt').read_text(encoding='utf-8') == 'private unfinished source text'
         assert 'private unfinished' not in result['error']
         assert not (tmp_path/name/'candidate.json').exists()
-    rows = [json.loads(x) for x in (tmp_path/'attempt-registry.jsonl').read_text().splitlines()]
+    rows = [json.loads(x) for x in (tmp_path/'attempt-registry.jsonl').read_text(encoding='utf-8').splitlines()]
     assert [r['phase'] for r in rows] == ['registered', 'failed', 'registered', 'failed']
 
 
@@ -133,7 +133,7 @@ def test_native_turn_end_collector_retains_events(tmp_path, monkeypatch):
     fake_harness(monkeypatch, json.dumps(proposal), notifications=True)
     result = pilot.propose_once(task=task, catalog=catalog, snapshot=snapshot, output=tmp_path/'events', gate=DiagnosticGate())
     assert result['status'] == 'compiled_candidate'
-    assert len((tmp_path/'events/events.jsonl').read_text().splitlines()) == 2
+    assert len((tmp_path/'events/events.jsonl').read_text(encoding='utf-8').splitlines()) == 2
 
 
 def test_no_request_evidence_cannot_be_reported_as_real_compiled_candidate(tmp_path, monkeypatch):
@@ -154,7 +154,7 @@ def test_cumulative_gate_preserves_prior_spend_and_unknown_request(tmp_path, mon
     with pytest.raises(ValueError, match='existing_cumulative_ledger_required'):
         with pilot.CumulativeProposalGate(tmp_path): pass
     pilot.write(tmp_path/'budget-checkpoint.json', {'request_count': 7, 'reserved_usd': 2.0})
-    (tmp_path/'cost-ledger.jsonl').write_text('')
+    (tmp_path/'cost-ledger.jsonl').write_text('', encoding='utf-8')
     attempt = tmp_path/'attempt'; attempt.mkdir()
     # Accounting test only: avoid opening a listener or sending any request.
     monkeypatch.setattr(pilot, 'create_server', lambda *args: SimpleNamespace(

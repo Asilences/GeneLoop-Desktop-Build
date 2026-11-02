@@ -54,7 +54,7 @@ class PaperCapabilityAdapter(CapabilityImprovementAdapter):
                 if code:raise ValueError('paper_native_learning_failed')
                 library=reference(directory/'learn/library.json')
                 probe=subprocess.run(['node','scripts/run-script-capability.mjs','--catalog','--library',library['path'],'--owner',self.plan['owner']],
-                    cwd=ROOT,capture_output=True,text=True,check=True)
+                    cwd=ROOT,capture_output=True,text=True,check=True, encoding='utf-8')
                 if not json.loads(probe.stdout)['capabilities']:raise ValueError('paper_learning_no_supported_material')
                 for r in refs:evidence(r)
                 refs += [reference(directory/'request.json'),reference(directory/'learn/certification.json')]

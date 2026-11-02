@@ -72,7 +72,7 @@ def verify(manifest, trace, specification, output):
                 '--network','none','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges',
                 '--memory=2g','--cpus=2','--tmpfs','/tmp','--entrypoint',executable,
                 '-v',f'{runtime}:/runtime:ro','-v',f'{media}:/tools:ro','-v',f'{workspace}:/work:ro',
-                manifest['image'],*args],capture_output=True,text=True,timeout=180)
+                manifest['image'],*args],capture_output=True,text=True,timeout=180, encoding='utf-8')
         probe = container('ffprobe',['-v','error','-count_frames','-show_streams','-show_format','-of','json',relative])
         if probe.returncode:
             raise ValueError('validator_probe_failed')
@@ -114,7 +114,7 @@ def verify(manifest, trace, specification, output):
     result = {'passed':bool(checks) and all(c['status']=='passed' for c in checks),'checks':checks,
               'scope':'dimensions_fps_frames_full_decode_and_selected_source_pixels',
               'limitations':['No human or typography review','Not an efficiency comparison']}
-    (output/'verification.json').write_text(json.dumps(result,indent=2))
+    (output/'verification.json').write_text(json.dumps(result,indent=2), encoding='utf-8')
     return result
 
 
@@ -128,6 +128,6 @@ if __name__ == '__main__':
     result=verify(*(json.loads(frozen[name]) for name in ('manifest','trace','specification')),args.output)
     if any(path.read_bytes()!=frozen[name] for name,path in paths.items()):raise ValueError('validator_evidence_changed')
     result['evidence_binding']={name+'_sha256':hashlib.sha256(raw).hexdigest() for name,raw in frozen.items()}
-    (args.output/'verification.json').write_text(json.dumps(result,indent=2))
+    (args.output/'verification.json').write_text(json.dumps(result,indent=2), encoding='utf-8')
     print(json.dumps(result))
     raise SystemExit(0 if result['passed'] else 2)

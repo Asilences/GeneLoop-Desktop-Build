@@ -20,7 +20,7 @@ def cleanup_owned_container(name, nonce):
     """Inspect ownership, then remove the immutable ID, never a task-wide label."""
     if not re.fullmatch(r'geneloop-cap-[a-f0-9]{32}', name) or not re.fullmatch(r'[a-f0-9]{32}', nonce):
         raise ValueError('source_container_identity_invalid')
-    result = subprocess.run(['docker', 'inspect', name], capture_output=True, text=True, timeout=15)
+    result = subprocess.run(['docker', 'inspect', name], capture_output=True, text=True, timeout=15, encoding='utf-8')
     if result.returncode:
         if 'No such object' in result.stderr or 'No such container' in result.stderr:
             return {'status': 'absent', 'name': name}
@@ -29,7 +29,7 @@ def cleanup_owned_container(name, nonce):
     if len(values) != 1 or values[0].get('Config', {}).get('Labels', {}).get('geneloop.capability_nonce') != nonce:
         raise RuntimeError('source_container_owner_mismatch')
     identity = values[0]['Id']
-    removed = subprocess.run(['docker', 'rm', '-f', identity], capture_output=True, text=True, timeout=30)
+    removed = subprocess.run(['docker', 'rm', '-f', identity], capture_output=True, text=True, timeout=30, encoding='utf-8')
     if removed.returncode:
         raise RuntimeError('source_container_cleanup_failed')
     return {'status': 'removed', 'name': name, 'container_id': identity}

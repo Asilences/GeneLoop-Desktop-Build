@@ -46,7 +46,7 @@ class CapabilityTests(unittest.TestCase):
             with self.assertRaises(ValueError): capability_digest(value)
 
     def test_online_schema_dialect_positive_and_negative_cases(self):
-        cases=json.loads((Path(__file__).parent/'fixtures/capability_dialect_cases.json').read_text())
+        cases=json.loads((Path(__file__).parent/'fixtures/capability_dialect_cases.json').read_text(encoding='utf-8'))
         for case in cases:
             definition={k:copy.deepcopy(leaf()[k]) for k in ('owner','contract','implementation','dependencies')}
             definition['contract']['input_schema']=case['schema']
@@ -57,7 +57,7 @@ class CapabilityTests(unittest.TestCase):
                     with self.assertRaises(ValueError):create_capability(definition)
 
     def test_native_source_admission_and_mapping_agree(self):
-        fixtures=subprocess.run(['node','--experimental-strip-types','tests/fixtures/capability_native_validation.mjs'],capture_output=True,text=True)
+        fixtures=subprocess.run(['node','--experimental-strip-types','tests/fixtures/capability_native_validation.mjs'],capture_output=True,text=True, encoding='utf-8')
         self.assertEqual(fixtures.returncode,0,fixtures.stderr)
         for case in json.loads(fixtures.stdout):
             with self.subTest(case=case['name']):
@@ -96,7 +96,7 @@ class CapabilityTests(unittest.TestCase):
         with self.assertRaises(ValueError): validate_capability(changed)
 
     def test_native_legacy_digest_is_authoritative_for_python_mapping(self):
-        result=subprocess.run(['node','--experimental-strip-types','tests/fixtures/capability_legacy_native.mjs'],capture_output=True,text=True)
+        result=subprocess.run(['node','--experimental-strip-types','tests/fixtures/capability_legacy_native.mjs'],capture_output=True,text=True, encoding='utf-8')
         self.assertEqual(result.returncode,0,result.stderr)
         native=json.loads(result.stdout)
         self.assertEqual(map_legacy_library(native['raw'],'owner','source_program',native['sha']),native['mapped'])

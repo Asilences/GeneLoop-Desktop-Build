@@ -17,7 +17,7 @@ from jsonschema import Draft202012Validator
 from .rsi_quality import quality_status, verify_quality_files
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = json.loads((ROOT / 'schemas/efficiency-rsi-study-v1.schema.json').read_text())
+SCHEMA = json.loads((ROOT / 'schemas/efficiency-rsi-study-v1.schema.json').read_text(encoding='utf-8'))
 
 
 def digest(value):
@@ -324,12 +324,12 @@ def main():
     parser.add_argument('--registry', type=Path)
     parser.add_argument('--evidence-root', type=Path)
     args = parser.parse_args()
-    plan = validate_study(json.loads(args.plan.read_text()))
+    plan = validate_study(json.loads(args.plan.read_text(encoding='utf-8')))
     if args.observations:
         if args.registry is None or args.evidence_root is None:
             parser.error('measurement requires --registry and --evidence-root')
-        result = measure_study(plan, json.loads(args.observations.read_text()),
-                               registry=json.loads(args.registry.read_text()), evidence_root=args.evidence_root)
+        result = measure_study(plan, json.loads(args.observations.read_text(encoding='utf-8')),
+                               registry=json.loads(args.registry.read_text(encoding='utf-8')), evidence_root=args.evidence_root)
     else:
         result = {'valid': True, 'plan_sha256': digest(plan), 'paid_requests': 0, 'publication_authorized': False}
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))

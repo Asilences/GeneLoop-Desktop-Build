@@ -25,6 +25,7 @@ from deepseek_harness.api import final_response, finish_reason
 from src.adapters.capability_builder import compile_proposal
 from src.adapters.capability_authoring import FORMAT as AUTHORING_FORMAT, aliases, authoring_context, expand_draft, diagnose
 from src.adapters.capability_contract import capability_digest, validate_capability_snapshot
+from src.adapters.file_lock import exclusive_lock
 from src.adapters.deepseek_cost_gate import State, create_server
 from src.adapters.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
@@ -85,7 +86,7 @@ def append(path, value):
 
 
 def read_json(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding='utf-8'))
 
 
 def safe_error(error):
@@ -123,7 +124,6 @@ class CumulativeProposalGate(AbstractContextManager):
         self.gate = self.thread = self.lockfile = None
 
     def __enter__(self):
-        import fcntl
         checkpoint, ledger = self.root/'budget-checkpoint.json', self.root/'cost-ledger.jsonl'
         if not checkpoint.is_file() or not ledger.is_file():
             raise ValueError('proposal_existing_cumulative_ledger_required')
@@ -131,9 +131,10 @@ class CumulativeProposalGate(AbstractContextManager):
             raise ValueError('proposal_private_model_credential_required')
         # Prevent concurrent instances of this pilot. Legacy runners must still
         # be scheduled serially by the experiment owner; they do not use this lock.
-        self.lockfile = (self.root/'capability-proposal.lock').open('a')
         try:
-            fcntl.flock(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock = exclusive_lock(self.root/'capability-proposal.lock')
+            lock.__enter__()
+            self.lockfile = lock
             owner = self
             class AuditedState(State):
                 def book(self, body):
@@ -194,7 +195,8 @@ class CumulativeProposalGate(AbstractContextManager):
         if self.thread:
             self.thread.join(timeout=5)
         if self.lockfile:
-            self.lockfile.close()
+            self.lockfile.__exit__(*args)
+            self.lockfile = None
 
 
 class TaskTurnEnded(Exception):
@@ -216,7 +218,7 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
         if any(prior.get(k) != v for k, v in hashes.items()):
             raise ValueError('proposal_repair_context_changed')
         repair = {'parent_attempt_id': prior['attempt_id'], 'previous_result': read_json(parent/'result.json'),
-                  'previous_answer': (parent/'answer.txt').read_text() if (parent/'answer.txt').exists() else None,
+                  'previous_answer': (parent/'answer.txt').read_text(encoding='utf-8') if (parent/'answer.txt').exists() else None,
                   'validation_feedback': feedback,
                   'previous_compiled_proposal':read_json(parent/'proposal.json') if (parent/'proposal.json').exists() else None}
     elif feedback is not None:

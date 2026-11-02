@@ -14,7 +14,7 @@ def test_materials_are_owner_scoped_append_only_and_recheck_original_evidence(tm
     pool.register(**kwargs);pool.register(**kwargs)
     assert len(pool.records())==1 and (tmp_path/'library.json').read_bytes()==original
     assert CapabilityMaterials(tmp_path/'pool','other').records()==[]
-    (tmp_path/'cert.json').write_text('{}')
+    (tmp_path/'cert.json').write_text('{}', encoding='utf-8')
     with pytest.raises(ValueError,match='evidence_changed'):pool.records()
 
 
@@ -23,5 +23,5 @@ def test_material_record_tampering_and_unsupported_backend_fail(tmp_path):
     with pytest.raises(ValueError,match='native_evidence_required'):
         pool.register(backend='unknown_backend',library=ref,refs=[ref],acquisition_key='one',opportunity='gap')
     pool.register(backend='source_program',library=ref,refs=[ref],acquisition_key='one',opportunity='gap')
-    path=next(pool.directory.glob('*.json'));row=json.loads(path.read_text());row['opportunity']='other';path.write_text(json.dumps(row))
+    path=next(pool.directory.glob('*.json'));row=json.loads(path.read_text(encoding='utf-8'));row['opportunity']='other';path.write_text(json.dumps(row), encoding='utf-8')
     with pytest.raises(ValueError,match='record_changed'):pool.records()

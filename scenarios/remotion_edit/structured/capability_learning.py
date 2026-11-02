@@ -80,7 +80,7 @@ def acquire_source(adapter,job,result,attempt):
             # The same native decoder used at execution must accept it before
             # registration. Empty/rejected results do not wake the Builder.
             probe=subprocess.run(['node','scripts/run-source-capability.mjs','--catalog','--library',library['path'],
-                '--owner',adapter.plan['owner']],cwd=ROOT,capture_output=True,text=True,check=True)
+                '--owner',adapter.plan['owner']],cwd=ROOT,capture_output=True,text=True,check=True, encoding='utf-8')
             catalog=json.loads(probe.stdout)
             if not catalog['capabilities']:raise ValueError('source_learning_no_certified_material')
             for ref in refs:evidence(ref)

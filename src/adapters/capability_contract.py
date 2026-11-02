@@ -17,7 +17,7 @@ from functools import lru_cache
 from pathlib import Path
 from jsonschema import Draft202012Validator
 
-SCHEMA = json.loads((Path(__file__).resolve().parents[2] / 'schemas/capability-v1.schema.json').read_text())
+SCHEMA = json.loads((Path(__file__).resolve().parents[2] / 'schemas/capability-v1.schema.json').read_text(encoding='utf-8'))
 VALIDATOR = Draft202012Validator(SCHEMA)
 IDENTITY_KEYS = ('owner', 'contract', 'implementation', 'dependencies')
 BACKENDS = ('source_program', 'artifact_motif', 'script_motif')
@@ -86,7 +86,7 @@ def _supported_contract_schemas(encoded):
     root = Path(__file__).resolve().parents[2]
     try:
         result = subprocess.run(['node', str(root / 'scripts/validate-capability-schema.mjs')],
-                                input=encoded, text=True, capture_output=True, cwd=root, timeout=30)
+                                input=encoded, text=True, encoding='utf-8', capture_output=True, cwd=root, timeout=30)
         reply = json.loads(result.stdout)
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as error:
         raise ValueError('capability_schema_bridge_failed') from error
@@ -291,7 +291,7 @@ def map_legacy_library(raw, owner, backend, expected_sha256):
                'backend': backend, 'expected_sha256': expected_sha256}
     try:
         result = subprocess.run(['node', '--experimental-strip-types', str(root / 'scripts/map-capability-legacy.mjs')],
-                                input=json.dumps(request), text=True, capture_output=True, cwd=root, timeout=30)
+                                input=json.dumps(request), text=True, encoding='utf-8', capture_output=True, cwd=root, timeout=30)
         reply = json.loads(result.stdout)
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as error:
         raise ValueError('capability_legacy_bridge_failed') from error

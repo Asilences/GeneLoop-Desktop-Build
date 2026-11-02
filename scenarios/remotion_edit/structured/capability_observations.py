@@ -11,7 +11,7 @@ from src.adapters.capability_feedback import file_ref, verify
 from src.adapters.capability_discovery import read_context
 
 
-def read(path):return json.loads(Path(path).read_text())
+def read(path):return json.loads(Path(path).read_text(encoding='utf-8'))
 
 
 def inspect_run(entry,owner):

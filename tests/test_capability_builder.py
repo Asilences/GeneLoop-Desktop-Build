@@ -96,10 +96,10 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual(compiled['capability']['certification'],'candidate')
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
-            for name,value in [('proposal',proposal),('snapshot',snapshot)]: (root/(name+'.json')).write_text(json.dumps(value))
+            for name,value in [('proposal',proposal),('snapshot',snapshot)]: (root/(name+'.json')).write_text(json.dumps(value), encoding='utf-8')
             command=[sys.executable,'scripts/build-capability.py','--proposal',str(root/'proposal.json'),'--construction-snapshot',str(root/'snapshot.json'),'--owner','owner','--output',str(root/'result.json')]
-            first=subprocess.run(command,capture_output=True,text=True)
-            self.assertEqual(first.returncode,0,first.stderr); self.assertEqual(json.loads((root/'result.json').read_text()),compiled)
+            first=subprocess.run(command,capture_output=True,text=True, encoding='utf-8')
+            self.assertEqual(first.returncode,0,first.stderr); self.assertEqual(json.loads((root/'result.json').read_text(encoding='utf-8')),compiled)
             self.assertNotEqual(subprocess.run(command,capture_output=True).returncode,0)
 
 if __name__=='__main__':unittest.main()
