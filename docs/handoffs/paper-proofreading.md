@@ -3,15 +3,19 @@
 ## 2026-11-03：Capability Frontier 七小时主线
 
 - 起点：已核对远程 main `f594e19`，PR #122 已合并。当前分支 `codex/capability-frontier-20261103`，沿用当前工作区，私人 `reference/` 未跟踪。
-- 当前目标：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结与失败决策见[七小时协议](../capability-frontier-protocol-v1.md)。C 已真实发布，第一轮四格完成：一组 D 通过 QLoRA 两对留出但没有调用完整 C，另三组未产生可运行候选；不能称 C→D 或新增效率收益。
+- 当前目标与结果：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结见[七小时协议](../capability-frontier-protocol-v1.md)。C 已真实发布；三种冻结条件全部结束，最后条件 WithC 2/2、Direct 1/2 通过 Mamba 两对检查，Flat 一格失败、一格无候选。已发布 D 全部完整重写、未调用 C/J；自主 C→D 与递归效率收益 pending。
 - 执行窗口：约 00:48–07:48（Asia/Shanghai）；先固定真实/公开输入、独立判据、组间可见能力和有限实验预算，再运行。沿用原累计账本；生产服务、旧库与默认聊天不改。
-- 已验证：函数入口、完整程序的机械包装、JSON 结果输入、双文件显式认证绑定及旧守卫；最新服务器定向 30 Python 通过，前轮 20 Node 通过/1 平台跳过。C 获取 20 请求 USD0.075317172，第一轮 D 12 请求 USD0.083205612，均为代理估费，旧账本前缀核验通过。
-- 正在运行：`252e2c1` 第二条件，Direct/L0、Flat=L0+J、Hierarchical=L0+J+C 各两格，USD0.80/格；冻结后再统一 Mamba 新留出。J 是 C 构造阶段学到的关系原语，原对照两组均有 J，现分别评价新关系材料与完整 C 包装，禁止混淆。代码快照 `code-13`、私有 study `code-13/.local/D-study-002/`。
-- 入口：服务器加载 `.local/remote-env.sh` 后使用项目 Python，`python -m scenarios.paper_proofreading.frontier.run --request <已冻结request.json>`；所有构造结束后 `frontier.finalize_D --directory <study> --base <私有实验根>`。完整来源、反例、摘要与费用见[实验记录](../experiments/capability-frontier-20261103.md)。原始数据两端忽略目录 `.local/capability-frontier-20261103/`；当前研究提交尚未推送或新建 PR，未部署。
+- 已实现：JSON 值桥接与65KB认证报告、双文件角色绑定、函数入口胶合与完整程序机械包装、按能力池版本恢复机会准入；复用原公共控制器/原生认证/TS执行与发布，没有另造Agent循环。
+- 已验证：`f06a0dc` 本地全量1859 Python通过/239跳过、1516 Node通过/20跳过；`8085c37`的smoke/motif:check通过。服务器原生定向32 Python、前轮20 Node通过/1平台跳过。`f06a0dc`补档案成员`count('/')`误拒绝，原程序零模型认证通过；不放宽未授权文件访问。后续`dc75d8a`仅把未可靠采集的构造耗时改为null，已检查语法；旧封账报告保留并标明时间字段限制。
+- 零模型诊断：C 本身在 Mamba 三版本全部正确；宿主强制接成 C(before)+C(after)+原模型比较程序，经原认证/发布/后继与 Mamba 两对检查通过，每对真实调用C两次。它是执行机制证据，不计自主选择。Flat 1原提案解除误拒绝后仍因影响传播过度被独立检查拒绝，未晋级。
+- 费用与数据：C20请求/USD0.075317172，D三条件12+30+17请求/USD0.264833400；总79/USD0.340150572代理估费，新增unknown0，账单/人工/机器成本未知。原账本3236→3315，前缀不变。服务器快照code-08/13/14分别对应三个正式条件，code-15只作零模型诊断。结果已同步本地`.local/capability-frontier-20261103/server-evidence/`，不含`.env`、dsh凭证目录与node_modules。
+- 入口：服务器加载`.local/remote-env.sh`后用`node scripts/project.mjs python -m scenarios.paper_proofreading.frontier.run --request <新冻结request.json>`；最终验收用`frontier.finalize_D --directory <新study> --base <私有实验根>`。旧study已封账，不能重发或覆盖。公共入口说明见[研究README](../../scenarios/paper_proofreading/frontier/README.md)，精确SHA/反例见[实验](../experiments/capability-frontier-20261103.md)。当前研究尚未推送或新建PR，未部署。
+- 接手下一步：审阅独立研究PR和CI；决定是否将“已有能力在普通程序中的调用方式”作为下一项最小机制修改，或换更需要既有抽象的真实任务后重新冻结。当前停止调提示求正例。不得把小样本配置差异、强制调用或旧视频收益称作本轮递归因果收益。
+- 权限与回退：真实模型测试授权保留，平台null与原账本不变；无后台付费请求。外部应用写入/投稿/生产接管未授权。本分支独立研究入口可停用；回退共享变更时连同精确兼容配置一起回退到`f594e19`，旧库/证书与所有原始失败均保留。
 
 ## 2026-11-03：B 真实书目 Capability 验收
 
-- 范围与版本：当前分支 `codex/rsi-real-acceptance-20261102`，A为`eba71e6`，B为`5efa221`；已推送并创建[PR #122](https://github.com/jingyio/GeneLoop/pull/122)，未合并/部署，CI以当前head为准。A 的计量实现保留，私人 `reference/` 与原始书目不提交。
+- 范围与版本：B 当时分支 `codex/rsi-real-acceptance-20261102`，A为`eba71e6`，B为`5efa221`；已通过[PR #122](https://github.com/jingyio/GeneLoop/pull/122)合并至 `f594e19`，尚未生产部署。A 的计量实现保留，私人 `reference/` 与原始书目不提交。
 - 已完成：修复原生 Script 的只读校验和前缀、当前命令临时脚本及 `re.compile` 误拒绝；恢复新材料对 Builder 的描述；公共生命周期以宿主输入版本识别同名新内容并核对真实回执。没有增加 Agent 循环或改默认聊天。
 - 真实结果：三项正常书目任务完成；模型缺口触发原学习器、认证入池和重试。模型提案在工程修复后保持字节不变，显式恢复发布；27 条验证与 29 条后继各 4 项检查通过。`cap_9ec2e88e6dc4540d4359e186` 已对下一 Builder 可见。**含人工工程恢复，不称全程自动恢复、C→D 或完整论文审查验收。**
 - 费用：19 次真实 Flash/off 请求（含失败），用量估费 USD0.018788928；实付、人工/维护总成本未知。原账本 3217→3236、前缀不变，没有效率对照。

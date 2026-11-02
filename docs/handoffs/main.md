@@ -1,10 +1,10 @@
 ## 2026-11-03：Capability Frontier 夜间研究（最新）
 
-起点为已合并 PR #122 的 `f594e19`。C 已发布，第一轮 D 四格全部保留：一格通过 QLoRA 两对留出但没有调用完整 C，三格构造/接口失败，无新增效率或完整 C→D 结论。32 次研究请求代理估费 USD0.158522784，旧累计账本前缀一致。接口诊断后冻结三组各两格的新条件与 Mamba 留出，正在服务器隔离快照 `code-13` 执行；生产未动。见[论文当前交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)和[实验](../experiments/capability-frontier-20261103.md)。
+起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D组合完成原生发布与Mamba两对验收，每对真实调用C两次；不能冒充自主构造。79次研究请求代理估费USD0.340150572，旧账本不变。准入误拒绝已修、未可靠采集的耗时保留null；当前代码`dc75d8a`，本地全量1859 Python/1516 Node通过，生产未动。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
 
 ## 2026-11-03：B 真实书目验收
 
-B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池→模型组合已真实发生；修正输入身份接线后，原提案显式重放发布，27条验证/29条后继各4项独立检查通过，新根对下一Builder可见。含工程恢复，不代表无人值守或新增效率收益。19次真实请求估费USD0.018788928，原账本不清零；默认聊天、生产和外部应用未改。代码、全量与定向验证/失败边界及下一步见[论文交接](paper-proofreading.md)与[实验记录](../experiments/paper-capability-real-20261102.md)。A与B（`5efa221`）已推送至[PR #122](https://github.com/jingyio/GeneLoop/pull/122)，未合并/部署；CI以当前head为准。
+B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池→模型组合已真实发生；修正输入身份接线后，原提案显式重放发布，27条验证/29条后继各4项独立检查通过，新根对下一Builder可见。含工程恢复，不代表无人值守或新增效率收益。19次真实请求估费USD0.018788928，原账本不清零；默认聊天、生产和外部应用未改。代码、全量与定向验证/失败边界及下一步见[论文交接](paper-proofreading.md)与[实验记录](../experiments/paper-capability-real-20261102.md)。A与B（`5efa221`）已通过[PR #122](https://github.com/jingyio/GeneLoop/pull/122)合并到 `f594e19`，尚未生产部署。
 
 ## 2026-11-02：A 计量修复
 
