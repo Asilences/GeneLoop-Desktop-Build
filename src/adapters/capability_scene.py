@@ -109,7 +109,18 @@ class CapabilityImprovementAdapter:
             current=self.library()['snapshot']['digest']
             if any(not f.get('subject') or f['subject'].get('construction_snapshot_sha256') in (None,current) for f in gaps):
                 return 'defer','construction_gap_requires_new_material_or_evidence'
-        if sum(f['status']=='failed' for f in facts)>=2:return 'defer','failed_opportunity_requires_new_evidence'
+        failed=[f for f in facts if f['status']=='failed']
+        if len(failed)>=2:
+            # Failure with the old vocabulary must not block an opportunity
+            # after newly certified materials change its construction snapshot.
+            # Older facts did not store the snapshot in subject; recover it
+            # from their immutable attempt evidence, conservatively retaining
+            # unscoped failures when no snapshot was recorded.
+            snapshots=[(f.get('subject') or {}).get('construction_snapshot_sha256') or
+                       json.loads(evidence(f['evidence'][0])).get('construction_snapshot_sha256') for f in failed]
+            current=self.library()['snapshot']['digest'] if any(snapshots) else None
+            if sum(s is None or s==current for s in snapshots)>=2:
+                return 'defer','failed_opportunity_requires_new_evidence'
         return 'start','feedback_allows_trial'
 
     def pending_gap(self,job):
@@ -128,7 +139,7 @@ class CapabilityImprovementAdapter:
         refs=[reference(attempt/'result.json')]
         if outcome and outcome.get('evidence_ref'):refs.append(outcome['evidence_ref'])
         scope=job.get('feedback_key',job['id'])
-        self.feedback.observe(stage='attempt',subject={'construction_snapshot_sha256':result.get('construction_snapshot_sha256')} if result.get('status')=='deferred' else None,scope=scope,status='passed' if passed else 'unknown' if result.get('status')=='deferred' else 'failed',
+        self.feedback.observe(stage='attempt',subject={'construction_snapshot_sha256':result['construction_snapshot_sha256']} if result.get('construction_snapshot_sha256') else None,scope=scope,status='passed' if passed else 'unknown' if result.get('status')=='deferred' else 'failed',
             cost=result.get('observed_model_usd'),evidence=refs,opportunity=key)
         if outcome and outcome.get('committed') and not passed and candidate:
             self.feedback.withdraw(capability_ref(candidate['capability']),'committed_followup_failed',refs[-1])

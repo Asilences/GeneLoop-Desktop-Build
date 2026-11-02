@@ -96,3 +96,17 @@ def test_failed_then_successful_same_input_keeps_negative_evidence(tmp_path):
     jobs=adapter.discover_jobs(directory)
     assert len(jobs)==1 and len(jobs[0]['observations'])==2
     assert {o['kind'] for o in jobs[0]['observations']}=={'task_failure','repeated_structure'}
+
+
+def test_failed_old_vocabulary_does_not_block_new_certified_materials(tmp_path):
+    plan,snapshot,_=setup(tmp_path);adapter=load_scene_adapter(plan)
+    directory=tmp_path/'discovered';directory.mkdir();job=adapter.discover_jobs(directory)[0]
+    for i in range(2):
+        path=tmp_path/f'failed-{i}.json'
+        ref=put(path,{'status':'failed','construction_snapshot_sha256':snapshot['digest']})
+        # Legacy facts stored subject=None; evidence still pins the old pool.
+        adapter.feedback.observe(stage='attempt',subject=None,scope=job['id'],status='failed',
+            evidence=[ref],opportunity=adapter.opportunity_key(job))
+    assert adapter.admission(job)[0]=='defer'
+    adapter.library=lambda:{'snapshot':{'digest':'new-certified-material-pool'}}
+    assert adapter.admission(job)[0]=='start'
