@@ -2,6 +2,7 @@
 from __future__ import annotations
 from decimal import Decimal
 import json
+import math
 from pathlib import Path
 import time
 
@@ -53,6 +54,7 @@ class StudyEpisodeRegistry:
 
 class FrontierGate(CumulativeProposalGate):
     def __init__(self,ledger_root,journal,*,deadline,study_registry=None):
+        if type(deadline) not in (int,float) or not math.isfinite(deadline):raise ValueError('frontier_deadline_invalid')
         super().__init__(ledger_root,study_registry=study_registry)
         self.journal=Path(journal);self.deadline=deadline;self.budget=None;self.cell=None
         self.owners={};self.request_cells={};self.exact_costs={};self.budgets={}

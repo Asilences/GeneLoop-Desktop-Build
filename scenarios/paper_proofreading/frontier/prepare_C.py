@@ -6,14 +6,19 @@ from src.adapters.capability_improvement import evidence,save
 from src.adapters.capability_contract import create_capability_snapshot
 from scenarios.paper_proofreading.frontier.execute import execute
 from scenarios.paper_proofreading.frontier.oracle import evaluate,audit,canonical
+from scenarios.paper_proofreading.frontier.freeze import protocol_reference
 
 
 def main():
     p=argparse.ArgumentParser()
     for name in ('base','output','bib_library','tex_library','ledger_root'):p.add_argument('--'+name.replace('_','-'),type=Path,required=True)
     p.add_argument('--store',type=Path)
-    a=p.parse_args();base=a.base.resolve();out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
-    owner='frontier-20261103';libraries=[reference(a.bib_library.resolve()),reference(a.tex_library.resolve())];catalogs=[]
+    p.add_argument('--protocol',type=Path)
+    p.add_argument('--owner')
+    a=p.parse_args();base=a.base.resolve();protocol,settings,deadline=protocol_reference(base,a.protocol)
+    out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
+    owner=a.owner or settings.get('capability_owner') or settings['experiment_id']
+    libraries=[reference(a.bib_library.resolve()),reference(a.tex_library.resolve())];catalogs=[]
     for library in libraries:
         r=subprocess.run(['node','scripts/run-script-capability.mjs','--catalog','--library',library['path'],'--owner',owner],cwd=ROOT,capture_output=True,text=True,check=True)
         catalogs.append(json.loads(r.stdout))
@@ -44,7 +49,7 @@ def main():
             'inputs':[{'path':'/work/inputs/project.zip','source':reference(base/'inputs-v1'/(project+'-v1.zip'))}],
             'specification':{'kind':'frontier_literal_v1','role':'C','input_paths':['/work/inputs/project.zip']}}
     save(out/'publication-template.json',template)
-    task=reference(base/'frozen-v1/task-C.json')
+    task=settings['tasks']['C'];evidence(task)
     job={'id':'frontier-C','objective':'capability_acquisition','task':task,'publication_plan':reference(out/'publication-template.json'),
         'execution_scope':'frontier-literal-C','source_evidence':[reference(out/'primitive-quality.json')],
         'observations':[{'task_id':'frontier-C-need','kind':'new_requirement','split':'training',
@@ -58,8 +63,8 @@ def main():
         'scene_adapter':reference(Path(__file__).with_name('adapter.py')),
         'scene_dependencies':[reference(Path(__file__).with_name(f)) for f in dependencies]}
     save(out/'plan.json',plan)
-    save(out/'request.json',{'plan':reference(out/'plan.json'),'protocol':reference(base/'frozen-v1/protocol-server.json'),
-        'cell':'C-acquisition','budget_usd':'2.00','journal':str(base/'C-request-journal.jsonl'),'deadline':1793663280.0})
+    save(out/'request.json',{'plan':reference(out/'plan.json'),'protocol':protocol,
+        'cell':'C-acquisition','budget_usd':settings['phase_C_research_budget_usd'],'journal':str(base/'C-request-journal.jsonl'),'deadline':deadline})
     print(json.dumps({'request':reference(out/'request.json'),'primitive_checks':len(checks)}))
 
 

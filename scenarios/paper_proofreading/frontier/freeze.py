@@ -1,8 +1,11 @@
 """Freeze task text, corpus, evaluator and research budgets before model calls."""
 from __future__ import annotations
 import argparse,json,copy
+from datetime import datetime,timezone
+import time
 from pathlib import Path
 from src.adapters.capability_scene import reference,ROOT
+from src.adapters.capability_improvement import evidence
 from scenarios.paper_proofreading.frontier.oracle import bibliography,latex,audit,compare,canonical,sha
 
 
@@ -33,9 +36,30 @@ def clarify_D_task(task,bibliography_task,latex_task):
     return value
 
 
+def deadline_epoch(value,*,now=None):
+    if not isinstance(value,str):raise ValueError('frontier_deadline_utc_required')
+    try:stamp=datetime.fromisoformat(value.replace('Z','+00:00'))
+    except ValueError as error:raise ValueError('frontier_deadline_utc_invalid') from error
+    if stamp.tzinfo is None:raise ValueError('frontier_deadline_timezone_required')
+    epoch=stamp.timestamp()
+    if epoch<=(time.time() if now is None else now):raise ValueError('frontier_deadline_expired')
+    return epoch
+
+
+def protocol_reference(base,explicit=None):
+    """Preserve historical relocated plans; new freezes need no manual rename."""
+    path=Path(explicit) if explicit is not None else Path(base)/'frozen-v1/protocol-server.json'
+    if explicit is None and not path.exists():path=Path(base)/'frozen-v1/protocol.json'
+    ref=reference(path.resolve());protocol=json.loads(evidence(ref))
+    return ref,protocol,deadline_epoch(protocol['deadline_utc'])
+
+
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--inputs',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
-    a.output.mkdir(parents=True,exist_ok=False);inputs=a.inputs.resolve()
+    p=argparse.ArgumentParser();p.add_argument('--inputs',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--experiment-id',required=True);p.add_argument('--deadline-utc',required=True);p.add_argument('--owner');a=p.parse_args()
+    if not a.experiment_id.strip():raise ValueError('frontier_experiment_id_required')
+    deadline=deadline_epoch(a.deadline_utc)
+    a.output=a.output.resolve();a.output.mkdir(parents=True,exist_ok=False);inputs=a.inputs.resolve()
     oracle_values={'bib':bibliography(inputs/'atc-v0.zip'),'tex':latex(inputs/'atc-v0.zip'),
                    'C':audit(inputs/'atc-v0.zip'),'D':compare(inputs/'atc-v0.zip',inputs/'atc-v1.zip')}
     refs={}
@@ -52,12 +76,14 @@ def main():
         task={'id':'frontier-'+kind,'instruction':DETAILS[kind],
               'contract':{'input_schema':input_schema,'output_schema':schema(oracle_values[kind]),'effects':['read']},
               'program_interface':interface,'literal_scope':'Static literal commands only; no TeX expansion or factual reference validation.'}
-        if kind=='D':task['audit_semantics']=DETAILS['C']
+        if kind=='D':
+            task['audit_semantics']=DETAILS['C']
+            task=clarify_D_task(task,{'instruction':DETAILS['bib']},{'instruction':DETAILS['tex']})
         path=a.output/('task-'+kind+'.json');path.write_text(json.dumps(task,ensure_ascii=False,indent=2));refs[kind]=reference(path)
     files=['scenarios/paper_proofreading/frontier/oracle.py','src/adapters/paper_bibliography.py']
-    plan={'format':'frontier_protocol_freeze_v1','experiment_id':'capability-frontier-20261103',
+    plan={'format':'frontier_protocol_freeze_v1','experiment_id':a.experiment_id,'capability_owner':a.owner or a.experiment_id,
         'input_manifest':reference(inputs/'manifest.json'),'tasks':refs,'evaluator_files':[reference(ROOT/f) for f in files],
-        'deadline_utc':'2026-11-02T23:48:00Z','phase_C_research_budget_usd':'2.00',
+        'deadline_utc':datetime.fromtimestamp(deadline,timezone.utc).isoformat(),'phase_C_research_budget_usd':'2.00',
         'D_cell_research_budget_usd':'1.00','D_arms':['flat_without_C','hierarchical_with_C'],
         'D_replicates':[0,1],'D_order':['hierarchical_with_C/0','flat_without_C/0','flat_without_C/1','hierarchical_with_C/1'],
         'D_baseline_ordinary_python_allowed':True,'force_C':False,'model':'deepseek-flash','reasoning_effort':'off',

@@ -17,6 +17,14 @@ def test_unknown_request_keeps_upper_reservation_and_no_budget_reset():
     with pytest.raises(ValueError):b.book(2,D('.3'))
 
 
+@pytest.mark.parametrize('deadline',[None,True,float('nan'),float('inf'),-float('inf'),'unlimited'])
+def test_invalid_deadline_never_disables_the_research_stop(tmp_path,deadline):
+    from scenarios.paper_proofreading.frontier.budget import FrontierGate
+    with pytest.raises(ValueError,match='frontier_deadline_invalid'):
+        FrontierGate(tmp_path/'unused-ledger',tmp_path/'unused.jsonl',deadline=deadline)
+    assert not (tmp_path/'unused-ledger').exists()
+
+
 def test_reopening_runner_preserves_known_and_unsettled_costs(tmp_path):
     import json,time
     from scenarios.paper_proofreading.frontier.budget import FrontierGate

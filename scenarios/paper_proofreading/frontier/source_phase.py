@@ -10,7 +10,7 @@ from scenarios.paper_proofreading.frontier.learn import learn
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--request',type=Path,required=True);a=p.parse_args()
-    request=json.loads(a.request.read_text());out=Path(request['output']);out.mkdir(parents=True,exist_ok=False)
+    request=json.loads(a.request.read_text());out=Path(request['output']).resolve();out.mkdir(parents=True,exist_ok=False)
     task=json.loads(evidence(request['task']));catalog=json.loads(evidence(request['catalog']))
     library={'snapshot':catalog['snapshot'],'source_catalog':catalog}
     with FrontierGate(request['ledger_root'],request.get('journal',out/'request-journal.jsonl'),deadline=request['deadline']) as gate:

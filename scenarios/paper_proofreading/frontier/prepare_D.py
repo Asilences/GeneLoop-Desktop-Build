@@ -10,6 +10,7 @@ from src.adapters.efficiency_rsi_measurement import validate_study
 from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
 from scenarios.paper_proofreading.frontier.execute import execute
 from scenarios.paper_proofreading.frontier.oracle import evaluate,compare
+from scenarios.paper_proofreading.frontier.freeze import protocol_reference
 
 
 def subset(snapshot,roots):
@@ -39,8 +40,10 @@ def main():
     parser.add_argument('--code-commit',required=True)
     parser.add_argument('--v2',action='store_true');parser.add_argument('--final-manifest',type=Path)
     parser.add_argument('--task-file',type=Path);parser.add_argument('--study-name')
+    parser.add_argument('--protocol',type=Path)
     parser.add_argument('--prior-journal',type=Path,action='append',default=[])
-    a=parser.parse_args();base=a.base.resolve();out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
+    a=parser.parse_args();base=a.base.resolve();protocol,settings,deadline=protocol_reference(base,a.protocol)
+    out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
     c_plan=read(a.C_plan);c_result=read(a.C_run/'result.json')
     published=[r for r in c_result['outcomes'] if r['status']=='published']
     if len(published)!=1:raise ValueError('frontier_one_published_C_required')
@@ -95,9 +98,9 @@ def main():
             {'path':'/work/inputs/before.zip','source':reference(before)},
             {'path':'/work/inputs/after.zip','source':reference(after)}]})
     save(out/'shared-training-examples.json',examples)
-    c_task=json.loads(evidence(reference(base/'frozen-v1/task-C.json')))
-    task=reference(a.task_file.resolve() if a.task_file else base/'frozen-v1/task-D.json');protocol=reference(base/'frozen-v1/protocol-server.json')
-    source_files=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py']
+    c_task=json.loads(evidence(settings['tasks']['C']))
+    task=reference(a.task_file.resolve()) if a.task_file else settings['tasks']['D'];evidence(task)
+    source_files=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py','freeze.py']
     common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/script_capability_runtime.ts',
         'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/adapters/efficiency_rsi_registry.py',
         'src/adapters/efficiency_rsi_measurement.py','config/script-runtime-compatibility.json',
@@ -186,7 +189,7 @@ def main():
             'scene_dependencies':conditions['code']}
         save(directory/'plan.json',plan)
         save(directory/'request.json',{'plan':reference(directory/'plan.json'),'protocol':protocol,'cell':cell,'budget_usd':budget,
-            'journal':str(out/'request-journal.jsonl'),'deadline':1793663280.0,
+            'journal':str(out/'request-journal.jsonl'),'deadline':deadline,
             'study':{'plan':reference(out/'study.json'),'journal':str(out/'study-owner-journal.jsonl'),'episode_id':cell+'-episode'}})
         requests.append(reference(directory/'request.json'))
     save(out/'ordered-requests.json',requests)
