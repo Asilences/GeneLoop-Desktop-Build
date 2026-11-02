@@ -1322,6 +1322,7 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 - `encode_complete_script(task,snapshot,library_ref,observations_ref)` 只把角色精确对应任务字符串字段、输出静态兼容的完整模型程序编码为一步候选，返回 build_only/candidate。部分 JSON 关系材料不自动宣称完整任务；原生认证与独立发布检查继续执行。
 - Frontier 的函数入口/元数据默认值是离线 authoring 协议：算法 source 由模型提供，宿主处理 `run(value)` 的 I/O 和固定包装。函数模式保留声明、记录忽略的脚本入口位置、保留原文与实际执行源码；显式脚本接口兼容。语义认证不得从 source-equivalence 推导。协议、精确请求字段及命令见[研究入口](../scenarios/paper_proofreading/frontier/README.md)。
 - 同一构造机会的失败按当时 `construction_snapshot_sha256` 计数，新认证材料改变能力池后可重新评价。旧事实从不可变尝试证据回溯版本，版本缺失时仍保守暂缓，不删除历史失败。
+- 公共控制器在已认证材料改变能力池后，继续用新 snapshot 提案，`parent/repair` 不跨版本复用；另以 catalog 的 `material_continuation`（`capability_material_continuation_v1`）携带当前 snapshot 与不可变获取记录引用。记录格式 `capability_material_acquisition_v1` 保存前/后 snapshot、新增可见根、上一缺口、程序用途/源码摘要及结果/获取/程序证据，不重复算法正文。模型上下文按当前根重新生成 `current_aliases`，旧别名不执行；证据或当前 snapshot 不符时拒绝构造。该元数据不授予认证、不强制选择高层能力，模型行为效果另测。立即学习和显式 pending-gap 唤醒均接入，任意中断自动恢复不在此协议内。
 - Frontier 最终验收在所有构造完成、计量与请求归属封账后，将原生独立检查写回同一 `CapabilityFeedback`。明确语义反例只撤回所执行的根，未来目录投影过滤其依赖者；不删除原发布或猜测叶节点错误。无候选不等于失败质量，执行/传输错误记 unknown；通过记录不自动恢复已有撤回，恢复仍需原独立重新验证/发布路径。研究最终结果不得进入本轮构造修复。
 
 新增执行仍是既有只读 Script 沙箱后端，不接管聊天，不宣称插件已去除 Python 或任意 MCP 自动组合已完成。真实效果与限制独立见[Frontier 记录](experiments/capability-frontier-20261103.md)。
