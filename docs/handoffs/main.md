@@ -1,5 +1,7 @@
 ## 2026-11-02：构造接口简化与离线定位
 
+> 网关超限响应已修复：413先按精确长度完整发送，再无缓冲丢弃排队输入并在最多5秒内结束连接。macOS/Linux各10项及竞态单项连续10次通过；隔离全量1809 Python、1508 Node通过（237/19跳过），0失败。Paper v44/PPT v41按原工具兼容重导出，旧版本和五项程序/证据文件不变。见[记录](../experiments/gateway-oversize-drain-20261102.md)；未部署，Windows/UTF-8修复由另一会话推进。
+
 > PR提交状态：[PR #121](https://github.com/jingyio/GeneLoop/pull/121)已创建，公共机制/Source/Script接线统一提交；已合并最新main `e6b6f12`，沿原重导出器生成Paper v43/PPT v40兼容版本。合并后1809 Python通过；Node1506通过、19跳过，保留1项旧上传ECONNRESET失败。58项兼容、smoke及motif:check通过。未合并/部署；CI以PR最新head为准。
 
 > 最新Script接线：已增加 `script_motif` 原生后端、论文适配器及BibTeX独立盘点验收，复用公共构造/反馈/发布流程。Linux合成原生认证→组合→验证→发布→换输入复用→Builder目录通过；旧编译哈希转为来源记录，执行版本用精确白名单兼容。新模型自主构造/真实历史任务获取路径待验证，未部署。见[当前交接](efficiency-rsi.md)及[记录](../experiments/efficiency-rsi-script-20261102.md)。以下续记保留历史范围。

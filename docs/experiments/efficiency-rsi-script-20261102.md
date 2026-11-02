@@ -39,6 +39,8 @@ RUN_SCRIPT_CAPABILITY_SANDBOX=1 "$SSS_PYTHON" -m pytest -q tests/test_paper_capa
 
 ## PR #121：合并最新main后的兼容验证
 
+后续补充：下文旧上传typed413 ECONNRESET失败已按用户授权修复，macOS/Linux传输检查及隔离全量通过；完整触发、修复和旧失败保留见[网关记录](gateway-oversize-drain-20261102.md)。该补充不改变本轮RSI与论文机制效果结论。
+
 2026-11-02已推送并创建[PR #121](https://github.com/jingyio/GeneLoop/pull/121)，包含前面九个本地机制提交。main已前进到`e6b6f12`（PR #119），合并提交`5cd754c`保留其视频双路逻辑与旧认证库；不把本地旧Paper v41/PPT v38覆盖回main。
 
 首次合并回归19项失败：两个分支使用过相同的版本目录名，且main当前默认库未绑定本分支的三个共享执行文件变化。复用现有重导出工具，精确核对`scenarios/remotion_edit/server.py`、`scripts/materialize-source-program.mjs`、`src/adapters/source_program_runtime.ts`，从main Paper v42/PPT v39生成新v43/v40。旧版本、library/online-manifest/task/tool-schemas/source-evidence五项字节均保留；重新生成在线manifest并验证原生loader，无新学习/模型调用，不将代码兼容记为任务质量或收益认证。58项相关回归通过。

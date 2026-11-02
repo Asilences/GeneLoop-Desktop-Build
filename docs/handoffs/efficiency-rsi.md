@@ -1,6 +1,7 @@
 # 效率驱动 RSI 当前交接
 
 - 更新时间与交接人：2026-11-02，Codex。
+- 网关未解决项已修复：超限请求先发送可解析413，再有界回收连接；原ECONNRESET用例通过，macOS/Linux各10项与竞态单项连续10次通过。仅本修复加7fdac81的隔离全量1809 Python/1508 Node通过、0失败，smoke/motif通过；旧失败保留在下文和日志中。Paper v44/PPT v41兼容重导出，详情见[记录](../experiments/gateway-oversize-drain-20261102.md)。Windows兼容改动由另一会话负责。
 - Windows CI修复：PR #121的Windows失败根因为反馈模块直接import fcntl，6项测试收集失败；已改用现有跨平台文件锁，提案账本同样复用，并补齐新模块UTF-8文本边界和Docker参数诊断uid/gid。最小59项回归通过/1项跳过，真实跨平台结果以PR最新head为准。详见[修复记录](../experiments/pr121-windows-ci-20261102.md)。上传ECONNRESET属于另一个问题，工作区并行网关改动未混入本次提交。
 - PR状态：已推送并创建[PR #121](https://github.com/jingyio/GeneLoop/pull/121)，包含此前未推送的公共Capability/Source/Script接线；已合并main `e6b6f12`（PR #119）。本轮未合并PR、未部署。
 - 合并后验证：Python1809通过/237跳过，Node1506通过/19跳过/1旧上传typed413 ECONNRESET失败；该文件独立复核8通过/1同错误失败，完整日志在`.local/efficiency-rsi-pr-20261102/`，未改传输代码。smoke和motif:check通过。合并前1793 Python/1495 Node全通过及Linux原生证据按原记录保留，不称合并后完整全绿。

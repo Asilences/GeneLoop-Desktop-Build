@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import net from 'node:net';
 import {once} from 'node:events';
 import {createHash,createHmac} from 'node:crypto';
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
@@ -126,6 +127,36 @@ test('oversized upload already in flight still receives typed 413',async t=>{
   assert.equal(response.status,413);
   assert.equal(response.body.error.code,'GENELOOP_MODEL_REQUEST_TOO_LARGE');
   assert.equal(f.received.length,0);
+  const next=await fetch(`http://127.0.0.1:${f.port}/v1/chat/completions`,{
+    method:'POST',headers:f.headers(),body:'{}'});
+  assert.equal(next.status,200);await next.text();assert.equal(f.received.length,1);
+});
+
+test('incomplete oversized upload receives a complete 413 before its bounded connection close',{timeout:10000},async t=>{
+  const f=await fixture(t),socket=net.createConnection({host:'127.0.0.1',port:f.port});
+  t.after(()=>socket.destroy());
+  await once(socket,'connect');
+  const closed=once(socket,'close');
+  const received=new Promise((resolve,reject)=>{
+    let wire=Buffer.alloc(0);
+    socket.on('error',reject);
+    socket.on('data',part=>{
+      wire=Buffer.concat([wire,part]);const split=wire.indexOf('\r\n\r\n');
+      if(split<0)return;
+      const header=wire.subarray(0,split).toString('utf8'),body=wire.subarray(split+4);
+      const length=Number(/\r\ncontent-length:\s*(\d+)/i.exec(header)?.[1]);
+      if(Number.isSafeInteger(length)&&body.length===length)resolve({header,body:JSON.parse(body)});
+    });
+  });
+  const headers={host:`127.0.0.1:${f.port}`,...f.headers(),'content-length':MODEL_REQUEST_MAX_BYTES+1};
+  socket.write('POST /v1/chat/completions HTTP/1.1\r\n'+Object.entries(headers).map(([k,v])=>`${k}: ${v}`).join('\r\n')+'\r\n\r\n');
+  // Intentionally send no body and keep the TCP client open after the response.
+  // The 413 must be usable now; the server must then end the incomplete upload.
+  const response=await received;
+  assert.match(response.header,/^HTTP\/1\.1 413 /);
+  assert.equal(response.body.error.code,'GENELOOP_MODEL_REQUEST_TOO_LARGE');
+  assert.equal(socket.destroyed,false);assert.equal(f.received.length,0);
+  await closed;assert.equal(socket.destroyed,true);
 });
 
 test('chunked overflow drains and returns 413; a later valid request still works',async t=>{
