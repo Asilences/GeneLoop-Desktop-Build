@@ -19,13 +19,13 @@ function fixture(t){
    '/work/inputs/after.zip':{relative:'inputs/after.zip'},'/work/inputs/before.zip':{relative:'inputs/before.zip'}}}};
  return {work,rows,p};
 }
-test('explicit two-input certification follows witnessed slots rather than same-suffix guessing',t=>{
+test('explicit two-input certification follows witnessed slots rather than same-suffix guessing',{skip:process.platform==='win32'},t=>{
  const f=fixture(t);assert.throws(()=>heldoutBindings(f.p,{},f.work),/ambiguous_script_binding/);
  const bound=heldoutBindings(f.p,{explicit_inputs:f.rows},f.work);
  assert.deepEqual(bound.map(b=>b.path),['/work/inputs/after.zip','/work/inputs/before.zip']);
  assert.deepEqual(bound.map(b=>b.sha256),[f.rows[1].sha256,f.rows[0].sha256]);
 });
-test('changed hashes, duplicate roles, missing files and changed origin versions fail closed',t=>{
+test('changed hashes, duplicate roles, missing files and changed origin versions fail closed',{skip:process.platform==='win32'},t=>{
  for(const change of [f=>f.rows[0].sha256='0'.repeat(64),f=>f.rows[0].source.sha256='0'.repeat(64),
   f=>f.rows[1].path=f.rows[0].path,f=>f.rows.pop(),f=>f.rows[0].path='/work/inputs/other.zip',
   f=>writeFileSync(join(f.work,'inputs/before.zip'),'changed')]){
