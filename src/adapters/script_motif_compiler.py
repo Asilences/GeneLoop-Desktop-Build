@@ -196,6 +196,20 @@ def compile_script(source, registered_files, *, argv=None):
                         and node in parent.args and isinstance(parent.func, ast.Attribute)
                         and parent.func.attr in {'startswith', 'endswith', 'strip', 'lstrip', 'rstrip', 'split', 'rsplit', 'replace'}):
                     continue
+                if node.value in {'/', './', '../'}:
+                    # Archive member normalization also uses separator joins,
+                    # concatenation and character membership tests. These are
+                    # string data operations, not literal filesystem reads.
+                    grandparent=parents.get(parent)
+                    if (isinstance(parent,ast.Attribute) and parent.value is node and parent.attr=='join'
+                            and isinstance(grandparent,ast.Call) and grandparent.func is parent):continue
+                    if isinstance(parent,ast.BinOp) and isinstance(parent.op,ast.Add):
+                        if isinstance(parent.left,ast.Constant) and isinstance(parent.right,ast.Constant):
+                            if isinstance(parent.left.value,str) and isinstance(parent.right.value,str):
+                                combined=parent.left.value+parent.right.value
+                                if re.match(r'^(?:/|\.\.?/|[A-Za-z]:\\)',combined):raise ValueError('unbound_path_literal')
+                        continue
+                    if isinstance(parent,ast.Compare) and any(isinstance(op,(ast.In,ast.NotIn,ast.Eq,ast.NotEq)) for op in parent.ops):continue
                 raise ValueError('unbound_path_literal')
     body = {'version': VERSION, 'language': 'python', 'template': template, 'inputs': slots}
     if argv and uses_argv:

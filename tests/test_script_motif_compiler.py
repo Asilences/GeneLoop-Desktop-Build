@@ -39,7 +39,9 @@ def test_zip_directory_separator_is_data_but_filesystem_root_stays_unbound():
     source="import zipfile\nz=zipfile.ZipFile('project.zip')\nprint([p for p in z.namelist() if not p.endswith('/')])"
     assert compile_script(source,inputs)['language']=='python'
     assert compile_script("import posixpath\nprint(posixpath.normpath('a/../b')); print(open('project.zip','rb').read())",inputs)['language']=='python'
-    for extra in ["print(open('/').read())", "print(open('/etc/passwd').read())", "root='/'"]:
+    normalization="\nname='a/b'\nbase='a'\nprint('/'.join(name.split('/')))\nprint(base+'/'+name)\nprint('/' in name)"
+    assert compile_script(source+normalization,inputs)['language']=='python'
+    for extra in ["print(open('/').read())", "print(open('/etc/passwd').read())", "root='/'", "print(open('/'+'etc/passwd').read())"]:
         with pytest.raises(ValueError,match='unbound_path_literal'):
             compile_script(source+'\n'+extra,inputs)
 
