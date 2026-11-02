@@ -68,6 +68,8 @@ def discover(job):
     observations = job['observations']
     for item in observations:
         evidence(item['evidence'])
+    for ref in job.get('source_evidence',[]):
+        evidence(ref)
     relevant = [o for o in observations if o['split'] in ('training', 'validation')]
     if not relevant or len(relevant) != len(observations):
         action, reason = 'defer', 'heldout_or_missing_observation'
@@ -85,7 +87,7 @@ def discover(job):
             if action not in ('start', 'defer', 'skip'):
                 raise ValueError('improvement_assessment_invalid')
             reason = 'f02_' + action
-    elif any(o['kind'] in ('task_failure', 'new_requirement') for o in relevant):
+    elif any(o['kind'] in ('task_failure', 'new_requirement', 'repeated_structure') for o in relevant):
         action, reason = 'start', 'bounded_capability_acquisition_trial'
     else:
         action, reason = 'defer', 'acquisition_need_missing'
@@ -121,7 +123,7 @@ def repair_signature(result, outcome, attempt):
 def run_improvement(plan, adapter, *, execute=False):
     """Adapter methods: library(), construct(), publish(); production uses Source.
 
-    The bounded job queue is host supplied; model chooses capability composition.
+    The bounded queue combines host jobs and adapter-discovered opportunities.
     A repair keeps the task/catalog/snapshot frozen. A new opportunity refreshes
     the published library, so a newly certified C is available when building D.
     """
@@ -139,10 +141,11 @@ def run_improvement(plan, adapter, *, execute=False):
     save(journal.directory/'effective.json', dict(plan_sha256=capability_digest(plan),
         policy_sha256=policy_sha, execute=execute, code_sha256={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
         for name in ('src/adapters/capability_improvement.py','schemas/capability-improvement-v1.schema.json',
-                     'src/adapters/capability_store.ts','src/adapters/capability_authoring.py',
+                     'src/adapters/capability_store.ts','src/adapters/capability_authoring.py','src/adapters/capability_feedback.py',
                      'scripts/export-capability-construction-library.mjs',
                      'scripts/complete-source-capability-loop.mjs',
                      'scenarios/remotion_edit/structured/run_capability_improvement.py',
+                     'scenarios/remotion_edit/structured/capability_observations.py',
                      'scenarios/remotion_edit/structured/verify_capability_outputs.py')}))
     summary = dict(format='capability_improvement_result_v1', status='preview' if not execute else 'completed',
                    outcomes=[], efficiency_conclusion=None, creation_benefit=None)
@@ -154,8 +157,24 @@ def run_improvement(plan, adapter, *, execute=False):
     try:
         if execute and hasattr(adapter, 'freeze'):
             adapter.freeze(journal.directory)
-        for job in plan['jobs']:
+        jobs=list(plan['jobs'])
+        if plan.get('discovery') and not hasattr(adapter,'discover_jobs'):
+            raise ValueError('improvement_discovery_adapter_required')
+        if hasattr(adapter,'discover_jobs'):
+            jobs.extend(adapter.discover_jobs(journal.directory))
+        if not jobs and not plan.get('discovery'):
+            raise ValueError('improvement_jobs_or_discovery_required')
+        if len({job['id'] for job in jobs})!=len(jobs):raise ValueError('improvement_duplicate_opportunity')
+        for job in jobs:
+            validate('job',job);evidence(job['task']);discover(job)
+        save(journal.directory/'resolved-jobs.json',jobs)
+        while jobs:
+            if hasattr(adapter,'prioritize_jobs'):jobs=adapter.prioritize_jobs(jobs)
+            job=jobs.pop(0)
             opportunity = discover(job)
+            if execute and hasattr(adapter,'admission'):
+                action,reason=adapter.admission(job)
+                if action!='start':opportunity.update(action=action,reason=reason)
             journal.emit('opportunity', opportunity)
             decision(job['id'], opportunity['action'], opportunity['reason'])
             if opportunity['action'] != 'start' or not execute:
@@ -172,6 +191,7 @@ def run_improvement(plan, adapter, *, execute=False):
             while True:
                 # Independent checks and host context cannot change during repair.
                 evidence(job['task'])
+                for ref in job.get('source_evidence',[]):evidence(ref)
                 attempt = folder/('attempt-'+str(attempt_index))
                 attempt_id = job['id']+'/'+attempt.name
                 journal.emit('attempt', dict(opportunity_id=job['id'], attempt_id=attempt_id,
@@ -200,9 +220,11 @@ def run_improvement(plan, adapter, *, execute=False):
                 outcome = None
                 if candidate:
                     decision(job['id'], 'validate', 'compiled_candidate_requires_independent_check', [result_ref])
+                    for ref in job.get('source_evidence',[]):evidence(ref)
                     outcome = adapter.publish(job, candidate, attempt, library['head'])
                     publication_ref = outcome.get('evidence_ref')
                     if outcome['status'] == 'published':
+                        if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
                         # Read the Store again; no candidate metadata promotion here.
                         refreshed = adapter.library()
                         new_ref = capability_ref(candidate['capability'])
@@ -224,6 +246,7 @@ def run_improvement(plan, adapter, *, execute=False):
                                                        publication_sha256=outcome['publication_sha256']))
                         break
                     if outcome.get('committed'):
+                        if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
                         # Publication succeeded but followup/reload failed. Never
                         # replay it as a model repair or silently reuse this result.
                         decision(job['id'], 'stop', 'committed_publication_requires_review', [publication_ref] if publication_ref else [])
@@ -231,6 +254,7 @@ def run_improvement(plan, adapter, *, execute=False):
                         summary['outcomes'].append(dict(opportunity_id=job['id'], status='committed_followup_failed'))
                         save(journal.directory/'result.json', summary)
                         return summary
+                if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
                 reason = (outcome or result).get('error', 'construction_failed')
                 signature = repair_signature(result, outcome, attempt)
                 fingerprint = capability_digest(signature)

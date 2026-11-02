@@ -123,6 +123,11 @@ if __name__ == '__main__':
     for name in ('manifest','trace','specification','output'):
         parser.add_argument('--'+name,required=True,type=Path)
     args=parser.parse_args()
-    result=verify(*(json.loads(path.read_text()) for path in (args.manifest,args.trace,args.specification)),args.output)
+    paths={'manifest':args.manifest,'trace':args.trace,'specification':args.specification}
+    frozen={name:path.read_bytes() for name,path in paths.items()}
+    result=verify(*(json.loads(frozen[name]) for name in ('manifest','trace','specification')),args.output)
+    if any(path.read_bytes()!=frozen[name] for name,path in paths.items()):raise ValueError('validator_evidence_changed')
+    result['evidence_binding']={name+'_sha256':hashlib.sha256(raw).hexdigest() for name,raw in frozen.items()}
+    (args.output/'verification.json').write_text(json.dumps(result,indent=2))
     print(json.dumps(result))
     raise SystemExit(0 if result['passed'] else 2)

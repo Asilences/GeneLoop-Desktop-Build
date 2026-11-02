@@ -6,7 +6,7 @@
 
 - `cost_reduction`：已有合格任务的降本机会。复用F02 `optimization_assessment` 的开始/暂缓/跳过决定，校验记录及发现任务关联；没有评估就暂缓，不从重复次数推算节省。
 - `capability_acquisition`：失败任务或新需求驱动的能力构造。无需基线先成功，不宣称没有做过的基线失败。输入观测必须引用固定字节；heldout不得用于机会选择或修复。
-- 当前输入为宿主提供的有界任务队列及授权观测；控制器提炼机会、执行准入和反馈。尚未自动扫描任意应用或开放任务流生成新题。模型自主选择Compose步骤和参数流，不由控制器指定C/D依赖。
+- 输入可以是显式jobs，也可以是Source适配器从已登记的正常任务记录生成的机会；两者进入同一控制器。宿主提供任务族、接口和独立验收配置，仍未自动扫描任意应用或推断任意场景契约。模型自主选择Compose步骤和参数流，不由控制器指定C/D依赖。
 
 ## 流程与权责
 
@@ -23,7 +23,7 @@
 
 - 构造侧分别记录可见根、编译后实际选择的直接依赖、参与独立验证通过的新能力。未实现模型内部“看过/考虑过”的遥测，不伪造这些事实。
 - 执行侧记录独立后继任务通过，引用实际执行/验证产物。构造谱系与执行回执分开。
-- `retain`表示通过构造贡献继续保留能力、供后续选择；目录不按直接调用频率淘汰已认证构造材料。当前为保守保留，未实现容量受限的替换/自动归档算法。
+- `retain`表示通过构造贡献继续保留能力、供后续选择；目录不按直接调用频率淘汰已认证构造材料。构造贡献现会提高下一Builder目录中的展示优先级；宿主可在共同质量范围和兼容契约检查后显式归档旧执行入口，但保留其构造材料与依赖。没有容量受限的全局淘汰算法。
 - 失败反馈实际进入下一次Harness构造；重复失败触发暂缓。发布结果实际改变下一轮Builder输入。
 - `benefit`始终为null，表示未测因果收益；原始模型费用单独引用，不把未知费用当零。当前没有价值预测器、收益驱动的自动预算再投资或节省结论。
 
@@ -66,3 +66,52 @@ node scripts/project.mjs python scripts/replay-capability-proposal.py \
 ```
 
 可选开关只在独立诊断副本中，为已经带类型的子绑定补缺失的对象包装，保存变更路径并重新编译；不改选择、绑定或原始文件，不修补非法JSON。该修改不是Agent自主修复。重放结果见[短记录](experiments/efficiency-rsi-authoring-replay-20261102.md)。
+
+
+## 正常记录到机会、双价值到选择（2026-11-02续）
+
+旧视频`continue_form.py`已包含下一任务、正常源码采集、学习/认证及形式反思，PPT也有自动学习调度。本次补的是这些场景证据到新Capability流程的接缝，不是重新实现旧学习器。
+
+计划可设`jobs: []`并提供`discovery`：
+
+```json
+{
+  "discovery": [{
+    "run": "<private completed run directory>",
+    "kind": "native_source",
+    "role": "training",
+    "context": {"path": "<private context.json>", "sha256": "<raw file sha256>"}
+  }],
+  "feedback_directory": "<private persistent feedback directory>"
+}
+```
+
+context必须恰含`owner`、`scope`、`contract`、`publication_plan`，最后一项沿用已有证据引用。宿主定义任务族/质量范围和独立验证任务，不填写组合步骤。相同context下至少两个不同任务输入，或一个真实失败，可生成`capability_acquisition`机会。这里只是探索触发条件，不证明两任务共享最优抽象或具有降本空间；模型读取原始证据自行构造。仅改任务名或复制同一输入不增加支持数；heldout禁止参与。
+
+`native_source`复用`learn_programs.collect()`源码、原生调用及渲染回执核验；`capability_execution`读取execute模式的实际trace、snapshot、args及独立检查。后者成功记录必须含检查器新增的`evidence_binding`，逐项核对trace/manifest/specification原字节摘要；旧无绑定检查不能直接作为本入口的正向证据，不能补写历史通过。原始source/receipt/QA摘要随job保存，模型调用前和发布前复核。生成任务、原始引用及忽略原因写入本轮discovery目录，随后直接进入控制器，无需手写“构造C”。
+
+`capability_feedback.py`在owner隔离私有目录内持久化事实，精确证据去重，写锁及原子替换；读取时复核原证据。成功发布并通过后继检查才给所选依赖记正向构造贡献，给新根记执行贡献；所有构造尝试和实际模型费用都保留。`execution_scope`用于执行质量范围，`feedback_key`用于机会族排序，不能混用。自动生成任务的新文件路径不改变机会身份。
+
+反馈实际改变三项行为：
+
+- Builder：有已验证构造贡献的材料优先展示，别名和版本绑定保持固定；不强迫模型选它。
+- 执行：只在宿主显式承认可替换的`eligible`根内排序；优先较少失败、有合格证据的能力，再比较同scope已知模型费用。未知费用不补零，跨scope不比较费用；这不是实际总成本预测器。
+- 机会：失败次数和已知尝试投入影响后续队列次序。同一原始证据已发布则跳过；跨轮同证据已有至少两次失败则暂缓，需新证据重新启动。这是机会准入策略，不改平台额度或原`max_repairs`语义；本轮内修复仍走既有签名/策略。
+
+执行选择入口默认预览：
+
+```bash
+npm run rsi:select:source -- --plan "$PRIVATE_SELECTION_PLAN"
+# Linux隔离执行，沿用TS Runtime与固定独立检查器；无模型请求
+npm run rsi:select:source -- --plan "$PRIVATE_SELECTION_PLAN" --execute
+```
+
+selection plan含`owner/seed/store/feedback_directory/eligible/scope/manifest/args/output`，其中seed、manifest、args为文件路径，eligible为精确能力引用。execute另需`specification`路径；输出必须是新建的私有`.local`目录。宿主计划授权候选与工作区权限，Runtime继续核验。独立检查后的执行结果返回同一反馈库，影响下次选择；运行成功本身不能记质量通过。此入口未接正式聊天任务，也不调用模型。
+
+## 最小失效与恢复
+
+显式withdraw只阻断指定版本及依赖它的后继，保留原Store版本和无关能力。即使全部不可用，也保存`recovery-queue.json`，而非丢失恢复事项。已发布但后继失败的根会隔离；实际执行发生确定的版本守卫失败时隔离该执行根。当前通用错误不一定定位到具体坏叶，不能声称自动精确归因到A；任务输入变化不会因此全局撤回能力。
+
+恢复接口要求可信宿主回调使用新生成的recovery任务身份，实际完成已有独立验证和Store发布/检查后才解除显式撤回，旧证书不能直接恢复。恢复任务尚未自动调度，也没有自动迁移任意旧依赖或崩溃续跑。显式archive只退出默认执行选择，不删除Builder材料；需不同替代根、相同契约和共同scope的独立合格证据，宿主仍负责可替代性判断。
+
+上述工程接线以免费回归验证；未新增真实模型、视频渲染或效率对照。自动发现机会的真实有效性、选择收益、完整C→D以及节余再投资仍待验证。

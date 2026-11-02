@@ -1264,3 +1264,12 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 ### 模型侧精简构造接口
 
 `capability_compose_draft_v1`由宿主固定版本：模型提交`steps:[{id,use,args}]`及`output`；无预设接口时另提交`contract`。use是冻结目录别名，普通对象/数组及`$input/$step/$literal`编码数据流。宿主展开为原`capability_compose_proposal_v1`后复用原编译/执行/认证，旧完整proposal仍可校验。别名映射与格式纳入修复上下文检查；诊断携带展开proposal坐标和通过的检查。离线重放入口与语法见[共同协议](capability-improvement-v1.md)。
+
+
+### 正常记录、反馈与执行选择（2026-11-02续）
+
+`capability_improvement_plan_v1`新增可选`discovery`和`feedback_directory`，jobs允许为空但须提供discovery；job可携带`source_evidence/feedback_key/execution_scope`。Source适配器复用旧源码见证采集，或消费带独立QA绑定的Capability execute轨迹；生成job进入原控制器。schema与字段示例见[共同协议](capability-improvement-v1.md)。
+
+`CapabilityFeedback`持久化执行/构造/尝试证据，向Builder提供稳定别名下的展示顺序，向宿主已准入的执行候选提供排序，并影响机会准入与队列；未知收益/费用仍为null。withdraw传递过滤依赖闭包且保存恢复清单，archive只退出执行入口，恢复需新任务独立验证。
+
+`npm run rsi:select:source -- --plan PLAN [--execute]`默认预览；执行沿用原TS Source Runtime与固定机械检查器，结果进入同一反馈库。`verify_capability_outputs.py`CLI输出新增`evidence_binding`，绑定trace/manifest/specification原字节；旧验证输出不追改。本轮没有接管正式聊天、修改原账本或声明真实收益。

@@ -1,5 +1,8 @@
 ## 2026-11-02：构造接口简化与离线定位
 
+> 2026-11-02效率RSI续：已登记Source记录→自动机会→Capability控制器、双价值事实→后续选择、最小失效/恢复清单已接线。本地/Linux定向172 Python+87 Node及Linux smoke通过；本地全量保留1项旧上传ECONNRESET失败。新增真实调用0、未部署，研究效果pending；详见[当前交接](efficiency-rsi.md)及[工程记录](../experiments/efficiency-rsi-feedback-20261102.md)。
+
+
 模型只提交能力选择/数据流/输出，宿主补固定协议与契约；开放接口设计仍交给模型。补真实检查点的定位诊断、轻量重复签名及历史提案重放。五份历史回答零模型重放：两份C只补各两处包装即通过，两个非法JSON仍拒绝，原D成功提案往返一致。实际Agent修复与效果仍pending。见[当前交接](efficiency-rsi.md)和[短记录](../experiments/efficiency-rsi-authoring-replay-20261102.md)，没有生产变更。
 
 ## 2026-11-02：效率RSI共同流程与递归构造接线

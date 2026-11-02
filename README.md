@@ -9,6 +9,8 @@ F02 审核候选提供一个免费可运行的经验执行协议演示：`npm ru
 
 新增[Capability离线改进协议](docs/capability-improvement-v1.md)与`npm run rsi:improve:source`：串联机会准入、构造/失败修复、独立发布和下一轮Builder目录更新，分别记录执行与构造贡献。默认预览；真实调用使用服务器原账本。机制接线、实际观察和效果pending分开记录，先完善机制，再接产品聊天入口；见[本轮记录](docs/experiments/efficiency-rsi-recursive-20261102.md)。 模型侧已改为精简draft，宿主补固定字段；支持具体错误定位和零模型[历史提案重放](docs/experiments/efficiency-rsi-authoring-replay-20261102.md)。
 
+Source记录到Capability机会、双价值反馈到后续选择现已接入离线控制器；新增`npm run rsi:select:source`连接现有TS执行与独立检查，默认预览。限定场景机制与效果待验证分别记录，见[协议](docs/capability-improvement-v1.md)。
+
 效率驱动 RSI 的开发入口为 `npm run rsi:efficiency:check`：检查固定版本能力契约、组合执行和全尝试评价。该入口只做免费诊断；研究方案、真实联调进度与限制见[当前交接](docs/handoffs/efficiency-rsi.md)，评价口径见[评价协议](docs/efficiency-rsi-evaluation.md)。新能力层尚未接管生产任务。
 
 Capability 离线创建/编译也需安装 Node/npm 依赖：Python 复用 DSH 的 schema 校验入口，线上 TypeScript 不依赖 Python。当前已在Source视频实验中完成真实模型Compose提案、新Runtime实际渲染、独立检查、版本化保存及新任务复用；另通过实际取消检查。共1次模型请求，未做效率对照，未部署正式服务。见[首个闭环记录](docs/experiments/efficiency-rsi-source-loop-20261102.md)。

@@ -80,6 +80,9 @@ def authoring_context(task, snapshot, catalog):
                 'args':compact_binding(step['arguments'])} for step in implementation['steps']],
                 'output':compact_binding(implementation['output'])}
         capabilities.append(item)
+    preferred=catalog.get('preferred_roots',[]) if isinstance(catalog,dict) else []
+    order={ref['id']:i for i,ref in enumerate(preferred) if ref in table.values()}
+    capabilities.sort(key=lambda item:order.get(table[item['alias']]['id'],len(order)))
     return {'authoring_format':FORMAT,'task':copy.deepcopy(task),'capabilities':capabilities,
             'contract_mode':'host_fixed' if 'contract' in task else 'model_designed'}
 
