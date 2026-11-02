@@ -15,7 +15,8 @@ export type CapabilityCall = {
  taskId:string; callId:string; parentCallId:string|null; capability:Capability;
  snapshotDigest:string; signal?:AbortSignal;
 };
-export type NativeCapabilityReceipt = {call_id:string; operation:string; status:'succeeded'};
+export type NativeCapabilityReceipt = {call_id:string; operation:string; status:'succeeded';
+ parent_call_id?:string|null;task_id?:string;native_receipt?:unknown};
 export type CapabilityBackend = {
  /** Read and verify the actual immutable library, object and certificate bytes.
   * Returning the supplied reference without reading the backend is not valid.
@@ -47,6 +48,9 @@ export type CapabilityRuntimeHost = {
  /** Independent trusted registry: certification/revocation must be current. */
  readCapability:(reference:CapabilityRef)=>unknown;
  backends:Partial<Record<LegacyRef['backend'],CapabilityBackend>>;
+ /** An independent validator may execute exactly one candidate root without
+  * upgrading its certification. Dependencies still require certification. */
+ readValidationGrant?:()=>{id:string;taskId:string;owner:string;snapshotDigest:string;root:CapabilityRef;revoked:boolean};
 };
 
 function check(condition:unknown,reason:string):asserts condition {
@@ -102,21 +106,30 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
   inspect:value!.inspect.bind(value),request:value!.request.bind(value),execute:value!.execute.bind(value),
  }])) as CapabilityRuntimeHost['backends'];
  const readHost=options.readHost,readCapability=options.readCapability;
+ const readValidationGrant=options.readValidationGrant;
 
- function guard(signal:AbortSignal|undefined,closure:Capability[],admittingRoot?:string){
+ function guard(signal:AbortSignal|undefined,closure:Capability[],selectedRoot:CapabilityRef,admitting=false){
   check(!signal?.aborted,'capability_cancelled');
   const host=readHost();
   check(host.taskId===taskId,'capability_task_mismatch');
   check(host.stateVersion===stateVersion,'capability_state_changed');
   check(same(host.versions,versions),'capability_component_version_changed');
   check(!host.grant.revoked&&host.grant.taskId===taskId&&host.grant.stateVersion===stateVersion,'capability_permission_denied');
+  let validating=false;
+  if(readValidationGrant){
+   const grant=readValidationGrant();
+   check(!grant.revoked&&grant.taskId===taskId&&grant.owner===owner&&grant.snapshotDigest===snapshot.digest&&same(grant.root,selectedRoot),
+    'capability_validation_grant_invalid');
+   validating=true;
+  }
   for(const frozen of closure){
    const current=validateCapability(readCapability(capabilityRef(frozen)),owner);
    check(same(capabilityRef(current),capabilityRef(frozen)),'capability_revision_changed');
-   check(frozen.certification==='certified'&&current.certification==='certified','capability_not_certified');
+   const candidateRoot=validating&&frozen.id===selectedRoot.id&&frozen.certification==='candidate'&&current.certification==='candidate';
+   check(candidateRoot||frozen.certification==='certified'&&current.certification==='certified','capability_not_certified');
    // Lifecycle/migration are selection policy, not revocation. Only the initial
    // root admission checks active; retained dependencies may already be archived.
-   if(frozen.id===admittingRoot)check(frozen.lifecycle==='active'&&current.lifecycle==='active','capability_not_executable');
+   if(admitting&&frozen.id===selectedRoot.id)check(candidateRoot||frozen.lifecycle==='active'&&current.lifecycle==='active','capability_not_executable');
    check(current.contract.effects.every(effect=>host.grant.effects.includes(effect)),'capability_permission_denied');
    check(!current.contract.effects.includes('external_write'),'capability_external_write_not_enabled');
    check(!current.contract.effects.includes('opaque'),'capability_opaque_not_executable');
@@ -155,13 +168,13 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
    try{
     const bound=structuredClone(args);
     receipt.arguments_sha256=jsonHash(bound);
-    guard(signal,closure,parentCallId===null?selectedRoot.id:undefined);
+    guard(signal,closure,selectedRoot,parentCallId===null);
     check(!validateJsonSchemaValue(capability.contract.input_schema,bound).length,'capability_input_schema_invalid');
     const implementation=capability.implementation;
     if(implementation.kind==='composition'){
      const outputs=new Map<string,unknown>();
      for(const step of implementation.steps){
-      guard(signal,closure);
+      guard(signal,closure,selectedRoot);
       const child=await run(step.capability,bind(step.arguments,bound,outputs),receipt.call_id);
       receipt.child_call_ids.push(child.receipt.call_id);
       receipt.dispatched ||= child.receipt.dispatched;
@@ -175,14 +188,16 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
      const call:CapabilityCall={taskId,callId:receipt.call_id,parentCallId,
       capability:structuredClone(capability),snapshotDigest:snapshot.digest,signal};
      const request=backend.request(call,structuredClone(bound));
-     const outcome=await executeRsiOperation(request,bound,()=>guard(signal,closure),async(operation,argumentsValue)=>{
+     const outcome=await executeRsiOperation(request,bound,()=>guard(signal,closure,selectedRoot),async(operation,argumentsValue)=>{
       // Recheck after request construction and immediately before native dispatch.
-      const current=guard(signal,closure);
+      const current=guard(signal,closure,selectedRoot);
       const operator=current.operators.get(request.payload.operator_id)?.record.payload;
       check(operator&&capability.contract.effects.includes(operator.effect),'capability_effect_mismatch');
       receipt.dispatched=true;
       const native=await backend.execute(call,operation,argumentsValue);
       check(native.receipt?.call_id===call.callId&&native.receipt.operation===operation&&native.receipt.status==='succeeded','capability_backend_receipt_invalid');
+      check((native.receipt.parent_call_id===undefined||native.receipt.parent_call_id===parentCallId)&&
+       (native.receipt.task_id===undefined||native.receipt.task_id===taskId),'capability_backend_receipt_scope_invalid');
       receipt.backend_receipt=structuredClone(native.receipt);
       receipt.result_sha256=jsonHash(native.value);
       return native.value;
@@ -194,7 +209,7 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
     }
     receipt.result_sha256=jsonHash(value);
     check(!validateJsonSchemaValue(capability.contract.output_schema,value).length,'capability_output_schema_invalid');
-    guard(signal,closure);
+    guard(signal,closure,selectedRoot);
     receipt.status='succeeded';
     return {ok:true,value,receipt};
    }catch(error){

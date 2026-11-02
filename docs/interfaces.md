@@ -1235,8 +1235,18 @@ Python Capability 创建/编译的输入输出 schema 经固定 `scripts/validat
 
 Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次检查根的当前选择资格。准入后同修订晋级或归档不中断该次调用，下次直接选择已归档根仍拒绝；认证、权限、内容和证据失效继续即时检查。实时检查仅覆盖选定根的依赖闭包，无关根不影响当前调用。
 
-旧 Source 场景新增 `FrozenSourceLibrary`：一次读取并验证任务库字节，后续 catalog/materialize 使用同一字节，runner 保存私有 `source-library.frozen.json`，通过 `REMOTION_SOURCE_LIBRARY_SHA256` / `REMOTION_SOURCE_LIBRARY_DIGEST` 绑定子进程。bridge 保留旧 `library` 路径参数，并支持冻结字节及期望版本；库限制为4 MB且拒绝重复program ID；返回 library 原字节 SHA、原生 digest、program identity 和 certificate digest。`phase=materialized` 只表示源码实例化；场景完成写入/渲染并核对 source_version 后才返回 `source_program_render_receipt_v1`，关联调用 ID、源码及视频摘要。失败留审计，不能生成成功回执。此接线尚不是新 CapabilityRuntime 的原生 backend；Docker 取消、组合输出类型和新内核接入仍待完成。
+旧 Source 场景新增 `FrozenSourceLibrary`：一次读取并验证任务库字节，后续 catalog/materialize 使用同一字节，runner 保存私有 `source-library.frozen.json`，通过 `REMOTION_SOURCE_LIBRARY_SHA256` / `REMOTION_SOURCE_LIBRARY_DIGEST` 绑定子进程。bridge 保留旧 `library` 路径参数，并支持冻结字节及期望版本；库限制为4 MB且拒绝重复program ID；返回 library 原字节 SHA、原生 digest、program identity 和 certificate digest。`phase=materialized` 只表示源码实例化；场景完成写入/渲染并核对 source_version 后才返回 `source_program_render_receipt_v1`，关联调用 ID、源码及视频摘要。失败留审计，不能生成成功回执。此旧路径已由后述Source Capability adapter接入新内核；其他后端仍待接入。
 
 效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
 
-`npm run rsi:efficiency:check` 运行跨语言与执行诊断，不调用模型。当前真实模型 Builder、场景后端连接、独立认证发布和固定资源多轮实验仍待接入；人工构造组合的成功不能证明 Agent 自主获得新能力。实施状态见[当前交接](handoffs/efficiency-rsi.md)。
+`npm run rsi:efficiency:check` 运行跨语言与执行诊断，不调用模型。Source已完成下述真实Compose与后继消费，其他后端、Specialize及多代效果实验仍待接入；合成检查不代表这些能力完成。实施状态见[当前交接](handoffs/efficiency-rsi.md)。
+
+### Source Capability 单场景闭环
+
+`buildSourceCapabilities(raw, owner)`复用旧Source库的原生认证，导出固定叶引用、参数schema和精确视频输出schema；只有旧程序认证被继承，组合不会因此认证。`runSourceCapability(manifestPath, snapshot, args)`将每叶交给既有渲染器，每叶独立工作区/nonce容器；输出`source_version/video_sha256/video_path/duration_seconds/call_id`及父子关联native回执。manifest格式为`source_capability_task_v1`，固定task/owner/输入原字节/库/镜像/快照/root/args和workspace_write grant；必须位于候选不可写目录。旧实验默认启动行为保留，新worker只清理自己nonce核对过的容器ID。
+
+`createCapabilityRuntime`可由独立可信验证者提供`readValidationGrant`，绑定task/owner/snapshot/root；它仅让指定candidate根进入隔离验收，依赖仍须认证。正常执行继续拒绝candidate，验证不改其状态，实时撤销/输入证据守卫仍有效。
+
+`createCapabilityStore({directory,owner,runValidation,validator})`的`publish({candidateSnapshot,root,input,expectedLatest})`内部实际调用执行和独立验收回调，不接受模型自报certificate；全部checks passed才晋级根。`capability_publication_v1`绑定输入、完整trace、产物bytes、验证器及范围限制。owner私有目录中保留不可变版本，通过锁和CAS原子更新latest；`loadLatest/loadVersion`复核全部证据摘要。该协议scope为local_experiment，尚未接入生产账户库/在线路由；不冒用原reuse_form类型。
+
+真实提案入口为`scenarios/remotion_edit/structured/run_capability_loop.py`，默认预览、显式`--call-model`才走现有Harness与累计账本；候选输出可交`scripts/complete-source-capability-loop.mjs PLAN.json`，后者独立检查、保存，并强制不同task/workspace的后继消费。失败记录保留；不会自动改质量阈值或发布不合格候选。命令、有效配置、真实结果和限制见[实验记录](experiments/efficiency-rsi-source-loop-20261102.md)。

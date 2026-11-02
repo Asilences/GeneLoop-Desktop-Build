@@ -85,3 +85,10 @@ v2分析写`analysis-v2/summary.json`，沿用v1三条种子的完整学习成�
 当前源码还包含[错误反馈修复与单题局部恢复](../../../docs/experiments/remotion-structured-reuse-20261028-recovery-v3.md)：已知拒绝／媒体失败通过MCP `ToolError`保留有界原因；不降低版本守卫。**旧认证库会拒绝变更后的server源码**，v1/v2实测仍使用其冻结导出。新代码不能套改旧manifest hash执行，后续execute须重新认证。本次局部恢复只用typed baseline，不计新独立任务或Motif收益。
 
 两轮矩阵完整同步本地后，可用`prepare_blind_review.py`生成去臂标签的35条审阅包，包括未交付条目；`ratings.json`初始全为null，私有映射在包外。它准备材料，不执行或冒称人工盲评。脚本拒绝覆盖已有评分包。
+
+
+## 效率RSI Source闭环（2026-11-02）
+
+单场景真实入口现将已有Source程序接为Capability：`scripts/run-source-capability.mjs --catalog`导出带输出类型的原语；`run_capability_loop.py`通过既有Harness生成Compose候选（默认预览，显式`--call-model`才调用模型）；`scripts/complete-source-capability-loop.mjs PLAN.json`完成真实验证、独立媒体检查、不可变发布及不同任务的后继加载。模型无Store/检查器写权限，候选在验证时仍非certified。
+
+实际两任务各23项检查通过；1次模型请求、USD0.00552810代理估费，未比较效率。正常取消已实际验证，硬杀/崩溃恢复不据此外推。计划/manifest字段、完整命令、预算、文件定位和限制见[实验记录](../../../docs/experiments/efficiency-rsi-source-loop-20261102.md)。这是私有Linux实验入口，未替换正式`/video`。

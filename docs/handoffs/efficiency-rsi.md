@@ -1,21 +1,17 @@
 # 效率驱动 RSI 当前交接
 
-- 更新时间与交接人：2026-11-02，Codex 主集成及 capability_contract / evaluation_protocol / runtime_migration 三个子智能体。
-- 审计更新（同日）：[第一批实现审计](../efficiency-rsi-audit.md)确认预算/归属、双语言兼容及运行中迁移等问题；初次审计以507c52e为基线；同日后续已修F3/F6/F7/F9及旧Source的G3部分，未开PR。T1/T3/T5只代表基础契约/内核/离线编译，真实后端/认证发布/递归效果尚缺。Linux18失败仅4同名baseline覆盖（聊天症状不同），其余14未逐项排除；watch容量根因也未有errno证据。审计反例与原始报告在私有.local目录。
-- 本轮已完成修复：F3/F7双语言共用DSH schema并复用Source原生验证；F6每次execute准入后迁移/归档不打断已开始调用；F9只守卫选定根闭包。旧Source runner/MCP固定库原字节并校验library/object/certificate，成功render才生成绑定源码/视频的回执。源码实例化和诊断fake render不算真实视频交付；尚未接为新CapabilityBackend。
-- 本轮验证：最终本地与Linux `npm run rsi:efficiency:check` 各92 Python/72 Node通过；Linux `npm run smoke` 18题通过，模型请求0。两端17份改动源码/测试SHA逐项相同。实际旧Source库materialize通过，未执行Docker渲染。全量 `TMPDIR=/private/tmp npm test`：Python1691通过/236跳过；Node1467通过/17跳过/1失败，大上传typed413报ECONNRESET。单文件当前和未改507c52e基线均8通过/1同样失败，证实不是本批新增；不称全量全绿。全量后补的2项render版本失配诊断已纳入最终定向检查，没有重跑全套。
-- 本轮配置与同步：日志、源码清单和基线复测在私有 `.local/efficiency-rsi-fixes-20261102/`；Linux使用私有项目下同名隔离验证目录，加载现有remote-env，未改服务器工作区或正式服务。本批源码/文档仅本地提交，未推送、未开PR。F1/F2/F4/F5评价器问题、F8深谱系及Docker取消仍未解决，不用于效果报告。
-- 最新推进优先级：用户明确快速落地、丰富实验后补。先修真实执行的契约/迁移问题，单场景完成模型组合→实际执行→独立验收→保存→后续复用；丰富对照、统计、第二后端与复杂再投资策略后补。未启用的评价器问题在启用效果报告前处理，不能将全部审计gap变成当前交付前置。
-- 目标与本次范围：第一批可审阅基础实现：固定版本能力、外部 Compose 提案编译、实际组合调用和完整尝试评价。效率同时覆盖省费与给定条件下的新能力可达性；完整依赖、责任与验收见[任务表](../efficiency-rsi-plan.md)。首个模型自主学习→构造→独立认证→后继使用的真实里程碑尚未达成。
-- 分支 / commit / 工作区：仍在原 SSS 目录 `codex/efficiency-rsi-20261102`；基线 `09b81b2255d1b5aae33c6804acc9eb55b26d7276`。本轮期间外部历史更新把原 `69724cf` 改为该 SHA，前后 tree 均为 `3231d94e1a3ca3dd70a02793fea7e5b1ce812a29`。PR117/118 已合并。本记录随首批源码保存在当前分支本地提交，未推送、未创建PR；私人 reference 仍不跟踪。
-- 已完成 T1：`capability_contract.py/.ts` 和 schema；固定 owner/契约/effects/实现/依赖身份与精确闭包快照。旧 Source/Artifact 库逐字节保留；Python 离线映射经固定 Node bridge 复用原生 TS 摘要，避免浮点/Unicode 分歧。生命周期、认证和迁移状态分别保存，状态声明不授执行权。
-- 已完成 T2 基础：`efficiency_rsi_measurement.py`、schema、只读 CLI 与[评价协议](../efficiency-rsi-evaluation.md)。独立 registry 绑定所有 cells、attempts、overheads 和物理请求；四格结果、失败重试、未观测、删失、未知费用与共享分摊均保留。预算范围是 attempt_execution，共享构造/认证另计；人工、机器、账单实付及全生命周期再投资尚未接入。
-- 已完成 T3 内核：`capability_runtime.ts` 固定依赖和组件版本，逐子调用复用已有 RSI admission；实际回执、父子关系、摘要和耗时完整，权限撤销、版本漂移、错误类型、取消和非法输入均留失败记录。Build-only/Archived 不直接选择，认证组合仍可调用其固定版本。首批没有改旧 Runtime、原生 Harness 或正式场景入口；本轮后续只为旧Source实验入口增加任务版本绑定。
-- 已完成 T5 离线部分：`capability_builder.py` 与 `scripts/build-capability.py` 编译外部提案；固定可见能力、检查显式数据流/类型/effects，输出仍为 candidate/build_only。已诊断 Python 编译输出→候选拒绝→可信诊断宿主独立认证→TS 三次实际 Python 子调用；没有模型自主生成、Specialize 或自动发布。
-- 首批历史验证：免费统一入口 `npm run rsi:efficiency:check` 最终 79 Python / 61 Node 通过。`rsi:check`、`smoke`、`motif:check` 通过。独立审查发现并修复旧摘要编码不一致及非法输入缺回执两项问题。全部为机制诊断，不能当真实任务质量/效率证据。
-- 首批历史全量回归：本地补齐 requirements 已声明的 PyMuPDF/defusedxml/reportlab 后，Python 1679 通过/236跳过；Node 1444通过/17跳过/13失败。12项由 macOS /var 与 /private/var 临时目录别名触发，指定真实 TMPDIR 后对应测试39通过/1跳过；上传在途413测试单独复跑通过，保留全量并发 ECONNRESET 失败。Linux同一冻结源码 Python 1893通过/5跳过/18失败；报错涉及旧聊天/Harness连接、服务监视器容量、PDF/OCR工具。未改基线已复现聊天连接、服务监视器、PDF与OCR代表性失败；其余失败完整保留，不称Python全量通过。Linux Node首次1451通过/4跳过/3失败，旧测试误用系统Python3.6；指定项目Python的PATH与SSS_PURE_CODE_PYTHON后，全量1470通过/4跳过/0失败。Linux统一定向79 Python/61 Node及rsi:check/smoke/motif:check均通过。
-- 配置与数据：本地日志/代码快照在 `.local/efficiency-rsi-20261102/`；Linux 在服务器项目私有 `.local/efficiency-rsi-20261102-validation/` 新目录验证，未覆盖该机器未提交工作。使用已配置私有环境，正式服务仍由 `GENELOOP_SERVICE_HOME/CONFIG` 定位；本轮未启停服务。`code-snapshot.json` 记录基线、tree和25份改动文件摘要（交接收尾仅补文档，测试源码未变）；Linux Node22.23.3 / Python3.10.21 / DSH0.1.5-rc.3，本地Node22.22.3 / Python3.12.14。原始日志不入Git。
-- 未完成与环境问题：真实模型提案/新场景后端/独立认证发布尚未实现。Linux旧Harness/服务测试报监视器容量与连接问题，文档工具另有环境失败；真实pilot前先恢复隔离运行条件，不通过重启正式服务或清除用户任务规避。
-- 接手下一步：1. 把已固定字节的Source场景接为CapabilityBackend，补真实输出契约、父子调用关联和实际渲染取消/失败验证。2. 复用既有Harness与账本接模型真实Compose提案，记录全部尝试；不预写A/B→C→D解法。3. 补单场景独立机械验收、版本化保存和下一任务实际消费；丰富研究对照后补。
-- 权限与预算：用户已授权当前工作区开发、子智能体和真实测试；真实模型测试沿原平台授权及累计账本，启动前记录实际模型/reasoning/output和研究资源。当前新增 DeepSeek 实验请求0，无生产发布、外部应用写入或私人原件修改。宿主成本未知。
-- 回退与旧工作：`.local/workspace-preservation-20261102/` 保存旧patch、稳定stash引用、55份副本/48份parked及RESTORE说明，4份reference原件留原位。原分支工作不往新main整段覆盖；外部历史更新后的旧commit定位以Git/备份映射复核。删除本批旁路模块及入口即可退出研究开发，不需要迁移或删除旧库。
+- 更新时间与交接人：2026-11-02，Codex及 capability_contract / evaluation_protocol / runtime_migration 子智能体。
+- 目标与本次范围：落地优先。本轮完成Source视频场景的真实Compose提案→新Runtime执行→独立验收→不可变发布→不同任务/参数后继消费；丰富对照、第二后端和多代研究后补。
+- 分支 / commit / 工作区：原SSS目录 `codex/efficiency-rsi-20261102`，本轮从本地 `2302f1f` 继续。当前结果随本轮本地提交保存，未推送、未开PR、未部署。私人 `reference/` 保留且不跟踪，旧工作备份仍在 `.local/workspace-preservation-20261102/`。
+- 已完成：`source_capability_runtime.ts`及CLI/worker用原生Source渲染器实际执行；精确输出契约、任务库/输入/镜像固定、父子回执、独立叶工作区及nonce容器清理。`capability_runtime.ts`新增可信精确validation grant，候选验证时仍为candidate，正常路径不能执行未认证候选。
+- 已完成：`run_capability_loop.py`复用原Harness生成/编译真实提案，登记全部attempt与请求、保留失败及显式修复关系。`capability_store.ts`在发布函数内部实际执行并独立验证，绑定输入/trace/产物/检查器；owner私有库、不可变版本、CAS指针，失败不晋级。`complete-source-capability-loop.mjs`强制不同任务/工作区重新加载并消费已发布版本。
+- 真实验收：实验 `efficiency-rsi-source-loop-20261102`；模型自主选择两项旧程序生成组合 `cap_2cdad2c72ff1e6ae9aad0dfa`。验证任务与后继任务各实际渲染2视频，各23项独立媒体检查通过；发布摘要 `1b63e988010e35599b6560b849844219310304090c62d3923a52581ebd7f1ca9`。收尾代码再次消费产生2视频、23项通过。实际容器启动后取消，interrupted/无后继派发/容器消失/2秒目录摘要稳定6项检查通过。
+- 质量与研究边界：检查尺寸/fps/帧数/完整解码/指定原始来源像素，未做人评、文字审美或全视频语义验收。不是六个独立研究样本；没有无组合成本对照、C构造D或多代持续RSI证据。执行/创造价值保存原始调用、构造引用和后继关系，尚无价值估计或自动再投资策略。
+- 权限与费用：用户持续授权真实测试；原DeepSeek Flash、off、实际max_tokens393216，费用/请求无额外上限。仅新增请求3212，代理估费USD0.00552810；累计请求3211→3212，预约记账USD2.648152476。旧账本前缀SHA仍为f507b1118f048d2542bcd43b514a07bc9677c454fe0188cbf61945cf722dbe13。账单、机器、人工作业费用未知，历史未知费用不改写。无外部应用写入、私人原件修改或生产切换。
+- 配置与数据：服务器既有私有项目加载remote-env后在 `.local/efficiency-rsi-loop-20261102/code/` 验证，未覆盖其工作区。Linux Node22.23.3/Python3.10.21/DSH0.1.5-rc.3；固定镜像、任务/库/输入/validator摘要及复现命令见[实验记录](../experiments/efficiency-rsi-source-loop-20261102.md)。同名本地私有目录保存代码清单、全量日志和 `delivery/` 视频/验证/trace；原始模型请求仍仅私有保存。
+- 旧能力保护：共享Remotion server可选容器归属分支首次触发17项旧产品code-lock拒绝。现用审阅式兼容重导出生成Paper v41/PPT v38、更新开发配置；旧v40/v37全部18文件不变，新旧IR/manifest/task/schema/source evidence逐字节一致。95 Python/4 Node兼容专项通过；不代表新Capability内核已获生产认证。正式服务未切换。
+- 已验证：最终本地与Linux统一 `npm run rsi:efficiency:check` 均113 Python/85 Node通过，Linux smoke18题通过；两端37份本批源码/测试/兼容产物SHA一致。最终全量 `TMPDIR=/private/tmp npm test`：Python1714通过/236跳过；Node1480通过/17跳过/1失败（原有大上传typed413的ECONNRESET，前轮当前与未改基线同样复现）。不称全量全绿。Linux本轮只跑统一定向及smoke，不声称Linux全量通过。
+- 失败保留：首次提案CLI因输出不在候选根.local下而拒绝，零模型请求，修路径后成功；17项旧锁失败及兼容修复日志保留。首轮、最终代码复验、取消任务分别保存，不覆盖为同一次运行。
+- 未完成与阻塞：新入口尚未接生产账户/聊天路由；Artifact、Specialize、输入更新的自动重新验证、任意进程/宿主崩溃恢复、多代构造和完整价值策略未完成。F1/F2/F4/F5评价器口径及F8深谱系限制仍保留，未拿该测量器报告收益。旧Linux18项历史全量失败并未在本轮全部排除，不能声称Linux全量通过。
+- 接手下一步：1. 将单个已授权用户任务接到现有聊天/Harness入口，给出能力预览/失效回退与可审阅产物；验收仍用真实调用。2. 对当前Source闭环补输入证据更新、失败后的明确恢复与Store锁交接；模型仍不能改验证器或账本。3. 先形成实际任务收益观察，再补C构造D、第二后端和丰富研究实验，避免用测试数代替进展。
+- 回退与风险：撤回本轮代码及开发config指针即可退出新实验路径；若撤回共享server须同步退回Paper v40/PPT v37代码锁，不能新旧混配。保留全部旧库、Store版本、累计账本和原始证据。真实生产发布仍走统一service入口，当前没有执行发布。

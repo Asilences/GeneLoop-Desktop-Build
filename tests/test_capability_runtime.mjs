@@ -303,3 +303,36 @@ test('Python compiler output requires independent diagnostic certification befor
   assert.equal(result.receipts.length,4);
  }finally{rmSync(directory,{recursive:true,force:true});}
 });
+
+test('independent validation grant executes the bound candidate without upgrading certification',async()=>{
+ const s=setup(),candidate={...s.root,certification:'candidate',lifecycle:'build_only'};
+ s.registry.set(candidate.id,candidate);
+ s.options.snapshot=createCapabilitySnapshot(owner,[capabilityRef(candidate)],[candidate,s.count,s.sum]);
+ const grant={id:'trusted-validation',taskId:s.host.taskId,owner,snapshotDigest:s.options.snapshot.digest,
+  root:capabilityRef(candidate),revoked:false};
+ s.options.readValidationGrant=()=>grant;
+ const result=await createCapabilityRuntime(s.options).execute(capabilityRef(candidate),argumentsValue);
+ assert.equal(result.status,'succeeded');assert.equal(s.executed.length,3);
+ assert.equal(s.registry.get(candidate.id).certification,'candidate');
+ const ordinary={...s.options};delete ordinary.readValidationGrant;
+ const rejected=await createCapabilityRuntime(ordinary).execute(capabilityRef(candidate),argumentsValue);
+ assert.equal(rejected.status,'rejected');assert.equal(rejected.receipts[0].reason,'capability_not_certified');
+});
+
+test('validation authorization cannot cover another snapshot or candidate dependency and is revocable',async()=>{
+ for(const variant of ['snapshot','dependency','revoked-during']){
+  const s=setup(),candidate={...s.root,certification:'candidate',lifecycle:'build_only'};
+  s.registry.set(candidate.id,candidate);
+  if(variant==='dependency')s.registry.get(s.count.id).certification='candidate';
+  s.options.snapshot=createCapabilitySnapshot(owner,[capabilityRef(candidate)],[...s.registry.values()]);
+  const grant={id:'trusted-validation',taskId:s.host.taskId,owner,snapshotDigest:variant==='snapshot'?'f'.repeat(64):s.options.snapshot.digest,
+   root:capabilityRef(candidate),revoked:false};
+  s.options.readValidationGrant=()=>grant;
+  if(variant==='revoked-during'){
+   const execute=s.backend.execute;s.backend.execute=async(...args)=>{const result=await execute(...args);grant.revoked=true;return result;};
+  }
+  const result=await createCapabilityRuntime(s.options).execute(capabilityRef(candidate),argumentsValue);
+  assert.notEqual(result.status,'succeeded');assert.equal(s.executed.length,variant==='revoked-during'?1:0);
+  assert.equal(result.receipts[0].reason,variant==='dependency'?'capability_not_certified':'capability_validation_grant_invalid');
+ }
+});

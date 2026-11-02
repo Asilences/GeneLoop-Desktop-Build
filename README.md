@@ -9,7 +9,7 @@ F02 审核候选提供一个免费可运行的经验执行协议演示：`npm ru
 
 效率驱动 RSI 的开发入口为 `npm run rsi:efficiency:check`：检查固定版本能力契约、组合执行和全尝试评价。该入口只做免费诊断；研究方案、真实联调进度与限制见[当前交接](docs/handoffs/efficiency-rsi.md)，评价口径见[评价协议](docs/efficiency-rsi-evaluation.md)。新能力层尚未接管生产任务。
 
-Capability 离线创建/编译也需安装 Node/npm 依赖：Python 复用 DSH 的 schema 校验入口，线上 TypeScript 不依赖 Python。当前修复了跨语言输入差异、运行中晋级/归档中断以及旧 Source 任务库版本漂移；新 Runtime 的真实后端、模型构造和独立认证发布仍待接入。
+Capability 离线创建/编译也需安装 Node/npm 依赖：Python 复用 DSH 的 schema 校验入口，线上 TypeScript 不依赖 Python。当前已在Source视频实验中完成真实模型Compose提案、新Runtime实际渲染、独立检查、版本化保存及新任务复用；另通过实际取消检查。共1次模型请求，未做效率对照，未部署正式服务。见[首个闭环记录](docs/experiments/efficiency-rsi-source-loop-20261102.md)。
 
 `npm run rsi:optimize` 补充“值得改哪里、怎样启动、改后是否接受”的免费决策演示；[十来行结果与接入说明](docs/rsi-optimization-v1.md)区分预计收益、配对结果和实际总支出。真实任务评审器与修改生成器仍待后续模块接入。
 
