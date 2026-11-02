@@ -1222,3 +1222,15 @@ TypeScript runtime 核对账号／Task、输入类型和版本、输出授权及
 `inspect_render`按`floor(seconds*fps)`选择明确帧，保持原分辨率并返回`selected_output_frames`实际帧号/时点；验证时长取视频帧数/fps，排除AAC尾部。审阅使用该事实和独立源帧核验，不以显示缩放坐标代替视频坐标。默认预览入口和外环未显式`--call-model`时不发付费调用。
 
 实际命令和质量范围见[视频程序复用入口](../scenarios/remotion_edit/structured/README.md)。机制实现和实测效果状态见[实验记录](experiments/remotion-program-rsi-20261030-v1.md)。
+
+## 效率驱动 RSI 能力契约与诊断执行（2026-11-02）
+
+`schemas/capability-v1.schema.json` 与 `capability_contract.py/.ts` 定义 `capability_v1`、`capability_snapshot_v1`。引用为 `{id, sha256}`；修订身份固定 owner、输入输出契约、effect、实现和依赖。生命周期、认证状态和迁移状态单独保存并进入任务快照，不因价值观察改变修订身份。新摘要采用明确的带类型规范编码，两种语言核验 Unicode 键序与浮点一致性；旧程序继续使用原生 ID、library digest 和证书摘要。
+
+`map_legacy_library` / `mapLegacyLibrary` 将 Source Program 与 Artifact Motif 的精确库字节映射为旁路记录。Python 离线映射经固定 `scripts/map-capability-legacy.mjs` 桥接复用 TypeScript 的原生摘要校验，避免浮点与 Unicode 编码分歧；线上 TypeScript 不依赖 Python。映射不授予执行权，也不改写旧库；原生代码锁、输入与沙箱检查仍由后端负责。组合显式列出固定子能力引用及 `input/step/literal/object/array` 数据绑定，拒绝前向引用、缺依赖、跨 owner 和未声明依赖；未支持的控制流交回现有模型路径。
+
+`createCapabilityRuntime` 接收可信宿主、固定快照与后端 adapter；每个真实叶调用仍经 `executeRsiOperation`，返回关联父子 call ID、输入输出摘要、状态、原生事件和执行回执。后端必须核验实际版本、完成原生执行并返回回执；源码实例化不算执行。任务取消后停止新调用，已发生的动作保留记录；不自动重放或撤销副作用。`build_only` 与 `archived` 退出直接选择，已认证组合仍可引用其固定版本，但当前认证、权限和撤销检查继续有效。
+
+效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
+
+`npm run rsi:efficiency:check` 运行跨语言与执行诊断，不调用模型。当前真实模型 Builder、场景后端连接、独立认证发布和固定资源多轮实验仍待接入；人工构造组合的成功不能证明 Agent 自主获得新能力。实施状态见[当前交接](handoffs/efficiency-rsi.md)。
