@@ -217,22 +217,20 @@ def main():
             elif protocol != 'baseline-v1':
                 raise ValueError('unknown frozen prompt protocol')
             program_digest = None
+            program_sha256 = None
+            pinned_program_library = None
             learned_tools = []
             visible_program_ids = []
             if args.program_library and arm == 'program':
-                library = json.loads(args.program_library.read_text())
-                if library.get('digest') != digest({k:v for k,v in library.items() if k!='digest'}):
-                    raise ValueError('frozen source-program library changed')
-                program_digest = library['digest']
-                programs=library['programs']
-                if library_scope!='all':
-                    request={'operation':'catalog','library':str(args.program_library.resolve()),
-                             'library_scope':library_scope,'intent':task['instruction']}
-                    selected=subprocess.run(['node','--experimental-strip-types',str(ROOT/'scripts/materialize-source-program.mjs')],
-                        input=json.dumps(request),capture_output=True,text=True,timeout=15,cwd=ROOT)
-                    if selected.returncode:raise ValueError('program retrieval failed: '+selected.stderr[-1500:])
-                    ids={p['id'] for p in json.loads(selected.stdout)['programs']}
-                    programs=[p for p in programs if p['id'] in ids]
+                from src.adapters.source_program_bridge import FrozenSourceLibrary
+                frozen = FrozenSourceLibrary(args.program_library,
+                    expected_sha256=form_snapshot.get('library_sha256') if form_snapshot and 'policy' in form_snapshot else None,
+                    expected_digest=form_snapshot['policy']['library_digest'] if form_snapshot and 'policy' in form_snapshot else None,
+                    scope=library_scope, intent=task['instruction'], include_source=args.program_evidence=='source')
+                pinned_program_library = run/'source-library.frozen.json'
+                frozen.save_bytes(pinned_program_library)
+                program_digest, program_sha256 = frozen.digest, frozen.sha256
+                programs = [{**p, 'default_parameters': p['example_parameters']} for p in frozen.catalog()['programs']]
                 visible_program_ids=[p['id'] for p in programs]
                 fields = ('id','description','parameters_schema','default_parameters') if args.catalog_format=='full' else ('id','description','default_parameters')
                 catalog = [{k:p[k] for k in fields} for p in programs]
@@ -251,7 +249,9 @@ def main():
                           'REMOTION_TASK_ASSETS': json.dumps(bound_assets), 'REMOTION_TASK_NONCE': uuid4().hex,
                           'REMOTION_FUSED_PROBE': '1' if arm in ('fused','program') else '0'}
             if args.program_library and arm == 'program':
-                server_env['REMOTION_SOURCE_LIBRARY'] = str(args.program_library.resolve())
+                server_env['REMOTION_SOURCE_LIBRARY'] = str(pinned_program_library.resolve())
+                server_env['REMOTION_SOURCE_LIBRARY_SHA256'] = program_sha256
+                server_env['REMOTION_SOURCE_LIBRARY_DIGEST'] = program_digest
                 server_env['REMOTION_LIBRARY_SCOPE'] = library_scope
                 server_env['REMOTION_PROGRAM_INTENT'] = task['instruction']
             if args.program_library:
@@ -304,6 +304,8 @@ def main():
                         'tasks_sha256': hashlib.sha256(args.tasks.read_bytes()).hexdigest(),
                         'task_registry': args.tasks.name, 'prompt_protocol': protocol,
                         'source_program_library_digest': program_digest,
+                        'source_program_library_sha256': program_sha256,
+                        'source_program_task_copy': 'source-library.frozen.json' if pinned_program_library else None,
                         'same_render_source_tool_in_both_arms': bool(args.program_library),
                         'program_catalog_format': args.catalog_format if args.program_library else None,
                         'source_program_representation': args.representation if args.program_library else None,
@@ -324,7 +326,7 @@ def main():
                         'experiment_code': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                                             for p in [Path(__file__), HERE / 'server.py', HERE / 'plugin.ts', HERE.parent / 'server.py']}}
             if args.program_library:
-                for path in [HERE/'program_server.py',ROOT/'src/adapters/source_program_runtime.ts',ROOT/'src/adapters/source_program_mcp.py',ROOT/'scripts/materialize-source-program.mjs']:
+                for path in [HERE/'program_server.py',ROOT/'src/adapters/source_program_runtime.ts',ROOT/'src/adapters/source_program_mcp.py',ROOT/'src/adapters/source_program_bridge.py',ROOT/'scripts/materialize-source-program.mjs']:
                     snapshot['experiment_code'][str(path.relative_to(ROOT))] = hashlib.sha256(path.read_bytes()).hexdigest()
             save(run / 'effective.json', snapshot)
             if form_snapshot:

@@ -1229,7 +1229,13 @@ TypeScript runtime 核对账号／Task、输入类型和版本、输出授权及
 
 `map_legacy_library` / `mapLegacyLibrary` 将 Source Program 与 Artifact Motif 的精确库字节映射为旁路记录。Python 离线映射经固定 `scripts/map-capability-legacy.mjs` 桥接复用 TypeScript 的原生摘要校验，避免浮点与 Unicode 编码分歧；线上 TypeScript 不依赖 Python。映射不授予执行权，也不改写旧库；原生代码锁、输入与沙箱检查仍由后端负责。组合显式列出固定子能力引用及 `input/step/literal/object/array` 数据绑定，拒绝前向引用、缺依赖、跨 owner 和未声明依赖；未支持的控制流交回现有模型路径。
 
+Python Capability 创建/编译的输入输出 schema 经固定 `scripts/validate-capability-schema.mjs` 调用安装版本的 DSH 权威校验，离线也须安装 Node/npm 依赖；不再用另一套 Python metaschema 决定支持方言。新 Capability wire 值两端一致拒绝负零，摘要函数仍保留 0/-0 等价；旧库字节不规范化改写。Source mapper 复用原生 `validateSourceProgram`，不接受原生执行入口拒绝的标量参数 schema 或超长模板。
+
 `createCapabilityRuntime` 接收可信宿主、固定快照与后端 adapter；每个真实叶调用仍经 `executeRsiOperation`，返回关联父子 call ID、输入输出摘要、状态、原生事件和执行回执。后端必须核验实际版本、完成原生执行并返回回执；源码实例化不算执行。任务取消后停止新调用，已发生的动作保留记录；不自动重放或撤销副作用。`build_only` 与 `archived` 退出直接选择，已认证组合仍可引用其固定版本，但当前认证、权限和撤销检查继续有效。
+
+Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次检查根的当前选择资格。准入后同修订晋级或归档不中断该次调用，下次直接选择已归档根仍拒绝；认证、权限、内容和证据失效继续即时检查。实时检查仅覆盖选定根的依赖闭包，无关根不影响当前调用。
+
+旧 Source 场景新增 `FrozenSourceLibrary`：一次读取并验证任务库字节，后续 catalog/materialize 使用同一字节，runner 保存私有 `source-library.frozen.json`，通过 `REMOTION_SOURCE_LIBRARY_SHA256` / `REMOTION_SOURCE_LIBRARY_DIGEST` 绑定子进程。bridge 保留旧 `library` 路径参数，并支持冻结字节及期望版本；库限制为4 MB且拒绝重复program ID；返回 library 原字节 SHA、原生 digest、program identity 和 certificate digest。`phase=materialized` 只表示源码实例化；场景完成写入/渲染并核对 source_version 后才返回 `source_program_render_receipt_v1`，关联调用 ID、源码及视频摘要。失败留审计，不能生成成功回执。此接线尚不是新 CapabilityRuntime 的原生 backend；Docker 取消、组合输出类型和新内核接入仍待完成。
 
 效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
 

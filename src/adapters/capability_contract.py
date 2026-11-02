@@ -13,9 +13,9 @@ import json
 import math
 import re
 import struct
+from functools import lru_cache
 from pathlib import Path
 from jsonschema import Draft202012Validator
-from .rsi_protocol import _supported_schema
 
 SCHEMA = json.loads((Path(__file__).resolve().parents[2] / 'schemas/capability-v1.schema.json').read_text())
 VALIDATOR = Draft202012Validator(SCHEMA)
@@ -58,6 +58,40 @@ def capability_digest(value):
     if len(encoded) > 4_000_000:
         _fail('too_large')
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _wire_values(value):
+    """New capability wire data rejects -0, matching the DSH JSON boundary.
+
+    Hash equivalence is intentionally broader; legacy bytes are never rewritten.
+    Call after capability_digest has already bounded JSON depth and value types.
+    """
+    if isinstance(value, float) and value == 0 and math.copysign(1, value) < 0:
+        _fail('negative_zero')
+    if isinstance(value, dict):
+        for child in value.values():
+            _wire_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            _wire_values(child)
+
+
+@lru_cache(maxsize=256)
+def _supported_contract_schemas(encoded):
+    """Use the installed online dialect, not a second Python metaschema.
+
+    Cache only successful checks of immutable JSON text, keeping Node startup
+    outside repeated validation of the same offline contract. No code executes.
+    """
+    root = Path(__file__).resolve().parents[2]
+    try:
+        result = subprocess.run(['node', str(root / 'scripts/validate-capability-schema.mjs')],
+                                input=encoded, text=True, capture_output=True, cwd=root, timeout=30)
+        reply = json.loads(result.stdout)
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as error:
+        raise ValueError('capability_schema_bridge_failed') from error
+    if result.returncode != 0 or reply != {'valid': True}:
+        _fail('contract_schema_unsupported')
 
 
 def _identifier(value):
@@ -119,13 +153,14 @@ def capability_identity(capability):
 
 def validate_capability(value, expected_owner=None):
     capability_digest(value)
+    _wire_values(value)
     if not isinstance(value, dict) or value.get('format') != 'capability_v1' or list(VALIDATOR.iter_errors(value)):
         _fail('schema_invalid')
     _identifier(value['owner'])
     if expected_owner is not None and value['owner'] != expected_owner:
         _fail('foreign_owner')
-    _supported_schema(value['contract']['input_schema'])
-    _supported_schema(value['contract']['output_schema'])
+    _supported_contract_schemas(json.dumps([value['contract']['input_schema'], value['contract']['output_schema']],
+                                          ensure_ascii=False, sort_keys=True, allow_nan=False, separators=(',', ':')))
     effects = value['contract']['effects']
     if not effects or len(effects) != len(set(effects)) or any(e not in ('read', 'workspace_write', 'external_write', 'opaque') for e in effects):
         _fail('effects_invalid')
@@ -180,6 +215,7 @@ def capability_ref(value):
 
 def validate_capability_snapshot(value, expected_owner=None):
     capability_digest(value)
+    _wire_values(value)
     if not isinstance(value, dict) or value.get('format') != 'capability_snapshot_v1' or list(VALIDATOR.iter_errors(value)):
         _fail('snapshot_schema_invalid')
     _identifier(value['owner'])

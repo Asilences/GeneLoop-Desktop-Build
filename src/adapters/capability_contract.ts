@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {assertSupportedJsonSchema,validateJsonSchemaValue} from '@deepseek-ai/dsh-tools';
 import {digest as legacyDigest} from '../motif_core/online_skill_runtime.mjs';
+import {validateSourceProgram} from './source_program_runtime.ts';
 
 export type CapabilityRef={id:string;sha256:string};
 export type Binding={kind:'input';path:string[]}|{kind:'step';step_id:string;path:string[]}|{kind:'literal';value:any}|{kind:'object';fields:Record<string,Binding>}|{kind:'array';items:Binding[]};
@@ -43,6 +44,13 @@ function tag(value:any,depth=0):any {
 export function capabilityDigest(value:unknown){
  const encoded=JSON.stringify(tag(value));if(Buffer.byteLength(encoded)>4_000_000)fail('too_large');return hash(encoded);
 }
+// Hash equivalence alone does not make -0 valid wire data. Do not normalize
+// original legacy bytes; reject negative zero only in new Capability records.
+function wireValues(value:any){
+ if(Object.is(value,-0))fail('negative_zero');
+ if(Array.isArray(value)){for(const child of value)wireValues(child);}
+ else if(value&&typeof value==='object'){for(const child of Object.values(value))wireValues(child);}
+}
 function identifier(value:any){if(typeof value!=='string'||!value.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g,'')||[...value].length>256)fail('identifier_invalid');unicode(value);}
 function sha(value:any){if(typeof value!=='string'||!(/^[a-f0-9]{64}$/).test(value))fail('digest_invalid');}
 function shape(value:any,keys:string[]){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==keys.length||keys.some(k=>!Object.hasOwn(value,k)))fail('shape_invalid');}
@@ -64,7 +72,7 @@ function binding(value:any,earlier:Set<string>,depth=0){
 }
 export function capabilityIdentity(value:Capability|CapabilityDefinition){return Object.fromEntries(identityKeys.map(k=>[k,(value as any)[k]])) as CapabilityDefinition;}
 export function validateCapability(value:any,expectedOwner?:string):Capability {
- capabilityDigest(value);
+ capabilityDigest(value);wireValues(value);
  if(value?.format!=='capability_v1'||validateJsonSchemaValue(schema,value).length)fail('schema_invalid');
  identifier(value.owner);if(expectedOwner!==undefined&&value.owner!==expectedOwner)fail('foreign_owner');
  assertSupportedJsonSchema(value.contract.input_schema);assertSupportedJsonSchema(value.contract.output_schema);
@@ -92,7 +100,7 @@ export function createCapability(definition:CapabilityDefinition,states:Partial<
 }
 export function capabilityRef(value:Capability):CapabilityRef{const checked=validateCapability(value);return {id:checked.id,sha256:checked.revision_sha256};}
 export function validateCapabilitySnapshot(value:any,expectedOwner?:string):CapabilitySnapshot {
- capabilityDigest(value);if(value?.format!=='capability_snapshot_v1'||validateJsonSchemaValue(schema,value).length)fail('snapshot_schema_invalid');
+ capabilityDigest(value);wireValues(value);if(value?.format!=='capability_snapshot_v1'||validateJsonSchemaValue(schema,value).length)fail('snapshot_schema_invalid');
  identifier(value.owner);if(expectedOwner!==undefined&&value.owner!==expectedOwner)fail('foreign_owner');
  const roots=value.roots.map(refKey);if(!roots.length||new Set(roots).size!==roots.length||JSON.stringify(roots)!==JSON.stringify([...roots].sort()))fail('roots_not_unique_sorted');
  const capabilities:Capability[]=value.capabilities.map((c:Capability)=>validateCapability(c,value.owner)),ids=capabilities.map(c=>c.id);
@@ -130,7 +138,8 @@ export function mapLegacyLibrary(raw:string|Buffer,owner:string,backend:'source_
   if(!certificate||typeof certificate!=='object'||Array.isArray(certificate)||certificate.source_equivalent!==true)fail('legacy_certificate_missing');
   let inputSchema:any;
   if(backend==='source_program'){
-   if(p.id!=='source_'+objectSha256.slice(0,24)||p.format!=='parameterized_source_program_v1'||!['tsx','javascript'].includes(p.language)||typeof p.template!=='string'||p.template.split('__GENELOOP_PARAMETERS__').length!==2||p.status!=='certified'||certificate.program_identity!==objectSha256)fail('legacy_identity_changed');
+   validateSourceProgram(p);
+   if(p.status!=='certified'||certificate.program_identity!==objectSha256)fail('legacy_identity_changed');
    inputSchema=p.parameters_schema;
   }else{
    if(p.id!=='artifact_'+objectSha256.slice(0,24)||p.language!=='python'||p.execution_policy!=='fresh_output_network_disabled_v1'||p.source_sha256!==hash(p.source)||certificate.program_sha256!==objectSha256||certificate.passed!==true||typeof certificate.distinct_inputs!=='number'||certificate.distinct_inputs<2)fail('legacy_identity_changed');

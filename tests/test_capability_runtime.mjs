@@ -127,6 +127,75 @@ for(const lifecycle of ['build_only','archived'])test(lifecycle+' dependency sta
  assert.equal(result.status,'succeeded');assert.deepEqual(result.result,{counts:{A:3,B:1}});
 });
 
+for(const lifecycle of ['build_only','archived'])test('an admitted root finishes after '+lifecycle+' and cannot be selected by the next call',async()=>{
+ const s=setup(),execute=s.backend.execute;
+ s.backend.execute=async(...args)=>{
+  const native=await execute(...args);
+  if(s.executed.length===1)s.registry.get(s.root.id).lifecycle=lifecycle;
+  return native;
+ };
+ const runtime=createCapabilityRuntime(s.options);
+ const admitted=await runtime.execute(capabilityRef(s.root),argumentsValue);
+ assert.equal(admitted.status,'succeeded');assert.deepEqual(admitted.result,{counts:{A:3,B:1}});
+ assert.equal(s.executed.length,3);assert.ok(admitted.receipts.every(receipt=>receipt.status==='succeeded'));
+ const next=await runtime.execute(capabilityRef(s.root),argumentsValue);
+ assert.equal(next.status,'rejected');assert.equal(next.receipts[0].reason,'capability_not_executable');
+ assert.equal(s.executed.length,3);
+});
+
+test('promotion of the same revisions does not interrupt actual multi-step execution or rewrite its snapshot',async()=>{
+ const s=setup(),execute=s.backend.execute;
+ s.backend.execute=async(...args)=>{
+  const native=await execute(...args);
+  if(s.executed.length===1)for(const capability of s.registry.values())capability.migration='promoted';
+  return native;
+ };
+ const runtime=createCapabilityRuntime(s.options);
+ const result=await runtime.execute(capabilityRef(s.root),argumentsValue);
+ assert.equal(result.status,'succeeded');assert.deepEqual(result.result,{counts:{A:3,B:1}});
+ assert.equal(s.executed.length,3);
+ assert.ok(runtime.snapshot().capabilities.every(capability=>capability.migration==='testing'));
+ assert.ok(result.receipts.every(receipt=>receipt.snapshot_sha256===s.snapshot.digest));
+});
+
+test('live guards and native inspection cover only the selected root dependency closure',async()=>{
+ const s=setup(),reads=[],inspections=[];
+ const unused=createCapability({...capabilityIdentity(s.count),
+  contract:{...s.count.contract,effects:['workspace_write']},
+  implementation:{kind:'legacy',legacy_ref:{...s.count.implementation.legacy_ref,object_id:'unused'}}},active);
+ s.registry.set(unused.id,{...unused,certification:'rejected'});
+ s.options.snapshot=createCapabilitySnapshot(owner,[capabilityRef(s.root),capabilityRef(unused)],
+  [s.root,s.count,s.sum,unused]);
+ s.options.readCapability=ref=>{reads.push(ref.id);return s.registry.get(ref.id);};
+ const inspect=s.backend.inspect;
+ s.backend.inspect=ref=>{inspections.push(ref.object_id);return inspect(ref);};
+ const runtime=createCapabilityRuntime(s.options);
+ const result=await runtime.execute(capabilityRef(s.root),argumentsValue);
+ assert.equal(result.status,'succeeded');assert.equal(s.executed.length,3);
+ assert.equal(reads.includes(unused.id),false);assert.equal(inspections.includes('unused'),false);
+ assert.ok(reads.includes(s.count.id)&&reads.includes(s.sum.id));
+ const rejected=await runtime.execute(capabilityRef(unused),{rows:[]});
+ assert.equal(rejected.status,'rejected');assert.equal(rejected.receipts[0].reason,'capability_not_certified');
+ assert.equal(s.executed.length,3);
+});
+
+for(const [name,mutate,reason] of [
+ ['dependency certificate',s=>{s.registry.get(s.sum.id).certification='rejected';},'capability_not_certified'],
+ ['permission',s=>{s.host.grant.revoked=true;},'capability_permission_denied'],
+ ['immutable revision',s=>{s.registry.set(s.sum.id,createCapability({...capabilityIdentity(s.sum),
+   contract:{...s.sum.contract,output_schema:{type:'object'}}},active));},'capability_revision_changed'],
+ ['current evidence',s=>{for(const record of s.host.currentEvidence.values())record.payload.status='invalidated';},'evidence_invalidated'],
+])test('admission never freezes away a later '+name+' invalidation',async()=>{
+ const s=setup(),execute=s.backend.execute;
+ s.backend.execute=async(...args)=>{
+  const native=await execute(...args);if(s.executed.length===1)mutate(s);return native;
+ };
+ const result=await createCapabilityRuntime(s.options).execute(capabilityRef(s.root),argumentsValue);
+ assert.equal(result.status,'failed');assert.equal(result.receipts[0].reason,reason);
+ assert.equal(s.executed.length,1);assert.equal(result.receipts[1].events.at(-1).payload.phase,'succeeded');
+ assert.equal(result.result,null);
+});
+
 test('invalid typed inputs reject and never dispatch',async()=>{
  const s=setup(),runtime=createCapabilityRuntime(s.options);
  const result=await runtime.execute(capabilityRef(s.root),{first:[{group:1}],second:[]});

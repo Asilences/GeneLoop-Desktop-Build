@@ -4,6 +4,7 @@ import hashlib
 import json
 import unittest
 import subprocess
+from pathlib import Path
 from src.adapters.capability_contract import (capability_digest, capability_ref, create_capability,
     create_capability_snapshot, validate_capability, validate_capability_snapshot, map_legacy_library)
 from src.adapters.script_motif_compiler import digest
@@ -43,6 +44,31 @@ class CapabilityTests(unittest.TestCase):
         self.assertEqual(capability_digest([1, 0]), capability_digest([1.0, -0.0]))
         for value in [float('inf'), float('nan'), 9007199254740992, '\ud800']:
             with self.assertRaises(ValueError): capability_digest(value)
+
+    def test_online_schema_dialect_positive_and_negative_cases(self):
+        cases=json.loads((Path(__file__).parent/'fixtures/capability_dialect_cases.json').read_text())
+        for case in cases:
+            definition={k:copy.deepcopy(leaf()[k]) for k in ('owner','contract','implementation','dependencies')}
+            definition['contract']['input_schema']=case['schema']
+            with self.subTest(case=case['name']):
+                if case['accepted']:
+                    self.assertEqual(create_capability(definition)['contract']['input_schema'],case['schema'])
+                else:
+                    with self.assertRaises(ValueError):create_capability(definition)
+
+    def test_native_source_admission_and_mapping_agree(self):
+        fixtures=subprocess.run(['node','--experimental-strip-types','tests/fixtures/capability_native_validation.mjs'],capture_output=True,text=True)
+        self.assertEqual(fixtures.returncode,0,fixtures.stderr)
+        for case in json.loads(fixtures.stdout):
+            with self.subTest(case=case['name']):
+                if case['native_accepted']:
+                    result=map_legacy_library(case['raw'],'owner','source_program',case['sha'])
+                    self.assertEqual(len(result),1)
+                    self.assertEqual(result[0]['certification'],'candidate')
+                    self.assertEqual(result[0]['contract']['input_schema']['required'],['x','x'])
+                else:
+                    with self.assertRaisesRegex(ValueError,'source_program_changed'):
+                        map_legacy_library(case['raw'],'owner','source_program',case['sha'])
 
     def test_identity_binds_contract_owner_and_excludes_states(self):
         a = leaf()

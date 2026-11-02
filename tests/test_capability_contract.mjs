@@ -2,7 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {capabilityDigest,validateCapability,validateCapabilitySnapshot,mapLegacyLibrary,capabilityRef,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
+import {readFileSync} from 'node:fs';
+import {createCapability,capabilityIdentity,capabilityDigest,validateCapability,validateCapabilitySnapshot,mapLegacyLibrary,capabilityRef,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
 const python=process.env.SSS_PYTHON??(process.platform==='win32'?'python':'python3');
 function fixture(){
  const run=spawnSync(python,['-c',`import json,base64
@@ -48,4 +49,53 @@ from src.adapters.capability_contract import map_legacy_library
 f=json.load(sys.stdin)
 print(json.dumps(map_legacy_library(f['raw'],'owner','source_program',f['sha']),ensure_ascii=False))`],{input:result.stdout,encoding:'utf8'});
  assert.equal(bridge.status,0,bridge.stderr);assert.deepEqual(JSON.parse(bridge.stdout),fixture.mapped);
+});
+
+test("Python and TS have the same schema dialect and accept each other's wire output",()=>{
+ const cases=JSON.parse(readFileSync(new URL('./fixtures/capability_dialect_cases.json',import.meta.url),'utf8'));
+ const run=spawnSync(python,['-c',`import copy,json
+from tests.test_capability_contract import leaf
+from src.adapters.capability_contract import create_capability,capability_identity
+cases=json.load(open('tests/fixtures/capability_dialect_cases.json'))
+results=[]
+for case in cases:
+ definition=capability_identity(leaf());definition['contract']['input_schema']=case['schema']
+ try:
+  capability=create_capability(definition);results.append({'accepted':True,'capability':capability})
+ except ValueError:results.append({'accepted':False})
+print(json.dumps(results,ensure_ascii=False,allow_nan=False))`],{encoding:'utf8'});
+ assert.equal(run.status,0,run.stderr);const py=JSON.parse(run.stdout),ts=[];
+ const leaf=data.snapshot.capabilities.find(c=>c.implementation.kind==='legacy');
+ for(const [i,item] of cases.entries()){
+  const definition=structuredClone(capabilityIdentity(leaf));definition.contract.input_schema=item.schema;
+  let cap;try{cap=createCapability(definition);}catch{}
+  assert.equal(Boolean(cap),item.accepted,item.name);assert.equal(py[i].accepted,item.accepted,item.name);
+  if(cap){assert.deepEqual(validateCapability(py[i].capability),py[i].capability);ts.push(cap);}
+ }
+ const reverse=spawnSync(python,['-c',`import json,sys
+from src.adapters.capability_contract import validate_capability
+for capability in json.load(sys.stdin):validate_capability(capability,'owner')
+print('accepted')`],{input:JSON.stringify(ts),encoding:'utf8'});
+ assert.equal(reverse.status,0,reverse.stderr);assert.equal(reverse.stdout.trim(),'accepted');
+});
+
+test('new composition wire rejects negative zero even though canonical hashes equate zeros',()=>{
+ const root=structuredClone(data.snapshot.capabilities.find(c=>c.implementation.kind==='composition'));
+ root.implementation.steps[0].arguments={kind:'literal',value:-0};
+ assert.throws(()=>validateCapability(root),/negative_zero/);
+ const snapshot=structuredClone(data.snapshot);snapshot.capabilities[0].contract.output_schema.default=-0;
+ assert.throws(()=>validateCapabilitySnapshot(snapshot),/negative_zero/);
+});
+
+test('Source sidecar mapping uses original native admission rules without certificate upgrades',()=>{
+ const generated=spawnSync(process.execPath,['--experimental-strip-types','tests/fixtures/capability_native_validation.mjs'],{encoding:'utf8'});
+ assert.equal(generated.status,0,generated.stderr);
+ for(const item of JSON.parse(generated.stdout)){
+  if(item.native_accepted){
+   const cap=mapLegacyLibrary(item.raw,'owner','source_program',item.sha)[0];
+   assert.equal(cap.certification,'candidate');assert.equal(cap.lifecycle,'build_only');
+   assert.deepEqual(cap.contract.input_schema.required,['x','x']);
+   assert.equal(cap.implementation.legacy_ref.library_sha256,item.sha);
+  }else assert.throws(()=>mapLegacyLibrary(item.raw,'owner','source_program',item.sha),/source_program_changed/,item.name);
+ }
 });

@@ -79,8 +79,10 @@ function bind(binding:Binding,input:unknown,steps:Map<string,unknown>):unknown {
  }
 }
 
-/** Freeze once at task admission, then keep this instance for that task. Latest
- * pointers are never resolved by this runner. Each run executes one frozen root.
+/** Freeze content/component versions once for the task. Each execute() admits
+ * one selected root against its current selection eligibility. Promotion or
+ * archival after that admission does not interrupt the call; certification,
+ * permissions and evidence remain live guards. Latest pointers are never read.
  */
 export function createCapabilityRuntime(options:CapabilityRuntimeHost){
  const snapshot=validateCapabilitySnapshot(options.snapshot,options.owner);
@@ -101,21 +103,20 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
  }])) as CapabilityRuntimeHost['backends'];
  const readHost=options.readHost,readCapability=options.readCapability;
 
- function guard(signal:AbortSignal|undefined,directRoot:string){
+ function guard(signal:AbortSignal|undefined,closure:Capability[],admittingRoot?:string){
   check(!signal?.aborted,'capability_cancelled');
   const host=readHost();
   check(host.taskId===taskId,'capability_task_mismatch');
   check(host.stateVersion===stateVersion,'capability_state_changed');
   check(same(host.versions,versions),'capability_component_version_changed');
   check(!host.grant.revoked&&host.grant.taskId===taskId&&host.grant.stateVersion===stateVersion,'capability_permission_denied');
-  for(const frozen of snapshot.capabilities){
+  for(const frozen of closure){
    const current=validateCapability(readCapability(capabilityRef(frozen)),owner);
    check(same(capabilityRef(current),capabilityRef(frozen)),'capability_revision_changed');
    check(frozen.certification==='certified'&&current.certification==='certified','capability_not_certified');
-   // Retained dependency versions remain usable by a certified composition.
-   // Lifecycle controls direct selection; certification controls revocation.
-   if(frozen.id===directRoot)check(frozen.lifecycle==='active'&&current.lifecycle==='active','capability_not_executable');
-   check(frozen.migration===current.migration,'capability_migration_changed');
+   // Lifecycle/migration are selection policy, not revocation. Only the initial
+   // root admission checks active; retained dependencies may already be archived.
+   if(frozen.id===admittingRoot)check(frozen.lifecycle==='active'&&current.lifecycle==='active','capability_not_executable');
    check(current.contract.effects.every(effect=>host.grant.effects.includes(effect)),'capability_permission_denied');
    check(!current.contract.effects.includes('external_write'),'capability_external_write_not_enabled');
    check(!current.contract.effects.includes('opaque'),'capability_opaque_not_executable');
@@ -131,6 +132,16 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
  async function execute(root:CapabilityRef,input:unknown,{signal}:{signal?:AbortSignal}={}){
   const selectedRoot=structuredClone(root);
   check(snapshot.roots.some(ref=>same(ref,selectedRoot)),'capability_root_not_in_snapshot');
+  const selectedIds=new Set<string>(),pending=[selectedRoot.id];
+  while(pending.length){
+   const id=pending.pop()!;
+   if(selectedIds.has(id))continue;
+   selectedIds.add(id);
+   pending.push(...capabilities.get(id)!.dependencies.map(ref=>ref.id));
+  }
+  // A snapshot can expose several roots. Unselected capabilities neither grant
+  // this call authority nor impose unrelated live availability/IO dependencies.
+  const closure=snapshot.capabilities.filter(capability=>selectedIds.has(capability.id));
   const receipts:CapabilityReceipt[]=[];
   async function run(ref:CapabilityRef,args:unknown,parentCallId:string|null):Promise<{ok:boolean;value:unknown;receipt:CapabilityReceipt}>{
    const started=performance.now();
@@ -144,13 +155,13 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
    try{
     const bound=structuredClone(args);
     receipt.arguments_sha256=jsonHash(bound);
-    guard(signal,selectedRoot.id);
+    guard(signal,closure,parentCallId===null?selectedRoot.id:undefined);
     check(!validateJsonSchemaValue(capability.contract.input_schema,bound).length,'capability_input_schema_invalid');
     const implementation=capability.implementation;
     if(implementation.kind==='composition'){
      const outputs=new Map<string,unknown>();
      for(const step of implementation.steps){
-      guard(signal,selectedRoot.id);
+      guard(signal,closure);
       const child=await run(step.capability,bind(step.arguments,bound,outputs),receipt.call_id);
       receipt.child_call_ids.push(child.receipt.call_id);
       receipt.dispatched ||= child.receipt.dispatched;
@@ -164,9 +175,9 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
      const call:CapabilityCall={taskId,callId:receipt.call_id,parentCallId,
       capability:structuredClone(capability),snapshotDigest:snapshot.digest,signal};
      const request=backend.request(call,structuredClone(bound));
-     const outcome=await executeRsiOperation(request,bound,()=>guard(signal,selectedRoot.id),async(operation,argumentsValue)=>{
+     const outcome=await executeRsiOperation(request,bound,()=>guard(signal,closure),async(operation,argumentsValue)=>{
       // Recheck after request construction and immediately before native dispatch.
-      const current=guard(signal,selectedRoot.id);
+      const current=guard(signal,closure);
       const operator=current.operators.get(request.payload.operator_id)?.record.payload;
       check(operator&&capability.contract.effects.includes(operator.effect),'capability_effect_mismatch');
       receipt.dispatched=true;
@@ -183,7 +194,7 @@ export function createCapabilityRuntime(options:CapabilityRuntimeHost){
     }
     receipt.result_sha256=jsonHash(value);
     check(!validateJsonSchemaValue(capability.contract.output_schema,value).length,'capability_output_schema_invalid');
-    guard(signal,selectedRoot.id);
+    guard(signal,closure);
     receipt.status='succeeded';
     return {ok:true,value,receipt};
    }catch(error){

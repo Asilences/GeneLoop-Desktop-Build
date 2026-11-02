@@ -59,6 +59,12 @@ class BuilderTests(unittest.TestCase):
         optional=copy.deepcopy(proposal);optional['contract']['input_schema']['required']=[]
         with self.assertRaisesRegex(ValueError,'schema_incompatible'):compile_proposal(optional,snapshot,'owner')
 
+    def test_negative_zero_proposal_rejected_before_wire_export(self):
+        snapshot,proposal=setup()
+        proposal['steps'][0]['arguments']={'kind':'object','fields':{'value':{'kind':'literal','value':-0.0}}}
+        with self.assertRaisesRegex(ValueError,'negative_zero'):
+            compile_proposal(proposal,snapshot,'owner')
+
     def test_effects_and_archived_dependencies(self):
         snapshot,proposal=setup()
         bad=copy.deepcopy(proposal);bad['contract']['effects']=['workspace_write']
