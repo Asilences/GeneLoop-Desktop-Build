@@ -1,6 +1,10 @@
-## 2026-11-03：B 真实书目验收（最新）
+## 2026-11-03：Capability Frontier 夜间研究（最新）
 
-B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池→模型组合已真实发生；修正输入身份接线后，原提案显式重放发布，27条验证/29条后继各4项独立检查通过，新根对下一Builder可见。含工程恢复，不代表无人值守或新增效率收益。19次真实请求估费USD0.018788928，原账本不清零；默认聊天、生产和外部应用未改。代码、全量与定向验证/失败边界及下一步见[论文交接](paper-proofreading.md)与[实验记录](../experiments/paper-capability-real-20261102.md)。A与B（`5efa221`）已推送至[PR #122](https://github.com/jingyio/GeneLoop/pull/122)，未合并/部署；CI以当前head为准。
+起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D可发布/复用；H0第一份材料已够用但入池后丢构造意图，已补新snapshot续接，模型效果未重跑。独立反例已回到原撤回机制，三份错误D退出后续选择。79次DeepSeek请求估费USD0.340150572，旧账本不变；源码`e6d46f6`还修复日期写死与付费前条件核对，原16格匹配。全量1879 Python/1516 Node、Linux原生/公共95项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)的`a92f278`（含最后源码）Ubuntu/Windows push/PR四项CI全部通过；后续仅文档收尾，最新head见PR，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
+
+## 2026-11-03：B 真实书目验收
+
+B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池→模型组合已真实发生；修正输入身份接线后，原提案显式重放发布，27条验证/29条后继各4项独立检查通过，新根对下一Builder可见。含工程恢复，不代表无人值守或新增效率收益。19次真实请求估费USD0.018788928，原账本不清零；默认聊天、生产和外部应用未改。代码、全量与定向验证/失败边界及下一步见[论文交接](paper-proofreading.md)与[实验记录](../experiments/paper-capability-real-20261102.md)。A与B（`5efa221`）已通过[PR #122](https://github.com/jingyio/GeneLoop/pull/122)合并到 `f594e19`，尚未生产部署。
 
 ## 2026-11-02：A 计量修复
 

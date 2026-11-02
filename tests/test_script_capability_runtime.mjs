@@ -78,6 +78,50 @@ test('Windows catalog remains readable but native sandbox execution is explicitl
  await assert.rejects(runScriptCapability(f.manifestPath,f.catalog.snapshot,f.args),/platform_unsupported/);
 });
 const sandbox=process.platform==='linux'&&existsSync('/usr/bin/bwrap')&&process.env.RUN_SCRIPT_CAPABILITY_SANDBOX==='1';
+function valueFixture(t,items=[]){
+ const f=fixture(t),p=f.body.programs[0];
+ p.inputs=[{suffix:'.json',format:'json',shape:{object:{items:'array'}}}];
+ p.template="import json\nx=json.load(open('__MOTIF_INPUT_0__'))\nprint(json.dumps({'items':x['items'],'count':len(x['items'])}))";
+ p.certification.output_schema={type:'object',properties:{items:{type:'array'},count:{type:'number'}},required:['items','count'],additionalProperties:false};
+ p.certification.value_binding={format:'script_json_value_binding_v1',input_schema:{type:'object',properties:{items:{type:'array'}},required:['items'],additionalProperties:false}};
+ p.certification.program_sha256=digest(programIdentity(p));p.id='script_'+p.certification.program_sha256.slice(0,24);
+ const catalog=f.saveLibrary(),leaf=catalog.capabilities.find(c=>c.contract.input_schema.properties.value);
+ const args={value:{items}};
+ f.manifest.libraries[0].sha256=catalog.library_sha256;
+ f.manifest.grant.root=capabilityRef(leaf);f.manifest.grant.snapshot_sha256=catalog.snapshot.digest;f.manifest.grant.arguments_sha256=capabilityDigest(args);
+ f.save();writeFileSync(f.manifest.registry_path,JSON.stringify(catalog.snapshot));
+ return {...f,catalog,leaf,args};
+}
+test('JSON values require certified opt-in; old path catalog stays intact and malformed metadata is rejected',t=>{
+ const f=valueFixture(t);assert.equal(f.catalog.capabilities.length,2);
+ assert.ok(f.catalog.capabilities.some(c=>c.contract.input_schema.properties.paths));
+ f.body.programs[0].certification.value_binding.format='unreviewed';assert.throws(f.saveLibrary,/invalid_script_value_binding/);
+});
+test('a fixed file with the wrong format reports a contract mismatch rather than a changed version',{skip:process.platform==='win32'},async t=>{
+ const f=valueFixture(t),leaf=f.catalog.capabilities.find(c=>c.contract.input_schema.properties.paths),args={paths:['/work/inputs/test.txt']};
+ f.manifest.grant.root=capabilityRef(leaf);f.manifest.grant.arguments_sha256=capabilityDigest(args);f.save();
+ const trace=await runScriptCapability(f.manifestPath,f.catalog.snapshot,args);
+ assert.equal(trace.status,'failed');assert.ok(trace.receipts.some(r=>r.reason==='script_capability_input_contract_mismatch'));
+});
+test('JSON result flow accepts new array contents, composes, and retains original file guards',{skip:!sandbox},async t=>{
+ for(const items of [[],['new','values']]){
+  const f=valueFixture(t,items),ref=capabilityRef(f.leaf);
+  const cap=createCapability({owner:'owner',contract:f.leaf.contract,implementation:{kind:'composition',steps:[
+   {id:'first',capability:ref,arguments:{kind:'input',path:[]}},
+   {id:'second',capability:ref,arguments:{kind:'object',fields:{value:{kind:'object',fields:{items:{kind:'step',step_id:'first',path:['value','items']}}}}}}
+  ],output:{kind:'step',step_id:'second',path:[]}},dependencies:[ref]},
+  {certification:'certified',lifecycle:'active',migration:'promoted'});
+  const snapshot=createCapabilitySnapshot('owner',[capabilityRef(cap)],[f.leaf,cap]);
+  f.manifest.grant.root=capabilityRef(cap);f.manifest.grant.snapshot_sha256=snapshot.digest;f.save();
+  writeFileSync(f.manifest.registry_path,JSON.stringify(snapshot));
+  const trace=await runScriptCapability(f.manifestPath,snapshot,f.args);
+  assert.equal(trace.status,'succeeded',JSON.stringify(trace));assert.equal(trace.result.value.count,items.length);
+  const receipts=trace.receipts.filter(r=>r.kind==='legacy');assert.equal(receipts.length,2);
+  for(const r of receipts)assert.deepEqual(r.backend_receipt.native_receipt.versions,[sha(JSON.stringify({items}))]);
+  writeFileSync(join(f.work,'inputs/test.txt'),'changed');
+  await assert.rejects(runScriptCapability(f.manifestPath,snapshot,f.args),/input_changed/);
+ }
+});
 test('native sandbox executes composition, preserves input, and binds exact leaf receipts',{skip:!sandbox},async t=>{
  const f=fixture(t),leaf=f.catalog.capabilities[0];
  const cap=createCapability({owner:'owner',contract:leaf.contract,implementation:{kind:'composition',steps:[{id:'read',capability:capabilityRef(leaf),

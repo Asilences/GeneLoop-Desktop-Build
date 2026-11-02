@@ -1313,3 +1313,17 @@ video_program_v1 通过原 source-program runtime 加载已接受的发布形式
 公共 `completeCapabilityCycle` 的 validation/followup 任务可由可信宿主提供 `input_versions:[{path,sha256}]`。两侧必须同时提供非空、路径唯一的合法版本列表，内容摘要集合必须不同；原生执行的 `input_versions` 必须与该侧列表精确一致。仍核对任务、owner、snapshot、根、真实参数摘要与回执；输入版本不能替代参数绑定。不提供版本列表的场景保留原参数差异检查。
 
 Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，拒绝仅重命名同一内容；Store 保存原执行参数和回执，独立质量检查不变。Builder 同时读取公共目录包装中的 seed 和 admitted_materials 描述，只向固定 snapshot 的可选根附加描述。真实范围与未完成项见[验收记录](experiments/paper-capability-real-20261102.md)。
+
+## Script 值输入与离线程序构造（2026-11-03）
+
+- 原生认证可选 `certification.value_binding:{format:"script_json_value_binding_v1",input_schema}`，仅用于一个已认证 JSON 文件输入、无 argv/网络的程序。两份原生输入必须是宿主规范 JSON，schema 从实际两侧见证推导。原文件接口保留；额外 Capability 接受 `{value:<schema>}`，宿主物化为每次调用独立的只读 JSON，再调用原执行器。父子参数摘要、JSON 字节哈希、原文件版本、owner/grant 与回执仍核验。
+- `certification.output_limit_bytes` 可显式认证为 16000 或 65536；未提供时仍是 16000。未认证的顶层额度、任意其他数值和非法值输入元数据拒绝加载。该额度是受限程序输出，不改 DeepSeek 的 393216 输出容量和平台 null 策略。旧执行版本只按精确兼容对接受，旧库/证书不改写。
+- 原生学习观测可由可信宿主提供 `explicit_inputs`，按源见证的固定文件角色匹配 heldout 输入并核对原始来源 SHA、当前字节 SHA 与契约，支持 before/after 同后缀文件。缺省仍用原绑定器；模型不能通过提案提供或覆盖认证见证。
+- `encode_complete_script(task,snapshot,library_ref,observations_ref)` 只把角色精确对应任务字符串字段、输出静态兼容的完整模型程序编码为一步候选，返回 build_only/candidate。部分 JSON 关系材料不自动宣称完整任务；原生认证与独立发布检查继续执行。
+- Frontier 的函数入口/元数据默认值是离线 authoring 协议：算法 source 由模型提供，宿主处理 `run(value)` 的 I/O 和固定包装。函数模式保留声明、记录忽略的脚本入口位置、保留原文与实际执行源码；显式脚本接口兼容。语义认证不得从 source-equivalence 推导。协议、精确请求字段及命令见[研究入口](../scenarios/paper_proofreading/frontier/README.md)。
+- 同一构造机会的失败按当时 `construction_snapshot_sha256` 计数，新认证材料改变能力池后可重新评价。旧事实从不可变尝试证据回溯版本，版本缺失时仍保守暂缓，不删除历史失败。
+- 公共控制器在已认证材料改变能力池后，继续用新 snapshot 提案，`parent/repair` 不跨版本复用；另以 catalog 的 `material_continuation`（`capability_material_continuation_v1`）携带当前 snapshot 与不可变获取记录引用。记录格式 `capability_material_acquisition_v1` 保存前/后 snapshot、新增可见根、上一缺口、程序用途/源码摘要及结果/获取/程序证据，不重复算法正文。模型上下文按当前根重新生成 `current_aliases`，旧别名不执行；证据或当前 snapshot 不符时拒绝构造。该元数据不授予认证、不强制选择高层能力，模型行为效果另测。立即学习和显式 pending-gap 唤醒均接入，任意中断自动恢复不在此协议内。
+- Frontier 最终验收在所有构造完成、计量与请求归属封账后，将原生独立检查写回同一 `CapabilityFeedback`。明确语义反例只撤回所执行的根，未来目录投影过滤其依赖者；不删除原发布或猜测叶节点错误。无候选不等于失败质量，执行/传输错误记 unknown；通过记录不自动恢复已有撤回，恢复仍需原独立重新验证/发布路径。研究最终结果不得进入本轮构造修复。
+- Frontier 新freeze显式给定实验ID与带时区未来截止，C/D准备器读取冻结协议及任务引用，支持`--protocol`与旧重定位文件，不继承本轮日期。`run`在owner/费用登记前核对精确研究预算、截止、任务、种子与实际初始能力池，首构造再次核对；不一致不调用模型，后续原生学习按回合协议更新池。研究截止须有限有效，平台null配额策略和原累计账本不改。
+
+新增执行仍是既有只读 Script 沙箱后端，不接管聊天，不宣称插件已去除 Python 或任意 MCP 自动组合已完成。真实效果与限制独立见[Frontier 记录](experiments/capability-frontier-20261103.md)。

@@ -69,8 +69,20 @@ def test_native_material_change_restarts_builder_with_fresh_snapshot_not_repair(
         seen.append(library['snapshot']['digest'])
         if len(seen)>1:
             assert parent is None and feedback is None
+            from src.adapters.capability_authoring import authoring_context
+            context=authoring_context(task,library['snapshot'],library['source_catalog'])
+            progress=context['material_continuation']
+            assert progress['current_snapshot_sha256']==seen[-1]
+            record=progress['acquisitions'][0]
+            assert record['previous_snapshot_sha256']==seen[0]
+            assert record['program_intent']['description']=='Previously requested relation'
+            assert record['previous_gap']['requirement']=='Need a reusable relation'
+            assert len(record['current_aliases'])==1
+            assert record['current_aliases'][0]['capability'] in library['snapshot']['roots']
             return original(task,library,attempt,parent,feedback)
-        attempt.mkdir();result={'status':'deferred','error':'capability_construction_gap',
+        attempt.mkdir();put(attempt/'program.json',{'description':'Previously requested relation','mode':'json','source':'def run(value): return value'})
+        result={'status':'deferred','error':'capability_construction_gap',
+            'construction_gap':{'reason':'missing_primitive','requirement':'Need a reusable relation'},
             'construction_snapshot_sha256':library['snapshot']['digest']}
         put(attempt/'result.json',result);return result
     def acquire(job,result,attempt):
@@ -85,6 +97,48 @@ def test_native_material_change_restarts_builder_with_fresh_snapshot_not_repair(
     result=run_improvement(plan,adapter,execute=True)
     assert result['outcomes'][0]['status']=='published' and len(seen)==2 and seen[0]!=seen[1]
     assert any(e['payload'].get('reason')=='certified_material_registered_re_evaluate_opportunity' for e in events(plan))
+
+
+def test_acquisition_context_verifies_immutable_sources_and_current_snapshot(tmp_path):
+    from src.adapters.capability_authoring import authoring_context
+    from src.adapters.capability_improvement import acquisition_continuation,continued_library
+    plan,snapshot,proposal=plan_at(tmp_path);attempt=tmp_path/'acquisition';attempt.mkdir()
+    result=put(attempt/'result.json',{'status':'deferred'})
+    acquired=put(attempt/'acquisition.json',{'status':'registered'})
+    record=acquisition_continuation(attempt,snapshot,snapshot,{},result,acquired)
+    library=continued_library({'snapshot':snapshot},[record])
+    task=json.loads(Path(plan['jobs'][0]['task']['path']).read_text())
+    context=authoring_context(task,snapshot,library['source_catalog'])
+    assert context['material_continuation']['acquisitions'][0]['current_aliases']==[]
+    changed=copy.deepcopy(library['source_catalog']);changed['material_continuation']['current_snapshot_sha256']='0'*64
+    with pytest.raises(ValueError,match='continuation_changed'):authoring_context(task,snapshot,changed)
+    Path(acquired['path']).write_text('{}',encoding='utf-8')
+    with pytest.raises(ValueError,match='evidence_changed'):authoring_context(task,snapshot,library['source_catalog'])
+
+
+def test_saved_pending_gap_keeps_acquisition_intent_in_a_new_round(tmp_path):
+    from src.adapters.capability_authoring import authoring_context
+    plan,snapshot,proposal=plan_at(tmp_path);plan['jobs']=plan['jobs'][:1]
+    plan['learning_routes']=put(tmp_path/'routes.json',{'diagnostic':True})
+    pending={'status':'deferred','construction_gap':{'reason':'missing_primitive','requirement':'Saved operation'}}
+    pending_ref=put(tmp_path/'pending-result.json',pending)
+    adapter=Adapter(snapshot,proposal);original=adapter.construct
+    adapter.admission=lambda job:('defer','construction_gap_requires_new_material_or_evidence') if adapter.snapshot['digest']==snapshot['digest'] else ('start','diagnostic')
+    adapter.pending_gap=lambda job:(pending,pending_ref)
+    def acquire(job,result,attempt):
+        material=copy.deepcopy(proposal);material['contract']['input_schema']['description']='New diagnostic material'
+        cap=compile_proposal(material,snapshot,'owner')['capability'];cap={**cap,'certification':'certified','lifecycle':'active'}
+        adapter.snapshot=create_capability_snapshot('owner',[*snapshot['roots'],capability_ref(cap)],[*snapshot['capabilities'],cap])
+        return {'status':'registered'}
+    def construct(task,library,attempt,parent,feedback):
+        context=authoring_context(task,library['snapshot'],library['source_catalog'])
+        record=context['material_continuation']['acquisitions'][0]
+        assert record['previous_gap']['requirement']=='Saved operation'
+        assert record['previous_snapshot_sha256']==snapshot['digest']
+        assert len(record['current_aliases'])==1 and parent is None and feedback is None
+        return original(task,library,attempt,parent,feedback)
+    adapter.acquire=acquire;adapter.construct=construct
+    assert run_improvement(plan,adapter,execute=True)['outcomes'][0]['status']=='published'
 
 
 def test_registered_flag_without_library_change_does_not_loop(tmp_path):

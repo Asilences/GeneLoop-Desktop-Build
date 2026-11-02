@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {scriptArgv} from '../src/adapters/script_motif_shell.ts';
-import {bindScript,scriptCommand,programIdentity,scriptCodeLocks,fixedInput,compatibleInput,witnessedOutputSchema,decodeScriptReceipt} from '../src/adapters/script_motif_runtime.ts';
+import {bindScript,scriptCommand,programIdentity,scriptCodeLocks,fixedInput,compatibleInput,witnessedOutputSchema,decodeScriptReceipt,scriptOutputLimit,scriptVirtualHost} from '../src/adapters/script_motif_runtime.ts';
 import {runCertifiedScript} from './run-certified-script.mjs';
 import {digest} from '../src/motif_core/online_skill_runtime.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -16,6 +16,20 @@ export function sandboxRun(workspace,command,cwd='/work'){
  const run=spawnSync(argv[0],argv.slice(1),{encoding:'utf8',timeout:30000,maxBuffer:256000});
  if(run.error||run.status!==0)throw Error('sandbox_replay_failed',{cause:{status:run.status,signal:run.signal,stderr:run.stderr}});
  return run.stdout;
+}
+export function heldoutBindings(program,held,workspace){
+ if(held.explicit_inputs===undefined)return bindScript(program,workspace);
+ const rows=held.explicit_inputs;
+ if(!Array.isArray(rows)||rows.length!==program.inputs.length||new Set(rows.map(r=>r.path)).size!==rows.length)throw Error('heldout_input_binding_inventory_invalid');
+ return program.original_paths.map((name,i)=>{
+  const relative=program.witness.files[name]?.relative;
+  if(typeof relative!=='string'||!relative.startsWith('inputs/'))throw Error('heldout_input_binding_source_invalid');
+  const path='/work/'+relative,row=rows.find(r=>r.path===path);
+  if(!row||path!=='/work/inputs/'+relative.slice('inputs/'.length).split('/').pop())throw Error('heldout_input_binding_missing');
+  const host=scriptVirtualHost(workspace,path),data=fixedInput(workspace,host),sha256=sha(data);
+  if(row.sha256!==sha256||row.source?.sha256!==sha256||!compatibleInput(program.inputs[i],host,data))throw Error('heldout_input_binding_changed');
+  return {host,path,data,sha256};
+ });
 }
 function certify(rows){
  const held=rows[0],rejected=[],programs=[],seen=new Set();
@@ -54,7 +68,7 @@ function certify(rows){
    });
    let other,heldWorkspace,lastBindingError;
    for(const workspace of (held.replay_workspaces?.length?held.replay_workspaces:[held.workspace]))try{
-    const candidate=bindScript(p,workspace);
+    const candidate=heldoutBindings(p,held,workspace);
     if(digest(own.map(b=>b.sha256))===digest(candidate.map(b=>b.sha256)))continue;
     other=candidate;heldWorkspace=workspace;break;
    }catch(error){lastBindingError=error;}
@@ -62,7 +76,9 @@ function certify(rows){
    const ownText=own.map(b=>b.data.toString('utf8')).join('\n'),heldText=other.map(b=>b.data.toString('utf8')).join('\n');
    // A literal copied from this task's data is not an input parameter. Retain
    // such programs as rejected evidence instead of silently caching old keys.
-   if((p.literal_selectors??[]).some(s=>ownText.includes(s)&&!heldText.includes(s)))throw Error('task_specific_literal_requires_binding');
+   const taskLiteral=(p.literal_selectors??[]).find(s=>ownText.includes(s)&&!heldText.includes(s));
+   if(taskLiteral)throw Error('task_specific_literal_requires_binding',{cause:{literal:taskLiteral,
+    source_task:task.task_id,heldout_task:held.task_id,requirement:'Replace task-specific literals with current input data. For project ZIPs use the declared geneloop-project.json root, not a source-only filename fallback.'}});
    if(digest(own.map(b=>b.sha256))===digest(other.map(b=>b.sha256)))throw Error('distinct_heldout_input_required');
    if(p.original_paths.some((name,i)=>p.witness.files[name].sha256!==own[i].sha256))throw Error('source_binding_changed');
    const original=sandboxRun(sourceWorkspace,"python3 - <<'SOURCE_EQUIVALENCE_BOUNDARY'\n"+(p.expression_witness?.prefix_source??p.source)+'\nSOURCE_EQUIVALENCE_BOUNDARY',p.witness.cwd);
@@ -75,7 +91,7 @@ function certify(rows){
     const first=JSON.parse(sandboxRun(row.workspace,cmd)),second=JSON.parse(sandboxRun(row.workspace,cmd));
     const compact=decodeScriptReceipt(JSON.parse(sandboxRun(row.workspace,scriptCommand(p,bound.map(b=>b.path),bound.map(b=>b.sha256),'certification',{compactReceipt:true}))));
     if(digest(compact)!==digest(first))throw Error('compact_receipt_changed_evidence');
-    if(Buffer.byteLength(first.output)>16000)throw Error('script_output_exceeds_context_budget');
+    if(Buffer.byteLength(first.output)>scriptOutputLimit(p))throw Error('script_output_exceeds_context_budget');
     if(first.output!==second.output||sha(first.output)!==first.output_sha256)throw Error('nondeterministic_script');
     if(role==='source'&&first.output!==original)throw Error('parameterization_changed_behavior');
     if(p.expression_witness){
@@ -86,7 +102,15 @@ function certify(rows){
     outputs.push(first.output);cases.push({role,task_id:row.task_id,input_sha256:bound.map(b=>b.sha256),output_sha256:first.output_sha256});
    }
    if(outputs[0]===outputs[1])throw Error('input_dependency_not_demonstrated');
-   const {source,witness,original_paths,expression_witness,...program}=p;
+   let valueBinding;
+   if(p.value_binding_requested){
+    if(p.inputs.length!==1||p.inputs[0].format!=='json'||p.argv_contract||p.network_policy)throw Error('script_value_binding_requires_one_json_input');
+    const texts=[own[0].data.toString('utf8'),other[0].data.toString('utf8')];
+    if(texts.some(t=>JSON.stringify(JSON.parse(t))!==t))throw Error('script_value_binding_requires_canonical_json');
+    const schema=witnessedOutputSchema(texts);if(!schema)throw Error('script_value_binding_unstable_contract');
+    valueBinding={format:'script_json_value_binding_v1',input_schema:schema};
+   }
+   const {source,witness,original_paths,expression_witness,output_limit_bytes,value_binding_requested,...program}=p;
    const programSha=digest(programIdentity(p));
    seen.add(p.id);programs.push({...program,certification:{passed:true,cases:cases.length,source_equivalent:true,program_sha256:programSha,
      source_bytes:Buffer.byteLength(p.source),output_bytes:outputs.map(x=>Buffer.byteLength(x)),
@@ -94,6 +118,8 @@ function certify(rows){
      ...(expression_witness?{expression:{target:expression_witness.target,lines:expression_witness.lines,source_sha256:expression_witness.original_source_sha256}}:{}),
      ...(witnessedOutputSchema(outputs)?{output_schema:witnessedOutputSchema(outputs)}:{}),
      receipt_protocol:'bounded_zlib_v1',
+     ...(output_limit_bytes?{output_limit_bytes:scriptOutputLimit(p)}:{}),
+     ...(valueBinding?{value_binding:valueBinding}:{}),
      scope:expression_witness?'source_prefix_and_dependency_slice_equivalence_on_distinct_inputs_not_historical_stdout_or_semantic_quality':'deterministic_source_equivalence_on_distinct_inputs_not_semantic_quality_proof'}});
   }catch(error){rejected.push({id:p.id,call_id:p.witness.call_id,reason:error.message,...(error.cause?{diagnostic:error.cause}:{})});}
  }

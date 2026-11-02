@@ -87,8 +87,23 @@ def authoring_context(task, snapshot, catalog):
     preferred=catalog.get('preferred_roots',[]) if isinstance(catalog,dict) else []
     order={ref['id']:i for i,ref in enumerate(preferred) if ref in table.values()}
     capabilities.sort(key=lambda item:order.get(table[item['alias']]['id'],len(order)))
-    return {'authoring_format':FORMAT,'task':copy.deepcopy(task),'capabilities':capabilities,
-            'contract_mode':'host_fixed' if 'contract' in task else 'model_designed'}
+    context={'authoring_format':FORMAT,'task':copy.deepcopy(task),'capabilities':capabilities,
+             'contract_mode':'host_fixed' if 'contract' in task else 'model_designed'}
+    continuation=source.get('material_continuation') if isinstance(source,dict) else None
+    if continuation is not None:
+        if continuation.get('format')!='capability_material_continuation_v1' or continuation.get('current_snapshot_sha256')!=snapshot['digest']:
+            raise AuthoringError('material_continuation_changed',['material_continuation'],'current construction snapshot',continuation)
+        from .capability_improvement import evidence
+        reverse={ref['id']:name for name,ref in table.items()};records=[]
+        for ref in continuation['acquisitions']:
+            record=json.loads(evidence(ref))
+            if record.get('format')!='capability_material_acquisition_v1':raise ValueError('proposal_material_acquisition_invalid')
+            for source_ref in record['evidence']:evidence(source_ref)
+            record['current_aliases']=[{'capability':r,'alias':reverse[r['id']]} for r in record['newly_visible'] if r in table.values()]
+            records.append(record)
+        context['material_continuation']={'scope':'Completed material acquisitions, not a same-snapshot repair. Prior aliases may have changed; use current aliases and contracts. All permitted implementations remain available; no choice is mandated.',
+            'current_snapshot_sha256':snapshot['digest'],'acquisitions':records}
+    return context
 
 
 def expand_draft(draft, task, snapshot):
