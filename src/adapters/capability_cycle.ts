@@ -7,7 +7,7 @@ import {createCapabilityStore,type CapabilityArtifact,type CapabilityValidationE
 
 export type CapabilitySceneRun={execution:CapabilityValidationExecution;artifacts:CapabilityArtifact[];[key:string]:unknown};
 export type CapabilitySceneCheck=CapabilityValidationVerdict&{evidence_binding?:Record<string,string>};
-type Task={id:string;workspace:string;input:unknown};
+type Task={id:string;workspace:string;input:unknown;input_versions?:{path:string;sha256:string}[]};
 export type CapabilityCycleOptions={
  owner:string;directory:string;candidateSnapshot:CapabilitySnapshot;root:ReturnType<typeof capabilityRef>;
  expectedLatest:string|null;validation:Task;followup:Task;
@@ -35,14 +35,26 @@ export async function completeCapabilityCycle(options:CapabilityCycleOptions){
  const snapshot=structuredClone(options.candidateSnapshot),root=structuredClone(options.root);
  const validation=structuredClone(options.validation),followup=structuredClone(options.followup);
  check(validation.id!==followup.id&&realpathSync(validation.workspace)!==realpathSync(followup.workspace),'followup_must_be_independent');
- // Paths supplied by adapters are canonical, existing directories. Different
- // task IDs alone are insufficient independence; identical inputs are rejected.
- check(capabilityDigest(validation.input)!==capabilityDigest(followup.input),'followup_input_must_differ');
+ // File arguments may retain their path while source bytes change. When the
+ // host supplies versions, require both tasks and bind actual execution to them.
+ const versions=(task:Task)=>{
+  const rows=task.input_versions;
+  check(Array.isArray(rows)&&rows.length>0&&rows.every(r=>r&&typeof r.path==='string'&&r.path.length>0&&
+   typeof r.sha256==='string'&&/^[a-f0-9]{64}$/.test(r.sha256)&&Object.keys(r).length===2)&&
+   new Set(rows.map(r=>r.path)).size===rows.length,'input_versions_invalid');
+  return rows;
+ };
+ if(validation.input_versions!==undefined||followup.input_versions!==undefined){
+  const left=versions(validation),right=versions(followup);
+  check(capabilityDigest(left.map(r=>r.sha256).sort())!==capabilityDigest(right.map(r=>r.sha256).sort()),'followup_input_must_differ');
+ }else check(capabilityDigest(validation.input)!==capabilityDigest(followup.input),'followup_input_must_differ');
  const run=options.run,verify=options.check;let validationRun:CapabilitySceneRun;
  function binding(value:CapabilitySceneRun,expected:CapabilitySnapshot,task:Task,mode:string){
   const t=value.execution;
   check(t.owner===owner&&t.task_id===task.id&&t.mode===mode&&t.snapshot_sha256===expected.digest&&
    capabilityDigest(t.root)===capabilityDigest(root)&&t.arguments_sha256===capabilityDigest(task.input),'execution_binding_changed');
+  if(task.input_versions!==undefined)check(Array.isArray(t.input_versions)&&
+   capabilityDigest(t.input_versions)===capabilityDigest(task.input_versions),'execution_input_versions_changed');
   check(t.status==='succeeded'&&Array.isArray(t.receipts)&&t.receipts.length>0,'execution_failed');
  }
  const store=createCapabilityStore({directory,owner,validator:{...options.validator,

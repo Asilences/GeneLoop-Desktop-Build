@@ -1245,6 +1245,8 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 
 效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
 
+当前 registry 为 `efficiency_rsi_registry_v2`，报告为 `efficiency_rsi_measurement_v2`；旧 registry v1 不能直接用于新口径。`StudyRequestRegistry(plan, journal, create=True)` 由宿主在执行前登记 owner，`CumulativeProposalGate(..., study_registry=registry)` 在真实 booking 边界持久绑定 request→attempt/overhead；`export(provider_request_refs)` 对照独立完整请求库存导出。只读 CLI 为 `scripts/export-efficiency-rsi-registry.py`。此接线为可选研究接口，其他 runner 未自动接入。全 cell 支出判预算，双方首成功获取成本算条件节省；无界/未知/未关闭结果只保留质量观察，不计有限预算能力增益。十进制金额边界与精确字符串、原账本保留及故障边界见上述协议。
+
 `npm run rsi:efficiency:check` 运行跨语言与执行诊断，不调用模型。Source已完成下述真实Compose与后继消费，其他后端、Specialize及多代效果实验仍待接入；合成检查不代表这些能力完成。实施状态见[当前交接](handoffs/efficiency-rsi.md)。
 
 ### Source Capability 单场景闭环
@@ -1305,3 +1307,9 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 ## 视频网页发布程序接口（2026-11-02）
 
 video_program_v1 通过原 source-program runtime 加载已接受的发布形式。两侧按实际 mode 派生工具表并核对完整 schema；Baseline 清空 Motif 环境变量，execute 侧加载类型化程序。video_program_reused 是已核对当前交付的审计事件，前端 program_reuses 与 verified_skips 分开。部署字段及边界见[视频双路记录](experiments/video-paired-motif-20261102.md)。
+
+## Capability 文件输入身份（2026-11-03）
+
+公共 `completeCapabilityCycle` 的 validation/followup 任务可由可信宿主提供 `input_versions:[{path,sha256}]`。两侧必须同时提供非空、路径唯一的合法版本列表，内容摘要集合必须不同；原生执行的 `input_versions` 必须与该侧列表精确一致。仍核对任务、owner、snapshot、根、真实参数摘要与回执；输入版本不能替代参数绑定。不提供版本列表的场景保留原参数差异检查。
+
+Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，拒绝仅重命名同一内容；Store 保存原执行参数和回执，独立质量检查不变。Builder 同时读取公共目录包装中的 seed 和 admitted_materials 描述，只向固定 snapshot 的可选根附加描述。真实范围与未完成项见[验收记录](experiments/paper-capability-real-20261102.md)。

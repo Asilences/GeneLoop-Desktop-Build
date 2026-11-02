@@ -72,7 +72,9 @@ def test_paper_native_certification_composition_publication_and_next_builder(tmp
     publication={'libraries':[reference(native/'library.json')]}
     for label,keys in [('validation',['P','P','Q','R']),('followup',['S','T','T','U','V'])]:
         path=tmp_path/(label+'.bib');path.write_text('\n'.join('@article{'+key+',title={Example}}' for key in keys)+'\n', encoding='utf-8')
-        virtual='/work/inputs/'+path.name
+        # Real successive uploads commonly retain a filename. The lifecycle
+        # must distinguish their pinned bytes rather than requiring a rename.
+        virtual='/work/inputs/references.bib'
         publication[label]={'id':label,'inputs':[{'path':virtual,'source':reference(path)}],
             'input':{'paths':[virtual]},'specification':{'kind':'bibtex_inventory_v1','source_path':virtual,
             'fields':{k:[k] for k in ('entry_count','unique_key_count','duplicate_keys')}}}

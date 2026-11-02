@@ -11,6 +11,7 @@ from copy import deepcopy
 import hashlib
 import json
 import math
+from decimal import Decimal, localcontext
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -58,6 +59,23 @@ def _refs(values):
     return sorted(values, key=lambda x: x['id'])
 
 
+def _decimal(value):
+    return Decimal(str(value))
+
+
+def _json_number(value):
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError('efficiency_cost_exceeds_json_number_range')
+    return result
+
+
+def _conserved(weights):
+    with localcontext() as context:
+        context.prec = 1024
+        return sum(map(_decimal, weights), Decimal(0)) == Decimal(1)
+
+
 def validate_study(plan):
     """Return a defensive copy after schema and cross-field checks."""
     plan = _validate(plan, 'study')
@@ -75,7 +93,7 @@ def validate_study(plan):
                 raise ValueError('efficiency_capability_snapshot_required')
     allocations = _index(plan['overhead_allocations'], 'category', 'efficiency_duplicate_allocation_policy')
     for row in allocations.values():
-        if set(row['weights']) - (set(arms) | {'study_only'}) or not math.isclose(sum(row['weights'].values()), 1., rel_tol=0., abs_tol=1e-9):
+        if set(row['weights']) - (set(arms) | {'study_only'}) or not _conserved(row['weights'].values()):
             raise ValueError('efficiency_invalid_allocation_policy')
     blocks = {}
     seen = set()
@@ -114,7 +132,7 @@ def _providers(rows, arms):
     for row in rows:
         if set(row['allocations']) - (set(arms) | {'study_only'}):
             raise ValueError('efficiency_unknown_allocation_arm')
-        if not math.isclose(sum(row['allocations'].values()), 1., rel_tol=0., abs_tol=1e-9):
+        if not _conserved(row['allocations'].values()):
             raise ValueError('efficiency_allocation_not_conserved')
         if row['phase'] == 'booked' and row['observed_peak_usd'] is not None:
             raise ValueError('efficiency_booking_cannot_claim_cost')
@@ -135,22 +153,27 @@ def _providers(rows, arms):
 
 
 def _cost(keys, providers, arm=None):
-    known = 0.
-    unknown, upper = [], 0.
-    for key in sorted(set(keys)):
-        row = providers[key]
-        weight = 1. if arm is None else row['allocations'].get(arm, 0.)
-        if not weight: continue
-        amount = row['observed_peak_usd'] if row['phase'] != 'booked' else None
-        if amount is None:
-            unknown.append({'ledger_ref': key[0], 'id': key[1]})
-            if row['reserved_upper_usd'] is None: upper = None
-            elif upper is not None: upper += row['reserved_upper_usd'] * weight
-        else:
-            known += amount * weight
-            if upper is not None: upper += amount * weight
-    return {'model_usd': None if unknown else known, 'known_model_usd': known,
-            'unknown_requests': unknown, 'accounted_upper_usd': upper}
+    # Accumulate decimal wire values before converting compatibility fields to
+    # JSON numbers. Exact strings remain available for budget/comparison checks.
+    with localcontext() as context:
+        context.prec = 1024
+        known, upper, unknown = Decimal(0), Decimal(0), []
+        for key in sorted(set(keys)):
+            row = providers[key]
+            weight = Decimal(1) if arm is None else _decimal(row['allocations'].get(arm, 0))
+            if not weight: continue
+            amount = row['observed_peak_usd'] if row['phase'] != 'booked' else None
+            if amount is None:
+                unknown.append({'ledger_ref': key[0], 'id': key[1]})
+                if row['reserved_upper_usd'] is None: upper = None
+                elif upper is not None: upper += _decimal(row['reserved_upper_usd']) * weight
+            else:
+                known += _decimal(amount) * weight
+                if upper is not None: upper += _decimal(amount) * weight
+        return {'model_usd': None if unknown else _json_number(known), 'known_model_usd': _json_number(known),
+                'model_usd_decimal': None if unknown else str(known), 'known_model_usd_decimal': str(known),
+                'unknown_requests': unknown, 'accounted_upper_usd': None if upper is None else _json_number(upper),
+                'accounted_upper_usd_decimal': None if upper is None else str(upper)}
 
 
 def measure_study(plan, observations, *, registry, evidence_root):
@@ -160,6 +183,8 @@ def measure_study(plan, observations, *, registry, evidence_root):
     reconstruct it from the successful runs in `observations`.
     """
     plan = validate_study(plan)
+    if registry.get('format') != 'efficiency_rsi_registry_v2':
+        raise ValueError('efficiency_request_bindings_require_runner_registry_v2')
     obs, registry = _validate(observations, 'observations'), _validate(registry, 'registry')
     plan_sha = digest(plan)
     if obs['plan_sha256'] != plan_sha or registry['plan_sha256'] != plan_sha:
@@ -181,13 +206,23 @@ def measure_study(plan, observations, *, registry, evidence_root):
     registered_requests = {_key(r) for r in registry['request_refs']}
     if set(providers) != registered_requests:
         raise ValueError('efficiency_request_inventory_incomplete')
+    bindings = {}
+    for binding in registry['request_bindings']:
+        key = _key(binding)
+        if key in bindings: raise ValueError('efficiency_duplicate_request_binding')
+        bindings[key] = binding
+    if set(bindings) != registered_requests:
+        raise ValueError('efficiency_request_binding_inventory_incomplete')
     owners, qualities = {}, {}
-    def assign(refs, owner):
+    def assign(refs, owner, owner_type, *, cell_id=None, category=None):
         keys = [_key(r) for r in refs]
         if len(set(keys)) != len(keys): raise ValueError('efficiency_duplicate_request_reference')
         for key in keys:
             if key not in providers: raise ValueError('efficiency_missing_request_ledger')
             if key in owners: raise ValueError('efficiency_request_attributed_twice')
+            binding = bindings[key]
+            if (binding['owner_id'], binding['owner_type'], binding['cell_id'], binding['category']) != (owner, owner_type, cell_id, category):
+                raise ValueError('efficiency_request_owner_binding_changed')
             owners[key] = owner
         return keys
     for cell_id, entry in reg.items():
@@ -208,7 +243,7 @@ def measure_study(plan, observations, *, registry, evidence_root):
                     raise ValueError('efficiency_visible_capability_set_changed')
             if entry['closed'] and a['status'] == 'running':
                 raise ValueError('efficiency_closed_cell_has_running_attempt')
-            assigned = assign(a['request_refs'], aid)
+            assigned = assign(a['request_refs'], aid, 'attempt', cell_id=cell_id)
             if any(providers[key]['allocations'] != {cell['arm_id']: 1} for key in assigned):
                 raise ValueError('efficiency_attempt_cost_shifted_to_other_arm')
             q = 'unknown'
@@ -236,7 +271,7 @@ def measure_study(plan, observations, *, registry, evidence_root):
     for overhead in overheads.values():
         if overhead['category'] not in allocation_policy:
             raise ValueError('efficiency_unplanned_overhead_category')
-        assigned = assign(overhead['request_refs'], overhead['id'])
+        assigned = assign(overhead['request_refs'], overhead['id'], 'overhead', category=overhead['category'])
         if any(providers[key]['allocations'] != allocation_policy[overhead['category']] for key in assigned):
             raise ValueError('efficiency_overhead_allocation_changed')
     if set(owners) != set(providers): raise ValueError('efficiency_unallocated_ledger_requests')
@@ -258,12 +293,17 @@ def measure_study(plan, observations, *, registry, evidence_root):
                    'infrastructure_error' if last in ('provider_error', 'environment_error') else
                    'cancelled' if last == 'cancelled' else 'failed')
         budget = cell['budget_usd']
-        within = None if first is None or first['model_usd'] is None or budget is None else first['model_usd'] <= budget
+        within = None if total['model_usd_decimal'] is None or budget is None else Decimal(total['model_usd_decimal']) <= _decimal(budget)
+        acquisition_within = None if first is None or first['model_usd_decimal'] is None or budget is None else Decimal(first['model_usd_decimal']) <= _decimal(budget)
         if first and within is False: outcome = 'success_over_budget'
-        if first and budget is not None and first['model_usd'] is None: outcome = 'success_budget_unknown'
+        if first and total['model_usd'] is None: outcome = 'success_budget_unknown'
+        elif first and budget is None: outcome = 'success_unbounded'
+        if first and not entry['closed']: outcome = 'success_pending_cell_close'
         results.append({**cell, 'split': tasks[cell['task_id']]['split'], 'outcome': outcome, 'closed': entry['closed'], 'attempt_ids': entry['attempt_ids'],
                         'attempt_count': len(statuses), 'quality_statuses': [qualities[a] for a in entry['attempt_ids']],
                         'cost': total, 'first_success': first, 'within_research_budget': within,
+                        'first_success_within_research_budget': acquisition_within,
+                        'quality_success_observed': first is not None,
                         'success_acquisition_cost_usd': first['model_usd'] if first else None,
                         'right_censored': outcome == 'budget_exhausted',
                         'censoring_spend_usd': total['model_usd'] if outcome == 'budget_exhausted' else None})
@@ -277,23 +317,33 @@ def measure_study(plan, observations, *, registry, evidence_root):
         for arm, c in block.items():
             if arm == plan['baseline_arm']: continue
             bo, co = b['outcome'], c['outcome']
-            comparable = bo in negative | {'success'} and co in negative | {'success'}
+            bounded = b['budget_usd'] is not None and c['budget_usd'] is not None
+            known = b['cost']['model_usd'] is not None and c['cost']['model_usd'] is not None
+            comparable = bounded and known and b['closed'] and c['closed'] and b['within_research_budget'] is True and c['within_research_budget'] is True and bo in negative | {'success'} and co in negative | {'success'}
             category = ('both_success' if bo == co == 'success' else
                         'capability_unlock' if bo in negative and co == 'success' else
                         'capability_regression' if bo == 'success' and co in negative else
                         'both_unsuccessful' if bo in negative and co in negative else 'unresolved')
-            bc, cc = b['cost']['model_usd'], c['cost']['model_usd']
-            saving = bc - cc if category == 'both_success' and bc is not None and cc is not None else None
+            if not comparable: category = 'unresolved'
+            bc = b['first_success']['model_usd_decimal'] if b['first_success'] else None
+            cc = c['first_success']['model_usd_decimal'] if c['first_success'] else None
+            with localcontext() as context:
+                context.prec = 1024
+                saving = Decimal(bc) - Decimal(cc) if category == 'both_success' and bc is not None and cc is not None else None
             comparisons.append({'task_id': task, 'split': tasks[task]['split'], 'replicate': replicate, 'phase': phase, 'candidate_arm': arm,
                                 'category': category, 'resolved': comparable,
                                 'baseline_outcome': bo, 'candidate_outcome': co,
-                                'conditional_cost_saving_usd': saving,
-                                'conditional_cost_reduction': saving / bc if saving is not None and bc else None})
+                                'quality_category': 'both_passed' if b['quality_success_observed'] and c['quality_success_observed'] else
+                                    'candidate_only_passed' if c['quality_success_observed'] else 'baseline_only_passed' if b['quality_success_observed'] else 'neither_passed',
+                                'conditional_cost_saving_usd': None if saving is None else float(saving),
+                                'conditional_cost_saving_usd_decimal': None if saving is None else str(saving),
+                                'conditional_cost_reduction': float(saving / Decimal(bc)) if saving is not None and Decimal(bc) else None})
     by_arm = {}
     for arm in arms:
         rows = [r for r in results if r['arm_id'] == arm]
         by_arm[arm] = {'planned_cells': len(rows), 'observed_cells': sum(r['attempt_count'] > 0 for r in rows),
                        'successful_cells': sum(r['outcome'] == 'success' for r in rows),
+                       'quality_successful_cells': sum(r['quality_success_observed'] for r in rows),
                        'success_rate_all_planned': sum(r['outcome'] == 'success' for r in rows) / len(rows),
                        'outcomes': {status: sum(r['outcome'] == status for r in rows) for status in sorted({r['outcome'] for r in results})},
                        'allocated_cost': _cost(providers, providers, arm),
@@ -301,11 +351,13 @@ def measure_study(plan, observations, *, registry, evidence_root):
                            'planned_cells': sum(r['split'] == split for r in rows),
                            'successful_cells': sum(r['split'] == split and r['outcome'] == 'success' for r in rows)}
                            for split in sorted({r['split'] for r in rows})}}
-    return {'format': 'efficiency_rsi_measurement_v1', 'study_id': plan['id'], 'objective': plan['objective'],
+    return {'format': 'efficiency_rsi_measurement_v2', 'study_id': plan['id'], 'objective': plan['objective'],
             'plan_sha256': plan_sha, 'registry_sha256': digest(registry), 'observations_sha256': digest(obs),
             'measurement_code_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             'budget_scope': plan['budget_scope'],
             'success_rate_scope': 'attempt_execution_excludes_shared_overheads',
+            'budget_compliance_scope': 'all_cell_attempts_including_post_success_requests',
+            'comparison_cost_scope': 'first_quality_success_including_prior_failed_attempts',
             'complete': all(r['closed'] and r['attempt_count'] > 0 for r in results),
             'planned_cells': len(cells), 'attempts': len(attempts), 'physical_model_requests': len(providers),
             'physical_study_cost': _cost(providers, providers), 'arms': by_arm,

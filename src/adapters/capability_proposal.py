@@ -116,8 +116,9 @@ def proposal_diagnostics(error, proposal):
 
 class CumulativeProposalGate(AbstractContextManager):
     """Reuse State and its prior checkpoint; this entry point never resets it."""
-    def __init__(self, ledger_root):
+    def __init__(self, ledger_root, *, study_registry=None):
         self.root = Path(ledger_root).resolve()
+        self.study_registry = study_registry
         self.current = None
         self.attribution = {}
         self.completed = {}
@@ -138,20 +139,29 @@ class CumulativeProposalGate(AbstractContextManager):
             owner = self
             class AuditedState(State):
                 def book(self, body):
-                    if owner.current is None:
+                    attempt = owner.current
+                    if attempt is None:
                         raise ValueError('proposal_unowned_provider_request')
                     request = json.loads(body)
                     thinking = request.get('thinking')
                     disabled = thinking.get('type') == 'disabled' if isinstance(thinking, dict) else request.get('reasoning_effort') in ('off', 'none')
                     if request.get('model') != MODEL or request.get('max_tokens') != MAX_TOKENS or not disabled:
                         raise ValueError('proposal_outgoing_model_configuration_changed')
+                    if owner.study_registry is not None:
+                        # Refuse unregistered ownership before reserving money.
+                        owner.study_registry.owner_for_path(attempt)
                     booked = super().book(body)
                     if booked:
                         rid = booked[0]
-                        owner.attribution[rid] = str(owner.current)
-                        write(owner.current/f'request-{rid:06d}.json', request)
-                        append(owner.current/'requests.jsonl', {'phase': 'booked', 'request_id': rid,
-                            'ledger_ref': str(ledger), 'attempt_id': owner.current.name,
+                        owner.attribution[rid] = str(attempt)
+                        if owner.study_registry is not None:
+                            # Durable ownership precedes upstream I/O. A journal
+                            # failure aborts forwarding; never refund an unknown
+                            # reservation or silently rebuild from observations.
+                            owner.study_registry.bind_request(attempt, str(ledger), rid)
+                        write(attempt/f'request-{rid:06d}.json', request)
+                        append(attempt/'requests.jsonl', {'phase': 'booked', 'request_id': rid,
+                            'ledger_ref': str(ledger), 'attempt_id': attempt.name,
                             'model': request['model'], 'max_tokens': request['max_tokens'], 'reasoning_effort': 'off',
                             'reserved_upper_usd': booked[2], 'observed_peak_usd': None})
                     return booked

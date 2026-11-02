@@ -1,4 +1,4 @@
-# 效率 RSI：冻结研究条件与离线测量 v1
+# 效率 RSI：冻结研究条件与离线测量
 
 本模块独立评价执行成本、构造成本与能力可达性，不是发布策略或执行授权。新增能力可以在 baseline 失败时形成研究证据；既有 `rsi_optimization` 的费用型发布门槛保持原样。不要为发表能力收益而降低产品发布质量或权限守卫。
 
@@ -28,10 +28,18 @@ measure_study(plan: dict, observations: dict, *, registry: dict, evidence_root: 
 三个 JSON 都由同一 schema 的版本化定义校验：
 
 - `efficiency_rsi_study_v1`：固定任务/组/cell 清单、条件/质量规则摘要、评测器文件引用、研究预算和 overhead 分摊政策。
-- `efficiency_rsi_registry_v1`：可信 runner 的独立完整库存；绑定 plan 摘要，包含每个 cell 的有序 attempt IDs/closed 状态，以及 `overhead_ids` 与唯一 `request_refs` 全集。
+- `efficiency_rsi_registry_v2`：可信 runner 的独立完整库存；绑定 plan 摘要，包含每个 cell 的有序 attempt IDs/closed 状态，以及 `overhead_ids`、唯一 `request_refs` 全集和 `request_bindings`。每条绑定固定 `(ledger_ref, id) → (owner_type, owner_id, cell_id, category)`，不允许从 attempt 移到 overhead 或换 owner。
 - `efficiency_rsi_observations_v1`：绑定 plan 和 registry 摘要；包含所有 attempts、overheads、provider 账目，包括失败、重试和未结算预留。
 
 registry 在运行中由 runner 独立追加，导出后冻结。它不能从筛选后的 observations 反推。即使尚无尝试，每个预注册 cell 也必须在 registry 中；未执行 cell 仍占分母。所有注册 attempt/overhead/request 必须完整导出，遗漏失败尝试或整段学习及其请求均拒绝；每个请求唯一归属一个 attempt 或 overhead。重试顺序和 parent attempt 必须与 registry 一致。
+
+`StudyRequestRegistry`（`src/adapters/efficiency_rsi_registry.py`）提供最小宿主接线：先 `register_owner(path, study_wide_id, cell_id=...)` 或指定 `category` 登记 overhead，再把该实例传给 `CumulativeProposalGate(ledger_root, study_registry=registry)`。登记可以早于 `prepare_attempt` 创建目录；同名 `attempt-0` 使用不同完整路径和全研究唯一 ID。网关在原 `State.book` 前核验 owner，在预留后、上游请求前 fsync 请求归属；继续沿用原 checkpoint、request ID 和费用。默认旧调用不变，没有新增 Agent 循环，也未自动启用研究报告。
+
+宿主在收齐请求、终态和质量评审后调用 `close_cell(id)`，然后以原 booking/ledger 中**本研究范围的完整唯一请求库存**调用 `export(provider_request_refs)`。仍在等待或费用未知的请求必须包含；其他研究的旧账保留在原累计账本中，不混入当前 study。导出拒绝缺项、额外请求、重复归属、owner/分类重写以及冻结计划变化。CLI `scripts/export-efficiency-rsi-registry.py --study PLAN --journal JOURNAL --provider-request-refs REFS` 只读既有 journal，向 stdout 输出 registry；不会为缺失 journal 创建替代证据。REFS 是独立 booking/ledger 导出的 `{ledger_ref, id}` 数组，不能从 observations 筛选。
+
+这是显式集成接口：其他 Web/场景 runner 仍须在自身真实 booking 边界接入并提供完整库存，不能称全平台已自动采集。journal 写入失败会中止转发，但原 checkpoint 已有的预留不回退；journal 残缺或预留与库存不一致时先人工核对，不能自动重建或继续报告。两份文件不是跨文件原子事务，任意进程中断恢复仍由后续恢复工作处理。
+
+版本迁移：study 和 observations 保持 v1；registry 升至 v2，报告升至 `efficiency_rsi_measurement_v2`。现测量器明确拒绝 registry v1，不能仅修改旧 `format` 或从旧 observations 补绑定冒充独立导出。历史原始记录、旧结果及费用均保留；有可信 booking 证据时重新导出一个新版本，否则保留为旧口径结果。schema 文件名沿用 study-v1，内含各子协议的独立版本。
 
 摘要能验证绑定和导出内部完整性，不能认证伪造的 registry 或评审身份。可信 runner/reviewer 的获取、不可变存储、预注册时间与独立评价隔离仍是研究执行责任。CLI 不执行评测器，也不证明 Agent 未看过 heldout。导出中的花费使用 proxy 估费，不冒称账单实付。
 
@@ -41,9 +49,9 @@ registry 在运行中由 runner 独立追加，导出后冻结。它不能从筛
 
 复用 `rsi_quality.quality_status`、`verify_quality_files`，校验 task/artifact/rubric 摘要、必需 checks、冻结 evaluator ID 和真实文件。评测器源码本身也核对冻结摘要。正例须为 `completed` 且独立质量 passed；技术退出成功、空 quality 或 artifact 存在均不足以判成功。
 
-每组分母始终为全部预注册 cells。区分 `success`、`failed`、`budget_exhausted`、`not_observed`、`pending`、`unreviewed`、`infrastructure_error`、`cancelled`，并另列 `success_over_budget`、`success_budget_unknown`。`complete` 只表示 cells 均关闭且有尝试，不代表全部质量已审或实验成功。基础设施失败、取消、缺评和未观测均不构成能力不足证据。
+每组分母始终为全部预注册 cells。区分 `success`、`failed`、`budget_exhausted`、`not_observed`、`pending`、`unreviewed`、`infrastructure_error`、`cancelled`，并另列 `success_over_budget`、`success_budget_unknown`、`success_unbounded`、`success_pending_cell_close`。`quality_success_observed` 和 `quality_successful_cells` 单列已观察的质量通过，不冒充有限预算内成功；`complete` 只表示 cells 均关闭且有尝试，不代表全部质量已审或实验成功。基础设施失败、取消、缺评和未观测均不构成能力不足证据。
 
-对照分别报告 `both_success`、`capability_unlock`、`capability_regression`、`both_unsuccessful`；其余为 `unresolved`。baseline 耗尽/质量失败而 candidate 成功可进入能力增益格，无须 baseline 全部成功。只有双方在预算内成功且费用已知，才计算条件成本差；失败 baseline 的“成功费用”和“节省率”保持 `null`，不取无穷大或伪造反事实。
+对照分别报告 `both_success`、`capability_unlock`、`capability_regression`、`both_unsuccessful`；其余为 `unresolved`。必须双方研究预算有限、全 cell 费用已知且均在预算内、cell 已关闭，并有确定结果，才标记 `resolved`。在此条件下，baseline 耗尽/质量失败而 candidate 成功可进入能力增益格，无须 baseline 全部成功。无预算或未知费用时，只通过 `quality_category` 描述本次质量差异。只有双方在预算内成功且费用已知，才计算条件成本差；失败 baseline 的“成功费用”和“节省率”保持 `null`，不取无穷大或伪造反事实。
 
 首成功成本累计该 cell 首成功前所有尝试、失败和重试。没有成功则成功获取成本为 `null`；budget exhausted 单列右删失与实际已花费，不将其解释成达到成功所需的真实成本。框架错误或未运行不是预算删失。不能只保留两边成功的任务报告整体收益。
 
@@ -52,6 +60,8 @@ registry 在运行中由 runner 独立追加，导出后冻结。它不能从筛
 v1 明确冻结 `budget_scope: attempt_execution`：cell 预算包含它的全部尝试请求，**不包含共享学习/认证等 overhead**。报告的 `success_rate_scope` 明示这一点；当前预算内成功率不能称为“包含构造/认证的全生命周期同总预算能力率”。`budget_policy: research_comparison_not_platform_authorization` 只定义研究控制，不重设平台额度、既有累计支出或副作用授权。要验证预算再投资的全生命周期能力率，后续须预注册新增总预算策略版本和成本归属，不可改写本版字段语义。
 
 请求按 `(ledger_ref, id)` 去重：相同记录只计一次；booked→completed/failed 为一个物理请求，终态替代预留；相互冲突终态或分摊变化拒绝。未知费用保留 `null`，同时给已知小计、未知请求和可得的预留上界。预留上界不是实付支出。
+
+全 cell 预算合规与首成功获取成本分别计算。成功后追加的失败、重试或未知费用仍进入 cell 总支出与预算判断，不能用它们放大首成功节省。双方全程合规后，条件成本差使用双方首成功获取成本。报告用 `budget_compliance_scope` / `comparison_cost_scope` 标明两种范围。费用及守恒权重按十进制累计和比较，兼容 JSON 数字之外保留 `*_usd_decimal` 精确字符串；`0.1 + 0.2` 等于 `0.3`，不使用容差放过真实超支。数值总和超出有限 JSON 数字范围时拒绝导出。
 
 | 字段 | 口径 |
 | --- | --- |

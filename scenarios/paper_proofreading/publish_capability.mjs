@@ -18,12 +18,15 @@ const checker=join(root,'scenarios/paper_proofreading/verify_capability_outputs.
 const checkerFiles=[checker,join(root,'src/adapters/paper_bibliography.py'),join(root,'src/adapters/capability_contract.py')];
 const checkerDigest=()=>capabilityDigest(checkerFiles.map(path=>({path,sha256:bytesSha256(readFileSync(path))})));
 const code=checkerDigest();
+// A path can remain unchanged while its source bytes change. The lifecycle
+// binds the host's full input evidence; the native program still gets only args.
+const cycleTask=label=>({...plan[label],input_versions:plan[label].manifest.inputs});
 try{
  if(!process.env.SSS_PYTHON)throw Error('project_python_required');
  const inputHashes=label=>plan[label].manifest.inputs.map(i=>i.sha256).sort();
  if(capabilityDigest(inputHashes('validation'))===capabilityDigest(inputHashes('followup')))throw Error('paper_followup_bytes_must_differ');
  const result=await completeCapabilityCycle({owner:plan.owner,directory:plan.store,candidateSnapshot:candidate.snapshot,root:selected,
-  expectedLatest:plan.expected_latest,validation:plan.validation,followup:plan.followup,
+  expectedLatest:plan.expected_latest,validation:cycleTask('validation'),followup:cycleTask('followup'),
   validator:{id:'paper-bibtex-inventory-v1',sha256:capabilityDigest({code,specification:plan.validation.specification})},
   run:async(snapshot,input,mode,label)=>{
    const task=plan[label],directory=join(output,label);mkdirSync(directory,{mode:0o700});

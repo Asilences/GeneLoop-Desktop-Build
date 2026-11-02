@@ -30,7 +30,9 @@ def example(tmp_path):
             'allocation_policy': 'explicit_conserved_weights_v1',
             'overhead_allocations': [{'category': 'seed_learning', 'weights': {'baseline': .5, 'candidate': .5}}],
             'budget_policy': 'research_comparison_not_platform_authorization', 'budget_scope': 'attempt_execution'}
-    registry = {'format': 'efficiency_rsi_registry_v1', 'plan_sha256': digest(plan),
+    registry = {'format': 'efficiency_rsi_registry_v2', 'plan_sha256': digest(plan),
+                'request_bindings': [{'ledger_ref':'ledger-one','id':str(i),'owner_type':'attempt',
+                    'owner_id':a+'-1','cell_id':a,'category':None} for i,a in enumerate(('baseline','candidate'),1)],
                 'overhead_ids': [], 'request_refs': [{'ledger_ref': 'ledger-one', 'id': str(i)} for i in (1, 2)],
                 'cells': [{'cell_id': a, 'attempt_ids': [a+'-1'], 'closed': True} for a in ('baseline', 'candidate')]}
     obs = {'format': 'efficiency_rsi_observations_v1', 'plan_sha256': digest(plan), 'registry_sha256': digest(registry),
@@ -58,6 +60,12 @@ def run(x, root):
 
 
 def refresh(x):
+    # Fixture-only runner re-export for deliberately added attempts/requests.
+    # Production bindings come from the independent runner, never observations.
+    x[2]['request_bindings']=[{**r,'owner_type':'attempt','owner_id':a['id'],'cell_id':a['cell_id'],'category':None}
+        for a in x[1]['attempts'] for r in a['request_refs']]
+    x[2]['request_bindings'] += [{**r,'owner_type':'overhead','owner_id':a['id'],'cell_id':None,'category':a['category']}
+        for a in x[1]['overheads'] for r in a['request_refs']]
     x[1]['plan_sha256'] = x[2]['plan_sha256'] = digest(x[0])
     x[1]['registry_sha256'] = digest(x[2])
 
@@ -222,6 +230,9 @@ def test_missing_whole_failed_overhead_and_ledger_rejected(tmp_path):
     with pytest.raises(ValueError, match='request_inventory_incomplete'): run(x, tmp_path)
     x[1]['providers'].append({'ledger_ref': 'seed-ledger', 'id': '1', 'phase': 'failed',
         'observed_peak_usd': .3, 'reserved_upper_usd': .4, 'allocations': {'baseline': .5, 'candidate': .5}})
+    x[2]['request_bindings'].append({'ledger_ref':'seed-ledger','id':'1','owner_type':'overhead',
+        'owner_id':'failed-seed','cell_id':None,'category':'seed_learning'})
+    x[1]['registry_sha256']=digest(x[2])
     with pytest.raises(ValueError, match='overhead_inventory_incomplete'): run(x, tmp_path)
 
 
@@ -242,3 +253,110 @@ def test_cli_measures_export_without_execution(tmp_path):
         '--study', str(tmp_path/'plan.json'), '--observations', str(tmp_path/'obs.json'),
         '--registry', str(tmp_path/'registry.json'), '--evidence-root', str(tmp_path)], text=True, encoding='utf-8')
     assert json.loads(output)['comparisons'][0]['category'] == 'both_success'
+
+
+def append_attempt(x,arm,amount,status='completed'):
+    entry=next(c for c in x[2]['cells'] if c['cell_id']==arm)
+    source=next(a for a in x[1]['attempts'] if a['cell_id']==arm)
+    ordinal=len(entry['attempt_ids'])+1;aid=arm+'-'+str(ordinal)
+    ref={'ledger_ref':'ledger-one','id':'extra-'+aid}
+    attempt={**deepcopy(source),'id':aid,'ordinal':ordinal,'parent_attempt_id':entry['attempt_ids'][-1],
+             'request_refs':[ref],'status':status}
+    if status!='completed':attempt['quality']=None
+    x[1]['attempts'].append(attempt);entry['attempt_ids'].append(aid)
+    x[1]['providers'].append({**ref,'phase':'completed','observed_peak_usd':amount,
+        'reserved_upper_usd':amount,'allocations':{arm:1.}})
+    x[2]['request_refs'].append(ref);refresh(x)
+
+
+def test_f1_post_success_spend_does_not_pass_budget_or_inflate_saving(tmp_path):
+    x=example(tmp_path);append_attempt(x,'baseline',10.,'provider_error')
+    report=run(x,tmp_path);baseline=report['cells'][0]
+    assert baseline['cost']['model_usd']==10.4
+    assert baseline['success_acquisition_cost_usd']==.4
+    assert baseline['first_success_within_research_budget'] is True
+    assert baseline['within_research_budget'] is False
+    assert baseline['outcome']=='success_over_budget'
+    assert report['comparisons'][0]['conditional_cost_saving_usd'] is None
+
+
+def test_f1_savings_compare_first_success_and_preserve_later_cost(tmp_path):
+    x=example(tmp_path);append_attempt(x,'baseline',.1,'provider_error')
+    report=run(x,tmp_path)
+    assert report['cells'][0]['cost']['model_usd']==.5
+    assert report['comparisons'][0]['conditional_cost_saving_usd']==.2
+    assert report['physical_study_cost']['model_usd']==.7
+
+
+def test_f2_same_registry_and_provider_cannot_move_attempt_cost_to_overhead(tmp_path):
+    x=example(tmp_path)
+    x[0]['overhead_allocations'].append({'category':'generation','weights':{'candidate':1.}})
+    x[1]['overheads'].append({'id':'existing-generation','category':'generation','request_refs':[]})
+    x[2]['overhead_ids'].append('existing-generation');refresh(x)
+    assert run(x,tmp_path)['comparisons'][0]['category']=='both_success'
+    frozen_registry,frozen_providers=digest(x[2]),digest(x[1]['providers'])
+    x[1]['overheads'][0]['request_refs']=x[1]['attempts'][1]['request_refs']
+    x[1]['attempts'][1]['request_refs']=[]
+    assert digest(x[2])==frozen_registry and digest(x[1]['providers'])==frozen_providers
+    with pytest.raises(ValueError,match='request_owner_binding_changed'):run(x,tmp_path)
+
+
+def test_f2_legacy_unbound_registry_requires_independent_reexport(tmp_path):
+    x=example(tmp_path);x[2]['format']='efficiency_rsi_registry_v1';x[2].pop('request_bindings')
+    x[1]['registry_sha256']=digest(x[2])
+    with pytest.raises(ValueError,match='runner_registry_v2'):run(x,tmp_path)
+
+
+@pytest.mark.parametrize('unknown',[False,True])
+def test_f4_unbounded_or_unknown_cost_is_quality_observation_not_unlock(tmp_path,unknown):
+    x=example(tmp_path);fail(x[1]['attempts'][0])
+    for cell in x[0]['cells']:cell['budget_usd']=None
+    if unknown:x[1]['providers'][1]['observed_peak_usd']=None
+    refresh(x);report=run(x,tmp_path)
+    assert report['cells'][1]['outcome']==('success_budget_unknown' if unknown else 'success_unbounded')
+    assert report['comparisons'][0]['category']=='unresolved'
+    assert report['comparisons'][0]['resolved'] is False
+    assert report['comparisons'][0]['quality_category']=='candidate_only_passed'
+
+
+def test_f5_decimal_boundary_and_genuine_overspend_are_distinguished(tmp_path):
+    x=example(tmp_path)
+    for c in x[0]['cells']:c['budget_usd']=.3
+    quality=deepcopy(x[1]['attempts'][1]['quality'])
+    x[1]['providers'][1]['observed_peak_usd']=.1;fail(x[1]['attempts'][1],'provider_error')
+    append_attempt(x,'candidate',.2)
+    x[1]['attempts'][-1]['quality']=quality
+    x[1]['attempts'][-1]['quality']['payload']['id']='q-retry'
+    report=run(x,tmp_path)
+    assert report['cells'][1]['outcome']=='success'
+    assert report['cells'][1]['cost']['model_usd']==.3
+    assert report['cells'][1]['within_research_budget'] is True
+    x[1]['providers'][-1]['observed_peak_usd']=.2000000001
+    assert run(x,tmp_path)['cells'][1]['outcome']=='success_over_budget'
+
+
+def test_exact_weight_conservation_rejects_even_small_extra_allocation(tmp_path):
+    x=example(tmp_path);x[1]['providers'][0]['allocations']={'baseline':1.,'candidate':1e-30}
+    with pytest.raises(ValueError,match='allocation_not_conserved'):run(x,tmp_path)
+
+
+def test_success_is_not_resolved_until_cell_is_closed(tmp_path):
+    x=example(tmp_path);x[2]['cells'][1]['closed']=False;refresh(x)
+    report=run(x,tmp_path)
+    assert report['cells'][1]['outcome']=='success_pending_cell_close'
+    assert report['comparisons'][0]['category']=='unresolved'
+
+
+def test_failed_arm_overspend_cannot_support_a_matched_budget_unlock(tmp_path):
+    x=example(tmp_path);fail(x[1]['attempts'][0]);x[1]['providers'][0]['observed_peak_usd']=10.
+    report=run(x,tmp_path)
+    assert report['cells'][0]['within_research_budget'] is False
+    assert report['comparisons'][0]['category']=='unresolved'
+
+
+def test_finite_inputs_cannot_produce_nonfinite_json_totals(tmp_path):
+    x = example(tmp_path)
+    for row in x[1]['providers']:
+        row['observed_peak_usd'] = 1e308
+    with pytest.raises(ValueError, match='exceeds_json_number_range'):
+        run(x, tmp_path)

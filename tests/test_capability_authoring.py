@@ -33,6 +33,19 @@ def test_open_interface_is_model_designed_and_compiled():
     assert authoring_context(task,snapshot,{})['contract_mode']=='model_designed'
 
 
+def test_scene_wrapper_preserves_seed_and_admitted_material_descriptions():
+    snapshot,_,task,_=data();refs=snapshot['roots']
+    catalog={'source_catalog':{'seed':{'catalog':[{'capability':refs[0],
+        'description':'Read current BibTeX entries','example_parameters':{'paths':['/work/inputs/current.bib']}}]},
+        'admitted_materials':[{'capability':refs[1],'description':'Count current citation keys'},
+                              {'capability':{'id':'not-visible','sha256':'0'*64},'description':'ignored'}]}}
+    context=authoring_context(task,snapshot,catalog)
+    assert [c['description'] for c in context['capabilities']]==['Read current BibTeX entries','Count current citation keys']
+    assert context['capabilities'][0]['example_parameters']=={'paths':['/work/inputs/current.bib']}
+    assert len(context['capabilities'])==len(refs)
+    assert [c['contract'] for c in context['capabilities']]==[next(c['contract'] for c in snapshot['capabilities'] if c['id']==r['id']) for r in refs]
+
+
 @pytest.mark.parametrize('extra', ['owner','format','contract','certificate','dependencies'])
 def test_fixed_metadata_cannot_be_overridden(extra):
     snapshot,_,task,draft=data();draft[extra]={}

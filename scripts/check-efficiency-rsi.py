@@ -20,6 +20,7 @@ commands = [
      'tests/test_capability_learning.py',
      'tests/test_capability_container_compat.py',
      'tests/test_efficiency_rsi_measurement.py',
+     'tests/test_efficiency_rsi_registry.py',
      'tests/test_rsi_protocol.py', 'tests/test_rsi_quality.py'],
     ['node', '--test', 'tests/test_capability_contract.mjs',
      'tests/test_capability_runtime.mjs', 'tests/test_rsi_protocol.mjs',
