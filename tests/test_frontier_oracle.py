@@ -47,3 +47,32 @@ def test_literal_scope_handles_comments_optional_arguments_and_include_cycles(tm
     r=audit(p)
     assert r['missing']==[] and r['unresolved']==[]
     assert r['citations']==[{'path':'body.tex','key':'A'}]
+
+
+def test_nested_include_is_root_relative_and_versions_reach_that_file(tmp_path):
+    files={'main.tex':r'\input{src/section}\bibliography{refs}',
+           'src/section.tex':r'\input{src/detail}',
+           'src/detail.tex':r'\cite{A}',
+           'refs.bib':'@article{A,title={One}}'}
+    before=project(tmp_path/'before.zip',files)
+    after=project(tmp_path/'after.zip',{**files,'src/detail.tex':r'\cite{Missing}'})
+    assert audit(before)['unresolved']==[]
+    result=compare(before,after)
+    assert result['changed_files']==['src/detail.tex']
+    assert result['introduced_missing']==['Missing']
+    assert result['affected_tex_files']==['main.tex','src/detail.tex','src/section.tex']
+
+
+def test_identical_duplicate_entries_are_a_multiset_change_not_a_set_change(tmp_path):
+    entry='@article{A,title={One}}'
+    files={'main.tex':r'\input{body}\bibliography{refs}',
+           'body.tex':r'\cite{A}','refs.bib':entry}
+    before=project(tmp_path/'before.zip',files)
+    after=project(tmp_path/'after.zip',{**files,'refs.bib':entry+'\n'+entry})
+    result=compare(before,after)
+    assert result['changed_entry_keys']==['A']
+    assert result['introduced_duplicates']==['A']
+    assert result['changed_files']==['refs.bib']
+    assert result['affected_tex_files']==['body.tex','main.tex']
+    incorrect={**result,'changed_entry_keys':[]}
+    assert not evaluate('D',[before,after],incorrect)['passed']
