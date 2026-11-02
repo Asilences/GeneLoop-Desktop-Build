@@ -85,10 +85,13 @@ def test_current_seed_keeps_every_previous_graph_shape_and_admits_current_code(t
     def shapes(version):
         release=ROOT/'motif-libraries'/version;manifest=read(release/'entry.json')
         return {digest(read(release/e['payload'])['artifact']['nodes']) for e in manifest['entries']}
-    previous=[name for name in FILE_RELEASES if int(name[6:])>=5]
+    previous=[name for name in FILE_RELEASES if 5<=int(name[6:])<=16]
     expected=shapes('file-v5')
     assert len(expected)==4
     assert all(shapes(name)==expected for name in previous)
+    version=FILE_RELEASES[-1]
+    assert len(shapes(version))==6
+    assert expected < shapes(version)
     # Use the same latest-compatible installation path as a fresh account.
     # An absent or stale certification must fail instead of falling back to a
     # hard-coded historical version or accepting an empty active registry.
@@ -97,20 +100,62 @@ def test_current_seed_keeps_every_previous_graph_shape_and_admits_current_code(t
     registry.publish(reason='free current seed diagnostic')
     install(cfg)
     active=[entry for entry in registry.load()['entries'] if entry['state']=='active']
-    assert len(active)==4
+    assert len(active)==6
     versions={read(registry.root/entry['certificate']['file'])['release'] for entry in active}
-    assert len(versions)==1
-    version=versions.pop()
+    assert versions=={'file-v16','file-v17'}
     release=ROOT/'motif-libraries'/version
     runtime=sources()
-    assert shapes(version)==expected
     for entry in active:
         policy=read(registry.root/entry['payload'])
+        certificate=registry.root/entry['certificate']['file']
         assert entry['runtime_source']==runtime and policy_current(policy,runtime)
-        assert validate_certificate(policy,registry.root/entry['certificate']['file'],entry['sha256'])['release']==version
+        assert validate_certificate(policy,certificate,entry['sha256'])['release']==read(certificate)['release']
     for entry in read(release/'entry.json')['entries']:
         payload=release/entry['payload']
-        assert validate_certificate(read(payload),release/entry['certificate'],sha(payload))['release']==version
+        certificate=release/entry['certificate']
+        assert validate_certificate(read(payload),certificate,sha(payload))['release']==read(certificate)['release']
+
+
+def test_file_v17_preserves_old_bytes_and_adds_two_certified_pagination_flows():
+    from src.motif_core.offline.experience_registry import read
+    old=ROOT/'motif-libraries/file-v16';new=ROOT/'motif-libraries/file-v17'
+    old_entries={e['policy_digest']:e for e in read(old/'entry.json')['entries']}
+    new_entries={e['policy_digest']:e for e in read(new/'entry.json')['entries']}
+    assert old_entries.keys() < new_entries.keys()
+    for name,entry in old_entries.items():
+        assert new_entries[name]==entry
+        for field in ['payload','certificate']:
+            assert (old/entry[field]).read_bytes()==(new/entry[field]).read_bytes()
+    additions=[new_entries[name] for name in new_entries.keys()-old_entries.keys()]
+    assert len(additions)==2
+    for entry in additions:
+        policy=read(new/entry['payload']);cert=read(new/entry['certificate'])
+        assert policy['format']=='sss-operation-flow-v3'
+        assert policy['artifact']['certification_contract']=='sss-operation-certification-v3'
+        assert policy['artifact']['max_steps']==64
+        assert cert['release']=='file-v17'
+
+
+def test_existing_account_receives_new_flows_without_reactivating_disabled_seed(tmp_path):
+    from src.adapters.management_seed import install,validate_certificate
+    from src.adapters.experience_library import sources
+    from src.motif_core.offline.experience_registry import ExperienceRegistry,read,sha
+    cfg={'state_root':str(tmp_path/'account')};registry=ExperienceRegistry(Path(cfg['state_root'])/'registry')
+    registry.publish(reason='free upgrade diagnostic')
+    old=ROOT/'motif-libraries/file-v16'
+    additions=[]
+    for item in read(old/'entry.json')['entries']:
+        payload=old/item['payload'];certificate=old/item['certificate']
+        validate_certificate(read(payload),certificate,sha(payload))
+        additions.append(registry.entry(item['kind'],payload,sources(),certificate))
+    registry.publish(additions,reason='free previous account fixture')
+    disabled=additions[0]['entry_id']
+    registry.publish(disable=[disabled],reason='account disabled this seed')
+    install(cfg);state=registry.load()
+    assert len(state['entries'])==6
+    assert len([e for e in state['entries'] if e['state']=='active'])==5
+    assert next(e for e in state['entries'] if e['entry_id']==disabled)['state']=='disabled'
+    assert not list((Path(cfg['state_root'])/'records').glob('*.json'))
 
 
 @pytest.mark.parametrize('changed', ['execution', 'catalog'])

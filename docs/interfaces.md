@@ -1,5 +1,11 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## File 分页种子 file-v17（2026-11-02）
+
+`motif-libraries/file-v17` 在 v16 四项图之外新增两项独立认证的 PDF 分页 `sss-operation-flow-v3`；未新增运行时字段或工具。包内沿用的四项 payload／certificate 原字节不改，证书仍指向来源 `file-v16`，新两项证书指向 `file-v17`。发布包版本不替代证书来源版本，现有校验器回溯来源 manifest，再核验当前工具契约和执行版本；新账号安装六项，已有账号只补缺项且保留停用状态。种子 `grants_execution=false`，实际执行继续受当前任务权限约束。
+
+分页接管保持 64 步边界，未知分支／交错／版本失配回普通 Harness；长文档可能只接管前缀。新增项从真实普通轨迹编译，经新正文独立普通见证与两次候选执行认证。原始轨迹、资料和私有证明不发布；质量、完整费用与失败见[发布记录](experiments/file-pdf-seeds-20261102.md)。
+
 ## RSI 共享质量与复用形式更新（2026-10-30 夜间）
 
 `quality_evaluation` 是 `geneloop.rsi/v1` 的新增候选记录，包含 task_id、task_sha256、artifact_sha256、rubric_sha256、evaluator、scope、limitations 及 checks。每个检查有 id、passed/failed/unknown、具体 observation 与证据路径/SHA。`rsi_quality.py:quality_status` / `rsi_quality.ts:qualityStatus` 按场景提供的必需检查和当前摘要解释结果；缺项、重复、确定判定无证据会拒绝，unknown 保持未知。Python `verify_quality_files` 重新核对实际证据字节与目录归属。记录格式通过不等于评审可靠，具体检查器和可信评价标准仍来自场景宿主。
