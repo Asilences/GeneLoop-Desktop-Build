@@ -16,6 +16,8 @@ commands = [
      'tests/test_capability_output_verifier.py',
      'tests/test_capability_improvement.py', 'tests/test_capability_feedback.py',
      'tests/test_capability_observations.py', 'tests/test_capability_selection.py', 'tests/test_capability_scene.py',
+     'tests/test_capability_materials.py',
+     'tests/test_capability_learning.py',
      'tests/test_capability_container_compat.py',
      'tests/test_efficiency_rsi_measurement.py',
      'tests/test_rsi_protocol.py', 'tests/test_rsi_quality.py'],

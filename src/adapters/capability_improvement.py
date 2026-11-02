@@ -130,6 +130,7 @@ def run_improvement(plan, adapter, *, execute=False):
     validate('plan', plan)
     def verify_scene():
         for ref in ([plan['scene_adapter']] if plan.get('scene_adapter') else [])+plan.get('scene_dependencies',[]):evidence(ref)
+        if plan.get('learning_routes'):evidence(plan['learning_routes'])
     verify_scene()
     if len({j['id'] for j in plan['jobs']}) != len(plan['jobs']):
         raise ValueError('improvement_duplicate_opportunity')
@@ -147,6 +148,11 @@ def run_improvement(plan, adapter, *, execute=False):
                      'src/adapters/capability_store.ts','src/adapters/capability_authoring.py','src/adapters/capability_feedback.py',
                      'src/adapters/capability_discovery.py','src/adapters/capability_scene.py',
                      'src/adapters/capability_cycle.ts','src/adapters/capability_proposal.py',
+                     'src/adapters/capability_materials.py','src/adapters/capability_materials.ts',
+                     'src/adapters/capability_trajectory.py','src/adapters/source_capability_runtime.ts',
+                     'scenarios/remotion_edit/structured/capability_learning.py',
+                     'scenarios/remotion_edit/structured/learn_programs.py',
+                     'scenarios/remotion_edit/structured/certify_programs.py',
                      'scripts/export-capability-construction-library.mjs',
                      'scripts/complete-source-capability-loop.mjs',
                      'scenarios/remotion_edit/structured/run_capability_improvement.py',
@@ -173,35 +179,56 @@ def run_improvement(plan, adapter, *, execute=False):
         for job in jobs:
             validate('job',job);evidence(job['task']);discover(job)
         save(journal.directory/'resolved-jobs.json',jobs)
-        while jobs:
+        waiting={}; rounds={}
+        while jobs or waiting:
+            if not jobs:
+                # Only revisit a waiting opportunity when its currently usable
+                # library changed. No timer, unchanged retry, or user-task replay.
+                current=adapter.library()['snapshot']['digest']
+                jobs=[j for j,seen in waiting.values() if seen!=current and adapter.admission(j)[0]=='start'] if hasattr(adapter,'admission') else []
+                if not jobs:break
+                for j in jobs:waiting.pop(j['id'])
             if hasattr(adapter,'prioritize_jobs'):jobs=adapter.prioritize_jobs(jobs)
             job=jobs.pop(0)
             opportunity = discover(job)
-            if execute and hasattr(adapter,'admission'):
+            if execute and opportunity['action']=='start' and hasattr(adapter,'admission'):
                 action,reason=adapter.admission(job)
+                if action=='defer' and reason=='construction_gap_requires_new_material_or_evidence' and plan.get('learning_routes') and hasattr(adapter,'pending_gap'):
+                    pending=adapter.pending_gap(job)
+                    if pending:
+                        verify_scene()
+                        for ref in job.get('source_evidence',[]):evidence(ref)
+                        resumed=journal.directory/(job['id']+'-pending-gap');resumed.mkdir(mode=0o700)
+                        save(resumed/'result.json',pending[0]);save(resumed/'original-gap.json',pending[1])
+                        acquisition=adapter.acquire(job,pending[0],resumed)
+                        save(resumed/'acquisition.json',acquisition)
+                        if acquisition.get('status')=='registered':action,reason=adapter.admission(job)
+                        else:reason=acquisition.get('reason',reason)
                 if action!='start':opportunity.update(action=action,reason=reason)
             journal.emit('opportunity', opportunity)
             decision(job['id'], opportunity['action'], opportunity['reason'])
             if opportunity['action'] != 'start' or not execute:
                 summary['outcomes'].append(dict(opportunity_id=job['id'], status=opportunity['action'] if execute else 'preview'))
+                if execute and opportunity['action']=='defer':waiting[job['id']]=(job,adapter.library()['snapshot']['digest'])
                 continue
-            folder = journal.directory/job['id']; folder.mkdir(mode=0o700)
+            round_index=rounds.get(job['id'],0);rounds[job['id']]=round_index+1
+            folder = journal.directory/(job['id'] if round_index==0 else job['id']+'-reevaluation-'+str(round_index)); folder.mkdir(mode=0o700)
             library = adapter.library()
             snapshot = validate_capability_snapshot(library['snapshot'], plan['owner'])
             if any(c['certification'] != 'certified' or c['lifecycle'] == 'archived' for c in snapshot['capabilities']):
                 raise ValueError('improvement_library_not_certified')
             save(folder/'library.json', library)
             task = json.loads(evidence(job['task']))
-            parent, feedback, failures, attempt_index = None, None, set(), 0
+            parent, feedback, failures, attempt_index, repairs = None, None, set(), 0, 0
             while True:
                 # Independent checks and host context cannot change during repair.
                 verify_scene()
                 evidence(job['task'])
                 for ref in job.get('source_evidence',[]):evidence(ref)
                 attempt = folder/('attempt-'+str(attempt_index))
-                attempt_id = job['id']+'/'+attempt.name
+                attempt_id = folder.name+'/'+attempt.name
                 journal.emit('attempt', dict(opportunity_id=job['id'], attempt_id=attempt_id,
-                    parent_attempt_id=None if parent is None else job['id']+'/'+parent.name,
+                    parent_attempt_id=None if parent is None else folder.name+'/'+parent.name,
                     phase='started', snapshot_sha256=snapshot['digest'], visible=snapshot['roots'],
                     selected=[], result_ref=None, observed_model_usd=None))
                 result = adapter.construct(task, library, attempt, parent, feedback)
@@ -214,7 +241,7 @@ def run_improvement(plan, adapter, *, execute=False):
                         raise ValueError('improvement_construction_snapshot_changed')
                     selected = candidate['capability']['dependencies']
                 journal.emit('attempt', dict(opportunity_id=job['id'], attempt_id=attempt_id,
-                    parent_attempt_id=None if parent is None else job['id']+'/'+parent.name,
+                    parent_attempt_id=None if parent is None else folder.name+'/'+parent.name,
                     phase='compiled' if candidate else 'failed', snapshot_sha256=snapshot['digest'],
                     visible=snapshot['roots'], selected=selected, result_ref=result_ref,
                     observed_model_usd=result.get('observed_model_usd')))
@@ -262,6 +289,28 @@ def run_improvement(plan, adapter, *, execute=False):
                         save(journal.directory/'result.json', summary)
                         return summary
                 if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
+                if result.get('status')=='deferred' and hasattr(adapter,'acquire'):
+                    verify_scene()
+                    for ref in job.get('source_evidence',[]):evidence(ref)
+                    acquisition=adapter.acquire(job,result,attempt)
+                    save(attempt/'acquisition.json',acquisition)
+                    acquisition_ref={'path':str(attempt/'acquisition.json'),
+                        'sha256':hashlib.sha256((attempt/'acquisition.json').read_bytes()).hexdigest()}
+                    if acquisition.get('status')=='registered':
+                        refreshed=adapter.library()
+                        next_snapshot=validate_capability_snapshot(refreshed['snapshot'],plan['owner'])
+                        if any(c['certification']!='certified' or c['lifecycle']=='archived' for c in next_snapshot['capabilities']):
+                            raise ValueError('improvement_library_not_certified')
+                        # Re-evaluate before constructing again. A learner's
+                        # success flag alone never wakes a user operation.
+                        if next_snapshot['digest']!=snapshot['digest'] and adapter.admission(job)[0]=='start':
+                            decision(job['id'],'continue','certified_material_registered_re_evaluate_opportunity',[acquisition_ref])
+                            library,snapshot=refreshed,next_snapshot
+                            save(attempt/'next-library.json',library)
+                            parent,feedback,failures,repairs=None,None,set(),0
+                            attempt_index+=1
+                            continue
+                    decision(job['id'],'defer',acquisition.get('reason','learning_did_not_change_available_material'),[acquisition_ref])
                 reason = (outcome or result).get('error', 'construction_failed')
                 signature = repair_signature(result, outcome, attempt)
                 fingerprint = capability_digest(signature)
@@ -269,12 +318,13 @@ def run_improvement(plan, adapter, *, execute=False):
                 max_repairs = plan['policy']['max_repairs']
                 repairable = result.get('status')!='deferred' and (outcome is None or
                     outcome.get('repairable',reason=='capability_store_validation_failed') is True)
-                retry = repairable and fingerprint not in failures and (max_repairs is None or attempt_index < max_repairs)
+                retry = repairable and fingerprint not in failures and (max_repairs is None or repairs < max_repairs)
                 decision(job['id'], 'repair' if retry else 'defer',
                          'new_failure_feedback' if retry else 'construction_gap_requires_new_material_or_evidence' if result.get('status')=='deferred'
                          else 'infrastructure_repeated_failure_or_explicit_repair_limit', [result_ref])
                 if not retry:
                     summary['outcomes'].append(dict(opportunity_id=job['id'], status='deferred', error=reason))
+                    waiting[job['id']]=(job,snapshot['digest'])
                     break
                 failures.add(fingerprint)
                 feedback = dict(error=reason, diagnostics=result.get('diagnostics'),
@@ -282,6 +332,7 @@ def run_improvement(plan, adapter, *, execute=False):
                                 validation=outcome.get('feedback') if outcome else None,
                                 source_attempt_id=attempt_id, scope='training_or_validation')
                 parent, attempt_index = attempt, attempt_index+1
+                repairs+=1
     except BaseException as error:
         summary['status'] = 'interrupted' if isinstance(error, (KeyboardInterrupt, SystemExit)) else 'failed'
         summary['error'] = str(error)

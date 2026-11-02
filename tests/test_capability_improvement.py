@@ -62,6 +62,58 @@ class Adapter:
 def events(plan):return [json.loads(line) for line in (Path(plan['output'])/'events.jsonl').read_text().splitlines()]
 
 
+def test_native_material_change_restarts_builder_with_fresh_snapshot_not_repair(tmp_path):
+    plan,snapshot,proposal=plan_at(tmp_path);plan['jobs']=plan['jobs'][:1]
+    adapter=Adapter(snapshot,proposal);original=adapter.construct;seen=[]
+    def construct(task,library,attempt,parent,feedback):
+        seen.append(library['snapshot']['digest'])
+        if len(seen)>1:
+            assert parent is None and feedback is None
+            return original(task,library,attempt,parent,feedback)
+        attempt.mkdir();result={'status':'deferred','error':'capability_construction_gap',
+            'construction_snapshot_sha256':library['snapshot']['digest']}
+        put(attempt/'result.json',result);return result
+    def acquire(job,result,attempt):
+        # Synthetic authority: tests scheduling only, not native certification.
+        material_proposal=copy.deepcopy(proposal)
+        material_proposal['contract']['input_schema']['description']='Diagnostic material contract'
+        c=compile_proposal(material_proposal,snapshot,'owner')['capability']
+        c={**c,'certification':'certified','lifecycle':'active'}
+        adapter.snapshot=create_capability_snapshot('owner',[*snapshot['roots'],capability_ref(c)],[*snapshot['capabilities'],c])
+        return {'status':'registered'}
+    adapter.construct=construct;adapter.acquire=acquire;adapter.admission=lambda job:('start','diagnostic')
+    result=run_improvement(plan,adapter,execute=True)
+    assert result['outcomes'][0]['status']=='published' and len(seen)==2 and seen[0]!=seen[1]
+    assert any(e['payload'].get('reason')=='certified_material_registered_re_evaluate_opportunity' for e in events(plan))
+
+
+def test_registered_flag_without_library_change_does_not_loop(tmp_path):
+    plan,snapshot,proposal=plan_at(tmp_path);plan['jobs']=plan['jobs'][:1]
+    adapter=Adapter(snapshot,proposal);calls=[]
+    def gap(task,library,attempt,parent,feedback):
+        calls.append(1);attempt.mkdir();result={'status':'deferred','error':'capability_construction_gap'}
+        put(attempt/'result.json',result);return result
+    adapter.construct=gap;adapter.acquire=lambda *a:{'status':'registered'};adapter.admission=lambda job:('start','diagnostic')
+    result=run_improvement(plan,adapter,execute=True)
+    assert len(calls)==1 and result['outcomes'][0]['status']=='deferred'
+
+
+def test_waiting_opportunity_re_evaluated_after_later_publication(tmp_path):
+    plan,snapshot,proposal=plan_at(tmp_path);adapter=Adapter(snapshot,proposal);seen=[]
+    adapter.admission=lambda job:('start','diagnostic')
+    construct=adapter.construct
+    def first_gap(task,library,attempt,parent,feedback):
+        seen.append(attempt.parent.name)
+        if len(seen)==1:
+            attempt.mkdir();result={'status':'deferred','error':'capability_construction_gap'}
+            put(attempt/'result.json',result);return result
+        return construct(task,library,attempt,parent,feedback)
+    adapter.construct=first_gap
+    result=run_improvement(plan,adapter,execute=True)
+    assert seen==['first','second','first-reevaluation-1']
+    assert [r['status'] for r in result['outcomes']]==['deferred','published','published']
+
+
 def test_preview_has_no_adapter_calls_or_ledger(tmp_path):
     plan,_,_=plan_at(tmp_path)
     result=run_improvement(plan,None)

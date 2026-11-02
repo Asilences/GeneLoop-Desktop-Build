@@ -18,6 +18,10 @@ class SourceImprovementAdapter(CapabilityImprovementAdapter):
         from scenarios.remotion_edit.structured.capability_observations import inspect_run
         return inspect_run(entry,owner)
 
+    def acquire(self,job,result,attempt):
+        from scenarios.remotion_edit.structured.capability_learning import acquire_source
+        return acquire_source(self,job,result,attempt)
+
     def publish(self, job, candidate, attempt, expected_latest):
         inputs = copy.deepcopy(self.templates[job['id']])
         context = attempt/'publication-inputs'; context.mkdir(mode=0o700)
@@ -46,6 +50,8 @@ class SourceImprovementAdapter(CapabilityImprovementAdapter):
                     shutil.copyfile(original,target)
                     item['path'] = str(target)
                 value['workspace'] = str(work)
+                value['additional_libraries']=[row['library'] for row in self.materials.records()
+                    if row['backend']=='source_program']
             path = context/(key+'.json'); save(path,value); plan[key] = str(path)
         save(context/'plan.json',plan)
         env = {**os.environ,'SSS_PYTHON':sys.executable}

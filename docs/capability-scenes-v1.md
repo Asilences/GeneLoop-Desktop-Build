@@ -62,4 +62,36 @@ reason只允许missing_primitive、incompatible_contracts、insufficient_evidenc
 - 视频：旧Source适配器使用新的公共生命周期，在Linux新目录实际渲染/检查/发布并换输入复用历史模型候选。验证执行与后继执行各23项机械检查通过，模型请求0。它证明迁移后的这条真实执行路径可运行，不证明本轮模型能自主构造新能力。
 - 数据计数：`examples/capability-scenes/counts/`是第二种场景的适配协议示例，使用同一发现/控制器/反馈/Store；固定Python程序确实执行，独立程序复算结果。任务、提案和准入权限是显式诊断夹具，不能连接生产用户会话或当作真实模型、真实Artifact认证或跨领域收益证据。
 
-当前主要缺口仍是：缺材料到既有学习器的自动分派；更广泛的原生工具适配；从普通任务结束事件自动收集新记录；更有辨别力的机会发现；匹配质量范围的净成本与创造价值估计。复用公共流程已经实现，普遍有效性仍需真实场景证据。完整命令、失败和运行位置见[本轮记录](experiments/efficiency-rsi-scenes-20261102.md)。
+Source缺口分派和材料登记已增加，配置和限制见下节。更广泛的原生工具适配、普通任务结束自动采集、更有辨别力的机会发现、净成本与创造价值估计仍未完成。公共接口可复用不代表普遍有效。前轮证据见[记录](experiments/efficiency-rsi-scenes-20261102.md)。
+
+## 原生材料获取与重新评价（2026-11-02续）
+
+共同适配器增加可选`acquire(job,result,attempt)`，默认返回deferred。只有可信宿主可以选择学习器；模型仍只报告缺口。返回registered后，控制器重新读取、校验能力库和机会准入；只有可用目录真正变化才开始新的构造尝试，不沿用旧快照修复。队列内已暂缓的机会在后续发布改变目录后也会重新评价。历史decision/outcome保留，因此一个机会可以先deferred、后published，不能将两者算作独立任务。
+
+原生材料保存在`store/materials/<owner哈希>/`，引用原library字节和认证/学习证据，读取时重验并调用原生映射器重建契约。固定seed不改写；原生source等价认证不等于新任务语义质量，Compose仍需独立验证、发布和换输入后继执行。Source任务manifest增加可选`additional_libraries:[{path,sha256}]`，每个叶执行按完整legacy_ref选择对应原生库。旧manifest继续可用。
+
+Source计划可选`learning_routes:{path,sha256}`，文件格式为：
+
+```json
+{
+  "format": "source_learning_routes_v1",
+  "owner": "宿主所有者",
+  "routes": [{
+    "scope": "与机会execution_scope一致",
+    "backend": "source_program",
+    "runs": [{"run": "私有正常Source任务目录", "role": "training",
+      "context": {"path": "宿主context.json", "sha256": "原字节摘要"},
+      "evidence": [{"path": "原始证据文件", "sha256": "原字节摘要"}]}]
+  }]
+}
+```
+
+`evidence`必须完整包含原`capability_observations.inspect_run`返回的证据，不能只放摘要或宣称passed。只有missing_primitive、唯一scope路由和合格训练见证会分派。执行复用`learn_programs.py`及`certify_programs.py`，DeepSeek Flash/off/max_tokens393216，原`ledger_root`已有账本/检查点及同一proposal锁；费用/请求不限，不重置。服务器还需原`REMOTION_EXPERIMENT_ROOT`资产/运行环境。旧学习CLI默认6000保留历史配置，新路由显式覆盖。请求、学习、失败、认证及原机会关联留在acquisitions；相同证据已启动过的学习不自动重放，中断需检查原状态或提供新证据。
+
+该学习器从见证源码参数化抽象，不会根据任意缺口凭空创造新算法。incompatible_contracts/insufficient_evidence及无合格素材保持deferred。当前不是跨Source/Artifact/Script的智能分派器，也不是常驻后台调度器；重新评价只发生在显式运行控制器时，且不重发原用户任务。
+
+## 论文执行证据：独立只读入口
+
+`node scripts/project.mjs python scripts/observe-capability-paper-tasks.py --request "$PRIVATE_PAPER_REQUEST"`读取原论文学习工作器的owner/scope/task_ids请求格式，将派生记录写到同owner私有`capability-trajectories/`。保留实际工具、参数、结果、事件位置、已有before/after边界、环境工具表和账本引用。未知参数来源、依赖与前提为null；失败不删，quality=unreviewed、split=unassigned，不把工具成功当论文正确。
+
+旧工作器和认证库完全保留。直接改旧工作器曾触发有效的认证代码锁拒绝，已撤回，没有改写证书绕过。当前入口需显式运行，尚未接默认任务结束触发，也尚未把投影喂给新Capability论文学习/认证适配器。Script Motif与paper_document_read尚未成为新Runtime后端；不能称论文Capability闭环已经迁移。

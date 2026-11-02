@@ -1281,4 +1281,12 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 
 共同发现器改为接收可信inspector，不枚举固定场景kind；相同输入失败/成功记录都保留，支持数按不同输入计。发布失败的repairable由宿主场景给出，不在核心扩充场景错误码。`completeCapabilityCycle`共用真实执行、严格Store发布、不同任务/输入/真实路径后继验证；`publicationVerdict`分离QA传输绑定与严格发布字段，未知字段不丢弃。
 
-构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。不自动生成或安装新原语。接口、样例和当前边界见[跨场景协议](capability-scenes-v1.md)。
+构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。模型不能直接安装原语；宿主可显式配置下述学习路由。接口、样例和当前边界见[跨场景协议](capability-scenes-v1.md)。
+
+### 原生材料登记与执行轨迹投影（2026-11-02续）
+
+改进plan增加可选摘要引用`learning_routes`。Source宿主仅将missing_primitive分派到唯一scope匹配的原生学习路由，使用原学习器、认证器和已有累计账本；其余缺口defer。共同适配器新增`acquire(job,result,attempt)`和`pending_gap(job)`，registered仅表示材料登记，控制器仍须重读目录、核验认证状态和准入再构造。相同证据已启动的学习不自动重放；当前是显式运行内的调度，不是后台用户任务重试。
+
+`store/materials/<owner哈希>/*.json`为追加式`capability_material_v1`登记，包含backend/library/evidence/acquisition_key/opportunity；export重验原字节并重建原生契约后与seed及Store历史合并。Source manifest新增可选`additional_libraries:[{path,sha256}]`，按完整legacy_ref分派，权限/取消/产物检查仍走原Runtime。旧seed/manifest无须改写。
+
+`capability_trajectory_v1`为原事件的派生只读记录，含owner/task_id/scene/mode/status、evidence、steps、tools、accounting。每个step关联实际call/result事件位置、原参数与结果、已有原生文件边界；parameter_sources/dependencies/preconditions未知则null，quality为unreviewed，split为unassigned。论文显式入口为`scripts/observe-capability-paper-tasks.py --request`，复用原owner/scope/task_ids索引，不改旧工作器/证书/轨迹；当前不自动触发学习或授予认证。

@@ -52,6 +52,7 @@ export function buildSourceCapabilities(raw:string|Buffer,owner:string){
 export type SourceTaskManifest={
  format:'source_capability_task_v1';task_id:string;owner:string;workspace:string;
  library_path:string;library_sha256:string;library_digest:string;registry_path:string;
+ additional_libraries?:{path:string;sha256:string}[];
  runtime_directory:string;media_tools_directory?:string;image:string;python?:string;
  inputs:{name:string;path:string;sha256:string}[];
  grant:{id:string;task_id:string;snapshot_sha256:string;root:CapabilityRef;arguments_sha256:string;
@@ -143,7 +144,13 @@ export async function runSourceCapability(manifestPath:string,snapshotValue:Capa
  });
  const libraryBytes=readFileSync(manifest.library_path);
  decodeSourceLibrary(libraryBytes,{library_sha256:manifest.library_sha256,library_digest:manifest.library_digest});
- const nativeCatalog=buildSourceCapabilities(libraryBytes,manifest.owner);
+ const libraries=new Map([[manifest.library_sha256,libraryBytes]]);
+ for(const ref of manifest.additional_libraries??[]){
+  const raw=readFileSync(ref.path);
+  assert(bytesSha256(raw)===ref.sha256,'source_material_library_changed');
+  decodeSourceLibrary(raw,{library_sha256:ref.sha256});libraries.set(ref.sha256,raw);
+ }
+ const nativeCatalog={capabilities:[...libraries.values()].flatMap(raw=>buildSourceCapabilities(raw,manifest.owner).capabilities)};
  const nativeLeaves=new Map(nativeCatalog.capabilities.map(capability=>[capability.id,capability]));
  const executionSha=executorDigest();
  const versions={motif:{id:'capability-snapshot',sha256:snapshot.digest},matcher:{id:'source-native-renderer',sha256:executionSha}};
@@ -188,7 +195,7 @@ export async function runSourceCapability(manifestPath:string,snapshotValue:Capa
  const backend:CapabilityBackend={
   inspect(reference){
    const leaf=nativeCatalog.capabilities.find(capability=>capability.implementation.kind==='legacy'&&
-    capability.implementation.legacy_ref.object_id===reference.object_id);
+    same(capability.implementation.legacy_ref,reference));
    assert(leaf&&leaf.implementation.kind==='legacy','source_capability_leaf_unknown');
    return structuredClone((leaf!.implementation as any).legacy_ref);
   },
@@ -206,13 +213,16 @@ export async function runSourceCapability(manifestPath:string,snapshotValue:Capa
     assert(/^sha256:[a-f0-9]{64}$/.test(image),'source_container_image_invalid');imageId=image;
    }
    assert(!call.signal?.aborted,'source_worker_cancelled');
+   const selectedLibrary=(call.capability.implementation as any).legacy_ref;
+   const selectedBytes=libraries.get(selectedLibrary.library_sha256);
+   assert(selectedBytes,'source_material_library_missing');
    const nonce=randomUUID().replaceAll('-',''),directory=join(workspace,'calls',call.callId);
    mkdirSync(join(workspace,'calls'),{recursive:true,mode:0o700});mkdirSync(directory,{mode:0o700});
    const native=await invokeWorker({call_id:call.callId,parent_call_id:call.parentCallId,task_id:manifest.task_id,parent_pid:process.pid,nonce,
     work:join(directory,'work'),runtime_directory:realpathSync(manifest.runtime_directory),
     media_tools_directory:manifest.media_tools_directory?realpathSync(manifest.media_tools_directory):undefined,
-    image:imageId,inputs,library_base64:libraryBytes.toString('base64'),
-    library_sha256:manifest.library_sha256,library_digest:manifest.library_digest,
+    image:imageId,inputs,library_base64:selectedBytes!.toString('base64'),
+    library_sha256:selectedLibrary.library_sha256,library_digest:selectedLibrary.library_digest,
     program_id:(call.capability.implementation as any).legacy_ref.object_id,arguments:args},
     manifest.python??process.env.SSS_PYTHON??'python3',call.signal);
    const value=native.value,receipt=native.native_receipt;

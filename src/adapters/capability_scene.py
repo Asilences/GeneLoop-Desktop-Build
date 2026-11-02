@@ -9,12 +9,14 @@ from pathlib import Path
 import subprocess
 import sys
 import signal
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from src.adapters.capability_improvement import evidence, read, save, run_improvement, validate
 from src.adapters.capability_feedback import CapabilityFeedback
 from src.adapters.capability_contract import capability_digest, capability_ref
+from src.adapters.capability_materials import CapabilityMaterials
 
 
 def reference(path):
@@ -46,6 +48,7 @@ class CapabilityImprovementAdapter:
         if self.seed['owner'] != plan['owner']:
             raise ValueError('improvement_seed_owner_changed')
         self.feedback = CapabilityFeedback(plan.get('feedback_directory', str(Path(plan['store'])/'feedback')), plan['owner'])
+        self.materials = CapabilityMaterials(Path(plan['store'])/'materials', plan['owner'])
         self.templates = {}
         self.configure_jobs(plan['jobs'])
 
@@ -60,6 +63,10 @@ class CapabilityImprovementAdapter:
 
     def publish(self,job,candidate,attempt,expected_latest):
         raise NotImplementedError('scene_native_publication_required')
+
+    def acquire(self,job,result,attempt):
+        """Optional trusted native learner. Default cannot grant new materials."""
+        return {'status':'deferred','reason':'scene_learning_route_unavailable'}
 
     def freeze(self, directory):
         observations=[(entry,self.inspect_run(entry,self.plan['owner'])) for entry in self.plan.get('discovery',[])]
@@ -105,6 +112,16 @@ class CapabilityImprovementAdapter:
         if sum(f['status']=='failed' for f in facts)>=2:return 'defer','failed_opportunity_requires_new_evidence'
         return 'start','feedback_allows_trial'
 
+    def pending_gap(self,job):
+        """Return original gap evidence for a previously deferred opportunity."""
+        key=self.opportunity_key(job);current=self.library()['snapshot']['digest']
+        for fact in self.feedback.read()['facts'].values():
+            if fact['stage']=='attempt' and fact['opportunity']==key and fact['status']=='unknown' and (fact.get('subject') or {}).get('construction_snapshot_sha256')==current:
+                ref=fact['evidence'][0];result=json.loads(evidence(ref))
+                if result.get('status')=='deferred' and result.get('construction_gap'):
+                    return result,ref
+        return None
+
     def record_outcome(self,job,attempt,result,candidate,outcome):
         passed=outcome is not None and outcome['status']=='published'
         key=self.opportunity_key(job)
@@ -124,11 +141,13 @@ class CapabilityImprovementAdapter:
 
     def raw_library(self):
         evidence(self.plan['seed'])
-        result = subprocess.run(['node', '--experimental-strip-types',
-            'scripts/export-capability-construction-library.mjs', self.plan['store'], self.plan['seed']['path']],
-            cwd=ROOT, capture_output=True, text=True, check=True)
+        with tempfile.TemporaryDirectory(prefix='capability-materials-') as directory:
+            index=Path(directory)/'index.json';save(index,self.materials.export())
+            result = subprocess.run(['node', '--experimental-strip-types',
+                'scripts/export-capability-construction-library.mjs', self.plan['store'], self.plan['seed']['path'],str(index)],
+                cwd=ROOT, capture_output=True, text=True, check=True)
         value = json.loads(result.stdout)
-        value['source_catalog'] = self.seed_catalog
+        value['source_catalog'] = {'seed':self.seed_catalog,'admitted_materials':value.pop('material_catalog',[])}
         return value
 
     def library(self):

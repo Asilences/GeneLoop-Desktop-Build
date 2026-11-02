@@ -13,6 +13,8 @@ from src.adapters.harless_rsi_bundle import load_product_bundle
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('auto_paper',ROOT/'scripts/learn-web-paper-tasks.py')
 worker=importlib.util.module_from_spec(spec);spec.loader.exec_module(worker)
+projection_spec=importlib.util.spec_from_file_location('paper_capability_observer',ROOT/'scripts/observe-capability-paper-tasks.py')
+observer=importlib.util.module_from_spec(projection_spec);projection_spec.loader.exec_module(observer)
 PIN,READ=worker.compiler.PAIR
 
 
@@ -48,6 +50,34 @@ def task(owned,index,*,mode='baseline',user='diagnostic-user',old_only=False,que
     save(directory/'learning-accounting.json',{'task_id':identity,'session_id':budget,'request_receipts':[{'task_id':identity,'global_request_id':index,'response_status':200,'response_usage':usage,'observed_peak_usd':.001}]})
     req=json.loads(request.read_text());req['task_ids'].append(identity);save(request,req)
     return directory
+
+
+def test_capability_projection_preserves_calls_failures_and_unknown_dependencies(owned):
+    from src.adapters.capability_trajectory import project_web_task
+    out,store,request=owned;directory=task(owned,1,mode='execute')
+    state=json.loads((directory/'task-state.json').read_text());state['status']='failed';save(directory/'task-state.json',state)
+    before={str(p):worker.sha(p) for p in directory.iterdir() if p.is_file()}
+    observed=observer.observe(request)
+    assert not observed['rejected']
+    records=list((store/'capability-trajectories').glob('*.json'))
+    assert len(records)==1 and not (store/'latest.json').exists()
+    value=json.loads(records[0].read_text())
+    assert value['status']=='failed' and value['quality']=='unreviewed' and value['split']=='unassigned'
+    assert len(value['steps'])==2 and all(r['dependencies'] is None and r['parameter_sources'] is None for r in value['steps'])
+    assert before=={str(p):worker.sha(p) for p in directory.iterdir() if p.is_file()}
+    observer.observe(request);assert len(list((store/'capability-trajectories').glob('*.json')))==1
+    with pytest.raises(ValueError,match='owner_changed'):project_web_task(directory,'foreign')
+
+
+def test_projection_rejects_false_boundary_and_only_reads_current_turn(owned):
+    from src.adapters.capability_trajectory import project_web_task
+    directory=task(owned,1,old_only=True)
+    assert project_web_task(directory,'diagnostic-user')['steps']==[]
+    effective=json.loads((directory/'effective-config.json').read_text());effective['trace_start_index']=0;save(directory/'effective-config.json',effective)
+    value=project_web_task(directory,'diagnostic-user')
+    boundary={'call_id':value['steps'][0]['call_id'],'arguments_sha256':'0'*64}
+    (directory/'reuse-boundaries.jsonl').write_text(json.dumps(boundary)+'\n')
+    with pytest.raises(ValueError,match='arguments_changed'):project_web_task(directory,'diagnostic-user')
 
 
 def test_existing_traces_compile_and_publish_next_private_version_without_changing_tasks(owned):
