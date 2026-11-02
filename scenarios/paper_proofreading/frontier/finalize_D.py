@@ -16,6 +16,7 @@ from src.adapters.efficiency_rsi_measurement import measure_study,digest as stud
 from src.adapters.rsi_protocol import envelope
 from scenarios.paper_proofreading.frontier.execute import execute
 from scenarios.paper_proofreading.frontier.oracle import evaluate,sha
+from scenarios.paper_proofreading.frontier.feedback import record_final_feedback
 
 
 def main():
@@ -122,6 +123,11 @@ def main():
     report=measure_study(study,obs,registry=frozen,evidence_root=directory)
     for name,value in [('registry',frozen),('observations',obs),('measurement',report),('details',details),
                        ('usage',[{'request_id':rid,'cell':books[rid]['cell'],'usage':terminal[rid].get('response_usage')} for rid in books])]:save(result_dir/(name+'.json'),value)
+    # All study outcomes and request ownership are frozen before changing the
+    # next Builder's eligibility. This cannot influence a construction cell.
+    feedback=[record_final_feedback(plan,request['cell'],reference(result_dir/request['cell']/'artifact.json'),
+                study['id']+'/'+study['rubric_sha256']) for request,plan in zip(requests,plans)]
+    save(result_dir/'final-feedback.json',feedback)
     print(json.dumps({'measurement':reference(result_dir/'measurement.json'),'physical_cost':report['physical_study_cost'],
         'cells':[{k:r[k] for k in ('id','outcome')} for r in report['cells']]}))
 
