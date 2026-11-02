@@ -104,7 +104,7 @@ test('JSON result flow accepts new array contents, composes, and retains origina
    {id:'second',capability:ref,arguments:{kind:'object',fields:{value:{kind:'object',fields:{items:{kind:'step',step_id:'first',path:['value','items']}}}}}}
   ],output:{kind:'step',step_id:'second',path:[]}},dependencies:[ref]},
   {certification:'certified',lifecycle:'active',migration:'promoted'});
-  const snapshot=createCapabilitySnapshot('owner',[capabilityRef(cap)],[...f.catalog.capabilities,cap]);
+  const snapshot=createCapabilitySnapshot('owner',[capabilityRef(cap)],[f.leaf,cap]);
   f.manifest.grant.root=capabilityRef(cap);f.manifest.grant.snapshot_sha256=snapshot.digest;f.save();
   writeFileSync(f.manifest.registry_path,JSON.stringify(snapshot));
   const trace=await runScriptCapability(f.manifestPath,snapshot,f.args);
