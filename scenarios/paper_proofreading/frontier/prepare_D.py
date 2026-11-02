@@ -98,7 +98,7 @@ def main():
     c_task=json.loads(evidence(reference(base/'frozen-v1/task-C.json')))
     task=reference(a.task_file.resolve() if a.task_file else base/'frozen-v1/task-D.json');protocol=reference(base/'frozen-v1/protocol-server.json')
     source_files=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py']
-    common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/script_capability_runtime.ts',
+    common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/script_capability_runtime.ts',
         'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/adapters/efficiency_rsi_registry.py',
         'src/adapters/efficiency_rsi_measurement.py','config/script-runtime-compatibility.json',
         'src/adapters/script_motif_compiler.py','src/adapters/capability_program_encoding.py']

@@ -39,6 +39,34 @@ def evidence(ref):
     return raw
 
 
+def acquisition_continuation(attempt,previous,current,result,result_ref,acquisition_ref):
+    """Remember a completed material request without reusing old alias bindings."""
+    refs=[{**ref,'path':str(Path(ref['path']).resolve())} for ref in (result_ref,acquisition_ref)]
+    intent=None
+    program=Path(result.get('program_request') or Path(attempt)/'program.json')
+    if program.is_file():
+        raw=program.read_bytes();value=json.loads(raw)
+        refs.append({'path':str(program.resolve()),'sha256':hashlib.sha256(raw).hexdigest()})
+        intent={k:value[k] for k in ('description','mode','interface') if k in value}
+        if isinstance(value.get('source'),str):intent['source_sha256']=hashlib.sha256(value['source'].encode()).hexdigest()
+    for ref in refs:evidence(ref)
+    record={'format':'capability_material_acquisition_v1','previous_snapshot_sha256':previous['digest'],
+        'new_snapshot_sha256':current['digest'],
+        'newly_visible':[ref for ref in current['roots'] if ref not in previous['roots']],
+        'previous_gap':result.get('construction_gap'),'program_intent':intent,'evidence':refs}
+    path=Path(attempt)/'material-continuation.json';save(path,record)
+    return {'path':str(path.resolve()),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
+def continued_library(library,records):
+    if not records:return library
+    value=copy.deepcopy(library)
+    value.setdefault('source_catalog',{})['material_continuation']={
+        'format':'capability_material_continuation_v1','current_snapshot_sha256':value['snapshot']['digest'],
+        'acquisitions':copy.deepcopy(records)}
+    return value
+
+
 class Journal:
     """New run only. Never silently resume/replay an interrupted external action."""
     def __init__(self, directory, run_id):
@@ -179,7 +207,7 @@ def run_improvement(plan, adapter, *, execute=False):
         for job in jobs:
             validate('job',job);evidence(job['task']);discover(job)
         save(journal.directory/'resolved-jobs.json',jobs)
-        waiting={}; rounds={}
+        waiting={}; rounds={}; material_progress={}
         while jobs or waiting:
             if not jobs:
                 # Only revisit a waiting opportunity when its currently usable
@@ -200,9 +228,17 @@ def run_improvement(plan, adapter, *, execute=False):
                         for ref in job.get('source_evidence',[]):evidence(ref)
                         resumed=journal.directory/(job['id']+'-pending-gap');resumed.mkdir(mode=0o700)
                         save(resumed/'result.json',pending[0]);save(resumed/'original-gap.json',pending[1])
+                        previous=adapter.library()['snapshot']
                         acquisition=adapter.acquire(job,pending[0],resumed)
                         save(resumed/'acquisition.json',acquisition)
-                        if acquisition.get('status')=='registered':action,reason=adapter.admission(job)
+                        if acquisition.get('status')=='registered':
+                            current=adapter.library()['snapshot']
+                            if current['digest']!=previous['digest']:
+                                file=lambda p:{'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+                                progress=acquisition_continuation(resumed,previous,current,pending[0],
+                                    file(resumed/'result.json'),file(resumed/'acquisition.json'))
+                                material_progress.setdefault(job['id'],[]).append(progress)
+                            action,reason=adapter.admission(job)
                         else:reason=acquisition.get('reason',reason)
                 if action!='start':opportunity.update(action=action,reason=reason)
             journal.emit('opportunity', opportunity)
@@ -213,7 +249,7 @@ def run_improvement(plan, adapter, *, execute=False):
                 continue
             round_index=rounds.get(job['id'],0);rounds[job['id']]=round_index+1
             folder = journal.directory/(job['id'] if round_index==0 else job['id']+'-reevaluation-'+str(round_index)); folder.mkdir(mode=0o700)
-            library = adapter.library()
+            library = continued_library(adapter.library(),material_progress.get(job['id'],[]))
             snapshot = validate_capability_snapshot(library['snapshot'], plan['owner'])
             if any(c['certification'] != 'certified' or c['lifecycle'] == 'archived' for c in snapshot['capabilities']):
                 raise ValueError('improvement_library_not_certified')
@@ -305,7 +341,9 @@ def run_improvement(plan, adapter, *, execute=False):
                         # success flag alone never wakes a user operation.
                         if next_snapshot['digest']!=snapshot['digest'] and adapter.admission(job)[0]=='start':
                             decision(job['id'],'continue','certified_material_registered_re_evaluate_opportunity',[acquisition_ref])
-                            library,snapshot=refreshed,next_snapshot
+                            progress=acquisition_continuation(attempt,snapshot,next_snapshot,result,result_ref,acquisition_ref)
+                            material_progress.setdefault(job['id'],[]).append(progress)
+                            library,snapshot=continued_library(refreshed,material_progress[job['id']]),next_snapshot
                             save(attempt/'next-library.json',library)
                             parent,feedback,failures,repairs=None,None,set(),0
                             attempt_index+=1
