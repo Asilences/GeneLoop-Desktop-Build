@@ -97,6 +97,12 @@ test('JSON values require certified opt-in; old path catalog stays intact and ma
  assert.ok(f.catalog.capabilities.some(c=>c.contract.input_schema.properties.paths));
  f.body.programs[0].certification.value_binding.format='unreviewed';assert.throws(f.saveLibrary,/invalid_script_value_binding/);
 });
+test('a fixed file with the wrong format reports a contract mismatch rather than a changed version',{skip:process.platform==='win32'},async t=>{
+ const f=valueFixture(t),leaf=f.catalog.capabilities.find(c=>c.contract.input_schema.properties.paths),args={paths:['/work/inputs/test.txt']};
+ f.manifest.grant.root=capabilityRef(leaf);f.manifest.grant.arguments_sha256=capabilityDigest(args);f.save();
+ const trace=await runScriptCapability(f.manifestPath,f.catalog.snapshot,args);
+ assert.equal(trace.status,'failed');assert.ok(trace.receipts.some(r=>r.reason==='script_capability_input_contract_mismatch'));
+});
 test('JSON result flow accepts new array contents, composes, and retains original file guards',{skip:!sandbox},async t=>{
  for(const items of [[],['new','values']]){
   const f=valueFixture(t,items),ref=capabilityRef(f.leaf);

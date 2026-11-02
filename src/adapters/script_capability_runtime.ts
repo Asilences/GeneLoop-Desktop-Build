@@ -157,7 +157,8 @@ export async function runScriptCapability(manifestPath:string,snapshotValue:Capa
    assert(paths.length===program.inputs.length&&new Set(paths).size===paths.length,'script_capability_binding_invalid');
    files=paths.map((path,i)=>{const input=inputMap.get(path);assert(input,'script_capability_input_not_granted');
     const bytes=fixedInput(workspace,scriptVirtualHost(workspace,path));
-    assert(bytesSha256(bytes)===input!.sha256&&compatibleInput(program.inputs[i],path,bytes),'script_capability_input_changed');
+    assert(bytesSha256(bytes)===input!.sha256,'script_capability_input_changed');
+    assert(compatibleInput(program.inputs[i],path,bytes),'script_capability_input_contract_mismatch');
     return {path,bytes,sha256:input!.sha256};});
    }
    const work=join(workspace,'calls',call.callId);

@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {scriptArgv} from '../src/adapters/script_motif_shell.ts';
-import {bindScript,scriptCommand,programIdentity,scriptCodeLocks,fixedInput,compatibleInput,witnessedOutputSchema,decodeScriptReceipt,scriptOutputLimit} from '../src/adapters/script_motif_runtime.ts';
+import {bindScript,scriptCommand,programIdentity,scriptCodeLocks,fixedInput,compatibleInput,witnessedOutputSchema,decodeScriptReceipt,scriptOutputLimit,scriptVirtualHost} from '../src/adapters/script_motif_runtime.ts';
 import {runCertifiedScript} from './run-certified-script.mjs';
 import {digest} from '../src/motif_core/online_skill_runtime.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -16,6 +16,20 @@ export function sandboxRun(workspace,command,cwd='/work'){
  const run=spawnSync(argv[0],argv.slice(1),{encoding:'utf8',timeout:30000,maxBuffer:256000});
  if(run.error||run.status!==0)throw Error('sandbox_replay_failed',{cause:{status:run.status,signal:run.signal,stderr:run.stderr}});
  return run.stdout;
+}
+export function heldoutBindings(program,held,workspace){
+ if(held.explicit_inputs===undefined)return bindScript(program,workspace);
+ const rows=held.explicit_inputs;
+ if(!Array.isArray(rows)||rows.length!==program.inputs.length||new Set(rows.map(r=>r.path)).size!==rows.length)throw Error('heldout_input_binding_inventory_invalid');
+ return program.original_paths.map((name,i)=>{
+  const relative=program.witness.files[name]?.relative;
+  if(typeof relative!=='string'||!relative.startsWith('inputs/'))throw Error('heldout_input_binding_source_invalid');
+  const path='/work/'+relative,row=rows.find(r=>r.path===path);
+  if(!row||path!=='/work/inputs/'+relative.slice('inputs/'.length).split('/').pop())throw Error('heldout_input_binding_missing');
+  const host=scriptVirtualHost(workspace,path),data=fixedInput(workspace,host),sha256=sha(data);
+  if(row.sha256!==sha256||row.source?.sha256!==sha256||!compatibleInput(program.inputs[i],host,data))throw Error('heldout_input_binding_changed');
+  return {host,path,data,sha256};
+ });
 }
 function certify(rows){
  const held=rows[0],rejected=[],programs=[],seen=new Set();
@@ -54,7 +68,7 @@ function certify(rows){
    });
    let other,heldWorkspace,lastBindingError;
    for(const workspace of (held.replay_workspaces?.length?held.replay_workspaces:[held.workspace]))try{
-    const candidate=bindScript(p,workspace);
+    const candidate=heldoutBindings(p,held,workspace);
     if(digest(own.map(b=>b.sha256))===digest(candidate.map(b=>b.sha256)))continue;
     other=candidate;heldWorkspace=workspace;break;
    }catch(error){lastBindingError=error;}

@@ -88,7 +88,7 @@ class FrontierAdapter(CapabilityImprovementAdapter):
             if trace_path.exists():
                 trace=read(trace_path)
                 failures=[{'capability':r['capability'],'reason':r.get('reason'),'call_id':r['call_id']}
-                    for r in trace.get('receipts',[]) if r.get('reason')=='script_capability_input_not_granted']
+                    for r in trace.get('receipts',[]) if r.get('reason') in ('script_capability_input_not_granted','script_capability_input_contract_mismatch')]
                 if failures:
                     runtime_binding_failure=True
                     feedback={'checks':[{'id':'granted_input_binding','status':'failed','observation':{
