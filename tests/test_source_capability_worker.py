@@ -1,6 +1,7 @@
 """Native-worker lifecycle diagnostics; no model calls or Docker startup."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import pytest
@@ -53,6 +54,8 @@ def test_native_scene_preserves_legacy_launch_and_accepts_explicit_nonce_scope(t
         if scoped: monkeypatch.setenv(key, value)
         else: monkeypatch.delenv(key, raising=False)
     monkeypatch.setattr(atexit, 'register', lambda *args: None)
+    monkeypatch.setattr(os, 'getuid', lambda: 1234, raising=False)
+    monkeypatch.setattr(os, 'getgid', lambda: 1234, raising=False)
     scene_spec = importlib.util.spec_from_file_location('source_scene_launch_test', ROOT/'scenarios/remotion_edit/server.py')
     scene = importlib.util.module_from_spec(scene_spec); scene_spec.loader.exec_module(scene)
     launches = []

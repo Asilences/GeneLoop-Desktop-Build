@@ -122,3 +122,5 @@ node scripts/run-script-capability.mjs --manifest "$TASK_MANIFEST" --snapshot "$
 `learning_routes`可指向`paper_script_learning_routes_v1`，包含owner及routes。每条route含`scope/backend:"script_motif"/tasks`；tasks首项role为`certification`，其余为`training`，各含`path`和`evidence:[{path,sha256}]`。evidence至少完整包含`project_web_task`返回的原始证据。只接明确missing_primitive，复用原学习器与原生认证，无新增模型调用。失败/中断不自动重跑；入池后由公共控制器重读目录并重新准入。真实历史任务路由待验，直接原生认证诊断不能替代。
 
 旧`code_locks`不改写。四个离线编译文件仅作来源记录，执行路径继续按当前哈希或仓库维护的精确转换表核验。白名单在`config/script-runtime-compatibility.json`，不接受候选自带例外；新增转换须核对具体变更并跑相关回归。
+
+Store在Windows采用文件fsync与同卷原子rename，不尝试Node不支持的目录fsync；POSIX保留目录同步和I/O错误传播。当前未承诺Windows断电后的目录持久性或完整崩溃恢复。两端的CAS、原子指针、原生执行、独立验收及原字节重验保持一致。

@@ -24,7 +24,7 @@ export function seed(owner){
 }
 function child(path,input){
  return new Promise((resolve,reject)=>{
-  const processChild=spawn(process.env.SSS_PYTHON??'python3',[path],{stdio:['pipe','pipe','pipe']});
+  const processChild=spawn(process.env.SSS_PYTHON??(process.platform==='win32'?'python':'python3'),[path],{stdio:['pipe','pipe','pipe']});
   let output='',error='';processChild.stdout.on('data',b=>output+=b);processChild.stderr.on('data',b=>error+=b);
   processChild.on('error',reject);processChild.on('close',code=>{
    if(code!==0)reject(Error('count_native_failed'));else {try{resolve(JSON.parse(output));}catch(e){reject(e);}}

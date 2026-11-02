@@ -3,7 +3,7 @@
 It intentionally uses the same controller/proposal/feedback/Store as Source.
 This example is not a production Artifact Motif adapter or an efficacy benchmark.
 """
-import copy,json,sys
+import copy,json,sys,os
 from pathlib import Path
 from src.adapters.capability_scene import CapabilityImprovementAdapter,ROOT,run_child,reference
 from src.adapters.capability_improvement import evidence,read,save
@@ -41,7 +41,8 @@ class CountAdapter(CapabilityImprovementAdapter):
             'expected_latest':expected_latest,'output':str(output)}
         save(attempt/'publication-plan.json',plan)
         with (attempt/'publication-stdout.log').open('w') as out,(attempt/'publication-stderr.log').open('w') as err:
-            code=run_child(['node','--experimental-strip-types',str(Path(__file__).with_name('publish.mjs')),str(attempt/'publication-plan.json')],cwd=ROOT,stdout=out,stderr=err)
+            code=run_child(['node','--experimental-strip-types',str(Path(__file__).with_name('publish.mjs')),str(attempt/'publication-plan.json')],cwd=ROOT,
+                env={**os.environ,'SSS_PYTHON':sys.executable},stdout=out,stderr=err)
         result=read(output/'result.json');ref=reference(output/'result.json')
         if code==0 and result['status']=='completed':
             return {'status':'published','publication_sha256':result['publication_sha256'],'evidence_ref':ref}

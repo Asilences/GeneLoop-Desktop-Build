@@ -1,5 +1,5 @@
 """Common engine + second scene. Proposal is diagnostic; native execution is real."""
-import copy,json,os,subprocess
+import copy,json,os,subprocess,sys
 from pathlib import Path
 import pytest
 from src.adapters.capability_scene import load_scene_adapter
@@ -28,7 +28,8 @@ for(let i=0;i<2;i++){
  for(const [name,value] of [['trace',result.execution],['args',args],['snapshot',snapshot]])writeFileSync(run+'/'+name+'.json',JSON.stringify(value));
 }
 """
-    subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',script,str(tmp_path)],cwd=ROOT,check=True,capture_output=True,text=True, encoding='utf-8')
+    subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',script,str(tmp_path)],cwd=ROOT,
+        env={**os.environ,'SSS_PYTHON':sys.executable},check=True,capture_output=True,text=True, encoding='utf-8')
     snapshot=json.loads((tmp_path/'seed.json').read_text(encoding='utf-8'));contract=json.loads((tmp_path/'contract.json').read_text(encoding='utf-8'))
     template=put(tmp_path/'publication-inputs.json',{
         'validation':{'id':'validation','input':{'rows':[{'group':'A'},{'group':'A'}]}},
@@ -56,7 +57,7 @@ def test_second_scene_uses_common_discovery_controller_feedback_and_real_store(t
         put(attempt/'result.json',result);return result
     adapter.construct=diagnostic_proposal
     result=run_improvement(plan,adapter,execute=True)
-    assert result['status']=='completed' and result['outcomes'][0]['status']=='published'
+    assert result['status']=='completed' and result['outcomes'][0]['status']=='published',result
     assert len(calls)==1 and len(calls[0]['learning_evidence'])==2
     facts=list(adapter.feedback.read()['facts'].values())
     assert any(f['stage']=='construction' and f['status']=='passed' for f in facts)

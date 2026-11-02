@@ -34,7 +34,13 @@ function shape(value:any,keys:string[]){check(value&&typeof value==='object'&&!A
 function regular(path:string){const stat=lstatSync(path);check(stat.isFile()&&!stat.isSymbolicLink(),'file_not_regular');}
 function directory(path:string){mkdirSync(path,{recursive:true,mode:0o700});const stat=lstatSync(path);check(stat.isDirectory()&&!stat.isSymbolicLink(),'directory_not_private');}
 function writeNew(path:string,bytes:Uint8Array){const fd=openSync(path,'wx',0o600);try{writeFileSync(fd,bytes);fsyncSync(fd);}finally{closeSync(fd);}}
-function syncDirectory(path:string){const fd=openSync(path,'r');try{fsyncSync(fd);}finally{closeSync(fd);}}
+function syncDirectory(path:string){
+ // Node cannot open directory handles for fsync on Windows. File fsync and
+ // same-volume atomic renames still apply; power-loss directory durability is
+ // a POSIX-only guarantee here. Never swallow an actual POSIX I/O failure.
+ if(process.platform==='win32')return;
+ const fd=openSync(path,'r');try{fsyncSync(fd);}finally{closeSync(fd);}
+}
 function successfulVerdict(value:any):asserts value is CapabilityValidationVerdict{
  check(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>['passed','checks','scope','limitations'].includes(k)),'shape_invalid');
  check(value.passed===true&&Array.isArray(value.checks)&&value.checks.length>0,'validation_failed');
