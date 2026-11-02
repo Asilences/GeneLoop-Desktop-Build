@@ -195,7 +195,7 @@ test('cached results cannot leak into a different conversation during navigation
 });
 
 test('all paired scenes restore persisted 1–5 scores without writes on refresh or navigation', async () => {
-  for (const scene of ['ppt', 'paper-proofreading', 'research-data-analysis', 'files']) {
+  for (const scene of ['ppt', 'paper-proofreading', 'research-data-analysis', 'files', 'video-editing']) {
     const value = comparison(); value.scene = scene; value.snapshot_revision = 1; value.scores = { baseline: 2, motif: 5 };
     const f = fixture(undefined, value); await flush(); f.render();
     const checked = () => f.all(row => row.type === 'input' && row.props.type === 'radio' && row.props.checked).map(row => row.props['aria-label']);
@@ -1096,4 +1096,11 @@ test('media download starts an authenticated native request inside the click wit
   assert.equal(f.downloaded[0].name,'video.mp4');
   assert.equal(f.downloaded[0].href,'/api/harless/comparisons?session_id=session-a&id=comparison-a&lane=baseline&file=media-file');
   assert.ok(f.requests.every(row => !row.url.includes('&file='))); f.dispose();
+});
+
+test('video program comparison labels actual program reuse separately from model-request skips',async()=>{
+ const value=comparison();value.scene='video-editing';value.lanes.baseline.stats.program_reuses=0;value.lanes.motif.stats.program_reuses=2;
+ const f=fixture(undefined,value);try{await flush();f.render();const text=f.content(f.render());
+  assert.match(text,/程序复用 0 次/);assert.match(text,/程序复用 2 次/);assert.doesNotMatch(text,/已验证跳过/);
+ }finally{f.dispose();}
 });

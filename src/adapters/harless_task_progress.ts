@@ -7,6 +7,7 @@ export type TaskTrace = TaskActivity & { id: string; time: string; kind: 'assist
 export type TaskProgressSnapshot = { answer: string; progress: TaskActivity; activity: TaskActivity[]; messages: TaskMessage[]; trace: TaskTrace[]; todos:NativeTodo[]|null };
 export type AttachmentPreparation = { phase: 'extracting' | 'rendering' | 'visual'; filename?: string; completed?: number; total?: number };
 const toolLabels: [RegExp, string][] = [
+  [/^reuse_/, '复用视频程序并渲染'],
   [/^skill$/, '读取技能说明'],
   [/^todo_write$/, '更新任务清单'],
   [/^present$/, '交付结果文件'],
@@ -165,12 +166,12 @@ export function createTaskProgress(saved?: Partial<TaskProgressSnapshot>, now = 
     },
     audit(value: any) {
       const kind=value?.kind;
-      const labels:Record<string,string>={model_request_skipped_verified:'已验证跳过一次模型请求',motif_bypass_attempt:'正在核验 Motif 流程',
+      const labels:Record<string,string>={published_program_library_loaded:'已加载发布的视频 Motif',video_program_reused:'已复用视频程序并完成渲染',model_request_skipped_verified:'已验证跳过一次模型请求',motif_bypass_attempt:'正在核验 Motif 流程',
         shadow_candidate:'发现 Motif 候选（仅观察）',motif_fallback:'转交模型继续处理',motif_result_unverified:'Motif 结果未通过核验',
         bypass_result_unverified:'Motif 结果未通过核验',motif_tool_result_verified:'Motif 工具结果已核验',motif_tool_result_unverified:'Motif 工具结果未通过核验'};
       if(!labels[kind])return;
       const failed=/unverified$/.test(kind), entry=row('motif',labels[kind],failed?'failed':kind==='motif_bypass_attempt'?'running':'completed',value.at??now());
-      entry.verified_skip=kind==='model_request_skipped_verified';entry.optimized=entry.verified_skip;
+      entry.verified_skip=kind==='model_request_skipped_verified';entry.optimized=entry.verified_skip||kind==='video_program_reused';
       if(safeTool(value.tool))entry.tool=value.tool;
       if(kind==='model_request_skipped_verified'||failed)for(const prior of trace)if(prior.kind==='motif'&&prior.status==='running')prior.status=failed?'failed':'completed';
     },
