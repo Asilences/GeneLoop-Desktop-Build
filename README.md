@@ -1,11 +1,25 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-02，离线 Capability 机制新增原生 Script 后端与论文盘点适配器，复用已有编译、沙箱及公共发布流程；旧库采用来源/执行分离和精确兼容白名单。入口见[场景协议](docs/capability-scenes-v1.md#论文-script-接入2026-11-02续)，[原生诊断记录](docs/experiments/efficiency-rsi-script-20261102.md)不作为新增模型或效率收益证据，默认聊天不接管。
+
 新增[RSI 共享质量证据与复用形式整合](docs/experiments/rsi-meta-overnight-20261030.md)：F02 统一记录任务/产物/评价标准和逐项证据，视频形式更新复用共同版本核验与发布回执。Python/TypeScript 都能核对新记录；视频帧/音频检查仍由场景提供。已完成一次真实发布、后继TS加载和下一学习/认证/反思；六对限定质量通过任务44→33请求、前向代理估费降约21%，后继两题仍有基线质量失败与候选重渲染开销，未证明持续净收益。完整证据与边界见实验记录，未部署正式服务。
 2026-11-02：已合并服务器运行版本与 GitHub main，并新增网页 `/video` 视频剪辑入口；每条视频任务需选择该场景，不带场景命令的消息仍按普通 Chat 执行。实现与验收范围见 [视频场景集成记录](docs/experiments/video-web-integration-20261101.md)。视频已接入原实验中通过发布校验的程序库，恢复 Baseline / Motif 双路执行；本轮部署与验收见[视频双路记录](docs/experiments/video-paired-motif-20261102.md)。
 
 
 新增[视频程序复用与复用形式RSI实验](scenarios/remotion_edit/structured/README.md)：从正常视频工具轨迹学习参数化TSX，并让目录/类型化工具、调用策略和下一轮编译方式进入可验证的外环。普通基线保留同样的源码写入与渲染融合能力；当前实现及实际效果边界见[实验记录](docs/experiments/remotion-program-rsi-20261030-v1.md)，尚未部署正式服务。
 F02 审核候选提供一个免费可运行的经验执行协议演示：`npm run rsi:demo` 展示两个任务目标共享局部计数，以及版本/权限/证据失效时停止；`npm run rsi:check` 检查 Python/TypeScript 一致性。先看[通俗说明与接口](docs/rsi-protocol-v1.md)。当前使用人工算子与合成数据，不代表自动学习、完整任务或降本验收。
+
+新增[Capability离线改进协议](docs/capability-improvement-v1.md)与`npm run rsi:improve:source`：串联机会准入、构造/失败修复、独立发布和下一轮Builder目录更新，分别记录执行与构造贡献。默认预览；真实调用使用服务器原账本。机制接线、实际观察和效果pending分开记录，先完善机制，再接产品聊天入口；见[本轮记录](docs/experiments/efficiency-rsi-recursive-20261102.md)。 模型侧已改为精简draft，宿主补固定字段；支持具体错误定位和零模型[历史提案重放](docs/experiments/efficiency-rsi-authoring-replay-20261102.md)。
+
+Source记录到Capability机会、双价值反馈到后续选择现已接入离线控制器；新增`npm run rsi:select:source`连接现有TS执行与独立检查，默认预览。限定场景机制与效果待验证分别记录，见[协议](docs/capability-improvement-v1.md)。
+
+新增[跨场景Capability接入](docs/capability-scenes-v1.md)及`npm run rsi:improve`：Source特定逻辑已拆成适配器，公共发现/提案/反馈/发布生命周期可复用。另有非视频原生计数诊断；实际视频旧候选通过新流程重放，不把接口通用或合成诊断称为普遍有效。
+
+共同控制器现支持原生材料登记后的机会重新评价；Source可显式配置既有学习/认证路由，并按原生库版本执行新叶节点。论文新增独立只读轨迹采集入口，旧认证工作器和库保留；论文Script/读取Motif到新Capability的适配仍待补齐。配置与边界见[材料与轨迹协议](docs/capability-scenes-v1.md#原生材料获取与重新评价2026-11-02续)。
+
+效率驱动 RSI 的开发入口为 `npm run rsi:efficiency:check`：检查固定版本能力契约、组合执行和全尝试评价。该入口只做免费诊断；研究方案、真实联调进度与限制见[当前交接](docs/handoffs/efficiency-rsi.md)，评价口径见[评价协议](docs/efficiency-rsi-evaluation.md)。新能力层尚未接管生产任务。
+
+Capability 离线创建/编译也需安装 Node/npm 依赖：Python 复用 DSH 的 schema 校验入口，线上 TypeScript 不依赖 Python。当前已在Source视频实验中完成真实模型Compose提案、新Runtime实际渲染、独立检查、版本化保存及新任务复用；另通过实际取消检查。共1次模型请求，未做效率对照，未部署正式服务。见[首个闭环记录](docs/experiments/efficiency-rsi-source-loop-20261102.md)。
 
 `npm run rsi:optimize` 补充“值得改哪里、怎样启动、改后是否接受”的免费决策演示；[十来行结果与接入说明](docs/rsi-optimization-v1.md)区分预计收益、配对结果和实际总支出。真实任务评审器与修改生成器仍待后续模块接入。
 

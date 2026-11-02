@@ -63,6 +63,18 @@ def run_command(command: str, timeout_seconds: Annotated[int, Field(ge=1, le=240
     with CONTAINER_LOCK:
         if CONTAINER is None:
             launch=['docker','run','-d','--rm','--label','geneloop.experiment=remotion-motivation-20261027-v1','--label',f'geneloop.task={WORK.name}','--user',f'{os.getuid()}:{os.getgid()}','--network','none','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--pids-limit=512','--memory=4g','--cpus=2','--shm-size=512m','--tmpfs','/tmp:rw,size=1g','--entrypoint','/bin/sh','-v',f'{RUNTIME}:/runtime:ro','-v',f'{WORK}:/work:rw','-v',f'{WORK}/public:/work/public:ro','-w','/work','-e','HOME=/tmp','-e','PATH=/runtime/node_modules/@remotion/compositor-linux-x64-gnu:/usr/local/bin:/usr/bin:/bin:/home/frappe/.nvm/current/bin',IMAGE,'-c','while :; do sleep 3600; done']
+            # Dedicated Capability workers may name only their own container.
+            # The old scene retains its original launch behavior when absent.
+            name, nonce = os.environ.get('REMOTION_CONTAINER_NAME'), os.environ.get('REMOTION_CONTAINER_NONCE')
+            if name or nonce:
+                import re
+                if not name or not nonce or not re.fullmatch(r'geneloop-cap-[a-f0-9]{32}', name) or not re.fullmatch(r'[a-f0-9]{32}', nonce):
+                    raise ValueError('invalid capability container ownership')
+                # Keep legacy experiment/task-wide cleanup from matching this
+                # independently owned worker's container.
+                launch[launch.index('geneloop.experiment=remotion-motivation-20261027-v1')]='geneloop.experiment=source-capability-v1'
+                launch[launch.index(f'geneloop.task={WORK.name}')]='geneloop.task='+nonce
+                launch[2:2]=['--name',name,'--label','geneloop.capability_nonce='+nonce]
             if MEDIA_TOOLS:
                 image_index=launch.index(IMAGE)
                 launch[image_index:image_index]=['-v',f'{MEDIA_TOOLS}:/media-tools:ro','-e','PATH=/media-tools/node_modules/@ffmpeg-installer/linux-x64:/runtime/node_modules/@remotion/compositor-linux-x64-gnu:/usr/local/bin:/usr/bin:/bin:/home/frappe/.nvm/current/bin']

@@ -1,5 +1,16 @@
 # 论文校对 当前交接
 
+## 2026-11-02：离线 Script Capability 接线
+
+- PR更新：[PR #121](https://github.com/jingyio/GeneLoop/pull/121)已推送并创建，未合并/部署。合并PR #119后保留main旧版本，按原工具从Paper v42兼容重导出v43，五项IR/程序/来源文件不变，58项兼容回归通过。合并后1809 Python通过，Node1506通过/19跳过/1旧上传ECONNRESET失败，失败保留。以下本轮原生实验数字是合并前验证，不能代替最新CI。
+
+- 当前分支 `codex/efficiency-rsi-20261102`，基于 `8a414dd`；本轮本地提交见Git，未推送/部署。旧程序、证书、原件及账本保留。
+- 已完成：`capability_adapter.py`、`publish_capability.mjs`、`verify_capability_outputs.py`接公共Builder/反馈/Store；原生只读Script后端及精确版本白名单。独立验收先覆盖字面BibTeX条目数、唯一键和重复键，不认证文献真实性。
+- 已验证：Linux原生认证、组合、发布、不同输入后继和下一Builder可见，4项论文测试通过；21项Script/沙箱检查通过。全量Python1793通过/237跳过，Node1495通过/18跳过；Linux smoke通过。确定性组合和合成输入只属诊断，模型请求0。
+- 未完成：真实历史任务的acquire路由、新真实Builder提案、任务结束自动采集、读取Motif接入及收益对照。默认聊天和原学习工作器未接管。修复`observation`缺失前的发布失败保留。
+- 配置/复现/边界见[场景协议](../capability-scenes-v1.md#论文-script-接入2026-11-02续)和[记录](../experiments/efficiency-rsi-script-20261102.md)。测试使用项目Linux私有环境，原始产物仅存`.local/efficiency-rsi-script-20261102/`。真实API持续授权不变；本轮新增费用0、机器成本未计价。
+- 接手下一步：固定真实任务训练/认证分区，运行原学习器路由；让真实Builder构造并逐阶段定位失败。回退可停用新scene_adapter；兼容策略与白名单应和本轮代码一起回退，不单独删除配置文件。
+
 ## 2026-10-23：回执传输独立 main 修复
 
 - 目标与范围：用户同意依次推进传输小PR、明确反例下的候选失效、成本决定。第一步从最新 main `62cb9787` 新建 `codex/script-receipt-transport-20261023`，只整理有界无损回执，不带入尚未发布的集合/关系/反馈实验。原实验分支 `codex/paper-evidence-split-20261023` 在 `fd7f98c9` 完整保留，Desktop脏工作区、生产、原件及旧库未动。

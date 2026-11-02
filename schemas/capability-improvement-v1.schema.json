@@ -1,0 +1,622 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capability-improvement-v1.schema.json",
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "capability": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "observation": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "task_failure",
+            "new_requirement",
+            "repeated_cost",
+            "repeated_structure"
+          ]
+        },
+        "split": {
+          "enum": [
+            "training",
+            "validation",
+            "heldout"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "required": [
+        "task_id",
+        "kind",
+        "split",
+        "summary",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "capability_improvement_policy_v1"
+        },
+        "max_repairs": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "max_repairs"
+      ],
+      "additionalProperties": false
+    },
+    "job": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$"
+        },
+        "objective": {
+          "enum": [
+            "cost_reduction",
+            "capability_acquisition"
+          ]
+        },
+        "task": {
+          "$ref": "#/$defs/evidence"
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/observation"
+          }
+        },
+        "optimization_assessment": {
+          "$ref": "#/$defs/evidence"
+        },
+        "publication_plan": {
+          "$ref": "#/$defs/evidence"
+        },
+        "feedback_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "execution_scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "objective",
+        "task",
+        "observations",
+        "publication_plan"
+      ],
+      "additionalProperties": false
+    },
+    "plan": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "capability_improvement_plan_v1"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "output": {
+          "type": "string",
+          "minLength": 1
+        },
+        "store": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "$ref": "#/$defs/evidence"
+        },
+        "seed_catalog": {
+          "$ref": "#/$defs/evidence"
+        },
+        "ledger_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy": {
+          "$ref": "#/$defs/policy"
+        },
+        "jobs": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "$ref": "#/$defs/job"
+          }
+        },
+        "feedback_directory": {
+          "type": "string",
+          "minLength": 1
+        },
+        "discovery": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "run",
+              "kind",
+              "role",
+              "context"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "run": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "role": {
+                "enum": [
+                  "training",
+                  "validation"
+                ]
+              },
+              "context": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "scene_adapter": {
+          "$ref": "#/$defs/evidence"
+        },
+        "scene_dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "learning_routes": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "required": [
+        "format",
+        "id",
+        "owner",
+        "output",
+        "store",
+        "seed",
+        "seed_catalog",
+        "ledger_root",
+        "policy",
+        "jobs"
+      ],
+      "additionalProperties": false
+    },
+    "opportunity": {
+      "type": "object",
+      "properties": {
+        "opportunity_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "objective": {
+          "enum": [
+            "cost_reduction",
+            "capability_acquisition"
+          ]
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/observation"
+          }
+        },
+        "action": {
+          "enum": [
+            "start",
+            "defer",
+            "skip"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "opportunity_id",
+        "objective",
+        "observations",
+        "action",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "object",
+      "properties": {
+        "opportunity_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "enum": [
+            "start",
+            "defer",
+            "skip",
+            "validate",
+            "retain",
+            "continue",
+            "repair",
+            "stop"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      },
+      "required": [
+        "opportunity_id",
+        "action",
+        "reason",
+        "policy_sha256",
+        "evidence_refs"
+      ],
+      "additionalProperties": false
+    },
+    "attempt": {
+      "type": "object",
+      "properties": {
+        "opportunity_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parent_attempt_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "enum": [
+            "started",
+            "compiled",
+            "failed"
+          ]
+        },
+        "snapshot_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "visible": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability"
+          }
+        },
+        "selected": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability"
+          }
+        },
+        "result_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/evidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_model_usd": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "opportunity_id",
+        "attempt_id",
+        "parent_attempt_id",
+        "phase",
+        "snapshot_sha256",
+        "visible",
+        "selected",
+        "result_ref",
+        "observed_model_usd"
+      ],
+      "additionalProperties": false
+    },
+    "contribution": {
+      "type": "object",
+      "properties": {
+        "opportunity_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "enum": [
+            "construction",
+            "execution"
+          ]
+        },
+        "capability": {
+          "$ref": "#/$defs/capability"
+        },
+        "beneficiary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/capability"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observation": {
+          "enum": [
+            "selected_in_compiled_proposal",
+            "contributed_to_validated_capability",
+            "independent_followup_execution"
+          ]
+        },
+        "quality": {
+          "enum": [
+            "unverified",
+            "passed"
+          ]
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/evidence"
+        },
+        "observed_model_usd": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "benefit": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "opportunity_id",
+        "attempt_id",
+        "stage",
+        "capability",
+        "beneficiary",
+        "observation",
+        "quality",
+        "evidence_ref",
+        "observed_model_usd",
+        "benefit"
+      ],
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "capability_improvement_event_v1"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "previous_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "enum": [
+            "opportunity",
+            "decision",
+            "attempt",
+            "contribution"
+          ]
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "format",
+        "run_id",
+        "sequence",
+        "previous_sha256",
+        "kind",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "opportunity"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/opportunity"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "decision"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/decision"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "attempt"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/attempt"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "contribution"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/contribution"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/plan"
+    },
+    {
+      "$ref": "#/$defs/event"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+[
+  {"name":"unconstrained","accepted":true,"schema":{}},
+  {"name":"annotation_only","accepted":true,"schema":{"description":"JSON value","default":{"x":1.25},"examples":[null,true]}},
+  {"name":"oneof_single","accepted":false,"schema":{"oneOf":[{"type":"integer"}]}},
+  {"name":"oneof_empty","accepted":false,"schema":{"oneOf":[]}},
+  {"name":"oneof_valid","accepted":true,"schema":{"oneOf":[{"type":"integer"},{"type":"string"}]}},
+  {"name":"oneof_type","accepted":false,"schema":{"type":"number","oneOf":[{"type":"integer"},{"type":"string"}]}},
+  {"name":"enum_const_conflict","accepted":false,"schema":{"type":"integer","const":1,"enum":[2]}},
+  {"name":"enum_const_valid","accepted":true,"schema":{"type":"integer","const":1,"enum":[1,2]}},
+  {"name":"required_duplicate","accepted":true,"schema":{"type":"object","properties":{"x":{"type":"integer"}},"required":["x","x"]}},
+  {"name":"required_undeclared","accepted":false,"schema":{"type":"object","required":["x"]}},
+  {"name":"enum_duplicate","accepted":true,"schema":{"type":"integer","enum":[1,1]}},
+  {"name":"enum_empty","accepted":false,"schema":{"type":"integer","enum":[]}},
+  {"name":"enum_wrong_type","accepted":false,"schema":{"type":"integer","enum":[true]}},
+  {"name":"nested_array","accepted":true,"schema":{"type":"array","items":{"type":"object","properties":{"x":{"type":"number","default":1.25}}}}},
+  {"name":"invalid_annotation","accepted":false,"schema":{"type":"string","description":42}},
+  {"name":"unsupported_minimum","accepted":false,"schema":{"type":"number","minimum":0}},
+  {"name":"unsupported_pattern","accepted":false,"schema":{"type":"string","pattern":"x"}},
+  {"name":"unsupported_ref","accepted":false,"schema":{"$ref":"#/defs/x"}},
+  {"name":"schema_additional_properties","accepted":false,"schema":{"type":"object","additionalProperties":{"type":"number"}}},
+  {"name":"negative_zero_default","accepted":false,"schema":{"type":"number","default":-0.0}},
+  {"name":"negative_zero_const","accepted":false,"schema":{"type":"number","const":-0.0}}
+]

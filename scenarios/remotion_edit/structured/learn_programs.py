@@ -95,7 +95,12 @@ def main():
     parser.add_argument('--form-owner')
     parser.add_argument('--form-file',type=Path)
     parser.add_argument('--call-model',action='store_true')
+    parser.add_argument('--ledger-root',type=Path)
+    parser.add_argument('--max-output-tokens',type=int,default=6000)
+    parser.add_argument('--experiment-id',default='remotion-program-rsi-20261030-v1')
     args=parser.parse_args();base=Path(os.environ['REMOTION_EXPERIMENT_ROOT'])
+    if args.max_output_tokens<=0:parser.error('positive native output capacity required')
+    ledger=args.ledger_root or base
     witnesses=[collect(run.resolve()) for run in args.run]
     form=None;form_parent=None
     if args.form_store:
@@ -107,24 +112,27 @@ def main():
         record=json.loads(args.form_file.read_text());form=validate_form(record.get('form',record))
     if not args.call_model:
         print(json.dumps({'witnesses':[w[0]['task_id'] for w in witnesses],'model':'deepseek-flash',
-            'reasoning_effort':'off','max_output_tokens':6000,'cap_usd':None,'reset_history':False}));return
+            'reasoning_effort':'off','max_output_tokens':args.max_output_tokens,'cap_usd':None,'reset_history':False}));return
     key=os.environ.get('DEEPSEEK_API_KEY')
     if not key:raise ValueError('private_model_credential_required')
     args.output.mkdir(parents=True,exist_ok=False)
-    attribution={};current=None
+    attribution={};current=None;receipts={}
     class AuditedState(State):
         def log(self,row):
-            super().log({**row,'experiment_id':'remotion-program-rsi-20261030-v1','phase':'program_learning',
+            super().log({**row,'experiment_id':args.experiment_id,'phase':'program_learning',
                          'collection_active_job':attribution.get(row.get('request_id'),current)})
+            if row.get('request_id') in attribution and 'observed_peak_usd' in row:
+                receipts[row['request_id']]=row
+                write(args.output/'request-receipts.json',list(receipts.values()))
         def book(self,body):
             booked=super().book(body)
             if booked:
                 attribution[booked[0]]=current
-                write(base/'requests'/f'{booked[0]:06d}.json',json.loads(body))
+                write(ledger/'requests'/f'{booked[0]:06d}.json',json.loads(body))
                 write(args.output/'request-attribution.json',attribution)
             return booked
-    state=AuditedState(cap_usd=None,output_cap=6000,record=base/'cost-ledger.jsonl',request_limit=None,
-                       checkpoint=base/'budget-checkpoint.json')
+    state=AuditedState(cap_usd=None,output_cap=args.max_output_tokens,record=ledger/'cost-ledger.jsonl',request_limit=None,
+                       checkpoint=ledger/'budget-checkpoint.json')
     gate=create_server('127.0.0.1',0,'https://api.deepseek.com',state)
     thread=threading.Thread(target=gate.serve_forever,daemon=True);thread.start()
     programs=[];rejected=[]
@@ -136,7 +144,7 @@ def main():
             system=SYSTEM
             if form:
                 system+='\nPublished or proposed compiler form: '+json.dumps(form,ensure_ascii=False)
-            payload={'model':'deepseek-flash','thinking':{'type':'disabled'},'max_tokens':6000,'stream':False,
+            payload={'model':'deepseek-flash','thinking':{'type':'disabled'},'max_tokens':args.max_output_tokens,'stream':False,
                      'response_format':{'type':'json_object'},'messages':[{'role':'system','content':system},
                       {'role':'user','content':json.dumps(context,ensure_ascii=False)}]}
             write(args.output/(witness['task_id']+'-request.json'),payload)
@@ -158,6 +166,7 @@ def main():
         write(args.output/'candidate-library.json',source_library(programs))
         write(args.output/'learning-summary.json',{'candidates':len(programs),'rejected':rejected,
               'request_ids':sorted(attribution),'compiler_form':form,'parent_policy_digest':form_parent,'cumulative_requests':state.request_count,
+              'observed_model_usd':sum(r['observed_peak_usd'] for r in receipts.values()) if attribution and set(attribution)==set(receipts) and all(r.get('observed_peak_usd') is not None for r in receipts.values()) else None,
               'cumulative_accounted_usd':state.reserved_usd,'billing_usd':None})
     finally:
         gate.shutdown();gate.server_close();thread.join(timeout=5)

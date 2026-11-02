@@ -4,10 +4,10 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import subprocess
 import time
 import asyncio
 import sys
+from uuid import uuid4
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
@@ -23,17 +23,19 @@ BINDING = os.environ.get('REMOTION_PARAMETER_BINDING','full')
 SHOW_SOURCE = os.environ.get('REMOTION_PROGRAM_EVIDENCE','interface')=='source'
 SCOPE = os.environ.get('REMOTION_LIBRARY_SCOPE','all')
 INTENT = os.environ.get('REMOTION_PROGRAM_INTENT','')
+from src.adapters.source_program_bridge import FrozenSourceLibrary
+TASK_LIBRARY = FrozenSourceLibrary(LIBRARY,
+    expected_sha256=os.environ.get('REMOTION_SOURCE_LIBRARY_SHA256'),
+    expected_digest=os.environ.get('REMOTION_SOURCE_LIBRARY_DIGEST'),
+    scope=SCOPE, intent=INTENT, include_source=SHOW_SOURCE) if LIBRARY else None
 
 
 def program_request(value):
-    if not LIBRARY:
+    if TASK_LIBRARY is None:
         raise ToolError('no learned program is installed for this task; use render_source')
-    request = {'library': LIBRARY, 'parameter_binding': BINDING,'library_scope':SCOPE,'intent':INTENT, **value}
-    result = subprocess.run(['node', '--experimental-strip-types', str(ROOT/'scripts/materialize-source-program.mjs')],
-        input=json.dumps(request), capture_output=True, text=True, timeout=15, cwd=ROOT)
-    if result.returncode:
-        raise ToolError(result.stderr[-1500:])
-    return json.loads(result.stdout)
+    if value['operation'] == 'catalog':
+        return TASK_LIBRARY.catalog()
+    return TASK_LIBRARY.materialize(value['program_id'], value['parameters'], BINDING)
 
 
 def list_programs() -> dict:
@@ -55,22 +57,41 @@ def render_program(program_id: str, parameters: dict) -> dict:
     or old semantic decision. Review the returned video with inspect_render.
     """
     with scene.LOCK:
-        materialized = program_request({'operation': 'materialize', 'program_id': program_id, 'parameters': parameters})
-        record = {'kind': 'source_program_selected', 'time': time.time(),
-                  **{key: materialized[key] for key in ('program_id','parameters_sha256','source_sha256','library_digest')}}
-        record['supplied_parameters'] = parameters
-        record['parameters'] = materialized['parameters']
-        record['parameter_binding'] = materialized['parameter_binding']
         audit = scene.WORK.parent/'source-program-audit.jsonl'
-        with audit.open('a') as stream:
-            stream.write(json.dumps(record, ensure_ascii=False)+'\n')
-        audit.chmod(0o600)
-        version = scene.write_source(materialized['source'])['source_version']
-        result = scene.render_composition(version)
-        with audit.open('a') as stream:
-            stream.write(json.dumps({**record, 'kind': 'source_program_rendered', 'render': result,
-                                     'source_current': scene.current_source_version()==version}, ensure_ascii=False)+'\n')
-        return {**result, 'program_id': program_id, 'library_digest': materialized['library_digest']}
+        record = {'call_id': uuid4().hex, 'time': time.time(), 'program_id': program_id}
+        def append(value):
+            with audit.open('a') as stream:
+                stream.write(json.dumps(value, ensure_ascii=False)+'\n')
+            audit.chmod(0o600)
+        try:
+            materialized = program_request({'operation': 'materialize', 'program_id': program_id, 'parameters': parameters})
+            record.update({key: materialized[key] for key in ('program_id','parameters_sha256','source_sha256','library_digest','source_program_version')})
+            record.update(supplied_parameters=parameters, parameters=materialized['parameters'],
+                          parameter_binding=materialized['parameter_binding'])
+            append({**record, 'kind': 'source_program_selected', 'phase': 'materialized'})
+            version = scene.write_source(materialized['source'])['source_version']
+            if version != materialized['source_sha256']:
+                raise ToolError('source_program_written_source_changed')
+            result = scene.render_composition(version)
+            current = scene.current_source_version() == version
+            if not current or result.get('source_version') != version:
+                raise ToolError('source_program_render_source_changed')
+            receipt = {'format': 'source_program_render_receipt_v1', 'call_id': record['call_id'],
+                       'status': 'succeeded', 'phase': 'rendered',
+                       'source_program_version': materialized['source_program_version'],
+                       'source_sha256': version, 'video_sha256': result['video_sha256'],
+                       'video_path': result['video_path']}
+            append({**record, 'kind': 'source_program_rendered', 'render': result,
+                    'source_current': current, 'native_receipt': receipt})
+            return {**result, 'program_id': program_id, 'library_digest': materialized['library_digest'],
+                    'source_program_version': materialized['source_program_version'], 'native_receipt': receipt}
+        except Exception:
+            # Preserve the failed invocation, but never echo private source or
+            # supplied parameters through an exception sent to the model.
+            append({'kind': 'source_program_failed', 'call_id': record['call_id'],
+                    'time': time.time(), 'program_id': program_id, 'reason': 'source_program_render_failed'})
+            raise ToolError('source_program_render_failed') from None
+
 
 
 if __name__ == '__main__':

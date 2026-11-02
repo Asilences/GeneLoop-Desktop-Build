@@ -32,6 +32,30 @@ function send(res, status, body, headers = {}) {
     'referrer-policy': 'no-referrer', ...headers });
   res.end(body);
 }
+
+function rejectOversizedBody(req, res, error) {
+  const body = Buffer.from(JSON.stringify({ error: {code:error.code, type:'invalid_request_error',
+    message:error.message, max_bytes:error.maxBytes} }));
+  let timer;
+  const cleanup = () => {
+    clearTimeout(timer);
+    req.off('end', finish); req.off('aborted', finish); req.off('error', finish);
+    res.off('close', cleanup);
+  };
+  const finish = () => { cleanup(); if (!res.writableEnded) res.end(); };
+  req.once('end', finish); req.once('aborted', finish); req.once('error', finish);
+  res.once('close', cleanup);
+  // A fixed response length lets clients consume the complete 413 immediately.
+  // Delay end()/connection close while already-sent request bytes are draining;
+  // ending a Connection: close response now can reset the socket before the
+  // client receives it. Incomplete uploads retain no body and have a deadline.
+  timer = setTimeout(finish, 5000); timer.unref();
+  res.writeHead(413, {'cache-control':'no-store','x-content-type-options':'nosniff',
+    'referrer-policy':'no-referrer','content-type':'application/json; charset=utf-8',
+    'content-length':body.length,'connection':'close'});
+  res.write(body);
+  if (req.complete) finish(); else req.resume();
+}
 function store(path, value) {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const tmp = path + '.' + random(8) + '.tmp';
@@ -250,8 +274,7 @@ export function createGateway(config) {
         { 'content-type': 'application/json', 'x-sss-control-token': config.memberPolicy.control_token }, body, res);
     } catch (error) {
       if (!res.headersSent && error?.status === 413) {
-        json(res, 413, { error: {code:error.code, type:'invalid_request_error',
-          message:error.message, max_bytes:error.maxBytes} }, {'connection':'close'});
+        rejectOversizedBody(req, res, error);
       } else if (!res.headersSent) json(res, 400, { error: 'Invalid scoped budget request' }); else res.destroy();
     }
   }) : null;

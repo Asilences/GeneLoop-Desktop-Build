@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {inflateSync} from 'node:zlib';
 import {createScriptExecutionFrontier} from './script_execution_frontier.ts';
 import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools';
+import {assertScriptRuntimeCompatibility} from './script_runtime_compatibility.ts';
 
 const sha=(s:any)=>createHash('sha256').update(s).digest('hex');
 const grants=new Map<string,{session:string;versions:any[];body:any;expires:number}>();
@@ -210,7 +211,7 @@ export function loadScriptLibrary(path:string){
   if(library.kind!=='sandboxed_script_motif_library'||library.version!==1||digest(body)!==claimed||!Array.isArray(library.programs)||library.programs.length>12)throw Error('invalid_script_library');
   const root=fileURLToPath(new URL('../../',import.meta.url));
   const locked=scriptCodeLocks;
-  if(!library.code_locks||locked.some(p=>sha(readFileSync(join(root,p)))!==library.code_locks[p]))throw Error('script_runtime_changed');
+  assertScriptRuntimeCompatibility(library.code_locks,locked);
   for(const p of library.programs){
     if(p.certification?.receipt_protocol!==undefined&&p.certification.receipt_protocol!=='bounded_zlib_v1')throw Error('unsupported_script_receipt_protocol');
     if(!p.certification?.passed||p.certification.cases<2||p.certification.source_equivalent!==true||

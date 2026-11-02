@@ -1229,6 +1229,79 @@ TypeScript runtime 核对账号／Task、输入类型和版本、输出授权及
 
 实际命令和质量范围见[视频程序复用入口](../scenarios/remotion_edit/structured/README.md)。机制实现和实测效果状态见[实验记录](experiments/remotion-program-rsi-20261030-v1.md)。
 
+## 效率驱动 RSI 能力契约与诊断执行（2026-11-02）
+
+`schemas/capability-v1.schema.json` 与 `capability_contract.py/.ts` 定义 `capability_v1`、`capability_snapshot_v1`。引用为 `{id, sha256}`；修订身份固定 owner、输入输出契约、effect、实现和依赖。生命周期、认证状态和迁移状态单独保存并进入任务快照，不因价值观察改变修订身份。新摘要采用明确的带类型规范编码，两种语言核验 Unicode 键序与浮点一致性；旧程序继续使用原生 ID、library digest 和证书摘要。
+
+`map_legacy_library` / `mapLegacyLibrary` 将 Source Program 与 Artifact Motif 的精确库字节映射为旁路记录。Python 离线映射经固定 `scripts/map-capability-legacy.mjs` 桥接复用 TypeScript 的原生摘要校验，避免浮点与 Unicode 编码分歧；线上 TypeScript 不依赖 Python。映射不授予执行权，也不改写旧库；原生代码锁、输入与沙箱检查仍由后端负责。组合显式列出固定子能力引用及 `input/step/literal/object/array` 数据绑定，拒绝前向引用、缺依赖、跨 owner 和未声明依赖；未支持的控制流交回现有模型路径。
+
+Python Capability 创建/编译的输入输出 schema 经固定 `scripts/validate-capability-schema.mjs` 调用安装版本的 DSH 权威校验，离线也须安装 Node/npm 依赖；不再用另一套 Python metaschema 决定支持方言。新 Capability wire 值两端一致拒绝负零，摘要函数仍保留 0/-0 等价；旧库字节不规范化改写。Source mapper 复用原生 `validateSourceProgram`，不接受原生执行入口拒绝的标量参数 schema 或超长模板。
+
+`createCapabilityRuntime` 接收可信宿主、固定快照与后端 adapter；每个真实叶调用仍经 `executeRsiOperation`，返回关联父子 call ID、输入输出摘要、状态、原生事件和执行回执。后端必须核验实际版本、完成原生执行并返回回执；源码实例化不算执行。任务取消后停止新调用，已发生的动作保留记录；不自动重放或撤销副作用。`build_only` 与 `archived` 退出直接选择，已认证组合仍可引用其固定版本，但当前认证、权限和撤销检查继续有效。
+
+Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次检查根的当前选择资格。准入后同修订晋级或归档不中断该次调用，下次直接选择已归档根仍拒绝；认证、权限、内容和证据失效继续即时检查。实时检查仅覆盖选定根的依赖闭包，无关根不影响当前调用。
+
+旧 Source 场景新增 `FrozenSourceLibrary`：一次读取并验证任务库字节，后续 catalog/materialize 使用同一字节，runner 保存私有 `source-library.frozen.json`，通过 `REMOTION_SOURCE_LIBRARY_SHA256` / `REMOTION_SOURCE_LIBRARY_DIGEST` 绑定子进程。bridge 保留旧 `library` 路径参数，并支持冻结字节及期望版本；库限制为4 MB且拒绝重复program ID；返回 library 原字节 SHA、原生 digest、program identity 和 certificate digest。`phase=materialized` 只表示源码实例化；场景完成写入/渲染并核对 source_version 后才返回 `source_program_render_receipt_v1`，关联调用 ID、源码及视频摘要。失败留审计，不能生成成功回执。此旧路径已由后述Source Capability adapter接入新内核；其他后端仍待接入。
+
+效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
+
+`npm run rsi:efficiency:check` 运行跨语言与执行诊断，不调用模型。Source已完成下述真实Compose与后继消费，其他后端、Specialize及多代效果实验仍待接入；合成检查不代表这些能力完成。实施状态见[当前交接](handoffs/efficiency-rsi.md)。
+
+### Source Capability 单场景闭环
+
+`buildSourceCapabilities(raw, owner)`复用旧Source库的原生认证，导出固定叶引用、参数schema和精确视频输出schema；只有旧程序认证被继承，组合不会因此认证。`runSourceCapability(manifestPath, snapshot, args)`将每叶交给既有渲染器，每叶独立工作区/nonce容器；输出`source_version/video_sha256/video_path/duration_seconds/call_id`及父子关联native回执。manifest格式为`source_capability_task_v1`，固定task/owner/输入原字节/库/镜像/快照/root/args和workspace_write grant；必须位于候选不可写目录。旧实验默认启动行为保留，新worker只清理自己nonce核对过的容器ID。
+
+`createCapabilityRuntime`可由独立可信验证者提供`readValidationGrant`，绑定task/owner/snapshot/root；它仅让指定candidate根进入隔离验收，依赖仍须认证。正常执行继续拒绝candidate，验证不改其状态，实时撤销/输入证据守卫仍有效。
+
+`createCapabilityStore({directory,owner,runValidation,validator})`的`publish({candidateSnapshot,root,input,expectedLatest})`内部实际调用执行和独立验收回调，不接受模型自报certificate；全部checks passed才晋级根。`capability_publication_v1`绑定输入、完整trace、产物bytes、验证器及范围限制。owner私有目录中保留不可变版本，通过锁和CAS原子更新latest；`loadLatest/loadVersion`复核全部证据摘要。该协议scope为local_experiment，尚未接入生产账户库/在线路由；不冒用原reuse_form类型。
+
+真实提案入口为`scenarios/remotion_edit/structured/run_capability_loop.py`，默认预览、显式`--call-model`才走现有Harness与累计账本；候选输出可交`scripts/complete-source-capability-loop.mjs PLAN.json`，后者独立检查、保存，并强制不同task/workspace的后继消费。失败记录保留；不会自动改质量阈值或发布不合格候选。命令、有效配置、真实结果和限制见[实验记录](experiments/efficiency-rsi-source-loop-20261102.md)。
+
+## Capability 离线改进流程（2026-11-02）
+
+共同流程由 `src/adapters/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
+
+Store新增`constructionLibrary(seed)`：读取并核验提交历史，保留原语和已发布根，输出`capability_construction_library_v1`及共用Capability Snapshot。完整证据验证失败则拒绝；新候选不能靠模型自报认证进入目录。每个新机会重新读取，修复链内冻结目录。新记录只用于实验改进流程，不伪装成旧`reuse_form`协议或授予生产权限。
+
+新增`npm run rsi:improve:source -- --plan "$PRIVATE_PLAN" [--call-model]`。plan分离`cost_reduction`与`capability_acquisition`；引用任务/观测/验证配置及原累计账本。事件分别记录机会、构造尝试、执行/构造贡献和实际决策。模型费用缺失为null；没有从这些事件推导因果创造收益或自动再投资。
+
+Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套组合交付中的视频对象；未指定时保持原`videos[index]`接口。第一次递归联调结果及pending项见[实验记录](experiments/efficiency-rsi-recursive-20261102.md)。
+
+### 模型侧精简构造接口
+
+`capability_compose_draft_v1`由宿主固定版本：模型提交`steps:[{id,use,args}]`及`output`；无预设接口时另提交`contract`。use是冻结目录别名，普通对象/数组及`$input/$step/$literal`编码数据流。宿主展开为原`capability_compose_proposal_v1`后复用原编译/执行/认证，旧完整proposal仍可校验。别名映射与格式纳入修复上下文检查；诊断携带展开proposal坐标和通过的检查。离线重放入口与语法见[共同协议](capability-improvement-v1.md)。
+
+
+### 正常记录、反馈与执行选择（2026-11-02续）
+
+`capability_improvement_plan_v1`新增可选`discovery`和`feedback_directory`，jobs允许为空但须提供discovery；job可携带`source_evidence/feedback_key/execution_scope`。Source适配器复用旧源码见证采集，或消费带独立QA绑定的Capability execute轨迹；生成job进入原控制器。schema与字段示例见[共同协议](capability-improvement-v1.md)。
+
+`CapabilityFeedback`持久化执行/构造/尝试证据，向Builder提供稳定别名下的展示顺序，向宿主已准入的执行候选提供排序，并影响机会准入与队列；未知收益/费用仍为null。withdraw传递过滤依赖闭包且保存恢复清单，archive只退出执行入口，恢复需新任务独立验证。
+
+`npm run rsi:select:source -- --plan PLAN [--execute]`默认预览；执行沿用原TS Source Runtime与固定机械检查器，结果进入同一反馈库。`verify_capability_outputs.py`CLI输出新增`evidence_binding`，绑定trace/manifest/specification原字节；旧验证输出不追改。本轮没有接管正式聊天、修改原账本或声明真实收益。
+
+
+### 跨场景改进适配（2026-11-02续）
+
+新增`npm run rsi:improve -- --plan PLAN [--call-model]`。宿主计划可提供`scene_adapter`原字节引用和`scene_dependencies`；模块导出`create_adapter(plan)`并继承`CapabilityImprovementAdapter`，实现inspect_run/freeze_publication_inputs/publish。模型不能选择或改写宿主适配代码。原Source入口和旧plan兼容，提案实现移到`capability_proposal.py`，原脚本只转发。
+
+共同发现器改为接收可信inspector，不枚举固定场景kind；相同输入失败/成功记录都保留，支持数按不同输入计。发布失败的repairable由宿主场景给出，不在核心扩充场景错误码。`completeCapabilityCycle`共用真实执行、严格Store发布、不同任务/输入/真实路径后继验证；`publicationVerdict`分离QA传输绑定与严格发布字段，未知字段不丢弃。
+
+构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。模型不能直接安装原语；宿主可显式配置下述学习路由。接口、样例和当前边界见[跨场景协议](capability-scenes-v1.md)。
+
+### 原生材料登记与执行轨迹投影（2026-11-02续）
+
+改进plan增加可选摘要引用`learning_routes`。Source宿主仅将missing_primitive分派到唯一scope匹配的原生学习路由，使用原学习器、认证器和已有累计账本；其余缺口defer。共同适配器新增`acquire(job,result,attempt)`和`pending_gap(job)`，registered仅表示材料登记，控制器仍须重读目录、核验认证状态和准入再构造。相同证据已启动的学习不自动重放；当前是显式运行内的调度，不是后台用户任务重试。
+
+`store/materials/<owner哈希>/*.json`为追加式`capability_material_v1`登记，包含backend/library/evidence/acquisition_key/opportunity；export重验原字节并重建原生契约后与seed及Store历史合并。Source manifest新增可选`additional_libraries:[{path,sha256}]`，按完整legacy_ref分派，权限/取消/产物检查仍走原Runtime。旧seed/manifest无须改写。
+
+`capability_trajectory_v1`为原事件的派生只读记录，含owner/task_id/scene/mode/status、evidence、steps、tools、accounting。每个step关联实际call/result事件位置、原参数与结果、已有原生文件边界；parameter_sources/dependencies/preconditions未知则null，quality为unreviewed，split为unassigned。论文显式入口为`scripts/observe-capability-paper-tasks.py --request`，复用原owner/scope/task_ids索引，不改旧工作器/证书/轨迹；当前不自动触发学习或授予认证。
+
+### 原生 Script Capability 与执行兼容（2026-11-02续）
+
+新增`script_motif` legacy_ref backend，由`buildScriptCapabilities(path,owner,expectedSha256?)`经原生loader核验库、身份和证书。`runScriptCapability`使用可信`script_capability_task_v1`，沿原沙箱执行，返回绑定native receipt的`script_capability_trace_v1`。公共材料登记支持该后端。raw bytes的旧`mapLegacyLibrary`仍只映射Source/Artifact；Script应使用原生路径入口核验执行版本。
+
+论文场景共享公共改进控制器和发布生命周期。计划、输入/输出、获取路由及限制见[场景协议](capability-scenes-v1.md#论文-script-接入2026-11-02续)。旧认证编译哈希改为来源记录，执行版本可按仓库精确白名单兼容；不改旧证书、不开放未知执行版本。
 ## 视频网页发布程序接口（2026-11-02）
 
 video_program_v1 通过原 source-program runtime 加载已接受的发布形式。两侧按实际 mode 派生工具表并核对完整 schema；Baseline 清空 Motif 环境变量，execute 侧加载类型化程序。video_program_reused 是已核对当前交付的审计事件，前端 program_reuses 与 verified_skips 分开。部署字段及边界见[视频双路记录](experiments/video-paired-motif-20261102.md)。

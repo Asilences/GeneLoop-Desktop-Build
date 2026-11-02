@@ -29,15 +29,28 @@ export function materializeSource(program:any,supplied:any,binding='full'){
  return {source,source_sha256:createHash('sha256').update(source).digest('hex'),program_id:program.id,
    parameters_sha256:digest(parameters),parameters,supplied_parameters_sha256:digest(supplied),parameter_binding:binding};
 }
-export function loadSourceLibrary(path:string){
- const library=JSON.parse(readFileSync(path,'utf8')),{digest:claimed,...body}=library;
+export function decodeSourceLibrary(raw:string|Buffer,expected:{library_sha256?:string;library_digest?:string}={}){
+ // Hash, validate and consume the very same byte buffer; no path is reopened.
+ const bytes=typeof raw==='string'?Buffer.from(raw,'utf8'):Buffer.from(raw);
+ if(bytes.length>4_000_000)throw Error('source_library_too_large');
+ const library_sha256=createHash('sha256').update(bytes).digest('hex');
+ if(expected.library_sha256!==undefined&&library_sha256!==expected.library_sha256)throw Error('source_library_bytes_changed');
+ const library=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)),{digest:claimed,...body}=library;
  if(library.format!=='source_program_library_v1'||digest(body)!==claimed||!Array.isArray(library.programs))throw Error('source_library_changed');
+ if(expected.library_digest!==undefined&&claimed!==expected.library_digest)throw Error('source_library_digest_changed');
+ const ids=new Set();
  for(const program of library.programs){
   validateSourceProgram(program);
+  if(ids.has(program.id))throw Error('source_library_duplicate_program');ids.add(program.id);
   if(program.status!=='certified'||program.certification?.program_identity!==digest(sourceProgramIdentity(program))||
     program.certification.source_equivalent!==true)throw Error('source_program_not_certified');
  }
- return library;
+ return {library,library_sha256};
+}
+export function loadSourceLibrary(path:string){return decodeSourceLibrary(readFileSync(path)).library;}
+export function sourceProgramVersion(library:any,library_sha256:string,program:any){
+ return {library_sha256,library_digest:library.digest,program_id:program.id,
+  program_sha256:digest(sourceProgramIdentity(program)),certificate_sha256:digest(program.certification)};
 }
 export function sourceCatalog(library:any,includeSource=false){
  return library.programs.map((p:any)=>({id:p.id,description:p.description,parameters_schema:p.parameters_schema,
@@ -77,7 +90,7 @@ export function loadSourceForm(store:string,owner:string){
  const policy=JSON.parse(readFileSync(policyPath,'utf8')),{digest:claimed,...body}=policy;
  if(policy.owner!==owner||policy.digest!==pointer.digest||policy.generation!==pointer.generation||digest(body)!==claimed||policy.verdict?.accepted!==true||
    !['program_catalog','typed_tools'].includes(policy.form?.representation))throw Error('reuse_form_policy_changed');
- const library=loadSourceLibrary(libraryPath);
+ const {library,library_sha256}=decodeSourceLibrary(readFileSync(libraryPath));
  if(library.digest!==policy.library_digest)throw Error('reuse_form_library_changed');
  if(policy.rsi_update_digest){
   const directory=join(root,pointer.policy.split('/')[0]);
@@ -88,5 +101,5 @@ export function loadSourceForm(store:string,owner:string){
     publication.record_type!=='publication_receipt'||p.manifest_sha256!==policy.digest||p.candidate_id!==policy.proposal_digest||
     p.next_versions.reuse_form?.sha256!==policy.proposal_digest)throw Error('reuse_form_protocol_receipt_changed');
  }
- return {policy,library_path:libraryPath,pointer_sha256:createHash('sha256').update(raw).digest('hex')};
+ return {policy,library_path:libraryPath,library_sha256,pointer_sha256:createHash('sha256').update(raw).digest('hex')};
 }
