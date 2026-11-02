@@ -80,12 +80,25 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         if code==0 and result.get('status')=='completed':
             return {'status':'published','publication_sha256':result['publication_sha256'],'evidence_ref':ref}
         feedback={}
+        runtime_binding_failure=False
         for label in ('validation','followup'):
             p=directory/label/'validation.json'
             if p.exists() and not read(p)['passed']:feedback=read(p);break
+            trace_path=directory/label/'trace.json'
+            if trace_path.exists():
+                trace=read(trace_path)
+                failures=[{'capability':r['capability'],'reason':r.get('reason'),'call_id':r['call_id']}
+                    for r in trace.get('receipts',[]) if r.get('reason')=='script_capability_input_not_granted']
+                if failures:
+                    runtime_binding_failure=True
+                    feedback={'checks':[{'id':'granted_input_binding','status':'failed','observation':{
+                        'failed_calls':failures,'current_task_arguments':plan[label]['input'],
+                        'granted_inputs':plan[label]['manifest']['inputs'],
+                        'requirement':'Bind existing file-reading capabilities to current task inputs, not new-program ABI placeholders.'}}]}
+                    break
         return {'status':'failed','error':result.get('error','frontier_publication_failed'),
             'committed':(directory/'publication.json').exists(),'evidence_ref':ref,
-            'repairable':result.get('error')=='capability_store_validation_failed','feedback':feedback}
+            'repairable':result.get('error')=='capability_store_validation_failed' or runtime_binding_failure,'feedback':feedback}
 
 
 def create_adapter(plan):return FrontierAdapter(plan)
