@@ -36,7 +36,18 @@ class FrontierGate(CumulativeProposalGate):
     def activate(self,cell,limit):
         if self.current is not None:raise ValueError('frontier_active_attempt')
         self.cell=cell
-        self.budget=self.budgets.setdefault(cell,ResearchBudget(limit))
+        if cell not in self.budgets:
+            budget=ResearchBudget(limit)
+            if self.journal.exists():
+                raw=self.journal.read_text(encoding='utf-8')
+                if not raw.endswith('\n'):raise ValueError('frontier_budget_journal_incomplete')
+                for row in map(json.loads,raw.splitlines()):
+                    if row.get('cell')!=cell:continue
+                    if row['event']=='cell_activated' and Decimal(row['budget_usd'])!=budget.limit:raise ValueError('frontier_budget_changed')
+                    if row['event']=='request_booked':budget.book(row['request_id'],Decimal(row['reserved_upper_usd']))
+                    if row['event']=='request_settled':budget.finish(row['request_id'],Decimal(row['observed_model_usd']) if row['observed_model_usd'] is not None else None)
+            self.budgets[cell]=budget
+        self.budget=self.budgets[cell]
         if self.budget.limit!=Decimal(str(limit)):raise ValueError('frontier_budget_changed')
         append(self.journal,{'event':'cell_activated','cell':cell,'budget_usd':str(self.budget.limit),'time':time.time()})
 
