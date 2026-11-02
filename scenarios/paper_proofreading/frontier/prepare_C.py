@@ -11,6 +11,7 @@ from scenarios.paper_proofreading.frontier.oracle import evaluate,audit,canonica
 def main():
     p=argparse.ArgumentParser()
     for name in ('base','output','bib_library','tex_library','ledger_root'):p.add_argument('--'+name.replace('_','-'),type=Path,required=True)
+    p.add_argument('--store',type=Path)
     a=p.parse_args();base=a.base.resolve();out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
     owner='frontier-20261103';libraries=[reference(a.bib_library.resolve()),reference(a.tex_library.resolve())];catalogs=[]
     for library in libraries:
@@ -51,7 +52,7 @@ def main():
         'evidence':reference(out/'primitive-quality.json')}]}
     dependencies=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py']
     plan={'format':'capability_improvement_plan_v1','id':'frontier-C','owner':owner,'output':str(out/'run'),
-        'store':str(out/'store'),'seed':reference(out/'seed.json'),'seed_catalog':reference(out/'catalog.json'),
+        'store':str(a.store.resolve() if a.store else out/'store'),'seed':reference(out/'seed.json'),'seed_catalog':reference(out/'catalog.json'),
         'ledger_root':str(a.ledger_root.resolve()),
         'policy':{'version':'capability_improvement_policy_v1','max_repairs':None},'jobs':[job],
         'scene_adapter':reference(Path(__file__).with_name('adapter.py')),
