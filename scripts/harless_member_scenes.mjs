@@ -50,6 +50,12 @@ export function memberSceneDeployment(policy, deployment) {
     if (!inside(root, source)) throw Error('Member code directory escapes the project');
     return { source, target: '/app/' + name };
   });
+  const packageLock=join(root,'package-lock.json');
+  if(existsSync(packageLock)){
+    const source=fixedPath(packageLock,'file','dependency lock');
+    if(statSync(source).nlink!==1)throw Error('Member dependency lock must be a private regular file');
+    mappings.push({source,target:'/app/package-lock.json'});
+  }
   const mounts = [...mappings, ...pythonRoots.map(source => ({ source, target: source }))];
   const skill=pptMasterInstallation(deployment.pptMasterRoot,root);
   if(skill){mounts.push(skill);mappings.push(skill);}

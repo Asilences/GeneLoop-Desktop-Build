@@ -101,7 +101,7 @@ export function apply(ctx){ctx.connection.fetch.register({path:'/api/diagnostic/
         '--dir','/app/.local','--bind',str(user/'tasks'),'/app/.local/web']
     # Mirror production's public module graph; the legacy report interceptor
     # is imported by the host even when this diagnostic creates no scene Task.
-    for name in ('scripts','benchmarks','motif-libraries'):
+    for name in ('scripts','benchmarks','motif-libraries','schemas'):
         if (ROOT/name).exists():args+=['--ro-bind',str(ROOT/name),'/app/'+name]
     for mount in deployment['mounts']:
         if mount['target']!='/app/src':args+=['--ro-bind',mount['source'],mount['target']]

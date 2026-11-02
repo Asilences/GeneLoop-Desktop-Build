@@ -89,8 +89,10 @@ test('Scene deployment mounts code read-only and keeps user data and credentials
       cwd:root,args:[join(root,'scenarios/general/server.py'),'__HARLESS_SESSION_WORKSPACE__/inputs']}}]};
   const policy={scenes:[scene],resources:{owner_private:{text:'Never inherit this'}}};
   const deployment={projectRoot:root,pythonExecutable:python,pythonRoots:[join(root,'python')]};
+  writeFileSync(join(root,'package-lock.json'),'{}');
   const result=memberSceneDeployment(policy,deployment);
   assert.equal(result.output,'/app/.local/web');
+  assert.ok(result.mounts.some(row=>row.source===join(root,'package-lock.json')&&row.target==='/app/package-lock.json'));
   assert.deepEqual(result.native_resources,{projectRoot:'/app'});
   assert.deepEqual(result.allowed_tools,scene.allowed_tools);
   assert.equal(result.scenes[0].mcp_rows[0].config.args[0],'/app/scenarios/general/server.py');
@@ -99,9 +101,11 @@ test('Scene deployment mounts code read-only and keeps user data and credentials
   assert.equal(policy.scenes[0].mcp_rows[0].config.cwd,root);
   assert.equal(result.scenes[0].resources,undefined);
   const certified=memberSceneDeployment({...policy,scenes:[{...scene,certified_code_locks:{
+    [join(root,'package-lock.json')]:'dependency-digest',
     [join(root,'config/geneloop-capabilities.json')]:'public-capability-digest',
     [join(root,'src/adapters/geneloop_shell.ts')]:'shell-digest'}}]},deployment);
   assert.deepEqual(certified.scenes[0].certified_code_locks,{
+    '/app/package-lock.json':'dependency-digest',
     '/app/config/geneloop-capabilities.json':'public-capability-digest',
     '/app/src/adapters/geneloop_shell.ts':'shell-digest'});
   assert.ok(!certified.mounts.some(row=>row.source===join(root,'config')),
