@@ -30,3 +30,20 @@ def test_reopening_runner_preserves_known_and_unsettled_costs(tmp_path):
     assert gate.budget.spent==D('.1') and gate.budget.pending=={8:D('.6')}
     assert gate.budget.available(D('.3')) and not gate.budget.available(D('.3000000001'))
     with pytest.raises(ValueError,match='budget_changed'):FrontierGate(tmp_path,p,deadline=time.time()+60).activate('c','2')
+
+
+def test_outer_study_episode_books_all_inner_repairs_without_owner_reassignment(tmp_path):
+    from scenarios.paper_proofreading.frontier.budget import StudyEpisodeRegistry
+    from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
+    from tests.test_efficiency_rsi_measurement import example
+    plan,_,_=example(tmp_path);registry=StudyRequestRegistry(plan,tmp_path/'trusted.jsonl',create=True)
+    root=tmp_path/'episode';bridge=StudyEpisodeRegistry(registry,root,'baseline-episode','baseline');root.mkdir()
+    refs=[]
+    for i in range(2):
+        path=root/f'inner-{i}';bridge.register_owner(path,f'inner-{i}',cell_id='baseline');path.mkdir()
+        bridge.bind_request(path,'original-ledger',str(i));refs.append({'ledger_ref':'original-ledger','id':str(i)})
+    exported=registry.export(refs)
+    assert exported['cells'][0]['attempt_ids']==['baseline-episode']
+    assert all(b['owner_id']=='baseline-episode' for b in exported['request_bindings'])
+    with pytest.raises(ValueError,match='unregistered'):bridge.bind_request(root/'unknown','original-ledger','third')
+    with pytest.raises(ValueError,match='child_invalid'):bridge.register_owner(tmp_path/'outside','bad',cell_id='baseline')

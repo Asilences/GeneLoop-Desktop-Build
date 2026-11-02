@@ -27,6 +27,30 @@ class ResearchBudget:
         self.spent+=reserved if cost is None else cost
 
 
+class StudyEpisodeRegistry:
+    """Pre-book one measured acquisition episode including inner repairs.
+
+    Initial exposure is frozen by the study. Actual intermediate pools and
+    material acquisitions remain in the separate improvement journal.
+    """
+    def __init__(self,registry,path,owner_id,cell_id):
+        self.registry=registry;self.path=Path(path).resolve();self.owner_id=owner_id;self.cell_id=cell_id;self.children=set()
+        registry.register_owner(self.path,owner_id,cell_id=cell_id)
+
+    def register_owner(self,path,owner_id,*,cell_id=None,category=None):
+        path=Path(path).resolve()
+        if not path.is_relative_to(self.path) or path==self.path or cell_id!=self.cell_id or category is not None or path in self.children:
+            raise ValueError('frontier_episode_child_invalid')
+        self.children.add(path)
+
+    def owner_for_path(self,path):
+        if Path(path).resolve() not in self.children:raise ValueError('frontier_episode_child_unregistered')
+        return self.registry.owner_for_path(self.path)
+
+    def bind_request(self,path,ledger_ref,request_id):
+        self.owner_for_path(path);self.registry.bind_request(self.path,ledger_ref,request_id)
+
+
 class FrontierGate(CumulativeProposalGate):
     def __init__(self,ledger_root,journal,*,deadline,study_registry=None):
         super().__init__(ledger_root,study_registry=study_registry)
@@ -57,6 +81,7 @@ class FrontierGate(CumulativeProposalGate):
         if self.cell is None:raise ValueError('frontier_cell_required')
         self.owners[path]={'owner_id':owner_id,'cell':self.cell,'category':category}
         if self.study_registry:self.study_registry.register_owner(path,owner_id,cell_id=self.cell)
+        if isinstance(self.study_registry,StudyEpisodeRegistry):self.owners[path]['study_episode_owner']=self.study_registry.owner_id
         append(self.journal,{'event':'owner_registered','path':path,**self.owners[path],'time':time.time()})
 
     def __enter__(self):
