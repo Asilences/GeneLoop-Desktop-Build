@@ -1,45 +1,25 @@
-# 效率驱动 RSI 当前交接
+# 效率 RSI 当前交接
 
-- 更新时间与交接人：2026-11-02，Codex。
-- 网关未解决项已修复：超限请求先发送可解析413，再有界回收连接；原ECONNRESET用例通过，macOS/Linux各10项与竞态单项连续10次通过。仅本修复加7fdac81的隔离全量1809 Python/1508 Node通过、0失败，smoke/motif通过；旧失败保留在下文和日志中。Paper v44/PPT v41兼容重导出，详情见[记录](../experiments/gateway-oversize-drain-20261102.md)。Windows兼容改动由另一会话负责。
-- Windows CI修复：PR #121的Windows失败根因为反馈模块直接import fcntl，6项测试收集失败；已改用现有跨平台文件锁，提案账本同样复用，并补齐新模块UTF-8文本边界和Docker参数诊断uid/gid。最小59项回归通过/1项跳过，真实跨平台结果以PR最新head为准。详见[修复记录](../experiments/pr121-windows-ci-20261102.md)。上传ECONNRESET属于另一个问题，工作区并行网关改动未混入本次提交。
-- PR状态：已推送并创建[PR #121](https://github.com/jingyio/GeneLoop/pull/121)，包含此前未推送的公共Capability/Source/Script接线；已合并main `e6b6f12`（PR #119）。本轮未合并PR、未部署。
-- 合并后验证：Python1809通过/237跳过，Node1506通过/19跳过/1旧上传typed413 ECONNRESET失败；该文件独立复核8通过/1同错误失败，完整日志在`.local/efficiency-rsi-pr-20261102/`，未改传输代码。smoke和motif:check通过。合并前1793 Python/1495 Node全通过及Linux原生证据按原记录保留，不称合并后完整全绿。
-- main兼容：main与本分支独立使用过Paper v41/PPT v38编号，合并保留main版本。现按原重导出器从main Paper v42/PPT v39生成v43/v40，精确审阅容器归属、Source单次解码及版本绑定三处变化；五项程序/证据文件逐字节保留。58项兼容回归通过，旧版本全部保留。
-- 最新Script接线：`script_capability_runtime.ts`、公共材料登记及论文 `capability_adapter.py` 已接入；只读文件程序可进入Builder、组合、独立验证、发布、换输入执行并回到构造池。论文acquire使用原学习器，训练/认证任务分开；真实历史任务路由及模型提案尚未实测。没有默认聊天接管。
-- 最新兼容修正：按用户要求直接拆分认证来源与执行锁。四个离线编译/认证文件保留哈希但不阻止旧程序执行，其他执行锁继续检查；`config/script-runtime-compatibility.json`目前只放行本次loader策略修改的精确旧/新哈希。没有全局skip验证或改写旧证书。联网/argv程序仍走旧路径，未纳入新后端。
-- 最新原生诊断：Linux 21项Script/沙箱测试及4项论文测试通过；论文验证4条/3唯一键/重复P，后继5条/4唯一键/重复T，各4项检查通过。发布 `c1248bde88f533d923456dd888b5e68b0219e15db56fc9cb6eae32e96de73ef3`，下一Builder目录可见且记录构造贡献。输入/提案为诊断夹具，模型调用0。首次schema和Store字段失败均保留并修复，见[记录](../experiments/efficiency-rsi-script-20261102.md)。
-- 最新下一步：用已有真实论文历史任务固定训练/认证分区，实测新acquire路由与真实Builder组合；失败时按具体阶段定位。默认任务结束采集、读取Motif、任意MCP、大规模成本与创造价值效果仍pending。以下“论文Script适配未完成”等段落为此前阶段，已由本条及上述最新接线更新。
-- 已有收益与本轮范围：此前Meta-v6六题已观察到程序复用的前向模型收益：请求44→30（-31.8%）、代理估费USD0.04070525→0.02613575（-35.8%）、输出Token21423→10967（-48.8%），六题均实际程序成片；质量审阅及总学习/研究成本摊销限制仍按[原记录](../experiments/remotion-program-rsi-20261030-v1.md)保留。本轮“收益待测”只指新增公共机制的增量收益，不否定这些历史观察，不应笼统写成项目没有效率增益。
-- 最新推进顺序：已读取网页会话最新正文；先完成材料闭环并接第二真实场景，主动Reuse-Aware执行及自动再投资延期。当前公共接线及Source实装已推进，论文只读证据入口已实现，尚不能称两个真实场景的完整闭环。
-- 最新代码：公共`capability_materials.py/.ts`追加式登记原生材料，控制器支持acquire、入池后重读目录/重新准入、等待机会随目录变化再评价；Source使用原learn_programs/certify_programs，固定scope/训练证据，已有ledger与proposal锁，Source manifest支持additional_libraries。重复/中断学习不自动重放，不重发原用户任务。
-- 最新论文接入：`capability_trajectory.py`及`observe-capability-paper-tasks.py`复用原owner/scope/task_ids索引，保存真实call/result/文件边界/账本引用，未知依赖为null。原工作器改动曾触发有效代码锁，已撤回；旧工作器、库、证书和生产保持不变。当前显式采集，非默认任务完成钩子；Script/读取Motif新后端及质量检查接线仍缺。
-- 最新验证：本地定向187 Python/93 Node通过；全量1790 Python/236跳过，Node1488通过/1旧上传ECONNRESET失败/17跳过。Linux历史原生库作为新增版本实际登记、验证、发布、不同输入复用，各23项检查通过、共4次叶执行；这是材料执行接线验证，模型调用0，不是新材料自主学习或真实递归增长证据。最后控制器计数/准入修订有额外24项回归。
-- 最新记录：[材料闭环记录](../experiments/efficiency-rsi-materials-20261102.md)，私有`.local/efficiency-rsi-materials-20261102/`。新增接线的增量收益尚未测量；本轮没有生产发布、推送或PR，原账本未改。关闭方式：计划不配learning_routes、不运行独立论文观察入口；旧seed不改写，新增Store独立保存。
-- 目标与本次范围：先完善共同改进机制、递归构造接线及反馈，再考虑聊天入口。用户明确不强求小样本正向效果；根据实际结果决定追加验证或保留pending等待大规模测试。效果不理想时优先与用户拆解具体失败环节，不扩写总结或自动追求正向结果。
-- 分支 / commit / 工作区：`codex/efficiency-rsi-20261102`，最新跨场景接线基于本地7463596继续；具体本轮提交见Git。未推送、未开PR、未部署。私人`reference/`不跟踪；旧备份、旧库及累计账本保留。
-- 已完成：`capability_improvement.py`及`capability-improvement-v1.schema.json`共同记录机会、全部尝试、双贡献与实际决策；区分降本/能力获得目标，F02准入复用而非放宽旧评价。
-- 已完成：`capability_store.ts`新增构造库导出，核验全部提交历史，保留种子与历史根，排除候选/拒绝/归档及失效闭包，保留当前种子撤回状态；新能力发布后自动更新下一Builder输入。`run_capability_improvement.py`复用现有Harness与TS执行/发布器，冻结配置、显式修复、重复失败暂缓、已提交后继失败停止，隔离每次尝试目录。
-- 前轮新增：`capability_authoring.py`精简模型draft，宿主补固定字段/契约/引用；开放任务仍由模型设计contract。`run_capability_loop.py`保存raw/draft/展开proposal/aliases，修复校验格式与别名快照。编译器原失败点提供位置、期望、实际值和已通过检查；重复规则同时看错误/位置/候选，不打进度分。
-- 前轮离线重放：新增`scripts/replay-capability-proposal.py`，五份历史回答保持原样。C两份只补各两处对象包装即编译通过，不改选择/数据流；只补第一处会将报错定位移到第二处。两份非法JSON不猜补，D成功提案精简往返一致。详见[短记录](../experiments/efficiency-rsi-authoring-replay-20261102.md)，新增模型/执行/发布均0，不称Agent自主修复成功。
-- 已完成：Source宿主检查器支持固定result_path以验证嵌套交付；新增精确binding位置及JSON行列反馈。共同协议、入口和当前边界见[协议](../capability-improvement-v1.md)及`docs/interfaces.md`。没有第二套Agent循环或在线Runtime。
-- 前轮新增：`capability_observations.py`将已登记Source记录生成jobs，复用旧源码见证；旧视频/PPT学习循环早已存在，缺口是到新Capability控制器的桥接。`capability_feedback.py`将执行/构造事实用于Builder排序、显式准入执行候选、机会排序/暂缓；不是单纯加字段。`rsi:select:source`默认预览，execute沿用TS Runtime和固定检查器，结果回到反馈库。限定场景仍由宿主提供context与验收任务。
-- 前轮生命周期：版本撤回传递过滤后继并持久化恢复清单，保留旧库/无关能力；已发布后继失败隔离，输入变化不全局撤回。通用守卫错误不猜叶级归因。显式执行归档保留Builder材料；恢复需可信宿主新任务独立验证，尚未自动调度。
-- 前轮已验证：本地/Linux定向172 Python、87 Node通过；Linux smoke18项及SDK初始化通过。新增27项为免费机制诊断。最终本地全量1773 Python通过/236跳过，Node1482通过/1失败/17跳过；唯一失败为已出现过的上传typed413 ECONNRESET，未修复。最初12项macOS临时路径别名失败通过canonical TMPDIR复核，未放宽检查。命令/反例见[本轮记录](../experiments/efficiency-rsi-feedback-20261102.md)。
-- 前轮配置与数据：`.local/efficiency-rsi-feedback-20261102/`保存两端代码摘要、完整定向/全量/失败复核日志及隔离Linux代码归档。模型调用/新渲染/发布均0，累计账本和生产服务不变。质量/效率实际效果仍pending。
-- 本轮新增：公共`capability_discovery.py/capability_proposal.py/capability_scene.py`及`capability_cycle.ts`；`rsi:improve`通过宿主摘要固定的scene_adapter接入。Source只保留记录解释、输入冻结和原生发布桥接，旧命令兼容。场景声明repairable，核心不再枚举Source错误码。接口见[跨场景协议](../capability-scenes-v1.md)。
-- 本轮缺口协议：模型可明确报告缺原语/契约不兼容/证据不足，保存缺口和成本并停止修复；同证据/目录暂缓，认证目录变化后可重试。还未自动调用既有学习器补材料，不能宣称开放式能力生成。
-- 本轮真实执行：Linux新Store重放历史模型候选，实际验证与不同输入后继执行各2次叶执行、23项机械检查通过；模型请求0。修复QA绑定字段与严格Store发布不兼容，验证公共发布生命周期确实可运行。原库/原账本/服务不改写。非视频计数适配使用真实子进程，但任务/准入/提案是诊断夹具，不是新模型或收益证据。
-- 本轮已验证：本地/Linux最终179 Python、91 Node定向通过；Linux smoke18项及SDK初始化通过。本地全量1780 Python通过/236跳过，Node1486通过/1旧上传ECONNRESET失败/17跳过，未修复该旧问题。
-- 本轮配置与数据：`.local/efficiency-rsi-scenes-20261102/`保留本地/服务器code、code-final、代码摘要、完整日志、source-replay-summary；实际视频与新测试Store位于服务器code/.local/source-cycle-replay。完整限制与负面结果见[记录](../experiments/efficiency-rsi-scenes-20261102.md)。
-- 前轮真实观察：实验`efficiency-rsi-recursive-20261102`。C连续3次编译失败后暂缓；D第一次JSON失败、第二次直接组合原语成功，4视频验证44项通过、不同参数4视频后继检查44项通过，实际发布并进入后续构造目录。没有发生C构造D；不强制制造谱系。详细反馈修订在此后完成，只通过诊断，未追加模型实验。
-- 前轮研究边界：该轮是两项明确需求的受控真实联调，不是自然用户流或统计样本；没有成本对照、因果创造价值或持续RSI收益。机器媒体检查通过，人工质量未评审。`benefit`/`efficiency_conclusion`保持null。
-- 前轮费用：真实请求3213–3217共5次，全部失败计入，代理估费USD0.02025325。累计3212→3217、预约记账约USD2.668405728，原4569行账本前缀字节不变。账单/机器/人工成本未知，历史未知不改写。
-- 前轮已验证：本地定向145 Python/87 Node通过；全量1746 Python通过/236跳过，Node1483通过/17跳过/0失败。此前间歇性typed413 ECONNRESET该轮未出现，但该轮没有针对它修复，不宣称已根治。Linux定向145 Python/87 Node及smoke通过，paid_model_requests=0；6份核心文件摘要、5份重放结果与本地一致。
-- 前轮配置与数据：`.local/efficiency-rsi-authoring-20261102/`保存原回答只读副本、五份重放、逐处包装检查、代码摘要及回归日志；旧实验与账本未改写。
-- 前轮配置与数据：服务器原项目私有环境、原ledger_root；模型DeepSeek Flash/off/max_tokens393216，费用/请求不限。私有`.local/efficiency-rsi-recursive-20261102/`保留首次运行code、最终code-final、计划、原始请求及全部产物。运行代码摘要见`code/.local/recursive-001/effective.json`；本地同步`delivery/summary.json`、完整事件和后继4个视频。正式服务仍由GENELOOP_SERVICE_HOME/CONFIG定位，本轮未运维。
-- 实验结论：[本轮跨场景记录](../experiments/efficiency-rsi-scenes-20261102.md)；[前轮反馈记录](../experiments/efficiency-rsi-feedback-20261102.md)；[前轮真实递归尝试](../experiments/efficiency-rsi-recursive-20261102.md)；前轮成功执行复用及取消验证见[Source首轮](../experiments/efficiency-rsi-source-loop-20261102.md)。两轮结果分开，不用前轮成功覆盖本轮C失败。
-- 未完成与pending：真实C→D与新反馈效果；任意开放轨迹/应用的自动发现及普通任务完成后后台触发；容量受限全局淘汰、价值估计/再投资；恢复队列自动调度；大规模总成本与负迁移；任意崩溃恢复。旧测量器F1/F2/F4/F5和深谱系F8未解决，本轮未用其报告收益。
-- 接手下一步：1. 补论文Script/读取Motif受支持子集的原生Capability适配及独立验收，保留旧证书语义；随后接默认完成采集，不能把投影当新能力。2. Source新学习路由真实模型联调仍pending，当前只有诊断及已认证历史材料实际执行；分开验证缺口识别、学习与认证，不强求正向降本。3. 任意MCP、跨代收益及后台中断恢复未完成，旧上传ECONNRESET独立处理。
-- 权限与预算：测试目的真实API持续授权仍有效，账本不清零；按用户最新要求本轮不再追加模型验证。外部应用写入、私人原件修改、实际投稿未授权。
-- 回退与风险：撤回本轮跨场景/缺口协议改动可回到7463596，但该版本包含QA绑定与严格发布接口不兼容，回退时须保留本轮该修复或停用新绑定发布路径；没有修改生产配置或旧库。不可删除失败日志、Store版本和原账本；不存在自动崩溃重放，恢复前需核对提交/副作用状态。
+- 更新时间与交接人：2026-11-02，Codex；本会话负责 A（计量正确性），B（Paper 真实闭环）由用户另开分支。
+- 目标与本次范围：修复 F1/F2/F4/F5，补请求发出前的归属登记和独立导出；不增加模型构造循环，不接管聊天、不做生产发布。
+- 分支 / commit / 工作区：`codex/rsi-real-acceptance-20261102`，基于已合并 PR #121 的 `71e3b7c`；本轮代码以本记录所在提交为准。私人 `reference/` 不跟踪，原库、失败日志、证书和累计账本保留。
+- 提交与发布：A仅在当前分支本地提交，未推送、未创建新PR、未部署；并行会话的未提交改动保留。
+- 已完成：`efficiency_rsi_measurement.py` 分离全 cell 预算与首成功成本，保留质量观察和未知费用，十进制计量；registry v2 冻结请求的 owner/cell/category；`efficiency_rsi_registry.py` 用宿主 journal 登记并导出，`CumulativeProposalGate(..., study_registry=...)` 在原 booking 边界接线。接口及版本迁移见[评价协议](../efficiency-rsi-evaluation.md)。
+- 已验证：本地完整 `npm test`：1835 Python 通过/237 跳过，1509 Node 通过/19 跳过，0 失败；最后路径预登记调整后本地/Linux定向各 69 项通过。`rsi:efficiency:check` 210 Python + 93 Node 通过；无模型 smoke 通过。它们是诊断回归，不是模型效果验收。旧上传 ECONNRESET 已在 main 中修复，不再列为当前未解决项。
+- 本轮实验记录：[计量反例与修复](../experiments/efficiency-rsi-measurement-20261102.md)。未重新计算历史收益，不将新口径追写成旧实验结果；本轮真实模型请求和费用新增均为 0，账单、人工与维护总成本仍未采集。
+- 配置与数据：私有 `.local/rsi-real-acceptance-20261102/` 保存修复前复现、A 回归日志及 `code-A` 快照/摘要；不提交原始轨迹。真实累计账本、生产配置均未改。工作区后续出现的 `script_motif_compiler.py` 及对应测试属于并行会话，A不修改、不提交；Linux A快照核验未包含这两份文件的后续改动。
+
+## B 分支接手
+
+1. 从包含 A 的提交分出或 cherry-pick A 后，先核对代码版本。B 的输入已准备在私有 `inputs-v2/`：同一真实 BibTeX 的 22/24/27/29 条互斥子集及来源哈希，原文件未改；它们不是多论文独立样本。此前已完成任务中只有算术诊断可供 Script 挖掘、候选为零，不能冒充论文历史任务闭环。
+2. 真实执行前冻结 study/质量标准，先以全研究唯一 ID 登记 owner（可早于 attempt 目录创建），在实际 provider booking 边界调用绑定。提案网关已有可选接线；独立 Web runner 仍须显式接入，不能从 observations 反造 journal。导出本 study 的完整 booking/provider 请求库存，包含失败和未结算请求；结束时再关闭 cell。若仅做无界任务验收，报告质量结果，不能报告有限预算能力解锁。
+3. 服务器隔离位置沿用 `/home/jingyij/jjy/.local/rsi-real-acceptance-20261102/`，运行前加载项目私有 `.local/remote-env.sh`。早先 `code-001` 是旧快照，不可当作 A 最终代码。原累计实验账本继续使用且串行访问；不要复用生产运行实例、重置费用或并行竞争同一账本。
+
+## 既有机制和研究边界
+
+- Source、论文 Script 原生能力/独立检查、材料学习/认证入池、公共构造/修复/反馈与发布生命周期已接线。Source 曾有真实构造与后继执行；Script 的公共闭环目前主要由原生诊断验证。正常 Paper 任务自动结束采集、论文真实历史驱动自主学习/组合仍待 B 验收。见[Source 真实闭环](../experiments/efficiency-rsi-source-loop-20261102.md)、[材料接线](../experiments/efficiency-rsi-materials-20261102.md)、[Script 接线](../experiments/efficiency-rsi-script-20261102.md)。
+- 跨代结果保留：C 三次构造失败；D 修复后直接使用原语成功，没有调用 C。验证和后继执行各 4 视频/44 检查通过，不能称 C→D 或持续 RSI 成功；该轮 5 次真实请求估费 USD0.02025325。详见[递归尝试](../experiments/efficiency-rsi-recursive-20261102.md)。后续诊断改进见[离线重放](../experiments/efficiency-rsi-authoring-replay-20261102.md)和[反馈接线](../experiments/efficiency-rsi-feedback-20261102.md)。
+- 未完成：真实跨代构造；新增公共机制的增量效率和大规模同质量总成本验证；自动再投资及创造价值因果估计；任意 MCP 适配；F8 深谱系；生产接管、任意中断自动恢复。当前 A 的 journal 与预算 checkpoint 不是跨文件事务，写入失败或中断后须先核对预留/归属，不能自动重建后继续报告。全平台请求完整采集、研究预算在线执行也不由离线测量器提供。
+- 接手下一步：A 完成后由 B 做最小真实 Paper 端到端；之后独立开展 C→D 研究实验；生产自动演化启用前补恢复验收。不强求少量任务出现增益。
+- 权限与预算：A 没有模型/外部应用调用。真实 DeepSeek 测试持续授权按 AGENTS.md，仍须记录实际模型/模式/上限并沿用原账本；外部应用写入、私人原件修改和实际投稿未授权。
+- 回退与风险：撤回 A 回到 `71e3b7c` 可保留既有产品行为，但会重新引入旧计量问题，不能继续使用旧评价器报告公平收益。新 journal/导出留存为证据，不删除、不篡改；没有部署或重启生产。

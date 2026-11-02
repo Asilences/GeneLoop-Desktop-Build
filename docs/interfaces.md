@@ -1245,6 +1245,8 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 
 效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
 
+当前 registry 为 `efficiency_rsi_registry_v2`，报告为 `efficiency_rsi_measurement_v2`；旧 registry v1 不能直接用于新口径。`StudyRequestRegistry(plan, journal, create=True)` 由宿主在执行前登记 owner，`CumulativeProposalGate(..., study_registry=registry)` 在真实 booking 边界持久绑定 request→attempt/overhead；`export(provider_request_refs)` 对照独立完整请求库存导出。只读 CLI 为 `scripts/export-efficiency-rsi-registry.py`。此接线为可选研究接口，其他 runner 未自动接入。全 cell 支出判预算，双方首成功获取成本算条件节省；无界/未知/未关闭结果只保留质量观察，不计有限预算能力增益。十进制金额边界与精确字符串、原账本保留及故障边界见上述协议。
+
 `npm run rsi:efficiency:check` 运行跨语言与执行诊断，不调用模型。Source已完成下述真实Compose与后继消费，其他后端、Specialize及多代效果实验仍待接入；合成检查不代表这些能力完成。实施状态见[当前交接](handoffs/efficiency-rsi.md)。
 
 ### Source Capability 单场景闭环

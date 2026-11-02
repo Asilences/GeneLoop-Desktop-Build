@@ -319,7 +319,7 @@
       "type": "object",
       "properties": {
         "format": {
-          "const": "efficiency_rsi_registry_v1"
+          "const": "efficiency_rsi_registry_v2"
         },
         "plan_sha256": {
           "type": "string",
@@ -389,6 +389,60 @@
             "maxLength": 256
           },
           "uniqueItems": true
+        },
+        "request_bindings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ledger_ref": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "owner_type": {
+                "enum": [
+                  "attempt",
+                  "overhead"
+                ]
+              },
+              "owner_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "cell_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "ledger_ref",
+              "id",
+              "owner_type",
+              "owner_id",
+              "cell_id",
+              "category"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [
@@ -396,7 +450,8 @@
         "plan_sha256",
         "cells",
         "request_refs",
-        "overhead_ids"
+        "overhead_ids",
+        "request_bindings"
       ],
       "additionalProperties": false
     },
