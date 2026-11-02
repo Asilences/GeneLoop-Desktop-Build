@@ -28,6 +28,14 @@ def sha(value):
 def digest(value):
     return sha(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(',', ':')))
 
+
+def script_reject(reason,node,source,space='executable_source'):
+    error=ValueError(reason);line=getattr(node,'lineno',None);rows=source.splitlines()
+    error.script_diagnostics={'kind':'script_admission','error':reason,'source_space':space,
+        'line':line,'column':getattr(node,'col_offset',None),
+        'source_line':rows[line-1] if line and line<=len(rows) else None}
+    raise error
+
 def virtual_host(workspace, virtual):
     if not virtual.startswith('/work/'):
         raise ValueError('script_outside_workspace')
@@ -149,11 +157,11 @@ def compile_script(source, registered_files, *, argv=None):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             modules = [node.module] if isinstance(node, ast.ImportFrom) else [a.name for a in node.names]
             if any(m not in IMPORTS for m in modules) or getattr(node, 'level', 0):
-                raise ValueError('import_not_admitted')
+                script_reject('import_not_admitted',node,source)
         regex_compile = (isinstance(node,ast.Attribute) and node.attr=='compile' and
                          isinstance(node.value,ast.Name) and node.value.id in regex_names)
         if isinstance(node, ast.Attribute) and (node.attr.startswith('_') or node.attr in FORBIDDEN) and not regex_compile:
-            raise ValueError('attribute_not_admitted:' + node.attr)
+            script_reject('attribute_not_admitted:' + node.attr,node,source)
         if isinstance(node, ast.Attribute) and isinstance(node.value,ast.Name) and node.value.id in sys_names and node.attr!='argv':
             raise ValueError('only_sys_argv_is_admitted')
         if isinstance(node,(ast.Assign,ast.AugAssign,ast.AnnAssign)):
@@ -207,10 +215,10 @@ def compile_script(source, registered_files, *, argv=None):
                         if isinstance(parent.left,ast.Constant) and isinstance(parent.right,ast.Constant):
                             if isinstance(parent.left.value,str) and isinstance(parent.right.value,str):
                                 combined=parent.left.value+parent.right.value
-                                if re.match(r'^(?:/|\.\.?/|[A-Za-z]:\\)',combined):raise ValueError('unbound_path_literal')
+                                if re.match(r'^(?:/|\.\.?/|[A-Za-z]:\\)',combined):script_reject('unbound_path_literal',node,template,'parameterized_template')
                         continue
                     if isinstance(parent,ast.Compare) and any(isinstance(op,(ast.In,ast.NotIn,ast.Eq,ast.NotEq)) for op in parent.ops):continue
-                raise ValueError('unbound_path_literal')
+                script_reject('unbound_path_literal',node,template,'parameterized_template')
     body = {'version': VERSION, 'language': 'python', 'template': template, 'inputs': slots}
     if argv and uses_argv:
         if len(argv)>32 or any(not a or len(a)>256 or a.startswith(('/', '..')) or any(c in a for c in '\n\r\x00') for a in argv):

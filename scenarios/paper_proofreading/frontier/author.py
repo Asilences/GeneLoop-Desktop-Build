@@ -17,6 +17,7 @@ You may choose an existing-capability composition: {"steps":[{"id":"name","use":
 Use {"$input":["field"]} for current input, {"$step":["earlier_id","field"]} for prior results, ordinary objects/arrays to assemble values, and {"$literal":value} for literal objects. No array-index paths. Select only visible aliases. Host supplies contract/owner/refs.
 Arrays are ordinary JSON lists of bindings. If the task field file is a string and a leaf requires paths as an array, use {"paths":[{"$input":["file"]}]}; {"paths":{"$input":["file"]}} is a string and is invalid. This example illustrates types only; choose actual task fields and operations yourself.
 You may instead request a new ordinary Python program: {"program":{"source":"complete Python source","description":"what it computes and scope","mode":"paths" or "json"}}.
+You may choose interface:"function_v1" inside program and write def run(value): ... returning the JSON object. The host supplies all I/O. In json mode value is the typed JSON input object. In paths mode value is a dictionary mapping the physical input filename stems to current granted paths (e.g. before and after). No argv/stdin/main/print glue is needed for this interface. Existing script_v1 remains allowed. A complete paths solver may be mechanically wrapped in the fixed task contract after native certification; this never bypasses independent quality checks.
 task.program_interface describes ONLY a newly requested program's sandbox ABI. It is not the input of the complete capability and must not be copied into unrelated existing calls. A composition reads the task contract's current input fields using $input; leaf paths are bound to those current task inputs. Print JSON with print(...); sys.stdout.write and file writes are rejected by admission.
 Program acquisition is allowed equally in all comparison arms. Do not claim to have executed it. The host will independently admit, sandbox, certify and register it before any composition can use it. It is a material request, not a publication or a finished capability. posixpath is also admitted for pure archive-member path normalization.
 The program reads exactly the current file literals shown in task.program_interface, prints one JSON object, and does not write files or access network. Execute at module level; omit any __name__ guard. Its input literals are parameterized after actual source execution. Imports allowed: json,re,collections,pathlib,zipfile,hashlib,math,statistics,itertools,csv,io,unicodedata,sys,xml.etree.ElementTree. Avoid classes, dynamic code, getattr, process/environment access. re.compile is allowed only for an unshadowed imported re module. Python loops, pure functions and conditionals are allowed. All output values must be recomputed from current inputs; no cached task answers or copied citation identifiers.
@@ -31,6 +32,12 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
                                      output=output,repair_from=parent,feedback=feedback)
     context=authoring_context(task,library['snapshot'],{'source_catalog':library['source_catalog']})
     context['program_examples']=library.get('program_examples',[])
+    presentation=library.get('presentation',{})
+    if presentation.get('hide_composition_definitions'):
+        for capability in context['capabilities']:capability.pop('definition',None)
+    if presentation.get('schema_only_examples'):
+        context['program_examples']=[];context['program_input_schemas']=library.get('program_input_schemas',{})
+        context['example_policy']='Only structural schemas are shown; full native training examples remain pinned for certification. Source strings and project identifiers are not needed to implement the general relation.'
     context['repair']=None if parent is None else {'previous_answer':(Path(parent)/'answer.txt').read_text(encoding='utf-8'),
         'previous_result':pilot.read_json(Path(parent)/'result.json'),'feedback':feedback}
     prompt=SYSTEM+'\nFROZEN CONSTRUCTION CONTEXT:\n'+json.dumps(context,ensure_ascii=False)
@@ -64,7 +71,8 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
         draft=pilot.parse_proposal(answer);pilot.write(output/'draft.json',draft)
         if set(draft)=={'program'}:
             program=draft['program']
-            if not isinstance(program,dict) or set(program)!={'source','description','mode'} or program['mode'] not in task['program_interface']['modes']:
+            if (not isinstance(program,dict) or set(program)-{'source','description','mode','interface'} or
+                    not {'source','description','mode'}<=set(program) or program.get('interface','script_v1') not in ('script_v1','function_v1') or program['mode'] not in task['program_interface']['modes']):
                 raise ValueError('frontier_program_request_invalid')
             if not all(isinstance(program[k],str) and program[k].strip() for k in ('source','description')):raise ValueError('frontier_program_source_required')
             pilot.write(output/'program.json',program)

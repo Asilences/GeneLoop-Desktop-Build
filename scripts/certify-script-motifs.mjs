@@ -76,7 +76,9 @@ function certify(rows){
    const ownText=own.map(b=>b.data.toString('utf8')).join('\n'),heldText=other.map(b=>b.data.toString('utf8')).join('\n');
    // A literal copied from this task's data is not an input parameter. Retain
    // such programs as rejected evidence instead of silently caching old keys.
-   if((p.literal_selectors??[]).some(s=>ownText.includes(s)&&!heldText.includes(s)))throw Error('task_specific_literal_requires_binding');
+   const taskLiteral=(p.literal_selectors??[]).find(s=>ownText.includes(s)&&!heldText.includes(s));
+   if(taskLiteral)throw Error('task_specific_literal_requires_binding',{cause:{literal:taskLiteral,
+    source_task:task.task_id,heldout_task:held.task_id,requirement:'Replace task-specific literals with current input data. For project ZIPs use the declared geneloop-project.json root, not a source-only filename fallback.'}});
    if(digest(own.map(b=>b.sha256))===digest(other.map(b=>b.sha256)))throw Error('distinct_heldout_input_required');
    if(p.original_paths.some((name,i)=>p.witness.files[name].sha256!==own[i].sha256))throw Error('source_binding_changed');
    const original=sandboxRun(sourceWorkspace,"python3 - <<'SOURCE_EQUIVALENCE_BOUNDARY'\n"+(p.expression_witness?.prefix_source??p.source)+'\nSOURCE_EQUIVALENCE_BOUNDARY',p.witness.cwd);

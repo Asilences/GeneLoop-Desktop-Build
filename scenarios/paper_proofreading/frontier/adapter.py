@@ -4,8 +4,11 @@ import copy,json,os,subprocess,sys
 from pathlib import Path
 from src.adapters.capability_scene import CapabilityImprovementAdapter,ROOT,reference,run_child
 from src.adapters.capability_improvement import evidence,read,save
-from src.adapters.capability_contract import capability_digest
+from src.adapters.capability_contract import capability_digest,create_capability_snapshot
 from src.adapters.capability_proposal import write
+from src.adapters import capability_proposal as pilot
+from src.adapters.capability_authoring import compact_proposal
+from src.adapters.capability_program_encoding import encode_complete_script
 from scenarios.paper_proofreading.frontier.author import propose
 from scenarios.paper_proofreading.frontier.learn import learn
 
@@ -27,9 +30,43 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         examples=next(iter(self.templates.values()))['program_examples']
         value['source_catalog']['program_examples']=copy.deepcopy(examples)
         value['program_examples']=copy.deepcopy(examples)
+        template=next(iter(self.templates.values()))
+        value['presentation']=copy.deepcopy(template.get('presentation',{}))
+        value['program_input_schemas']=copy.deepcopy(template.get('program_input_schemas',{}))
+        value['source_catalog']['presentation']=value['presentation']
+        value['source_catalog']['program_input_schemas']=value['program_input_schemas']
+        if value['presentation'].get('hide_redundant_JSON_file_variants'):
+            snapshot=value['snapshot'];caps={c['id']:c for c in snapshot['capabilities']}
+            values={capability_digest(c['implementation']['legacy_ref']) for c in caps.values()
+                if c['implementation']['kind']=='legacy' and 'value' in c['contract']['input_schema'].get('properties',{})}
+            roots=[r for r in snapshot['roots'] if not (caps[r['id']]['implementation']['kind']=='legacy' and
+                'paths' in caps[r['id']]['contract']['input_schema'].get('properties',{}) and
+                capability_digest(caps[r['id']]['implementation']['legacy_ref']) in values)]
+            selected={};todo=list(roots)
+            while todo:
+                ref=todo.pop()
+                if ref['id'] in selected:continue
+                selected[ref['id']]=caps[ref['id']];todo.extend(caps[ref['id']]['dependencies'])
+            value['snapshot']=create_capability_snapshot(snapshot['owner'],roots,list(selected.values()))
         return value
 
     def construct(self,task,library,output,parent,feedback):
+        template=next(iter(self.templates.values()));pending=getattr(self,'pending_complete',None)
+        self.pending_complete=None
+        if pending and template.get('auto_wrap_complete_program'):
+            encoded=encode_complete_script(task,library['snapshot'],pending['library'],pending['observations'])
+            if encoded:
+                self.gate.register_attempt(output,self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
+                effective,_=pilot.prepare_attempt(task=task,catalog=library['source_catalog'],snapshot=library['snapshot'],output=output)
+                effective.update(model_called=False,host_encoding=encoded['encoding_scope']);write(output/'effective.json',effective)
+                write(output/'proposal.json',encoded['proposal']);write(output/'candidate.json',encoded['candidate'])
+                write(output/'answer.txt',json.dumps(compact_proposal(encoded['proposal'],task,library['snapshot'])))
+                result={'status':'compiled_candidate','construction_snapshot_sha256':library['snapshot']['digest'],
+                    'candidate_id':encoded['candidate']['capability']['id'],'model_called':False,'provider_requests':0,
+                    'request_ids':[],'observed_model_usd':0,'observed_model_usd_decimal':'0','elapsed_seconds':0,
+                    'host_encoding':encoded['encoding_scope'],'originating_program':pending['program'],
+                    'originating_program_ref':pending['program_ref'],'quality':'not_independently_reviewed'}
+                write(output/'result.json',result);return result
         result=propose(task=task,library=library,output=output,gate=self.gate,parent=parent,feedback=feedback,
                        owner_id=self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
         if result.get('program_request'):
@@ -37,11 +74,16 @@ class FrontierAdapter(CapabilityImprovementAdapter):
             try:
                 result['native_library']=learn(program,template['native_cases'][program['mode']],output/'native',
                     reference(output/'answer.txt'),large_output=True)
+                result['native_observations']=reference(output/'native/observations.json')
+                self.pending_complete={'library':result['native_library'],'observations':result['native_observations'],
+                    'program':program,'program_ref':reference(output/'program.json')}
             except Exception as error:
                 diagnostics={'native_error':str(error)}
                 for p in (output/'native').glob('**/certification.json'):diagnostics['certification']=read(p)
+                for p in (output/'native').glob('**/admission-error.json'):diagnostics['admission']=read(p)
                 for p in (output/'native').glob('**/source-stderr.txt'):
-                    if p.read_text().strip():diagnostics[p.parent.name+'_stderr']=p.read_text()[-6000:]
+                    text=p.read_text()
+                    if 'Traceback' in text or 'Error:' in text:diagnostics[p.parent.name+'_stderr']=text[-6000:]
                 result.update(status='failed',error='frontier_native_material_rejected',diagnostics=diagnostics)
             write(output/'result.json',result)
         return result
@@ -49,6 +91,7 @@ class FrontierAdapter(CapabilityImprovementAdapter):
     def acquire(self,job,result,attempt):
         if not result.get('native_library'):return {'status':'deferred','reason':'frontier_no_certified_material'}
         refs=[reference(attempt/'answer.txt'),reference(attempt/'native/certification.json'),job['publication_plan']]
+        if result.get('native_observations'):refs.append(result['native_observations'])
         material=self.materials.register(backend='script_motif',library=result['native_library'],refs=refs,
             acquisition_key=capability_digest(refs),opportunity=self.opportunity_key(job))
         return {'status':'registered','material':material,'model_requests':0,'benefit':None}

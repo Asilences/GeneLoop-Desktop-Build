@@ -50,7 +50,8 @@ def main():
     arms={r['id']:r for r in study['arms']};cells={r['id']:r for r in study['cells']}
     for request,plan in zip(requests,plans):
         cell=request['cell'];arm=arms[cells[cell]['arm_id']];run=Path(plan['output']);construction=read(run/'result.json')
-        published=[r for r in construction['outcomes'] if r['status']=='published'];quality=None;status='environment_error'
+        published=[r for r in construction['outcomes'] if r['status']=='published'];quality=None
+        status='completed' if conditions.get('format')=='frontier_D_conditions_v2' else 'environment_error'
         local=result_dir/cell;local.mkdir();cell_details={'cell':cell,'construction':construction,'final_cases':[]}
         if published:
             if len(published)!=1:raise ValueError('frontier_D_publication_ambiguous')
@@ -59,9 +60,11 @@ def main():
             snapshot=candidates[0]['snapshot'];template=json.loads(evidence(plan['jobs'][0]['publication_plan']))
             libraries=template['libraries']+[r['library'] for r in CapabilityMaterials(Path(plan['store'])/'materials',plan['owner']).records()]
             checks=[];execution_errors=False
-            for before,after in [(0,1),(1,2)]:
-                label=f'heldout_v{before}_v{after}';case_dir=local/label
-                inputs=[{'path':'/work/inputs/'+part+'.zip','source':reference(base/'inputs-v1'/f'qlora-v{version}.zip')}
+            projects=conditions.get('final_projects') or [{'id':'heldout','versions':{str(i):reference(base/'inputs-v1'/f'qlora-v{i}.zip') for i in range(3)}}]
+            cases=[(project,before,after) for project in projects for before,after in [(0,1),(1,2)]]
+            for project,before,after in cases:
+                label=f"{project['id']}_v{before}_v{after}";case_dir=local/label
+                inputs=[{'path':'/work/inputs/'+part+'.zip','source':project['versions'][str(version)]}
                     for part,version in [('before',before),('after',after)]]
                 started=time.monotonic();trace=None
                 try:
@@ -78,8 +81,10 @@ def main():
                     'observation':'Actual frozen native result compared with independent oracle; '+('execution unavailable' if 'execution_error' in verdict else str(verdict['passed'])),
                     'evidence':[file]})
                 calls=[] if trace is None else [r for r in trace.get('receipts',[]) if r.get('capability')==conditions['C']['capability']]
+                relations=[] if trace is None or not conditions.get('J') else [r for r in trace.get('receipts',[]) if r.get('capability')==conditions['J']]
                 cell_details['final_cases'].append({'case':label,'quality':verdict,'native_elapsed_seconds':time.monotonic()-started,
-                    'C_calls':[{'call_id':r['call_id'],'parent_call_id':r.get('parent_call_id'),'status':r['status']} for r in calls]})
+                    'C_calls':[{'call_id':r['call_id'],'parent_call_id':r.get('parent_call_id'),'status':r['status']} for r in calls],
+                    'J_calls':[{'call_id':r['call_id'],'parent_call_id':r.get('parent_call_id'),'status':r['status']} for r in relations]})
             status='environment_error' if execution_errors else 'completed'
             if not execution_errors:cell_details['quality_checks']=checks
             cell_details['C_selected']=conditions['C']['capability'] in next(c for c in snapshot['capabilities'] if c['id']==root['id'])['dependencies']
@@ -89,7 +94,7 @@ def main():
         if published and status=='completed':
             quality=envelope('quality_evaluation',{'id':cell+'-quality','task_id':'frontier-D','task_sha256':study['tasks'][0]['sha256'],
                 'artifact_sha256':artifact['sha256'],'rubric_sha256':study['rubric_sha256'],'evaluator':study['evaluator']['id'],
-                'scope':'Literal held-out QLoRA version consistency; two transitions of one project',
+                'scope':'Literal held-out project version consistency; two controlled transitions per project',
                 'limitations':['No TeX expansion or factual review','Controlled source changes','One held-out project, not independent projects per transition'],
                 'checks':cell_details['quality_checks']})
         owned=[rid for rid,r in books.items() if r['cell']==cell]
@@ -110,7 +115,9 @@ def main():
         'attempts':attempts,'overheads':[],'providers':providers}
     # Validate all evidence before mutating the registry's closure state.
     measure_study(study,obs,registry=provisional,evidence_root=directory)
-    for cell in study['cells']:registry.close_cell(cell['id'])
+    closed={r['cell_id'] for r in provisional['cells'] if r['closed']}
+    for cell in study['cells']:
+        if cell['id'] not in closed:registry.close_cell(cell['id'])
     frozen=registry.export(refs);obs['registry_sha256']=study_digest(frozen)
     report=measure_study(study,obs,registry=frozen,evidence_root=directory)
     for name,value in [('registry',frozen),('observations',obs),('measurement',report),('details',details),

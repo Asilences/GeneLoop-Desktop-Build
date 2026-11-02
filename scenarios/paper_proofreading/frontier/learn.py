@@ -5,6 +5,7 @@ historical Bash calls. Certification still says source equivalence, not quality.
 """
 from __future__ import annotations
 import json
+import ast
 import os
 from pathlib import Path
 import shutil
@@ -14,10 +15,33 @@ from src.adapters.capability_scene import ROOT,reference
 from src.adapters.script_motif_compiler import observe,sha
 
 
+def executable_source(program,cases):
+    source=program['source']
+    if program.get('interface','script_v1')=='script_v1':return source
+    if program['interface']!='function_v1':raise ValueError('frontier_program_interface_invalid')
+    tree=ast.parse(source);runs=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='run']
+    if len(runs)!=1 or len(runs[0].args.posonlyargs+runs[0].args.args)!=1 or runs[0].args.vararg or runs[0].args.kwarg or runs[0].args.kwonlyargs:
+        raise ValueError('frontier_single_argument_run_function_required')
+    if any(isinstance(n,ast.Name) and n.id.startswith('frontier_bridge_') for n in ast.walk(tree)):
+        raise ValueError('frontier_reserved_bridge_identifier')
+    if any(not isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef,ast.Assign,ast.AnnAssign)) and
+           not (isinstance(n,ast.Expr) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str)) for n in tree.body):
+        raise ValueError('frontier_function_module_must_not_execute_main')
+    paths=[i['path'] for i in cases[0]['inputs']]
+    if program['mode']=='json':
+        if paths!=['/work/inputs/value.json']:raise ValueError('frontier_json_function_input_invalid')
+        payload="frontier_bridge_json.load(open('/work/inputs/value.json',encoding='utf-8'))"
+    else:
+        if len({Path(p).stem for p in paths})!=len(paths):raise ValueError('frontier_path_function_roles_ambiguous')
+        payload=repr({Path(p).stem:p for p in paths})
+    return source+"\nimport json as frontier_bridge_json\nfrontier_bridge_input="+payload+"\nprint(frontier_bridge_json.dumps(run(frontier_bridge_input),ensure_ascii=False,separators=(',',':')))\n"
+
+
 def learn(program,cases,directory,source_evidence,*,large_output=False,origin='model_construction'):
     if origin not in ('model_construction','host_diagnostic'):raise ValueError('frontier_source_origin_invalid')
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=False)
-    source=program['source'];command="python3 - <<'FRONTIER_MODEL_PROGRAM'\n"+source+'\nFRONTIER_MODEL_PROGRAM'
+    source=executable_source(program,cases);(directory/'executed-source.py').write_text(source,encoding='utf-8')
+    command="python3 - <<'FRONTIER_MODEL_PROGRAM'\n"+source+'\nFRONTIER_MODEL_PROGRAM'
     if '\nFRONTIER_MODEL_PROGRAM' in source:raise ValueError('frontier_reserved_boundary')
     rows=[]
     for index,case in enumerate(cases):
@@ -33,9 +57,14 @@ def learn(program,cases,directory,source_evidence,*,large_output=False,origin='m
         result=subprocess.run(['node','--input-type=module','-e',snippet,str(work),command],cwd=ROOT,capture_output=True,text=True,encoding='utf-8',timeout=45)
         (work/'source-stdout.txt').write_text(result.stdout,encoding='utf-8');(work/'source-stderr.txt').write_text(result.stderr,encoding='utf-8')
         if result.returncode:raise ValueError('frontier_native_source_execution_failed')
-        observed=observe(command,program['description'],str(work),result.stdout,case['id'],origin+'-sandbox-probe-'+str(index))
+        try:observed=observe(command,program['description'],str(work),result.stdout,case['id'],origin+'-sandbox-probe-'+str(index))
+        except ValueError as error:
+            if getattr(error,'script_diagnostics',None):
+                (work/'admission-error.json').write_text(json.dumps(error.script_diagnostics,ensure_ascii=False,indent=2),encoding='utf-8')
+            raise
         observed['witness'].update(events_sha256=source_evidence['sha256'],
-            input_evidence_scope=origin+'_source_and_actual_sandbox_probe',source_evidence=source_evidence)
+            input_evidence_scope=origin+'_source_and_actual_sandbox_probe',source_evidence=source_evidence,
+            program_interface=program.get('interface','script_v1'),model_source_sha256=sha(program['source']),executed_source_sha256=sha(source))
         if large_output:observed['output_limit_bytes']=65536
         if program['mode']=='json':observed['value_binding_requested']=True
         rows.append({'task_id':case['id'],'workspace':str(work),'candidates':[observed] if index==0 else [],
