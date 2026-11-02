@@ -1,5 +1,12 @@
 # 论文校对 当前交接
 
+## 2026-11-03：Capability Frontier 七小时主线
+
+- 起点：已核对远程 main `f594e19`，PR #122 已合并。当前分支 `codex/capability-frontier-20261103`，沿用当前工作区，私人 `reference/` 未跟踪。
+- 当前目标：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结与失败决策见[七小时协议](../capability-frontier-protocol-v1.md)。截至本条仅固化研究设计，尚未新增模型调用或产生本轮研究结果。
+- 执行窗口：约 00:48–07:48（Asia/Shanghai）；先固定真实/公开输入、独立判据、组间可见能力和有限实验预算，再运行。沿用原累计账本；生产服务、旧库与默认聊天不改。
+- 下步：准备两个独立文档项目，冻结 C/D 的跨文件、跨版本约束；在同等基础工具与普通编码条件下做自主构造和移除 C 对照。原始数据 `.local/capability-frontier-20261103/`，实验报告按协议维护。
+
 ## 2026-11-03：B 真实书目 Capability 验收
 
 - 范围与版本：当前分支 `codex/rsi-real-acceptance-20261102`，A为`eba71e6`，B为`5efa221`；已推送并创建[PR #122](https://github.com/jingyio/GeneLoop/pull/122)，未合并/部署，CI以当前head为准。A 的计量实现保留，私人 `reference/` 与原始书目不提交。
