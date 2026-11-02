@@ -12,14 +12,16 @@ from src.adapters.capability_improvement import evidence,read,save
 from src.adapters.capability_contract import capability_digest
 from src.adapters.capability_materials import CapabilityMaterials
 from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
-from src.adapters.efficiency_rsi_measurement import measure_study
+from src.adapters.efficiency_rsi_measurement import measure_study,digest as study_digest
 from src.adapters.rsi_protocol import envelope
 from scenarios.paper_proofreading.frontier.execute import execute
 from scenarios.paper_proofreading.frontier.oracle import evaluate,sha
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--directory',type=Path,required=True);p.add_argument('--base',type=Path,required=True);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--directory',type=Path,required=True);p.add_argument('--base',type=Path,required=True)
+    p.add_argument('--evaluation-id',default='evaluation-001');a=p.parse_args()
+    if not a.evaluation_id.replace('-','').isalnum():raise ValueError('frontier_evaluation_id_invalid')
     directory=a.directory.resolve();base=a.base.resolve();study=read(directory/'study.json');conditions=read(directory/'conditions.json')
     if capability_digest(conditions)!=study['conditions_sha256']:raise ValueError('frontier_D_conditions_changed')
     for ref in conditions['code']:evidence(ref)
@@ -43,7 +45,7 @@ def main():
     registry=StudyRequestRegistry(study,directory/'study-owner-journal.jsonl')
     refs=[{'ledger_ref':r['ledger_ref'],'id':str(rid)} for rid,r in books.items()]
     provisional=registry.export(refs)
-    result_dir=directory/'evaluation-001';result_dir.mkdir(exist_ok=False)
+    result_dir=directory/a.evaluation_id;result_dir.mkdir(exist_ok=False)
     attempts=[];details=[];providers=[]
     arms={r['id']:r for r in study['arms']};cells={r['id']:r for r in study['cells']}
     for request,plan in zip(requests,plans):
@@ -104,12 +106,12 @@ def main():
             providers.append({'ledger_ref':books[rid]['ledger_ref'],'id':str(rid),'phase':'completed' if cost is not None else 'failed',
                 'observed_peak_usd':float(Decimal(cost)) if cost is not None else None,
                 'reserved_upper_usd':float(Decimal(books[rid]['reserved_upper_usd'])),'allocations':{cells[cell]['arm_id']:1.}})
-    obs={'format':'efficiency_rsi_observations_v1','plan_sha256':capability_digest(study),'registry_sha256':capability_digest(provisional),
+    obs={'format':'efficiency_rsi_observations_v1','plan_sha256':study_digest(study),'registry_sha256':study_digest(provisional),
         'attempts':attempts,'overheads':[],'providers':providers}
     # Validate all evidence before mutating the registry's closure state.
     measure_study(study,obs,registry=provisional,evidence_root=directory)
     for cell in study['cells']:registry.close_cell(cell['id'])
-    frozen=registry.export(refs);obs['registry_sha256']=capability_digest(frozen)
+    frozen=registry.export(refs);obs['registry_sha256']=study_digest(frozen)
     report=measure_study(study,obs,registry=frozen,evidence_root=directory)
     for name,value in [('registry',frozen),('observations',obs),('measurement',report),('details',details),
                        ('usage',[{'request_id':rid,'cell':books[rid]['cell'],'usage':terminal[rid].get('response_usage')} for rid in books])]:save(result_dir/(name+'.json'),value)
