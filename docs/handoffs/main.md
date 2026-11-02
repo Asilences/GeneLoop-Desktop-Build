@@ -1,6 +1,6 @@
 ## 2026-11-03：Capability Frontier 夜间研究（最新）
 
-起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D组合完成原生发布与Mamba两对验收，每对真实调用C两次；不能冒充自主构造。79次研究请求代理估费USD0.340150572，旧账本不变。准入误拒绝已修、未可靠采集的耗时保留null；当前代码`dc75d8a`，本地全量1859 Python/1516 Node通过，生产未动。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
+起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D组合完成原生发布与Mamba两对验收，每对真实调用C两次；不能冒充自主构造。79次研究请求代理估费USD0.340150572，旧账本不变。`e1f25ad`再将最终独立反例接回现有撤回/目录投影，真实三份错误D退出后续选择；本地全量1867 Python/1516 Node通过，Linux原生43项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)供审阅，首个head跨平台CI通过，后续以最新head为准，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
 
 ## 2026-11-03：B 真实书目验收
 

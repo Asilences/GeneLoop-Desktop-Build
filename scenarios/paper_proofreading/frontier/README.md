@@ -2,7 +2,7 @@
 
 本目录验证已有材料是否帮助模型构造新增跨文件/版本关系。它是离线研究适配器：复用公共控制器、Script 编译/沙箱、TS Capability Runtime、Store 与独立计量器，不接管聊天或正式服务。
 
-当前观察：C 可在新 Mamba 留出复用；D 自主构造尚未选 C/J，完整 Python 也能得到合格 D。宿主强制 C→D 组合诊断通过，但不计自主研究成功或效率收益。三种冻结条件分别保留，79 次真实请求估费 USD0.340150572。
+当前观察：C 可在新 Mamba 留出复用；最后条件的 D 自主构造未选 C/J，完整 Python 也能得到合格 D。第一条件有 J 复用，但仍未调用完整 C。宿主强制 C→D 组合诊断通过，但不计自主研究成功或效率收益。三种冻结条件分别保留，79 次真实请求估费 USD0.340150572。
 
 当前目标、冻结条件与原始失败见 [推进协议](../../../docs/capability-frontier-protocol-v1.md)、[实验记录](../../../docs/experiments/capability-frontier-20261103.md)。输入及运行结果只放忽略的 `.local/`；私有论文、原始轨迹和凭证不得提交。
 
@@ -13,7 +13,7 @@
 1. `prepare_inputs` 生成真实项目只读副本及受控版本；`freeze` 在模型请求前固定任务、评价器和预算。原文件不修改。
 2. `source_phase --request <配置>` 生成并原生认证底层程序。`prepare_C` 固定实际解析输出与独立输入，`run --request <配置>` 使用公共控制器构造 C。
 3. `prepare_D --base <私有实验根> --output <新目录> --c-plan <C-plan> --c-run <C-run> --code-commit <SHA>` 冻结研究。`--v2 --final-manifest <新留出清单>` 创建三组各两格；`--task-file`、`--study-name` 新建条件，不覆盖旧配置。第三条件还传入全部 `--prior-journal`，核验六美元研究估费上界。
-4. 按 `ordered-requests.json` 顺序执行 `run --request <cell/request.json>`，每格一次完整获取回合。**全部构造结束之后**才执行 `finalize_D --directory <study> --base <实验根>`；最终结果不得送回模型修复。
+4. 按 `ordered-requests.json` 顺序执行 `run --request <cell/request.json>`，每格一次完整获取回合。**全部构造结束之后**才执行 `finalize_D --directory <study> --base <实验根>`；最终结果不得送回本轮模型修复。全部报告与请求归属封账后，已发布根的独立失败接回原 `CapabilityFeedback` 撤回机制，供未来 Builder 过滤；原发布证据不删除，环境错误记为未知、不推测叶节点责任。`final-feedback.json` 保存本次回写，已撤回根不能仅凭一个成功事实恢复。
 5. `replay_program --request <重放配置>` 可用保存的原程序零模型定位认证、包装及质量失败。它不冒充新自主构造；所有输出使用新目录。
 
 `run` 请求包含 `plan`/`protocol` 文件引用、`cell`、`budget_usd`、`journal`、Unix `deadline`，可附正式 `study` 的计划引用、独立 journal 和 episode ID。底层计划遵循 `schemas/capability-improvement-v1.schema.json`。每个引用均为 `{path,sha256}`，使用前校验原字节。
