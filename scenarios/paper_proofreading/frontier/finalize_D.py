@@ -38,7 +38,7 @@ def main():
         row=json.loads(line)
         if row.get('request_id') in books:terminal[row['request_id']]=row
     if set(terminal)!=set(books):raise ValueError('frontier_D_provider_inventory_incomplete')
-    first=next(i for i,line in enumerate(lines) if json.loads(line).get('request_id') in books)
+    first=next((i for i,line in enumerate(lines) if json.loads(line).get('request_id') in books),len(lines))
     if sha(b''.join(lines[:first]))!=read(directory/'ledger-before-D.json')['ledger_sha256']:raise ValueError('frontier_prior_cumulative_ledger_changed')
     registry=StudyRequestRegistry(study,directory/'study-owner-journal.jsonl')
     refs=[{'ledger_ref':r['ledger_ref'],'id':str(rid)} for rid,r in books.items()]
@@ -114,7 +114,7 @@ def main():
     for name,value in [('registry',frozen),('observations',obs),('measurement',report),('details',details),
                        ('usage',[{'request_id':rid,'cell':books[rid]['cell'],'usage':terminal[rid].get('response_usage')} for rid in books])]:save(result_dir/(name+'.json'),value)
     print(json.dumps({'measurement':reference(result_dir/'measurement.json'),'physical_cost':report['physical_study_cost'],
-        'cells':[{k:r[k] for k in ('cell_id','outcome')} for r in report['cells']]}))
+        'cells':[{k:r[k] for k in ('id','outcome')} for r in report['cells']]}))
 
 
 if __name__=='__main__':main()
