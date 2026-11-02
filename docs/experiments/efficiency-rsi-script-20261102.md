@@ -36,3 +36,11 @@ RUN_SCRIPT_CAPABILITY_SANDBOX=1 "$SSS_PYTHON" -m pytest -q tests/test_paper_capa
 这些命令没有模型调用；新增模型请求/费用均为 0，未重置或写入原累计账本。机器和开发成本未货币化。构造能力、效率增量、创造价值的因果贡献与大规模泛化均待真实任务验证，不否定此前程序复用已有的局部效率收益。
 
 下一步：固定已有真实论文任务的训练/认证输入，运行原生获取路由，再让真实 Builder 构造；如果失败，按缺口识别、材料学习、组合、验收四层定位。默认聊天接管、任务结束自动采集、任意 MCP 和主动资源再投资不在本轮范围。
+
+## PR #121：合并最新main后的兼容验证
+
+2026-11-02已推送并创建[PR #121](https://github.com/jingyio/GeneLoop/pull/121)，包含前面九个本地机制提交。main已前进到`e6b6f12`（PR #119），合并提交`5cd754c`保留其视频双路逻辑与旧认证库；不把本地旧Paper v41/PPT v38覆盖回main。
+
+首次合并回归19项失败：两个分支使用过相同的版本目录名，且main当前默认库未绑定本分支的三个共享执行文件变化。复用现有重导出工具，精确核对`scenarios/remotion_edit/server.py`、`scripts/materialize-source-program.mjs`、`src/adapters/source_program_runtime.ts`，从main Paper v42/PPT v39生成新v43/v40。旧版本、library/online-manifest/task/tool-schemas/source-evidence五项字节均保留；重新生成在线manifest并验证原生loader，无新学习/模型调用，不将代码兼容记为任务质量或收益认证。58项相关回归通过。
+
+合并后最终全量：Python1809通过/237跳过；Node1506通过/19跳过/1旧上传typed413 ECONNRESET失败。完整失败与单文件复核均保存在`.local/efficiency-rsi-pr-20261102/`；没有修改上传实现或删除检查。smoke及motif:check通过。Linux原生21+4项为本记录前述接线提交上的诊断，不冒充合并后新模型验收。Script原生执行明确拒绝Windows，目录和契约仍可读取，Windows专项通过/跳过应以CI实际结果为准。

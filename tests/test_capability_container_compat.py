@@ -17,8 +17,8 @@ def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 @pytest.mark.parametrize('old_name,new_name,scene',[
-    ('paper-web-v40','paper-web-v41','paper-proofreading'),
-    ('ppt-master-v37','ppt-master-v38','ppt'),
+    ('paper-web-v42','paper-web-v43','paper-proofreading'),
+    ('ppt-master-v39','ppt-master-v40','ppt'),
 ])
 def test_container_compatibility_retains_original_program_and_report(old_name,new_name,scene):
     old,new=(ROOT/'motif-libraries'/name for name in (old_name,new_name))
@@ -27,12 +27,13 @@ def test_container_compatibility_retains_original_program_and_report(old_name,ne
     record=after.pop('capability_container_compatibility')
     assert after==before
     assert record['previous_certification_sha256']==sha(old/'certification.json')
-    assert record['changed_code_locks']==['scenarios/remotion_edit/server.py']
+    reviewed={'scenarios/remotion_edit/server.py','scripts/materialize-source-program.mjs','src/adapters/source_program_runtime.ts'}
+    assert set(record['changed_code_locks'])==reviewed
     assert record['additional_code_locks']==['scripts/reexport-capability-container-compat.py']
     assert record['new_training_tasks']==record['model_requests']==0
     assert record['raw_traces_replayed'] is record['quality_cost_promoted'] is record['capability_runtime_certified'] is False
     old_locks=read(old/'certification.json')['code_locks'];new_locks=read(new/'certification.json')['code_locks']
-    assert {name for name,value in old_locks.items() if new_locks[name]!=value}=={'scenarios/remotion_edit/server.py'}
+    assert {name for name,value in old_locks.items() if new_locks[name]!=value}==reviewed
     assert set(new_locks)-set(old_locks)=={'scripts/reexport-capability-container-compat.py'}
     for name,value in read(old/'entry.json')['files'].items():assert sha(old/name)==value
     selected=next(row['rsi']['runtime_bundle'] for row in read(ROOT/'config/harless-scenes.json')['scenes'] if row['id']==scene)

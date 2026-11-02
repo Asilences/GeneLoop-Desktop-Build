@@ -2,6 +2,8 @@
 
 ## 2026-11-02：离线 Script Capability 接线
 
+- PR更新：[PR #121](https://github.com/jingyio/GeneLoop/pull/121)已推送并创建，未合并/部署。合并PR #119后保留main旧版本，按原工具从Paper v42兼容重导出v43，五项IR/程序/来源文件不变，58项兼容回归通过。合并后1809 Python通过，Node1506通过/19跳过/1旧上传ECONNRESET失败，失败保留。以下本轮原生实验数字是合并前验证，不能代替最新CI。
+
 - 当前分支 `codex/efficiency-rsi-20261102`，基于 `8a414dd`；本轮本地提交见Git，未推送/部署。旧程序、证书、原件及账本保留。
 - 已完成：`capability_adapter.py`、`publish_capability.mjs`、`verify_capability_outputs.py`接公共Builder/反馈/Store；原生只读Script后端及精确版本白名单。独立验收先覆盖字面BibTeX条目数、唯一键和重复键，不认证文献真实性。
 - 已验证：Linux原生认证、组合、发布、不同输入后继和下一Builder可见，4项论文测试通过；21项Script/沙箱检查通过。全量Python1793通过/237跳过，Node1495通过/18跳过；Linux smoke通过。确定性组合和合成输入只属诊断，模型请求0。

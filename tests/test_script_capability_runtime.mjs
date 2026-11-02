@@ -61,17 +61,21 @@ test('unsupported argv or network programs are explicitly excluded from the new 
  p.certification.program_sha256=digest(programIdentity(p));p.id='script_'+p.certification.program_sha256.slice(0,24);
  const catalog=f.saveLibrary();assert.equal(catalog.snapshot,null);assert.equal(catalog.excluded.length,1);
 });
-test('pre-cancelled execution dispatches no native worker',async t=>{
+test('pre-cancelled execution dispatches no native worker',{skip:process.platform==='win32'},async t=>{
  const f=fixture(t),controller=new AbortController();controller.abort();
  const trace=await runScriptCapability(f.manifestPath,f.catalog.snapshot,f.args,{signal:controller.signal});
  assert.equal(trace.status,'cancelled');assert.equal(trace.receipts[0].dispatched,false);
 });
-test('host authority and input/library versions are checked before native dispatch',async t=>{
+test('host authority and input/library versions are checked before native dispatch',{skip:process.platform==='win32'},async t=>{
  for(const change of [f=>f.manifest.grant.revoked=true,f=>f.manifest.grant.effects=['external_write'],
   f=>f.manifest.grant.arguments_sha256='f'.repeat(64),f=>writeFileSync(join(f.work,'inputs/test.txt'),'changed'),
   f=>writeFileSync(f.library,readFileSync(f.library)+' ')]){
   const f=fixture(t);change(f);f.save();await assert.rejects(runScriptCapability(f.manifestPath,f.catalog.snapshot,f.args),/(grant_invalid|input_changed|library_changed)/);
  }
+});
+test('Windows catalog remains readable but native sandbox execution is explicitly unsupported',{skip:process.platform!=='win32'},async t=>{
+ const f=fixture(t);assert.equal(f.catalog.capabilities.length,1);
+ await assert.rejects(runScriptCapability(f.manifestPath,f.catalog.snapshot,f.args),/platform_unsupported/);
 });
 const sandbox=process.platform==='linux'&&existsSync('/usr/bin/bwrap')&&process.env.RUN_SCRIPT_CAPABILITY_SANDBOX==='1';
 test('native sandbox executes composition, preserves input, and binds exact leaf receipts',{skip:!sandbox},async t=>{

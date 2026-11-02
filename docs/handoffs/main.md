@@ -1,5 +1,7 @@
 ## 2026-11-02：构造接口简化与离线定位
 
+> PR提交状态：[PR #121](https://github.com/jingyio/GeneLoop/pull/121)已创建，公共机制/Source/Script接线统一提交；已合并最新main `e6b6f12`，沿原重导出器生成Paper v43/PPT v40兼容版本。合并后1809 Python通过；Node1506通过、19跳过，保留1项旧上传ECONNRESET失败。58项兼容、smoke及motif:check通过。未合并/部署；CI以PR最新head为准。
+
 > 最新Script接线：已增加 `script_motif` 原生后端、论文适配器及BibTeX独立盘点验收，复用公共构造/反馈/发布流程。Linux合成原生认证→组合→验证→发布→换输入复用→Builder目录通过；旧编译哈希转为来源记录，执行版本用精确白名单兼容。新模型自主构造/真实历史任务获取路径待验证，未部署。见[当前交接](efficiency-rsi.md)及[记录](../experiments/efficiency-rsi-script-20261102.md)。以下续记保留历史范围。
 
 > 2026-11-02材料闭环续：Source学习/原生认证路由、追加式材料池、目录变化后的机会重新评价及多库原生执行已接线。历史材料新版本真实发布/换输入复用各23项检查通过，模型0；论文新增独立只读轨迹入口，默认采集和Script/读取Motif适配未完成。旧论文工作器/证书未改，未部署。见[当前交接](efficiency-rsi.md)。

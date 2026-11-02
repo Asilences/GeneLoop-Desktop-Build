@@ -1,7 +1,9 @@
 # 效率驱动 RSI 当前交接
 
 - 更新时间与交接人：2026-11-02，Codex。
-- 最新全量验证：Python1793通过/237跳过，Node1495通过/18跳过/0失败；Linux smoke通过。此前上传ECONNRESET本次未出现，未针对它修复，不宣称根治。本轮代码和失败证据在`.local/efficiency-rsi-script-20261102/`；本地提交未推送、未部署。
+- PR状态：已推送并创建[PR #121](https://github.com/jingyio/GeneLoop/pull/121)，包含此前未推送的公共Capability/Source/Script接线；已合并main `e6b6f12`（PR #119）。本轮未合并PR、未部署。
+- 合并后验证：Python1809通过/237跳过，Node1506通过/19跳过/1旧上传typed413 ECONNRESET失败；该文件独立复核8通过/1同错误失败，完整日志在`.local/efficiency-rsi-pr-20261102/`，未改传输代码。smoke和motif:check通过。合并前1793 Python/1495 Node全通过及Linux原生证据按原记录保留，不称合并后完整全绿。
+- main兼容：main与本分支独立使用过Paper v41/PPT v38编号，合并保留main版本。现按原重导出器从main Paper v42/PPT v39生成v43/v40，精确审阅容器归属、Source单次解码及版本绑定三处变化；五项程序/证据文件逐字节保留。58项兼容回归通过，旧版本全部保留。
 - 最新Script接线：`script_capability_runtime.ts`、公共材料登记及论文 `capability_adapter.py` 已接入；只读文件程序可进入Builder、组合、独立验证、发布、换输入执行并回到构造池。论文acquire使用原学习器，训练/认证任务分开；真实历史任务路由及模型提案尚未实测。没有默认聊天接管。
 - 最新兼容修正：按用户要求直接拆分认证来源与执行锁。四个离线编译/认证文件保留哈希但不阻止旧程序执行，其他执行锁继续检查；`config/script-runtime-compatibility.json`目前只放行本次loader策略修改的精确旧/新哈希。没有全局skip验证或改写旧证书。联网/argv程序仍走旧路径，未纳入新后端。
 - 最新原生诊断：Linux 21项Script/沙箱测试及4项论文测试通过；论文验证4条/3唯一键/重复P，后继5条/4唯一键/重复T，各4项检查通过。发布 `c1248bde88f533d923456dd888b5e68b0219e15db56fc9cb6eae32e96de73ef3`，下一Builder目录可见且记录构造贡献。输入/提案为诊断夹具，模型调用0。首次schema和Store字段失败均保留并修复，见[记录](../experiments/efficiency-rsi-script-20261102.md)。

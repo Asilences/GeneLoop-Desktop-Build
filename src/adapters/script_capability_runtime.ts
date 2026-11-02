@@ -80,6 +80,7 @@ async function invoke(job:unknown,signal?:AbortSignal):Promise<any>{
 
 export async function runScriptCapability(manifestPath:string,snapshotValue:CapabilitySnapshot,args:unknown,
  options:{root?:CapabilityRef;signal?:AbortSignal}={}){
+ assert(process.platform==='linux'||process.platform==='darwin','script_capability_platform_unsupported');
  const raw=readFileSync(manifestPath),manifest=JSON.parse(raw.toString('utf8')) as ScriptTaskManifest;
  assert(manifest.format==='script_capability_task_v1'&&manifest.owner&&manifest.task_id,'script_task_manifest_invalid');
  const snapshot=validateCapabilitySnapshot(snapshotValue,manifest.owner),grant=manifest.grant;
