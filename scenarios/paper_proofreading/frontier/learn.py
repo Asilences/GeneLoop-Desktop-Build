@@ -36,6 +36,7 @@ def learn(program,cases,directory,source_evidence,*,large_output=False):
         observed['witness'].update(events_sha256=source_evidence['sha256'],
             input_evidence_scope='model_constructed_source_and_actual_sandbox_probe',source_evidence=source_evidence)
         if large_output:observed['output_limit_bytes']=65536
+        if program['mode']=='json':observed['value_binding_requested']=True
         rows.append({'task_id':case['id'],'workspace':str(work),'candidates':[observed] if index==0 else [],
                      'explicit_inputs':[{**item,'sha256':item['source']['sha256']} for item in case['inputs']],
                      'evidence_scope':'model_construction_not_historical_web_task'})

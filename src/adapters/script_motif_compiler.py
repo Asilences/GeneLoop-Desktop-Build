@@ -15,7 +15,7 @@ import posixpath
 
 VERSION = 1
 IMPORTS = {'json', 're', 'collections', 'pathlib', 'zipfile', 'hashlib', 'math',
-           'statistics', 'itertools', 'csv', 'io', 'unicodedata', 'sys',
+           'statistics', 'itertools', 'csv', 'io', 'unicodedata', 'sys', 'posixpath',
            'urllib.request', 'urllib.parse', 'xml.etree.ElementTree', 'time'}
 FORBIDDEN = {'eval', 'exec', 'compile', '__import__', 'getattr', 'setattr', 'delattr',
              'globals', 'locals', 'vars', 'input', 'breakpoint', 'exit', 'quit',

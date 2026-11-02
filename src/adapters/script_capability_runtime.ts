@@ -35,14 +35,20 @@ export function buildScriptCapabilities(path:string,owner:string,expectedSha256?
   const output_schema={type:'object',properties:{stdout:{type:'string'},
    ...(program.certification.output_schema?{value:program.certification.output_schema}:{})},
    required:['stdout',...(program.certification.output_schema?['value']:[])],additionalProperties:false};
-  const capability=createCapability({owner,contract:{input_schema:{type:'object',properties:{paths:{type:'array',
-   items:{type:'string'},description:`Exactly ${program.inputs.length} granted input paths, in native slot order`}},required:['paths'],additionalProperties:false},
+  const fileInput={type:'object',properties:{paths:{type:'array',
+   items:{type:'string'},description:`Exactly ${program.inputs.length} granted input paths, in native slot order`}},required:['paths'],additionalProperties:false};
+  const variants=[{input_schema:fileInput,value:false}];
+  if(program.certification.value_binding)variants.push({input_schema:{type:'object',properties:{value:program.certification.value_binding.input_schema},
+   required:['value'],additionalProperties:false},value:true});
+  for(const variant of variants){
+  const capability=createCapability({owner,contract:{input_schema:variant.input_schema,
    output_schema,effects:['read']},implementation:{kind:'legacy',legacy_ref:{backend:'script_motif',
    library_sha256,library_digest:library.digest,object_id:program.id,object_sha256:digest(programIdentity(program)),
    certificate_sha256:digest(program.certification)}},dependencies:[]},{lifecycle:'active',certification:'certified',migration:'legacy'});
-  capabilities.push(capability);catalog.push({capability:capabilityRef(capability),description:program.description,
+  capabilities.push(capability);catalog.push({capability:capabilityRef(capability),description:program.description+(variant.value?' [Certified JSON value input; accepts previous capability results directly]':''),
    input_schema:capability.contract.input_schema,output_schema,input_contracts:program.inputs,
    certification_scope:program.certification.scope??'source_equivalence_not_semantic_quality'});
+  }
  }
  const roots=capabilities.map(capabilityRef);
  // A supported native catalog must have at least one root; report unsupported
@@ -139,12 +145,21 @@ export async function runScriptCapability(manifestPath:string,snapshotValue:Capa
     arguments_sha256:argumentsSha256,dependencies,versions,obligation_ref:obligation,state_version:snapshot.digest});
   },
   async execute(call,operation,value){
-   const program=native.get(call.capability.id).program,paths=(value as any).paths as string[];
+   const item=native.get(call.capability.id),program=item.program;
+   const valueMode=Object.hasOwn(item.cap.contract.input_schema.properties,'value');
+   let paths:string[],files:{path:string;bytes:Buffer;sha256:string}[];
+   if(valueMode){
+    assert(program.certification.value_binding?.format==='script_json_value_binding_v1','script_value_binding_not_certified');
+    const bytes=Buffer.from(JSON.stringify((value as any).value));assert(bytes.length>0&&bytes.length<=1000000,'script_value_input_bound');
+    paths=['/work/inputs/value.json'];files=[{path:paths[0],bytes,sha256:bytesSha256(bytes)}];
+   }else{
+   paths=(value as any).paths as string[];
    assert(paths.length===program.inputs.length&&new Set(paths).size===paths.length,'script_capability_binding_invalid');
-   const files=paths.map((path,i)=>{const input=inputMap.get(path);assert(input,'script_capability_input_not_granted');
+   files=paths.map((path,i)=>{const input=inputMap.get(path);assert(input,'script_capability_input_not_granted');
     const bytes=fixedInput(workspace,scriptVirtualHost(workspace,path));
     assert(bytesSha256(bytes)===input!.sha256&&compatibleInput(program.inputs[i],path,bytes),'script_capability_input_changed');
     return {path,bytes,sha256:input!.sha256};});
+   }
    const work=join(workspace,'calls',call.callId);
    mkdirSync(join(workspace,'calls'),{recursive:true,mode:0o700});mkdirSync(work,{mode:0o700});
    for(const name of ['inputs','code','outputs/code','command-tmp'])mkdirSync(join(work,name),{recursive:true,mode:0o700});

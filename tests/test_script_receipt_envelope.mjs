@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,realpathSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {decodeScriptReceipt,scriptCommand,createScriptInterceptor,consumeScriptGrant} from '../src/adapters/script_motif_runtime.ts';
+import {decodeScriptReceipt,scriptCommand,createScriptInterceptor,consumeScriptGrant,scriptOutputLimit} from '../src/adapters/script_motif_runtime.ts';
 import {sandboxRun} from '../scripts/certify-script-motifs.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const pack=value=>{const bytes=Buffer.from(JSON.stringify(value));return {kind:'script_motif_envelope',encoding:'zlib_base64_v1',payload:deflateSync(bytes).toString('base64'),sha256:sha(bytes)};};
@@ -28,6 +28,15 @@ function workspace(t){
 }
 const p={id:'diagnostic',inputs:[{suffix:'.txt',format:'text'}],template:"rows=open('__MOTIF_INPUT_0__').read().splitlines()\nprint('count',len(rows))\nprint('文字😀',rows)",description:'read current lines',
  certification:{receipt_protocol:'bounded_zlib_v1'}};
+test('larger reports opt in through a bounded certificate; legacy output bound remains enforced',{skip:!enabled},t=>{
+ const root=workspace(t),version=sha(readFileSync(join(root,'inputs/data.txt')));
+ const large={...p,template:"n=len(open('__MOTIF_INPUT_0__').read())\nprint('x'*(n*5000))"};
+ assert.equal(scriptOutputLimit(large),16000);
+ assert.throws(()=>sandboxRun(root,scriptCommand(large,['/work/inputs/data.txt'],[version],'legacy')),/sandbox_replay_failed/);
+ const certified={...large,certification:{...p.certification,output_limit_bytes:65536}};
+ assert.equal(JSON.parse(sandboxRun(root,scriptCommand(certified,['/work/inputs/data.txt'],[version],'large'))).output.length,20001);
+ assert.throws(()=>scriptOutputLimit({...large,certification:{output_limit_bytes:999999}}),/invalid_script_output_limit/);
+});
 test('actual sandbox compressed and original receipts preserve every evidence byte',{skip:!enabled},t=>{
  const root=workspace(t),version=sha(readFileSync(join(root,'inputs/data.txt'))),args=[p,['/work/inputs/data.txt'],[version],'current'];
  const original=JSON.parse(sandboxRun(root,scriptCommand(...args))),compressed=JSON.parse(sandboxRun(root,scriptCommand(...args,{compactReceipt:true})));

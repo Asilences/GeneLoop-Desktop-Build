@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {scriptArgv} from '../src/adapters/script_motif_shell.ts';
-import {bindScript,scriptCommand,programIdentity,scriptCodeLocks,fixedInput,compatibleInput,witnessedOutputSchema,decodeScriptReceipt} from '../src/adapters/script_motif_runtime.ts';
+import {bindScript,scriptCommand,programIdentity,scriptCodeLocks,fixedInput,compatibleInput,witnessedOutputSchema,decodeScriptReceipt,scriptOutputLimit} from '../src/adapters/script_motif_runtime.ts';
 import {runCertifiedScript} from './run-certified-script.mjs';
 import {digest} from '../src/motif_core/online_skill_runtime.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -75,7 +75,7 @@ function certify(rows){
     const first=JSON.parse(sandboxRun(row.workspace,cmd)),second=JSON.parse(sandboxRun(row.workspace,cmd));
     const compact=decodeScriptReceipt(JSON.parse(sandboxRun(row.workspace,scriptCommand(p,bound.map(b=>b.path),bound.map(b=>b.sha256),'certification',{compactReceipt:true}))));
     if(digest(compact)!==digest(first))throw Error('compact_receipt_changed_evidence');
-    if(Buffer.byteLength(first.output)>16000)throw Error('script_output_exceeds_context_budget');
+    if(Buffer.byteLength(first.output)>scriptOutputLimit(p))throw Error('script_output_exceeds_context_budget');
     if(first.output!==second.output||sha(first.output)!==first.output_sha256)throw Error('nondeterministic_script');
     if(role==='source'&&first.output!==original)throw Error('parameterization_changed_behavior');
     if(p.expression_witness){
@@ -86,7 +86,15 @@ function certify(rows){
     outputs.push(first.output);cases.push({role,task_id:row.task_id,input_sha256:bound.map(b=>b.sha256),output_sha256:first.output_sha256});
    }
    if(outputs[0]===outputs[1])throw Error('input_dependency_not_demonstrated');
-   const {source,witness,original_paths,expression_witness,...program}=p;
+   let valueBinding;
+   if(p.value_binding_requested){
+    if(p.inputs.length!==1||p.inputs[0].format!=='json'||p.argv_contract||p.network_policy)throw Error('script_value_binding_requires_one_json_input');
+    const texts=[own[0].data.toString('utf8'),other[0].data.toString('utf8')];
+    if(texts.some(t=>JSON.stringify(JSON.parse(t))!==t))throw Error('script_value_binding_requires_canonical_json');
+    const schema=witnessedOutputSchema(texts);if(!schema)throw Error('script_value_binding_unstable_contract');
+    valueBinding={format:'script_json_value_binding_v1',input_schema:schema};
+   }
+   const {source,witness,original_paths,expression_witness,output_limit_bytes,value_binding_requested,...program}=p;
    const programSha=digest(programIdentity(p));
    seen.add(p.id);programs.push({...program,certification:{passed:true,cases:cases.length,source_equivalent:true,program_sha256:programSha,
      source_bytes:Buffer.byteLength(p.source),output_bytes:outputs.map(x=>Buffer.byteLength(x)),
@@ -94,6 +102,8 @@ function certify(rows){
      ...(expression_witness?{expression:{target:expression_witness.target,lines:expression_witness.lines,source_sha256:expression_witness.original_source_sha256}}:{}),
      ...(witnessedOutputSchema(outputs)?{output_schema:witnessedOutputSchema(outputs)}:{}),
      receipt_protocol:'bounded_zlib_v1',
+     ...(output_limit_bytes?{output_limit_bytes:scriptOutputLimit(p)}:{}),
+     ...(valueBinding?{value_binding:valueBinding}:{}),
      scope:expression_witness?'source_prefix_and_dependency_slice_equivalence_on_distinct_inputs_not_historical_stdout_or_semantic_quality':'deterministic_source_equivalence_on_distinct_inputs_not_semantic_quality_proof'}});
   }catch(error){rejected.push({id:p.id,call_id:p.witness.call_id,reason:error.message,...(error.cause?{diagnostic:error.cause}:{})});}
  }

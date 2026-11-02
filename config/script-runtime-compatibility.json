@@ -4,9 +4,16 @@
     {
       "path": "src/adapters/script_motif_runtime.ts",
       "from_sha256": "61d679a1f971f9efb16a2711c583b35ac005301341a282a9c8ee5e630a2df870",
-      "to_sha256": "0111a59d3aa3d1a2dbde74b1c16c79b7aab32edd79bf48ba5c0bb91076570afb",
+      "to_sha256": "9cef4d6a5e4dba6f66006af4e4f010e71a513e3ec48669a563155986d1d9958b",
       "reason": "仅将整文件锁检查改为执行兼容策略；程序身份、证书、绑定、沙箱及回执逻辑保持原样",
       "validation": "tests/test_script_capability_runtime.mjs"
+    },
+    {
+      "path": "src/adapters/script_motif_runtime.ts",
+      "from_sha256": "0111a59d3aa3d1a2dbde74b1c16c79b7aab32edd79bf48ba5c0bb91076570afb",
+      "to_sha256": "9cef4d6a5e4dba6f66006af4e4f010e71a513e3ec48669a563155986d1d9958b",
+      "reason": "旧程序继续使用16000字节上限；新程序仅能使用证书中显式认证的65536上限，增加受认证JSON值输入元数据校验，绑定与沙箱保持原样",
+      "validation": "tests/test_script_capability_runtime.mjs tests/test_script_receipt_envelope.mjs"
     }
   ]
 }

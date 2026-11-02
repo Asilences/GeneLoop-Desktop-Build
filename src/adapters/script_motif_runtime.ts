@@ -142,6 +142,12 @@ export function witnessedOutputSchema(outputs:string[]){
   if(result.type==='object'&&result.properties&&Buffer.byteLength(JSON.stringify(result))<=8000)return result;
  }catch{}
 }
+/** Legacy programs retain 16 KB. Larger reports require explicit certification. */
+export function scriptOutputLimit(program:any){
+ const limit=program.certification?.output_limit_bytes??program.output_limit_bytes??16000;
+ if(![16000,65536].includes(limit))throw Error('invalid_script_output_limit');
+ return limit;
+}
 export function scriptCommand(program:any,paths:string[],versions:string[],nonce:string,options:any={}){
   if(paths.length!==program.inputs.length||paths.some(p=>!p.startsWith('/work/')||p.includes('\n')))throw Error('invalid_script_binding');
   let source=program.template;
@@ -153,7 +159,7 @@ export function scriptCommand(program:any,paths:string[],versions:string[],nonce
   const header=`import io as _sm_io, contextlib as _sm_context, hashlib as _sm_hash, json as _sm_json, resource as _sm_resource, sys as _sm_sys\n_sm_resource.setrlimit(_sm_resource.RLIMIT_CPU, (20,20))\nif _sm_sys.platform != 'darwin':\n    _sm_resource.setrlimit(_sm_resource.RLIMIT_AS, (536870912,536870912))\n_sm_sys.argv=${JSON.stringify(['cached-script',...(options.argv??[])])}\n_sm_paths=${JSON.stringify(paths)}\n_sm_expected=${JSON.stringify(versions)}\ndef _sm_versions():\n    return [_sm_hash.sha256(open(p,'rb').read()).hexdigest() for p in _sm_paths]\nassert _sm_versions()==_sm_expected, 'input_changed'\n${http}def _sm_program():\n`;
   const invoke=program.network_policy?`try:\n    with _sm_context.redirect_stdout(_sm_buffer):\n        _sm_program()\nexcept _sm_Demand: pass\nif _sm_pending:\n    print(_sm_json.dumps({'kind':'script_http_demand','url':_sm_pending[0]}))\n    _sm_sys.exit(0)\n`:`with _sm_context.redirect_stdout(_sm_buffer):\n    _sm_program()\n`;
   const receiptExpression=`_sm_json.dumps({'kind':'script_motif_receipt','nonce':${JSON.stringify(nonce)},'program_id':${JSON.stringify(program.id)},'versions':_sm_expected,'output':_sm_output,'output_sha256':_sm_hash.sha256(_sm_output.encode()).hexdigest()},ensure_ascii=False)`;
-  const footer=`\n_sm_buffer=_sm_io.StringIO()\n${invoke}assert _sm_versions()==_sm_expected, 'input_changed'\n_sm_output=_sm_buffer.getvalue()\nassert 0<len(_sm_output.encode())<=16000, 'output_bound'\n`;
+  const footer=`\n_sm_buffer=_sm_io.StringIO()\n${invoke}assert _sm_versions()==_sm_expected, 'input_changed'\n_sm_output=_sm_buffer.getvalue()\nassert 0<len(_sm_output.encode())<=${scriptOutputLimit(program)}, 'output_bound'\n`;
   const transport=options.compactReceipt?'_sm_receipt='+receiptExpression+'\n'+
    "import zlib as _sm_zlib, base64 as _sm_b64\n_sm_payload=_sm_receipt.encode('utf-8')\nassert len(_sm_payload)<=256000, 'receipt_bound'\n_sm_compact=_sm_b64.b64encode(_sm_zlib.compress(_sm_payload)).decode('ascii')\nassert len(_sm_compact)<=48000, 'compressed_receipt_bound'\nprint(_sm_json.dumps({'kind':'script_motif_envelope','encoding':'zlib_base64_v1','payload':_sm_compact,'sha256':_sm_hash.sha256(_sm_payload).hexdigest()}))\n":'print('+receiptExpression+')\n';
   return "python3 - <<'SCRIPT_MOTIF_BOUNDARY'\n"+header+source.split('\n').map((s:string)=>'    '+s).join('\n')+footer+transport+'SCRIPT_MOTIF_BOUNDARY';
@@ -213,6 +219,11 @@ export function loadScriptLibrary(path:string){
   const locked=scriptCodeLocks;
   assertScriptRuntimeCompatibility(library.code_locks,locked);
   for(const p of library.programs){
+    if(p.output_limit_bytes!==undefined||p.value_binding_requested!==undefined)throw Error('uncertified_script_options');
+    scriptOutputLimit(p);
+    if(p.certification?.value_binding&&(p.certification.value_binding.format!=='script_json_value_binding_v1'||
+       p.inputs?.length!==1||p.inputs[0].format!=='json'||p.argv_contract||p.network_policy||
+       !p.certification.value_binding.input_schema?.properties))throw Error('invalid_script_value_binding');
     if(p.certification?.receipt_protocol!==undefined&&p.certification.receipt_protocol!=='bounded_zlib_v1')throw Error('unsupported_script_receipt_protocol');
     if(!p.certification?.passed||p.certification.cases<2||p.certification.source_equivalent!==true||
        p.certification.program_sha256!==digest(programIdentity(p))||
