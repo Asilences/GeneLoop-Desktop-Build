@@ -34,6 +34,15 @@ def test_readonly_regex_script_does_not_require_json_ir():
     assert p['language']=='python'
 
 
+def test_zip_directory_separator_is_data_but_filesystem_root_stays_unbound():
+    inputs={'project.zip':{'suffix':'.zip','format':'zip'}}
+    source="import zipfile\nz=zipfile.ZipFile('project.zip')\nprint([p for p in z.namelist() if not p.endswith('/')])"
+    assert compile_script(source,inputs)['language']=='python'
+    for extra in ["print(open('/').read())", "print(open('/etc/passwd').read())", "root='/'"]:
+        with pytest.raises(ValueError,match='unbound_path_literal'):
+            compile_script(source+'\n'+extra,inputs)
+
+
 def test_regex_compile_is_distinct_from_python_compile_and_rebinding():
     inputs={'references.bib':{'suffix':'.bib','format':'text'}}
     for alias in ('re','rx'):

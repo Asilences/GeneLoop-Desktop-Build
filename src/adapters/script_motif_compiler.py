@@ -183,9 +183,19 @@ def compile_script(source, registered_files, *, argv=None):
     if any('__MOTIF_INPUT_' in n.value for n in nodes if isinstance(n, ast.Constant) and isinstance(n.value, str)):
         raise ValueError('reserved_placeholder')
     # Paths left in a template indicate a missed dependency, not a reusable input.
-    for node in ast.walk(ast.parse(template)):
+    template_tree = ast.parse(template)
+    parents = {child: parent for parent in ast.walk(template_tree) for child in ast.iter_child_nodes(parent)}
+    for node in ast.walk(template_tree):
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             if re.match(r'^(?:/|\.\.?/|[A-Za-z]:\\)', node.value):
+                # A ZIP directory suffix or string separator is data, not an
+                # unbound filesystem read. Keep this exception local to string
+                # operations; open('/') and unregistered paths still fail.
+                parent = parents.get(node)
+                if (node.value in {'/', './', '../'} and isinstance(parent, ast.Call)
+                        and node in parent.args and isinstance(parent.func, ast.Attribute)
+                        and parent.func.attr in {'startswith', 'endswith', 'strip', 'lstrip', 'rstrip', 'split', 'rsplit', 'replace'}):
+                    continue
                 raise ValueError('unbound_path_literal')
     body = {'version': VERSION, 'language': 'python', 'template': template, 'inputs': slots}
     if argv and uses_argv:
