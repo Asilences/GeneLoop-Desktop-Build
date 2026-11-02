@@ -58,3 +58,23 @@ test('unknown or malformed QA transport fields are not silently accepted',()=>{
  assert.throws(()=>publicationVerdict({...verdict,evidence_binding:{trace_sha256:'bad'}}),/binding_invalid/);
  assert.throws(()=>publicationVerdict({...verdict,model_certificate:true}),/shape_invalid/);
 });
+
+test('same file arguments accept different pinned bytes and bind native versions',async t=>{
+ const options=fixture(t),run=options.run;
+ options.followup.input=structuredClone(options.validation.input);
+ options.validation.input_versions=[{path:'/work/inputs/references.bib',sha256:'a'.repeat(64)}];
+ options.followup.input_versions=[{path:'/work/inputs/references.bib',sha256:'b'.repeat(64)}];
+ options.run=async(...args)=>{const value=await run(...args);value.execution.input_versions=structuredClone(options[args[3]].input_versions);return value;};
+ assert.equal((await completeCapabilityCycle(options)).followup_passed,true);
+});
+
+test('renaming identical bytes, missing versions and changed execution versions are rejected',async t=>{
+ const options=fixture(t),run=options.run;
+ options.validation.input_versions=[{path:'/work/inputs/one.bib',sha256:'a'.repeat(64)}];
+ await assert.rejects(completeCapabilityCycle(options),/input_versions_invalid/);
+ options.followup.input_versions=[{path:'/work/inputs/two.bib',sha256:'a'.repeat(64)}];
+ await assert.rejects(completeCapabilityCycle(options),/followup_input_must_differ/);
+ options.followup.input_versions=[{path:'/work/inputs/two.bib',sha256:'b'.repeat(64)}];
+ options.run=async(...args)=>{const value=await run(...args);value.execution.input_versions=[{path:'/work/inputs/wrong.bib',sha256:'c'.repeat(64)}];return value;};
+ await assert.rejects(completeCapabilityCycle(options),/execution_input_versions_changed/);
+});

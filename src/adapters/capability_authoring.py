@@ -59,7 +59,11 @@ def authoring_context(task, snapshot, catalog):
     source=catalog.get('source_catalog',catalog) if isinstance(catalog,dict) else {}
     descriptions={}
     if isinstance(source,dict):
-        for row in source.get('catalog',[]):
+        seed=source.get('seed',{})
+        rows=[*source.get('catalog',[]),
+              *(seed.get('catalog',[]) if isinstance(seed,dict) else []),
+              *source.get('admitted_materials',[])]
+        for row in rows:
             if isinstance(row,dict) and isinstance(row.get('capability'),dict):
                 descriptions[(row['capability'].get('id'),row['capability'].get('sha256'))]=row
     lookup={cap['id']:cap for cap in snapshot['capabilities']}

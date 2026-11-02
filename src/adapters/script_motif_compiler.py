@@ -40,37 +40,70 @@ def virtual_host(workspace, virtual):
 
 
 def extract(command, workspace=None):
-    """Accept a single interpreter invocation; never silently discard a pipeline."""
+    """Extract one interpreter, retaining admission for a fixed input checksum."""
     cwd = '/work'
     prefix = re.match(r'^\s*cd\s+(\S+|\x27[^\x27]+\x27|"[^"]+")\s*&&\s*', command)
     if prefix:
         cwd = shlex.split(prefix.group(1))[0]; command = command[prefix.end():]
+    # Native agents commonly checksum an input immediately before a heredoc.
+    # Only this read of one fixed input is separable; arbitrary shell prefixes,
+    # pipelines, expansion, options and output redirection remain rejected.
+    checksum_path = None
+    checksum = re.match(r'^sha256sum[ \t]+([^\n]*?)[ \t]*&&[ \t]*', command)
+    if checksum:
+        tokens = shlex.split(checksum.group(1))
+        if (workspace is None or len(tokens) != 1 or tokens[0].startswith('-') or
+                any(c in tokens[0] for c in '$`\\;|&<>*?[]{}~\r\n')):
+            raise ValueError('script_checksum_fixed_input_required')
+        checksum_path = posixpath.normpath(posixpath.join(cwd, tokens[0]))
+        path = virtual_host(workspace, checksum_path)
+        if (not path.is_file() or path.is_symlink() or
+                not path.resolve().is_relative_to(Path(workspace).resolve())):
+            raise ValueError('script_checksum_fixed_input_required')
+        command = command[checksum.end():]
+    def check_checksum_binding(source):
+        if checksum_path is not None and not any(
+                isinstance(node, ast.Constant) and isinstance(node.value, str) and
+                posixpath.normpath(posixpath.join(cwd, node.value)) == checksum_path
+                for node in ast.walk(ast.parse(source))):
+            raise ValueError('script_checksum_input_not_bound')
     # A real Agent often saves code and invokes it later. Admit only an exact
     # single-file heredoc followed by that interpreter call, never arbitrary shell.
-    saved = re.fullmatch(r"cat\s*>\s*(\S+)\s*<<['\"]?(\w+)['\"]?\n(.*?)\n\2\n(python3?\s+[^\n]+)", command.strip(), re.S)
+    saved = re.fullmatch(r"cat\s*>\s*(?P<path>\S+)\s*<<(?P<quote>['\"]?)(?P<delimiter>\w+)(?P=quote)\n(?P<body>.*?)\n(?P=delimiter)\n(?P<invocation>python3?\s+[^\n]+)", command.strip(), re.S)
     declared = None
     if saved:
-        declared = (saved.group(1), saved.group(3))
-        command = saved.group(4)
+        declared = (saved.group('path'), saved.group('body'))
+        if not saved.group('quote') and re.search(r"[$`\\]",declared[1]):
+            raise ValueError('script_heredoc_expansion_requires_evidence')
+        command = saved.group('invocation')
         invocation = shlex.split(command)
         if len(invocation)>=2 and invocation[0] in ('python','python3') and invocation[1]==declared[0] and not any(p in {'|',';','&&','||','>','2>&1'} for p in invocation):
             if workspace:
                 virtual=posixpath.normpath(posixpath.join(cwd,invocation[1]))
-                if not virtual.startswith('/work/'):raise ValueError('script_outside_workspace')
-                path=virtual_host(workspace,virtual)
-                if path.is_symlink() or not path.resolve().is_relative_to(Path(workspace).resolve()):raise ValueError('script_source_not_fixed')
-                # Existing saved bytes still have to agree. A newly declared
-                # source may be absent from the native pre-call snapshot.
-                if path.exists() and path.read_bytes().decode('utf-8').strip()!=declared[1].strip():raise ValueError('saved_source_changed')
+                if re.fullmatch(r'/tmp/[A-Za-z0-9_.-]+\.py',invocation[1]):
+                    # Exact current-command bytes only. Never read a host /tmp
+                    # path or promote an arbitrary previously saved temp file.
+                    pass
+                else:
+                    if not virtual.startswith('/work/'):raise ValueError('script_outside_workspace')
+                    path=virtual_host(workspace,virtual)
+                    if path.is_symlink() or not path.resolve().is_relative_to(Path(workspace).resolve()):raise ValueError('script_source_not_fixed')
+                    # Existing saved bytes still have to agree. A newly declared
+                    # source may be absent from the native pre-call snapshot.
+                    if path.exists() and path.read_bytes().decode('utf-8').strip()!=declared[1].strip():raise ValueError('saved_source_changed')
             # This source is created by the current command; it cannot exist in
             # the pre-call snapshot. Its bytes are witnessed by native arguments.
+            check_checksum_binding(declared[1])
             return cwd, declared[1], invocation[2:], sha(declared[1])
     match = re.fullmatch(r"\s*python(?:3)?\s+(?:-\s*)?<<\s*(?P<quote>['\"]?)(?P<delimiter>[A-Za-z_]\w*)(?P=quote)[ \t]*\n(?P<body>.*?)\n(?P=delimiter)[ \t]*\s*", command, re.S)
     if match:
         source=match.group('body')
         if not match.group('quote') and re.search(r"[$`\\]",source):
             raise ValueError('script_heredoc_expansion_requires_evidence')
+        check_checksum_binding(source)
         return cwd, source
+    if checksum_path is not None:
+        raise ValueError('script_checksum_heredoc_required')
     parts = shlex.split(command)
     if len(parts) == 3 and parts[0] in ('python', 'python3') and parts[1] == '-c':
         return cwd, parts[2]
@@ -99,6 +132,17 @@ def compile_script(source, registered_files, *, argv=None):
     if len(source.encode()) > 48000: raise ValueError('script_size_limit')
     tree = ast.parse(source)
     nodes = list(ast.walk(tree))
+    regex_names = {a.asname or a.name for n in tree.body if isinstance(n,ast.Import)
+                   for a in n.names if a.name=='re'}
+    # Allow regular-expression compilation, never Python compile/eval. Reject
+    # a shadowed module name rather than inferring the callable dynamically.
+    shadowed = {n.id for n in nodes if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Store)}
+    shadowed |= {n.arg for n in nodes if isinstance(n,ast.arg)}
+    shadowed |= {n.name for n in nodes if isinstance(n,(ast.FunctionDef,ast.ClassDef))}
+    shadowed |= {a.asname or a.name.split('.')[0] for n in nodes if isinstance(n,ast.Import)
+                 for a in n.names if n not in tree.body or a.name!='re'}
+    shadowed |= {a.asname or a.name for n in nodes if isinstance(n,ast.ImportFrom) for a in n.names}
+    regex_names -= shadowed
     sys_names = {a.asname or a.name for n in nodes if isinstance(n,ast.Import) for a in n.names if a.name=='sys'}
     if len(nodes) > 4000: raise ValueError('script_ast_limit')
     for node in nodes:
@@ -106,7 +150,9 @@ def compile_script(source, registered_files, *, argv=None):
             modules = [node.module] if isinstance(node, ast.ImportFrom) else [a.name for a in node.names]
             if any(m not in IMPORTS for m in modules) or getattr(node, 'level', 0):
                 raise ValueError('import_not_admitted')
-        if isinstance(node, ast.Attribute) and (node.attr.startswith('_') or node.attr in FORBIDDEN):
+        regex_compile = (isinstance(node,ast.Attribute) and node.attr=='compile' and
+                         isinstance(node.value,ast.Name) and node.value.id in regex_names)
+        if isinstance(node, ast.Attribute) and (node.attr.startswith('_') or node.attr in FORBIDDEN) and not regex_compile:
             raise ValueError('attribute_not_admitted:' + node.attr)
         if isinstance(node, ast.Attribute) and isinstance(node.value,ast.Name) and node.value.id in sys_names and node.attr!='argv':
             raise ValueError('only_sys_argv_is_admitted')

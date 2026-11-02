@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-03，论文书目公共 Capability 完成首个受控真实验收：正常任务学习、缺口补材料、模型组合，经显式工程恢复后通过 27 条验证和 29 条后继，发布能力进入下一 Builder。尚未接管聊天或证明新增机制降本；范围、费用与失败见[真实记录](docs/experiments/paper-capability-real-20261102.md)。
+
 2026-11-02，离线 Capability 机制新增原生 Script 后端与论文盘点适配器，复用已有编译、沙箱及公共发布流程；旧库采用来源/执行分离和精确兼容白名单。入口见[场景协议](docs/capability-scenes-v1.md#论文-script-接入2026-11-02续)，[原生诊断记录](docs/experiments/efficiency-rsi-script-20261102.md)不作为新增模型或效率收益证据，默认聊天不接管。
 
 新增[RSI 共享质量证据与复用形式整合](docs/experiments/rsi-meta-overnight-20261030.md)：F02 统一记录任务/产物/评价标准和逐项证据，视频形式更新复用共同版本核验与发布回执。Python/TypeScript 都能核对新记录；视频帧/音频检查仍由场景提供。已完成一次真实发布、后继TS加载和下一学习/认证/反思；六对限定质量通过任务44→33请求、前向代理估费降约21%，后继两题仍有基线质量失败与候选重渲染开销，未证明持续净收益。完整证据与边界见实验记录，未部署正式服务。

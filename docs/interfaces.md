@@ -1307,3 +1307,9 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 ## 视频网页发布程序接口（2026-11-02）
 
 video_program_v1 通过原 source-program runtime 加载已接受的发布形式。两侧按实际 mode 派生工具表并核对完整 schema；Baseline 清空 Motif 环境变量，execute 侧加载类型化程序。video_program_reused 是已核对当前交付的审计事件，前端 program_reuses 与 verified_skips 分开。部署字段及边界见[视频双路记录](experiments/video-paired-motif-20261102.md)。
+
+## Capability 文件输入身份（2026-11-03）
+
+公共 `completeCapabilityCycle` 的 validation/followup 任务可由可信宿主提供 `input_versions:[{path,sha256}]`。两侧必须同时提供非空、路径唯一的合法版本列表，内容摘要集合必须不同；原生执行的 `input_versions` 必须与该侧列表精确一致。仍核对任务、owner、snapshot、根、真实参数摘要与回执；输入版本不能替代参数绑定。不提供版本列表的场景保留原参数差异检查。
+
+Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，拒绝仅重命名同一内容；Store 保存原执行参数和回执，独立质量检查不变。Builder 同时读取公共目录包装中的 seed 和 admitted_materials 描述，只向固定 snapshot 的可选根附加描述。真实范围与未完成项见[验收记录](experiments/paper-capability-real-20261102.md)。
