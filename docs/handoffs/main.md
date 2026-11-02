@@ -1,4 +1,8 @@
-## 2026-11-03：B 真实书目验收（最新）
+## 2026-11-03：Capability Frontier 夜间研究（最新）
+
+起点为已合并 PR #122 的 `f594e19`。C 已发布，第一轮 D 四格全部保留：一格通过 QLoRA 两对留出但没有调用完整 C，三格构造/接口失败，无新增效率或完整 C→D 结论。32 次研究请求代理估费 USD0.158522784，旧累计账本前缀一致。接口诊断后冻结三组各两格的新条件与 Mamba 留出，正在服务器隔离快照 `code-13` 执行；生产未动。见[论文当前交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)和[实验](../experiments/capability-frontier-20261103.md)。
+
+## 2026-11-03：B 真实书目验收
 
 B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池→模型组合已真实发生；修正输入身份接线后，原提案显式重放发布，27条验证/29条后继各4项独立检查通过，新根对下一Builder可见。含工程恢复，不代表无人值守或新增效率收益。19次真实请求估费USD0.018788928，原账本不清零；默认聊天、生产和外部应用未改。代码、全量与定向验证/失败边界及下一步见[论文交接](paper-proofreading.md)与[实验记录](../experiments/paper-capability-real-20261102.md)。A与B（`5efa221`）已推送至[PR #122](https://github.com/jingyio/GeneLoop/pull/122)，未合并/部署；CI以当前head为准。
 

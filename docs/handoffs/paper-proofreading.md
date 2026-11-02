@@ -3,9 +3,11 @@
 ## 2026-11-03：Capability Frontier 七小时主线
 
 - 起点：已核对远程 main `f594e19`，PR #122 已合并。当前分支 `codex/capability-frontier-20261103`，沿用当前工作区，私人 `reference/` 未跟踪。
-- 当前目标：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结与失败决策见[七小时协议](../capability-frontier-protocol-v1.md)。截至本条仅固化研究设计，尚未新增模型调用或产生本轮研究结果。
+- 当前目标：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结与失败决策见[七小时协议](../capability-frontier-protocol-v1.md)。C 已真实发布，第一轮四格完成：一组 D 通过 QLoRA 两对留出但没有调用完整 C，另三组未产生可运行候选；不能称 C→D 或新增效率收益。
 - 执行窗口：约 00:48–07:48（Asia/Shanghai）；先固定真实/公开输入、独立判据、组间可见能力和有限实验预算，再运行。沿用原累计账本；生产服务、旧库与默认聊天不改。
-- 下步：准备两个独立文档项目，冻结 C/D 的跨文件、跨版本约束；在同等基础工具与普通编码条件下做自主构造和移除 C 对照。原始数据 `.local/capability-frontier-20261103/`，实验报告按协议维护。
+- 已验证：函数入口、完整程序的机械包装、JSON 结果输入、双文件显式认证绑定及旧守卫；最新服务器定向 30 Python 通过，前轮 20 Node 通过/1 平台跳过。C 获取 20 请求 USD0.075317172，第一轮 D 12 请求 USD0.083205612，均为代理估费，旧账本前缀核验通过。
+- 正在运行：`252e2c1` 第二条件，Direct/L0、Flat=L0+J、Hierarchical=L0+J+C 各两格，USD0.80/格；冻结后再统一 Mamba 新留出。J 是 C 构造阶段学到的关系原语，原对照两组均有 J，现分别评价新关系材料与完整 C 包装，禁止混淆。代码快照 `code-13`、私有 study `code-13/.local/D-study-002/`。
+- 入口：服务器加载 `.local/remote-env.sh` 后使用项目 Python，`python -m scenarios.paper_proofreading.frontier.run --request <已冻结request.json>`；所有构造结束后 `frontier.finalize_D --directory <study> --base <私有实验根>`。完整来源、反例、摘要与费用见[实验记录](../experiments/capability-frontier-20261103.md)。原始数据两端忽略目录 `.local/capability-frontier-20261103/`；当前研究提交尚未推送或新建 PR，未部署。
 
 ## 2026-11-03：B 真实书目 Capability 验收
 

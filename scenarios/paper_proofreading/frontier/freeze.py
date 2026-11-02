@@ -1,6 +1,6 @@
 """Freeze task text, corpus, evaluator and research budgets before model calls."""
 from __future__ import annotations
-import argparse,json
+import argparse,json,copy
 from pathlib import Path
 from src.adapters.capability_scene import reference,ROOT
 from scenarios.paper_proofreading.frontier.oracle import bibliography,latex,audit,compare,canonical,sha
@@ -17,6 +17,20 @@ def schema(example):
     if isinstance(example,dict):return {'type':'object','properties':{k:schema(v) for k,v in example.items()},'required':list(example),'additionalProperties':False}
     if isinstance(example,list):return {'type':'array'}
     return {'type':'boolean' if isinstance(example,bool) else 'number' if isinstance(example,(int,float)) else 'string'}
+
+
+def clarify_D_task(task,bibliography_task,latex_task):
+    """New task-text condition, never an in-place edit of a frozen task.
+
+    Observable output contract and the independent evaluator do not change.
+    """
+    value=copy.deepcopy(task);marker='Join bibliography entries ONLY';semantics=value['audit_semantics']
+    if marker not in semantics:raise ValueError('frontier_D_semantics_boundary_missing')
+    value['audit_semantics']=semantics[semantics.index(marker):]
+    value['literal_parser_semantics']={'scope':'Reference extraction behavior separately for each project version; final D output is ONLY the main task contract.',
+        'bibliography':bibliography_task['instruction'],'latex':latex_task['instruction']}
+    value['construction_policy']='Every comparison arm may implement the ENTIRE D solver in ordinary Python, including parsing, or use any visible capability. C construction restrictions do not apply to D. No prior capability is mandatory.'
+    return value
 
 
 def main():

@@ -15,6 +15,23 @@ from src.adapters.capability_scene import ROOT,reference
 from src.adapters.script_motif_compiler import observe,sha
 
 
+def function_module(source):
+    tree=ast.parse(source);lines=source.splitlines();kept=[];ignored=[]
+    functions={n.name for n in tree.body if isinstance(n,ast.FunctionDef)}
+    for node in tree.body:
+        declaration=isinstance(node,(ast.Import,ast.ImportFrom,ast.FunctionDef,ast.Assign,ast.AnnAssign))
+        if isinstance(node,(ast.Assign,ast.AnnAssign)) and any(
+                (isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id in functions|{'open','input'}) or
+                (isinstance(n,ast.Attribute) and n.attr in ('stdin','argv')) for n in ast.walk(node)):
+            declaration=False
+        docstring=isinstance(node,ast.Expr) and isinstance(node.value,ast.Constant) and isinstance(node.value.value,str)
+        if declaration or docstring:
+            first=min([node.lineno,*[d.lineno for d in getattr(node,'decorator_list',[])]])
+            kept.append('\n'.join(lines[first-1:node.end_lineno]))
+        else:ignored.append({'line':node.lineno,'statement':type(node).__name__})
+    return '\n\n'.join(kept)+'\n',ignored
+
+
 def executable_source(program,cases):
     source=program['source']
     if program.get('interface','script_v1')=='script_v1':return source
@@ -24,9 +41,10 @@ def executable_source(program,cases):
         raise ValueError('frontier_single_argument_run_function_required')
     if any(isinstance(n,ast.Name) and n.id.startswith('frontier_bridge_') for n in ast.walk(tree)):
         raise ValueError('frontier_reserved_bridge_identifier')
-    if any(not isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef,ast.Assign,ast.AnnAssign)) and
-           not (isinstance(n,ast.Expr) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str)) for n in tree.body):
-        raise ValueError('frontier_function_module_must_not_execute_main')
+    # function_v1 is a library interface: host invokes run(value). Script main
+    # control/output statements are not part of this entrypoint. All function
+    # bodies/imports/constants retain their original source text and order.
+    source,_=function_module(source)
     paths=[i['path'] for i in cases[0]['inputs']]
     if program['mode']=='json':
         if paths!=['/work/inputs/value.json']:raise ValueError('frontier_json_function_input_invalid')
@@ -41,6 +59,10 @@ def learn(program,cases,directory,source_evidence,*,large_output=False,origin='m
     if origin not in ('model_construction','host_diagnostic'):raise ValueError('frontier_source_origin_invalid')
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=False)
     source=executable_source(program,cases);(directory/'executed-source.py').write_text(source,encoding='utf-8')
+    if program.get('interface')=='function_v1':
+        (directory/'entrypoint.json').write_text(json.dumps({'interface':'function_v1',
+            'ignored_script_main_statements':function_module(program['source'])[1],
+            'raw_source_sha256':sha(program['source']),'executed_source_sha256':sha(source)},indent=2),encoding='utf-8')
     command="python3 - <<'FRONTIER_MODEL_PROGRAM'\n"+source+'\nFRONTIER_MODEL_PROGRAM'
     if '\nFRONTIER_MODEL_PROGRAM' in source:raise ValueError('frontier_reserved_boundary')
     rows=[]

@@ -1,5 +1,6 @@
 """Freeze all four D episodes and their initial exposure before any D call."""
 import argparse,copy,json,shutil,subprocess
+from decimal import Decimal
 from pathlib import Path
 from src.adapters.capability_scene import ROOT,reference
 from src.adapters.capability_improvement import evidence,read,save
@@ -26,11 +27,19 @@ def structural_schema(value):
     return {'type':'null' if value is None else 'boolean' if isinstance(value,bool) else 'number' if isinstance(value,(int,float)) else 'string'}
 
 
+def read_journal(path):
+    raw=Path(path).read_text(encoding='utf-8')
+    if not raw.endswith('\n'):raise ValueError('frontier_prior_journal_incomplete')
+    return [json.loads(line) for line in raw.splitlines()]
+
+
 def main():
     parser=argparse.ArgumentParser()
     for name in ('base','output','C_plan','C_run'):parser.add_argument('--'+name.replace('_','-').lower(),type=Path,required=True,dest=name)
     parser.add_argument('--code-commit',required=True)
     parser.add_argument('--v2',action='store_true');parser.add_argument('--final-manifest',type=Path)
+    parser.add_argument('--task-file',type=Path);parser.add_argument('--study-name')
+    parser.add_argument('--prior-journal',type=Path,action='append',default=[])
     a=parser.parse_args();base=a.base.resolve();out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
     c_plan=read(a.C_plan);c_result=read(a.C_run/'result.json')
     published=[r for r in c_result['outcomes'] if r['status']=='published']
@@ -87,7 +96,7 @@ def main():
             {'path':'/work/inputs/after.zip','source':reference(after)}]})
     save(out/'shared-training-examples.json',examples)
     c_task=json.loads(evidence(reference(base/'frozen-v1/task-C.json')))
-    task=reference(base/'frozen-v1/task-D.json');protocol=reference(base/'frozen-v1/protocol-server.json')
+    task=reference(a.task_file.resolve() if a.task_file else base/'frozen-v1/task-D.json');protocol=reference(base/'frozen-v1/protocol-server.json')
     source_files=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py']
     common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/script_capability_runtime.ts',
         'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/adapters/efficiency_rsi_registry.py',
@@ -114,13 +123,24 @@ def main():
             final_projects=[{'id':'mamba','versions':versions,'source_manifest':manifest_ref}],
             final_test_policy='All six episodes finish before fresh Mamba final tests; no final feedback in model calls.')
         required_checks=['mamba_v0_v1','mamba_v1_v2'];baseline='direct_L0'
+    if a.prior_journal:
+        prior={};settled={}
+        for path in a.prior_journal:
+            for row in read_journal(path):
+                if row['event']=='request_booked':prior[row['request_id']]=Decimal(row['reserved_upper_usd'])
+                elif row['event']=='request_settled':settled[row['request_id']]=row['observed_model_usd']
+        accounted=sum((Decimal(settled[rid]) if settled.get(rid) is not None else reserve for rid,reserve in prior.items()),Decimal(0))
+        upper=accounted+Decimal(budget)*len(snapshots)*2
+        if upper>Decimal('6.00'):raise ValueError('frontier_aggregate_research_budget_exceeded')
+        conditions.update(prior_research_journals=[reference(p.resolve()) for p in a.prior_journal],
+            prior_accounted_upper_usd=str(accounted),aggregate_planned_upper_usd=str(upper),aggregate_model_estimate_limit_usd='6.00')
     save(out/'conditions.json',conditions)
     (out/'evaluator').mkdir();shutil.copyfile(Path(__file__).with_name('oracle.py'),out/'evaluator/oracle.py')
     arms=[{'id':arm,**{prefix+'_snapshot_sha256':snapshot['digest'] for prefix in ('execution','build')},
         **{prefix+'_capabilities':snapshot['roots'] for prefix in ('execution','build')}} for arm,snapshot in snapshots.items()]
     cells=[{'id':arm+'-r'+str(rep),'task_id':'frontier-D','arm_id':arm,'replicate':rep,'phase':'construction',
         'budget_usd':float(budget),'max_attempts':1} for rep in (0,1) for arm in snapshots]
-    study=validate_study({'format':'efficiency_rsi_study_v1','id':'frontier-D-study-002' if a.v2 else 'frontier-D-study-001','objective':'efficiency_and_capability',
+    study=validate_study({'format':'efficiency_rsi_study_v1','id':a.study_name or ('frontier-D-study-002' if a.v2 else 'frontier-D-study-001'),'objective':'efficiency_and_capability',
         'conditions_sha256':capability_digest(conditions),'rubric_sha256':capability_digest({'required':required_checks,'oracle':reference(out/'evaluator/oracle.py')['sha256']}),
         'evaluator':{'id':'frontier-heldout-v1','sha256':reference(out/'evaluator/oracle.py')['sha256'],'ref':'evaluator/oracle.py'},
         'required_checks':required_checks,'tasks':[{'id':'frontier-D','sha256':task['sha256'],

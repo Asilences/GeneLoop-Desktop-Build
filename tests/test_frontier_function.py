@@ -23,9 +23,36 @@ def test_path_roles_are_bound_by_the_host_without_model_argv_or_literal_paths():
     assert len(compiled['inputs'])==2
 
 
-@pytest.mark.parametrize('source',["def run(a,b):\n return {}", "def other(a):\n return {}", "def run(a):\n return {}\nprint('extra')", "frontier_bridge_input={}\ndef run(a):\n return a"])
+@pytest.mark.parametrize('source',["def run(a,b):\n return {}", "def other(a):\n return {}", "frontier_bridge_input={}\ndef run(a):\n return a"])
 def test_invalid_entrypoints_or_bridge_shadowing_fail_before_execution(source):
     with pytest.raises(ValueError):executable_source({'source':source,'mode':'json','interface':'function_v1'},[{'inputs':[{'path':'/work/inputs/value.json'}]}])
+
+
+def test_function_library_ignores_script_main_but_keeps_function_algorithm():
+    from scenarios.paper_proofreading.frontier.learn import function_module
+    source="def run(value):\n    return {'count':len(value['rows'])}\n\nprint(run(value))\n"
+    module,ignored=function_module(source)
+    assert "return {'count':len(value['rows'])}" in module and 'print(run(value))' not in module
+    assert ignored==[{'line':4,'statement':'Expr'}]
+    _,ignored=function_module(source+"data=json.load(open('old.json'))\nresult=run(data)\n")
+    assert [r['statement'] for r in ignored]==['Expr','Assign','Assign']
+
+
+def test_program_metadata_defaults_do_not_rewrite_the_algorithm():
+    from scenarios.paper_proofreading.frontier.author import normalize_program
+    source="def run(paths):\n    return {'before':paths['before']}\n"
+    value,changes=normalize_program({'source':source},{'id':'D','program_interface':{'modes':['paths','json']}})
+    assert value['source']==source and value['mode']=='paths' and value['interface']=='function_v1'
+    assert set(changes)=={'default_mode','default_description','inferred_entrypoint'}
+
+
+def test_D_clarification_keeps_behavior_contract_and_removes_only_C_construction_policy():
+    from scenarios.paper_proofreading.frontier.freeze import clarify_D_task,DETAILS
+    task={'contract':{'fixed':'diagnostic'},'instruction':DETAILS['D'],'audit_semantics':DETAILS['C']}
+    value=clarify_D_task(task,{'instruction':DETAILS['bib']},{'instruction':DETAILS['tex']})
+    assert value['contract']==task['contract'] and value['instruction']==task['instruction']
+    assert value['audit_semantics']==DETAILS['C'][DETAILS['C'].index('Join bibliography entries ONLY'):]
+    assert task['audit_semantics']==DETAILS['C']
 
 
 native=(sys.platform=='linux' and Path('/usr/bin/bwrap').exists() and os.environ.get('RUN_SCRIPT_CAPABILITY_SANDBOX')=='1')
