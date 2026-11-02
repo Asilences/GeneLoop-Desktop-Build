@@ -1,6 +1,6 @@
 ## 2026-11-03：Capability Frontier 夜间研究（最新）
 
-起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D可发布/复用；进一步发现H0第一份材料已够用，但入池后丢了构造意图，已补按新snapshot续接，模型效果未重跑。独立反例已回到原撤回机制，三份错误D退出后续选择。79次请求估费USD0.340150572，旧账本不变；最新源码`e6d46f6`还修复日期写死与付费前条件核对，原16格一致性审计通过。全量1879 Python/1516 Node、Linux原生/公共95项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)的`c66c5cc`跨平台CI通过，最终补丁以最新head为准，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
+起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D可发布/复用；H0第一份材料已够用但入池后丢构造意图，已补新snapshot续接，模型效果未重跑。独立反例已回到原撤回机制，三份错误D退出后续选择。79次DeepSeek请求估费USD0.340150572，旧账本不变；源码`e6d46f6`还修复日期写死与付费前条件核对，原16格匹配。全量1879 Python/1516 Node、Linux原生/公共95项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)的`a92f278`（含最后源码）Ubuntu/Windows push/PR四项CI全部通过；后续仅文档收尾，最新head见PR，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
 
 ## 2026-11-03：B 真实书目验收
 
