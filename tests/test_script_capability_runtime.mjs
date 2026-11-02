@@ -87,6 +87,7 @@ function valueFixture(t,items=[]){
  p.certification.program_sha256=digest(programIdentity(p));p.id='script_'+p.certification.program_sha256.slice(0,24);
  const catalog=f.saveLibrary(),leaf=catalog.capabilities.find(c=>c.contract.input_schema.properties.value);
  const args={value:{items}};
+ f.manifest.libraries[0].sha256=catalog.library_sha256;
  f.manifest.grant.root=capabilityRef(leaf);f.manifest.grant.snapshot_sha256=catalog.snapshot.digest;f.manifest.grant.arguments_sha256=capabilityDigest(args);
  f.save();writeFileSync(f.manifest.registry_path,JSON.stringify(catalog.snapshot));
  return {...f,catalog,leaf,args};
