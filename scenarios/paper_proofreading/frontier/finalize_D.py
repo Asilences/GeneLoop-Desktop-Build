@@ -52,7 +52,8 @@ def main():
         cell=request['cell'];arm=arms[cells[cell]['arm_id']];run=Path(plan['output']);construction=read(run/'result.json')
         published=[r for r in construction['outcomes'] if r['status']=='published'];quality=None
         status='completed' if conditions.get('format')=='frontier_D_conditions_v2' else 'environment_error'
-        local=result_dir/cell;local.mkdir();cell_details={'cell':cell,'construction':construction,'final_cases':[]}
+        local=result_dir/cell;local.mkdir();cell_details={'cell':cell,'construction':construction,'final_cases':[],
+            'construction_wall_seconds':None,'timing_limitation':'Construction terminal timestamp was not recorded. Owner-to-finalization time includes other cells and is not construction duration.'}
         if published:
             if len(published)!=1:raise ValueError('frontier_D_publication_ambiguous')
             root=published[0]['capability'];candidates=[read(p) for p in run.glob('**/next-library.json') if root in read(p)['snapshot']['roots']]
@@ -98,12 +99,11 @@ def main():
                 'limitations':['No TeX expansion or factual review','Controlled source changes','One held-out project, not independent projects per transition'],
                 'checks':cell_details['quality_checks']})
         owned=[rid for rid,r in books.items() if r['cell']==cell]
-        starts=[r['time'] for r in journal if r['event']=='owner_registered' and r['cell']==cell]
         attempts.append({'id':request['study']['episode_id'],'cell_id':cell,'ordinal':1,'parent_attempt_id':None,
             'conditions_sha256':study['conditions_sha256'],**{k:arm[k] for k in ('execution_snapshot_sha256','build_snapshot_sha256','execution_capabilities','build_capabilities')},
             'status':status,'request_refs':[{'ledger_ref':books[rid]['ledger_ref'],'id':str(rid)} for rid in owned],
             'artifact_ref':artifact_ref,'artifact_sha256':artifact['sha256'],'quality':quality,
-            'wall_seconds':max(0,time.time()-min(starts)) if starts else None})
+            'wall_seconds':None})
         details.append(cell_details)
         for rid in owned:
             cost=settled.get(rid,{}).get('observed_model_usd')
