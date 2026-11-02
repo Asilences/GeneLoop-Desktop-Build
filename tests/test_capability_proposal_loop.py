@@ -195,3 +195,30 @@ def test_json_feedback_has_location_without_rewriting_candidate():
     with pytest.raises(json.JSONDecodeError) as failure:pilot.parse_proposal('not JSON')
     diagnostic=pilot.proposal_diagnostics(failure.value,None)
     assert diagnostic['kind']=='json_syntax' and diagnostic['line']==1
+
+
+def test_compact_harness_draft_expands_without_model_supplied_contract_or_hashes(tmp_path, monkeypatch):
+    from src.adapters.capability_authoring import compact_proposal
+    task,catalog,snapshot,proposal=inputs()
+    draft=compact_proposal(proposal,task,snapshot)
+    observed=fake_harness(monkeypatch,json.dumps(draft))
+    result=pilot.propose_once(task=task,catalog=catalog,snapshot=snapshot,output=tmp_path/'compact',gate=DiagnosticGate())
+    assert result['status']=='compiled_candidate'
+    assert pilot.read_json(tmp_path/'compact/draft.json')==draft
+    assert pilot.read_json(tmp_path/'compact/proposal.json')==proposal
+    assert snapshot['roots'][0]['sha256'] not in observed['prompt']
+    assert pilot.read_json(tmp_path/'compact/effective.json')['authoring_format']=='capability_compose_draft_v1'
+
+
+def test_exact_failure_is_in_next_repair_prompt(tmp_path, monkeypatch):
+    from src.adapters.capability_authoring import compact_proposal
+    task,catalog,snapshot,proposal=inputs();draft=compact_proposal(proposal,task,snapshot)
+    bad=copy.deepcopy(draft);bad['steps'][1]['args']={'value':'wrong type'}
+    fake_harness(monkeypatch,json.dumps(bad))
+    first=pilot.propose_once(task=task,catalog=catalog,snapshot=snapshot,output=tmp_path/'bad',gate=DiagnosticGate())
+    assert first['diagnostics']['issues'][0]['path']==['steps',1,'arguments','fields','value']
+    observed=fake_harness(monkeypatch,json.dumps(draft))
+    second=pilot.propose_once(task=task,catalog=catalog,snapshot=snapshot,output=tmp_path/'repaired',gate=DiagnosticGate(),repair_from=tmp_path/'bad')
+    assert second['status']=='compiled_candidate'
+    assert 'wrong type' in observed['prompt'] and 'steps/0/arguments' in observed['prompt']
+    assert pilot.read_json(tmp_path/'bad/draft.json')==bad

@@ -46,3 +46,23 @@ Source检查器支持宿主冻结的 `outputs[].result_path`，用于从嵌套�
 免费诊断：`npm run rsi:efficiency:check`，覆盖候选排除、旧发布证据损坏、目录累积、修复/暂缓、已提交失败禁止重放，以及构造贡献与执行贡献分离。诊断的合成适配器不代表真实模型行为。
 
 真实验收需观察C发布后自动进入Builder、模型自行选择C构造D、D实际执行并独立验证；未选择C、构造失败、负收益全部保留。完整机制收益仍需后续匹配质量与资源的对照。本轮真实运行状态见[实验记录](experiments/efficiency-rsi-recursive-20261102.md)。
+
+## 构造接口与定位修复（2026-11-02续）
+
+模型侧使用`capability_compose_draft_v1`，宿主在effective记录版本；模型不必返回format。固定契约任务只返回steps/output：每步为`{id,use,args}`，use为当前冻结目录的c1/c2等别名。参数与输出使用普通对象/数组组装，`{"$input":["edit"]}`读取当前输入，`{"$step":["edit_video"]}`读取此前步骤结果，`{"$literal":value}`表示字面JSON；其他标量为字面值。以$开头的字段保留给操作符，不猜测或隐式纠正未知操作符。
+
+`capability_authoring.py`确定性补齐owner、协议版本、固定契约及精确版本引用，再交给原Builder。没有预设契约时模型仍须设计contract；组合步骤、参数流和输出均由模型决定。旧完整proposal继续严格校验，不自动修复。aliases.json与aliases_sha256保留别名映射；修复时版本、目录或映射变化则拒绝。原始answer、draft、展开proposal和candidate分别保存。
+
+编译器在真实失败点附加位置、期望、实际值与此前通过的检查。JSON错误带行列；不可见引用、类型不兼容、未保证属性和前向引用可定位。编译诊断坐标是展开后的proposal，下一修复输入同时携带该proposal与诊断，不要求模型猜坐标。没有覆盖的错误保留通用错误码，不伪造细粒度定位。下一次Harness调用接收这些证据；模型仍返回完整修订draft，不能自行声明通过。
+
+重复失败签名比较错误、位置及候选内容；JSON键顺序变化不算内容变化。相同签名再次出现会暂缓；内容或位置变化只允许继续尝试，`progress=not_established`，不作为进展评分。已有显式max_repairs、基础设施错误及已提交失败守卫保留。
+
+离线排障入口（零模型、零执行、零发布）：
+
+```bash
+node scripts/project.mjs python scripts/replay-capability-proposal.py \
+  --answer "$SAVED_ANSWER" --task "$FROZEN_TASK" --snapshot "$FROZEN_SNAPSHOT" \
+  --output "$NEW_PRIVATE_OUTPUT" --repair-object-wrappers
+```
+
+可选开关只在独立诊断副本中，为已经带类型的子绑定补缺失的对象包装，保存变更路径并重新编译；不改选择、绑定或原始文件，不修补非法JSON。该修改不是Agent自主修复。重放结果见[短记录](experiments/efficiency-rsi-authoring-replay-20261102.md)。

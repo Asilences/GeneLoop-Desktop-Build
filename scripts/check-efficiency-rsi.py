@@ -10,7 +10,7 @@ env = {**os.environ, 'SSS_PYTHON': sys.executable}
 commands = [
     [sys.executable, '-m', 'pytest', '-q',
      'tests/test_capability_contract.py',
-     'tests/test_capability_builder.py',
+     'tests/test_capability_builder.py', 'tests/test_capability_authoring.py',
      'tests/test_source_program_bridge.py',
      'tests/test_capability_proposal_loop.py', 'tests/test_source_capability_worker.py',
      'tests/test_capability_output_verifier.py',

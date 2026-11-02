@@ -93,6 +93,31 @@ def discover(job):
                 observations=observations, action=action, reason=reason)
 
 
+def repair_signature(result, outcome, attempt):
+    """Same error at the same location on the same content is repetition.
+
+    A changed signature only permits another attempt; it never proves progress.
+    """
+    observation = outcome or result
+    diagnostics = result.get('diagnostics') or {}
+    locations = [issue.get('path', []) for issue in diagnostics.get('issues', [])]
+    if diagnostics.get('kind') == 'json_syntax':
+        locations.append([diagnostics.get('line'), diagnostics.get('column')])
+    if outcome:
+        locations = [check.get('id') for check in (outcome.get('feedback') or {}).get('checks', [])
+                     if check.get('status') != 'passed']
+    candidate_sha = None
+    for name in ('proposal.json', 'draft.json'):
+        path = Path(attempt)/name
+        if path.exists():
+            candidate_sha = capability_digest(read(path))
+            break
+    if candidate_sha is None and (Path(attempt)/'answer.txt').exists():
+        candidate_sha = hashlib.sha256((Path(attempt)/'answer.txt').read_bytes().strip()).hexdigest()
+    return {'format':'capability_repair_signature_v1','error':observation.get('error','construction_failed'),
+            'locations':locations,'candidate_sha256':candidate_sha}
+
+
 def run_improvement(plan, adapter, *, execute=False):
     """Adapter methods: library(), construct(), publish(); production uses Source.
 
@@ -114,7 +139,8 @@ def run_improvement(plan, adapter, *, execute=False):
     save(journal.directory/'effective.json', dict(plan_sha256=capability_digest(plan),
         policy_sha256=policy_sha, execute=execute, code_sha256={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
         for name in ('src/adapters/capability_improvement.py','schemas/capability-improvement-v1.schema.json',
-                     'src/adapters/capability_store.ts','scripts/export-capability-construction-library.mjs',
+                     'src/adapters/capability_store.ts','src/adapters/capability_authoring.py',
+                     'scripts/export-capability-construction-library.mjs',
                      'scripts/complete-source-capability-loop.mjs',
                      'scenarios/remotion_edit/structured/run_capability_improvement.py',
                      'scenarios/remotion_edit/structured/verify_capability_outputs.py')}))
@@ -206,7 +232,9 @@ def run_improvement(plan, adapter, *, execute=False):
                         save(journal.directory/'result.json', summary)
                         return summary
                 reason = (outcome or result).get('error', 'construction_failed')
-                fingerprint = capability_digest(reason)
+                signature = repair_signature(result, outcome, attempt)
+                fingerprint = capability_digest(signature)
+                save(attempt/'repair-signature.json', signature)
                 max_repairs = plan['policy']['max_repairs']
                 repairable = outcome is None or reason in ('loop_independent_validation_failed',
                     'capability_store_validation_failed','loop_video_result_missing')
@@ -217,7 +245,9 @@ def run_improvement(plan, adapter, *, execute=False):
                     summary['outcomes'].append(dict(opportunity_id=job['id'], status='deferred', error=reason))
                     break
                 failures.add(fingerprint)
-                feedback = dict(error=reason, validation=outcome.get('feedback') if outcome else None,
+                feedback = dict(error=reason, diagnostics=result.get('diagnostics'),
+                                repeat_signature=signature, progress='not_established',
+                                validation=outcome.get('feedback') if outcome else None,
                                 source_attempt_id=attempt_id, scope='training_or_validation')
                 parent, attempt_index = attempt, attempt_index+1
     except BaseException as error:

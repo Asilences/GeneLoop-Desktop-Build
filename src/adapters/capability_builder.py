@@ -12,8 +12,10 @@ from .capability_contract import (capability_digest, capability_ref, create_capa
 ANNOTATIONS = {'description', 'title', 'default', 'examples'}
 
 
-def _fail(reason):
-    raise ValueError('capability_build_' + reason)
+def _fail(reason, path=(), expected=None, actual=None):
+    error = ValueError('capability_build_' + reason)
+    error.capability_path, error.capability_expected, error.capability_actual = path, expected, actual
+    raise error
 
 
 def _semantic(schema):
@@ -53,45 +55,55 @@ def _assignable(source, target):
     return tt is not None
 
 
-def _path_schema(schema, path):
+def _path_schema(schema, path, location):
     for key in path:
         if schema.get('type') != 'object' or key not in schema.get('required', []) or key not in schema.get('properties', {}):
-            _fail('path_not_guaranteed')
+            _fail('path_not_guaranteed', location+('path',), {'required':schema.get('required',[])}, path)
         schema = schema['properties'][key]
     return schema
 
 
-def _check_binding(binding, expected, inputs, earlier):
+def _check_binding(binding, expected, inputs, earlier, path=()):
     kind = binding['kind']
     if kind in ('input', 'step'):
         schema = inputs if kind == 'input' else earlier[binding['step_id']]
-        if not _assignable(_path_schema(schema, binding['path']), expected):
-            _fail('schema_incompatible')
+        selected = _path_schema(schema, binding['path'], path)
+        if not _assignable(selected, expected):
+            _fail('schema_incompatible', path, expected, selected)
     elif kind == 'literal':
         if list(Draft202012Validator(expected).iter_errors(binding['value'])):
-            _fail('literal_schema_incompatible')
+            _fail('literal_schema_incompatible', path, expected, binding)
     elif kind == 'object':
         if not _semantic(expected):
             expected = {'type': 'object'}
         if expected.get('type') != 'object':
-            _fail('object_schema_incompatible')
+            _fail('object_schema_incompatible', path, expected, binding)
         fields, properties = binding['fields'], expected.get('properties', {})
         if not set(expected.get('required', [])) <= set(fields):
-            _fail('required_input_missing')
+            _fail('required_input_missing', path, expected, binding)
         if expected.get('additionalProperties', True) is False and not set(fields) <= set(properties):
-            _fail('extra_input')
+            _fail('extra_input', path, expected, binding)
         for key, child in fields.items():
-            _check_binding(child, properties.get(key, {}), inputs, earlier)
+            _check_binding(child, properties.get(key, {}), inputs, earlier, path+('fields',key))
     elif kind == 'array':
         if not _semantic(expected):
             expected = {'type': 'array'}
         if expected.get('type') != 'array':
-            _fail('array_schema_incompatible')
-        for child in binding['items']:
-            _check_binding(child, expected.get('items', {}), inputs, earlier)
+            _fail('array_schema_incompatible', path, expected, binding)
+        for index, child in enumerate(binding['items']):
+            _check_binding(child, expected.get('items', {}), inputs, earlier, path+('items',index))
 
 
 def compile_proposal(proposal, construction_snapshot, expected_owner):
+    passed = []
+    try:
+        return _compile_proposal(proposal, construction_snapshot, expected_owner, passed)
+    except ValueError as error:
+        error.passed_checks = passed
+        raise
+
+
+def _compile_proposal(proposal, construction_snapshot, expected_owner, passed):
     """Compile an agent-supplied proposal against an immutable visible library.
 
     Only snapshot roots are exposed construction primitives. Closure nodes are
@@ -99,36 +111,43 @@ def compile_proposal(proposal, construction_snapshot, expected_owner):
     No external writes, execution, model calls or certificate upgrades occur.
     """
     snapshot = validate_capability_snapshot(construction_snapshot, expected_owner)
+    passed.append('construction_snapshot')
     capability_digest(proposal)
     keys = {'format', 'owner', 'contract', 'steps', 'output'}
     if not isinstance(proposal, dict) or set(proposal) != keys or proposal['format'] != 'capability_compose_proposal_v1':
         _fail('proposal_shape')
+    passed.append('proposal_shape')
     if proposal['owner'] != expected_owner:
         _fail('foreign_owner')
+    passed.append('owner')
     steps = proposal['steps']
     if not isinstance(steps, list) or any(not isinstance(step, dict) or 'capability' not in step for step in steps):
         _fail('steps_invalid')
     roots = {r['id']: r['sha256'] for r in snapshot['roots']}
     lookup = {c['id']: c for c in snapshot['capabilities']}
     dependencies = {}
-    for step in steps:
+    for index, step in enumerate(steps):
         ref = step['capability']
         if not isinstance(ref, dict) or set(ref) != {'id', 'sha256'} or roots.get(ref.get('id')) != ref.get('sha256'):
-            _fail('reference_not_visible_or_changed')
+            _fail('reference_not_visible_or_changed', ('steps',index,'capability'), snapshot['roots'], ref)
         dependencies[ref['id']] = ref
+        passed.append('steps/'+str(index)+'/capability')
     candidate = create_capability({'owner': expected_owner, 'contract': proposal['contract'],
         'implementation': {'kind': 'composition', 'steps': steps, 'output': proposal['output']},
         'dependencies': list(dependencies.values())})
+    passed.append('contract_and_binding_structure')
     earlier = {}
-    for step in candidate['implementation']['steps']:
+    for index, step in enumerate(candidate['implementation']['steps']):
         child = lookup[step['capability']['id']]
         if child['lifecycle'] == 'archived' or child['certification'] == 'rejected':
-            _fail('dependency_unavailable')
+            _fail('dependency_unavailable', ('steps',index,'capability'), 'available fixed dependency', {'lifecycle':child['lifecycle'],'certification':child['certification']})
         if not set(child['contract']['effects']) <= set(candidate['contract']['effects']):
-            _fail('effects_underdeclared')
-        _check_binding(step['arguments'], child['contract']['input_schema'], candidate['contract']['input_schema'], earlier)
+            _fail('effects_underdeclared', ('contract','effects'), child['contract']['effects'], candidate['contract']['effects'])
+        _check_binding(step['arguments'], child['contract']['input_schema'], candidate['contract']['input_schema'], earlier, ('steps',index,'arguments'))
+        passed.append('steps/'+str(index)+'/arguments')
         earlier[step['id']] = child['contract']['output_schema']
-    _check_binding(candidate['implementation']['output'], candidate['contract']['output_schema'], candidate['contract']['input_schema'], earlier)
+    _check_binding(candidate['implementation']['output'], candidate['contract']['output_schema'], candidate['contract']['input_schema'], earlier, ('output',))
+    passed.append('output')
     closure = {}
     def collect(ref):
         if ref['id'] in closure:

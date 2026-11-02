@@ -118,7 +118,22 @@ def _ref(ref):
     return ref['id'] + ':' + ref['sha256']
 
 
-def _binding(binding, earlier, depth=0):
+def _binding(binding, earlier, depth=0, path=()):
+    try:
+        return _binding_check(binding, earlier, depth, path)
+    except ValueError as error:
+        if not hasattr(error, 'capability_path'):
+            error.capability_path = path
+            error.capability_actual = binding
+            error.capability_expected = 'binding with kind=input/step/literal/object/array; named arguments use kind=object and fields'
+            if str(error)=='capability_binding_step_unavailable':
+                error.capability_path = (*path, 'step_id')
+                error.capability_expected = sorted(earlier)
+                error.capability_actual = binding.get('step_id')
+        raise
+
+
+def _binding_check(binding, earlier, depth=0, path=()):
     if depth > 32 or not isinstance(binding, dict):
         _fail('binding_invalid')
     kind = binding.get('kind')
@@ -135,14 +150,14 @@ def _binding(binding, earlier, depth=0):
         _shape(binding, ('kind', 'fields'))
         if not isinstance(binding['fields'], dict) or any(k in ('__proto__', 'prototype', 'constructor') for k in binding['fields']):
             _fail('binding_fields_invalid')
-        for child in binding['fields'].values():
-            _binding(child, earlier, depth + 1)
+        for key, child in binding['fields'].items():
+            _binding(child, earlier, depth + 1, (*path, 'fields', key))
     elif kind == 'array':
         _shape(binding, ('kind', 'items'))
         if not isinstance(binding['items'], list):
             _fail('binding_items_invalid')
-        for child in binding['items']:
-            _binding(child, earlier, depth + 1)
+        for index, child in enumerate(binding['items']):
+            _binding(child, earlier, depth + 1, (*path, 'items', index))
     else:
         _fail('binding_kind_invalid')
 
@@ -179,14 +194,14 @@ def validate_capability(value, expected_owner=None):
         steps, earlier, called = impl['steps'], set(), set()
         if not 1 <= len(steps) <= 64:
             _fail('steps_invalid')
-        for step in steps:
+        for index, step in enumerate(steps):
             _identifier(step['id'])
             if step['id'] in earlier or step['id'] in ('__proto__', 'prototype', 'constructor'):
                 _fail('step_duplicate_or_reserved')
             called.add(_ref(step['capability']))
-            _binding(step['arguments'], earlier)
+            _binding(step['arguments'], earlier, path=('steps', index, 'arguments'))
             earlier.add(step['id'])
-        _binding(impl['output'], earlier)
+        _binding(impl['output'], earlier, path=('output',))
         if called != set(deps):
             _fail('dependencies_do_not_match_calls')
     expected = capability_digest(capability_identity(value))

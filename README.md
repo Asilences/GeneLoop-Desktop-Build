@@ -7,7 +7,7 @@
 新增[视频程序复用与复用形式RSI实验](scenarios/remotion_edit/structured/README.md)：从正常视频工具轨迹学习参数化TSX，并让目录/类型化工具、调用策略和下一轮编译方式进入可验证的外环。普通基线保留同样的源码写入与渲染融合能力；当前实现及实际效果边界见[实验记录](docs/experiments/remotion-program-rsi-20261030-v1.md)，尚未部署正式服务。
 F02 审核候选提供一个免费可运行的经验执行协议演示：`npm run rsi:demo` 展示两个任务目标共享局部计数，以及版本/权限/证据失效时停止；`npm run rsi:check` 检查 Python/TypeScript 一致性。先看[通俗说明与接口](docs/rsi-protocol-v1.md)。当前使用人工算子与合成数据，不代表自动学习、完整任务或降本验收。
 
-新增[Capability离线改进协议](docs/capability-improvement-v1.md)与`npm run rsi:improve:source`：串联机会准入、构造/失败修复、独立发布和下一轮Builder目录更新，分别记录执行与构造贡献。默认预览；真实调用使用服务器原账本。机制接线、实际观察和效果pending分开记录，先完善机制，再接产品聊天入口；见[本轮记录](docs/experiments/efficiency-rsi-recursive-20261102.md)。
+新增[Capability离线改进协议](docs/capability-improvement-v1.md)与`npm run rsi:improve:source`：串联机会准入、构造/失败修复、独立发布和下一轮Builder目录更新，分别记录执行与构造贡献。默认预览；真实调用使用服务器原账本。机制接线、实际观察和效果pending分开记录，先完善机制，再接产品聊天入口；见[本轮记录](docs/experiments/efficiency-rsi-recursive-20261102.md)。 模型侧已改为精简draft，宿主补固定字段；支持具体错误定位和零模型[历史提案重放](docs/experiments/efficiency-rsi-authoring-replay-20261102.md)。
 
 效率驱动 RSI 的开发入口为 `npm run rsi:efficiency:check`：检查固定版本能力契约、组合执行和全尝试评价。该入口只做免费诊断；研究方案、真实联调进度与限制见[当前交接](docs/handoffs/efficiency-rsi.md)，评价口径见[评价协议](docs/efficiency-rsi-evaluation.md)。新能力层尚未接管生产任务。
 

@@ -1260,3 +1260,7 @@ Store新增`constructionLibrary(seed)`：读取并核验提交历史，保留原
 新增`npm run rsi:improve:source -- --plan "$PRIVATE_PLAN" [--call-model]`。plan分离`cost_reduction`与`capability_acquisition`；引用任务/观测/验证配置及原累计账本。事件分别记录机会、构造尝试、执行/构造贡献和实际决策。模型费用缺失为null；没有从这些事件推导因果创造收益或自动再投资。
 
 Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套组合交付中的视频对象；未指定时保持原`videos[index]`接口。第一次递归联调结果及pending项见[实验记录](experiments/efficiency-rsi-recursive-20261102.md)。
+
+### 模型侧精简构造接口
+
+`capability_compose_draft_v1`由宿主固定版本：模型提交`steps:[{id,use,args}]`及`output`；无预设接口时另提交`contract`。use是冻结目录别名，普通对象/数组及`$input/$step/$literal`编码数据流。宿主展开为原`capability_compose_proposal_v1`后复用原编译/执行/认证，旧完整proposal仍可校验。别名映射与格式纳入修复上下文检查；诊断携带展开proposal坐标和通过的检查。离线重放入口与语法见[共同协议](capability-improvement-v1.md)。

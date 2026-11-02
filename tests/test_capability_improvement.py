@@ -148,3 +148,30 @@ def test_corrupted_catalog_never_reaches_builder(tmp_path):
     with pytest.raises(ValueError,match='not_certified'):run_improvement(plan,adapter,execute=True)
     assert not adapter.calls
     assert json.loads((Path(plan['output'])/'result.json').read_text())['status']=='failed'
+
+
+def test_repeat_signature_compares_location_and_candidate_without_claiming_progress(tmp_path):
+    from src.adapters.capability_improvement import repair_signature
+    result={'error':'same_code','diagnostics':{'issues':[{'path':['steps',0]}]}}
+    put(tmp_path/'proposal.json',{'x':1,'y':2})
+    original=repair_signature(result,None,tmp_path)
+    put(tmp_path/'proposal.json',{'y':2,'x':1})
+    assert repair_signature(result,None,tmp_path)==original  # formatting is not progress
+    result['diagnostics']['issues'][0]['path']=['steps',1]
+    assert repair_signature(result,None,tmp_path)!=original
+    result['diagnostics']['issues'][0]['path']=['steps',0]
+    put(tmp_path/'proposal.json',{'x':2,'y':2})
+    assert repair_signature(result,None,tmp_path)!=original
+
+
+def test_changed_candidate_can_retry_even_with_same_error_code(tmp_path):
+    plan,snapshot,proposal=plan_at(tmp_path);plan['jobs']=plan['jobs'][:1]
+    adapter=Adapter(snapshot,proposal,failures=2);construct=adapter.construct
+    def changing(*args):
+        result=construct(*args)
+        if result['status']=='failed':put(args[2]/'draft.json',{'revision':len(adapter.calls)})
+        return result
+    adapter.construct=changing
+    assert run_improvement(plan,adapter,execute=True)['outcomes'][0]['status']=='published'
+    assert len(adapter.calls)==3
+    assert adapter.calls[2][2]['progress']=='not_established'
