@@ -202,7 +202,7 @@ def compile_script(source, registered_files, *, argv=None):
                 parent = parents.get(node)
                 if (node.value in {'/', './', '../'} and isinstance(parent, ast.Call)
                         and node in parent.args and isinstance(parent.func, ast.Attribute)
-                        and parent.func.attr in {'startswith', 'endswith', 'strip', 'lstrip', 'rstrip', 'split', 'rsplit', 'replace'}):
+                        and parent.func.attr in {'startswith', 'endswith', 'strip', 'lstrip', 'rstrip', 'split', 'rsplit', 'replace', 'count'}):
                     continue
                 if node.value in {'/', './', '../'}:
                     # Archive member normalization also uses separator joins,
