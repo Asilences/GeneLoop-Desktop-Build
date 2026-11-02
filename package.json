@@ -8,6 +8,7 @@
     "rsi:optimize": "node scripts/project.mjs rsi-optimize",
     "rsi:check": "node scripts/project.mjs python scripts/check-rsi-protocol.py",
     "rsi:efficiency:check": "node scripts/project.mjs python scripts/check-efficiency-rsi.py",
+    "rsi:improve:source": "node scripts/project.mjs python scenarios/remotion_edit/structured/run_capability_improvement.py",
     "setup": "node scripts/project.mjs setup",
     "test": "node scripts/project.mjs test",
     "smoke": "node scripts/project.mjs smoke",

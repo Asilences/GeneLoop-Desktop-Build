@@ -36,7 +36,7 @@ async function main(){
  const checkerBytes=readFileSync(validatorPath);
  const python=process.env.SSS_PYTHON;if(!python)throw Error('project_python_required');
  save(resolve(output,'plan.json'),plan);
- async function run(snapshot,input,manifestPath,mode,label){
+ async function run(snapshot,input,manifestPath,mode,label,specification){
   const directory=resolve(output,label);mkdirSync(directory,{mode:0o700});
   const manifest=read(manifestPath);
   if(manifest.owner!==plan.owner)throw Error('loop_owner_mismatch');
@@ -51,7 +51,13 @@ async function main(){
   save(resolve(directory,'trace.json'),execution);
   if(result.code!==0||execution.status!=='succeeded')throw Error('loop_native_execution_failed');
   const scope=realpathSync(manifest.workspace),artifacts=[];
-  for(const [index,video] of (execution.result?.videos??[]).entries()){
+  const videos=specification.outputs.map((spec,index)=>{
+   const path=spec.result_path??['videos',index];
+   if(!Array.isArray(path)||!path.length||path.some(key=>!(typeof key==='string'||Number.isSafeInteger(key)&&key>=0)||['__proto__','prototype','constructor'].includes(key)))throw Error('loop_result_path_invalid');
+   return path.reduce((value,key)=>value&&Object.hasOwn(value,key)?value[key]:undefined,execution.result);
+  });
+  for(const [index,video] of videos.entries()){
+   if(!video||typeof video.video_path!=='string')throw Error('loop_video_result_missing');
    const path=realpathSync(video.video_path),part=relative(scope,path);
    if(!part||part.startsWith('..')||isAbsolute(part))throw Error('loop_artifact_outside_task');
    const bytes=readFileSync(path);if(hash(bytes)!==video.video_sha256)throw Error('loop_artifact_changed');
@@ -72,7 +78,7 @@ async function main(){
  const validationSpec=read(plan.validation_specification);
  const store=createCapabilityStore({directory:plan.store,owner:plan.owner,
   runValidation:async({candidateSnapshot,input})=>{
-   validationRun=await run(candidateSnapshot,input,plan.validation_manifest,'validate','validation');return validationRun;
+   validationRun=await run(candidateSnapshot,input,plan.validation_manifest,'validate','validation',validationSpec);return validationRun;
   },
   validator:{id:'source-mechanical-v1',sha256:capabilityDigest({code:hash(checkerBytes),specification:validationSpec}),
    check:async()=>check(validationRun,validationSpec)}});
@@ -83,8 +89,9 @@ async function main(){
   // the in-memory candidate. The next task has independently frozen inputs.
   const loaded=await store.loadLatest();
   if(!loaded||loaded.publication_sha256!==publication.publication_sha256)throw Error('loop_publication_not_adopted');
-  const followup=await run(loaded.snapshot,read(plan.followup_args),plan.followup_manifest,'execute','followup');
-  const verdict=await check(followup,read(plan.followup_specification));
+  const followupSpec=read(plan.followup_specification);
+  const followup=await run(loaded.snapshot,read(plan.followup_args),plan.followup_manifest,'execute','followup',followupSpec);
+  const verdict=await check(followup,followupSpec);
   save(resolve(output,'result.json'),{status:'completed',publication_sha256:publication.publication_sha256,
    candidate:selected,validation_task:validationRun.execution.task_id,followup_task:followup.execution.task_id,
    followup_passed:verdict.passed,scope:'one_source_composition_validated_published_and_reused',efficiency_conclusion:null});

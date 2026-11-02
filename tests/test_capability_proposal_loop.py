@@ -178,3 +178,20 @@ def test_cli_failure_is_nonzero_after_writing_summary(tmp_path, monkeypatch, cap
     with pytest.raises(SystemExit) as error: pilot.main()
     assert error.value.code == 1
     assert json.loads(capsys.readouterr().out)['status'] == 'failed'
+
+
+def test_compile_feedback_points_to_missing_binding_wrapper():
+    _,_,snapshot,proposal=inputs()
+    proposal['steps'][0]['arguments']={'value':{'kind':'input','path':['value']}}
+    with pytest.raises(ValueError) as failure:
+        pilot.compile_proposal(proposal,snapshot,snapshot['owner'])
+    diagnostic=pilot.proposal_diagnostics(failure.value,proposal)
+    assert diagnostic['issues'][0]['path']==['steps',0,'arguments']
+    assert 'kind=object' in diagnostic['issues'][0]['expected']
+
+
+def test_json_feedback_has_location_without_rewriting_candidate():
+    import json
+    with pytest.raises(json.JSONDecodeError) as failure:pilot.parse_proposal('not JSON')
+    diagnostic=pilot.proposal_diagnostics(failure.value,None)
+    assert diagnostic['kind']=='json_syntax' and diagnostic['line']==1

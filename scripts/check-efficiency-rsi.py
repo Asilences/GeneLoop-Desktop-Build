@@ -14,6 +14,7 @@ commands = [
      'tests/test_source_program_bridge.py',
      'tests/test_capability_proposal_loop.py', 'tests/test_source_capability_worker.py',
      'tests/test_capability_output_verifier.py',
+     'tests/test_capability_improvement.py',
      'tests/test_capability_container_compat.py',
      'tests/test_efficiency_rsi_measurement.py',
      'tests/test_rsi_protocol.py', 'tests/test_rsi_quality.py'],

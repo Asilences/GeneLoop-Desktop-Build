@@ -1250,3 +1250,13 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 `createCapabilityStore({directory,owner,runValidation,validator})`的`publish({candidateSnapshot,root,input,expectedLatest})`内部实际调用执行和独立验收回调，不接受模型自报certificate；全部checks passed才晋级根。`capability_publication_v1`绑定输入、完整trace、产物bytes、验证器及范围限制。owner私有目录中保留不可变版本，通过锁和CAS原子更新latest；`loadLatest/loadVersion`复核全部证据摘要。该协议scope为local_experiment，尚未接入生产账户库/在线路由；不冒用原reuse_form类型。
 
 真实提案入口为`scenarios/remotion_edit/structured/run_capability_loop.py`，默认预览、显式`--call-model`才走现有Harness与累计账本；候选输出可交`scripts/complete-source-capability-loop.mjs PLAN.json`，后者独立检查、保存，并强制不同task/workspace的后继消费。失败记录保留；不会自动改质量阈值或发布不合格候选。命令、有效配置、真实结果和限制见[实验记录](experiments/efficiency-rsi-source-loop-20261102.md)。
+
+## Capability 离线改进流程（2026-11-02）
+
+共同流程由 `src/adapters/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
+
+Store新增`constructionLibrary(seed)`：读取并核验提交历史，保留原语和已发布根，输出`capability_construction_library_v1`及共用Capability Snapshot。完整证据验证失败则拒绝；新候选不能靠模型自报认证进入目录。每个新机会重新读取，修复链内冻结目录。新记录只用于实验改进流程，不伪装成旧`reuse_form`协议或授予生产权限。
+
+新增`npm run rsi:improve:source -- --plan "$PRIVATE_PLAN" [--call-model]`。plan分离`cost_reduction`与`capability_acquisition`；引用任务/观测/验证配置及原累计账本。事件分别记录机会、构造尝试、执行/构造贡献和实际决策。模型费用缺失为null；没有从这些事件推导因果创造收益或自动再投资。
+
+Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套组合交付中的视频对象；未指定时保持原`videos[index]`接口。第一次递归联调结果及pending项见[实验记录](experiments/efficiency-rsi-recursive-20261102.md)。

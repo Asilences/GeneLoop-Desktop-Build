@@ -127,3 +127,36 @@ test('a proposal cannot replace validation with self-certified metadata',async t
  await assert.rejects(s.store.publish({...value,input,expectedLatest:null,certificate:{passed:true}}),/candidate_required/);
  assert.deepEqual(s.calls,{execution:0,validation:0});assert.equal(s.store.loadLatest(),null);
 });
+
+test('construction catalog retains seeds and earlier published roots; verified C builds executable D',async t=>{
+ const s=setup(t),first=candidate();
+ const leaf=first.candidateSnapshot.capabilities.find(c=>c.implementation.kind==='legacy');
+ const seed=createCapabilitySnapshot(owner,[capabilityRef(leaf)],[leaf]);
+ const c=await s.store.publish({...first,input,expectedLatest:null});
+ const available=s.store.constructionLibrary(seed);
+ assert.deepEqual(new Set(available.snapshot.roots.map(r=>r.id)),new Set([leaf.id,first.root.id]));
+ const rootC=available.snapshot.capabilities.find(c=>c.id===first.root.id);
+ const d=createCapability({owner,contract,implementation:{kind:'composition',steps:[{id:'use-learned-c',capability:capabilityRef(rootC),arguments:{kind:'input',path:[]}}],output:{kind:'step',step_id:'use-learned-c',path:[]}},dependencies:[capabilityRef(rootC)]});
+ const dSnapshot=createCapabilitySnapshot(owner,[capabilityRef(d)],[d,rootC,leaf]);
+ const published=await s.store.publish({candidateSnapshot:dSnapshot,root:capabilityRef(d),input,expectedLatest:c.publication_sha256});
+ assert.equal(published.snapshot.capabilities.find(x=>x.id===d.id).certification,'certified');
+ const next=s.store.constructionLibrary(seed);
+ assert.equal(next.head,published.publication_sha256);
+ assert.equal(next.snapshot.roots.length,3);
+ assert.ok(next.catalog.find(x=>x.capability.id===rootC.id).publication_sha256);
+ // Historical publication must not resurrect an explicitly withdrawn seed.
+ const withdrawn=createCapabilitySnapshot(owner,[capabilityRef(leaf)],[{...leaf,lifecycle:'archived'}]);
+ assert.throws(()=>s.store.constructionLibrary(withdrawn),/construction_library_empty/);
+ // Corruption of an older, no longer latest publication must still stop discovery.
+ writeFileSync(join(s.directory,hash(owner),'versions',c.publication_sha256,'validation.json'),'{}');
+ assert.throws(()=>s.store.constructionLibrary(seed),/evidence_changed/);
+});
+
+test('unpublished candidate and archived seed never enter builder catalog',async t=>{
+ const s=setup(t),first=candidate();
+ const leaf=first.candidateSnapshot.capabilities.find(c=>c.implementation.kind==='legacy');
+ const extra={...leaf,lifecycle:'archived'};
+ const seed=createCapabilitySnapshot(owner,[capabilityRef(first.candidateSnapshot.capabilities[0]),capabilityRef(leaf)],first.candidateSnapshot.capabilities);
+ assert.deepEqual(s.store.constructionLibrary(seed).snapshot.roots,[capabilityRef(leaf)]);
+ assert.throws(()=>s.store.constructionLibrary(createCapabilitySnapshot(owner,[capabilityRef(extra)],[extra])),/construction_library_empty/);
+});

@@ -31,3 +31,13 @@ def test_external_or_symlink_escape_artifacts_rejected_before_media_execution(tm
             with pytest.raises(ValueError,match='output_scope'):
                 checker.verify(manifest,{'status':'succeeded','result':{'videos':[{'video_path':str(path)}]}},
                                {'outputs':[{'width':640}]},tmp_path/'qa')
+
+
+def test_frozen_nested_output_paths_and_missing_video():
+    a,b={'video_path':'a'},{'video_path':'b'}
+    result={'primary':{'videos':[a]},'alternative':{'videos':[b]}}
+    specification={'outputs':[{'result_path':['primary','videos',0]}, {'result_path':['alternative','videos',0]}]}
+    assert checker.selected_videos(result,specification)==[a,b]
+    for path in (['primary','videos',3],['__proto__'],['primary','videos',True]):
+        with pytest.raises(ValueError):
+            checker.selected_videos(result,{'outputs':[{'result_path':path}]})

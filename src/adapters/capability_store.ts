@@ -109,6 +109,48 @@ export function createCapabilityStore(options:CapabilityStoreOptions){
   return {publication_sha256:publicationSha256,publication:structuredClone(publication),snapshot};
  }
  function loadLatest(){const current=pointer();return current===null?null:loadVersion(current);}
+ /** Trusted seed plus all committed publication roots, not just latest's closure.
+  * Read and validate the entire history before exposing anything to a Builder.
+  * This does not authorize execution; the runtime still checks current grants.
+  */
+ function constructionLibrary(seed:CapabilitySnapshot){
+  const initial=validateCapabilitySnapshot(seed,owner);
+  const head=pointer(),history:LoadedCapabilityPublication[]=[],seen=new Set<string>();
+  let cursor=head;
+  while(cursor!==null){
+   check(!seen.has(cursor),'history_cycle');seen.add(cursor);
+   const loaded=loadVersion(cursor);history.push(loaded);cursor=loaded.publication.previous_publication_sha256;
+  }
+  const capabilities=new Map(initial.capabilities.map(c=>[c.id,c]));
+  const unavailable=new Set(initial.capabilities.filter(c=>c.lifecycle==='archived'||c.certification==='rejected').map(c=>c.id));
+  const roots=new Map(initial.roots.map(ref=>[ref.id,ref]));
+  const publications=new Map<string,string>();
+  for(const loaded of history.reverse()){
+   for(const cap of loaded.snapshot.capabilities){
+    const prior=capabilities.get(cap.id);
+    check(!prior||same(capabilityRef(prior),capabilityRef(cap)),'catalog_identity_conflict');
+    capabilities.set(cap.id,cap);
+   }
+   roots.set(loaded.publication.root.id,loaded.publication.root);
+   publications.set(loaded.publication.root.id,loaded.publication_sha256);
+  }
+  function eligible(ref:CapabilityRef,visiting=new Set<string>()):boolean{
+   if(visiting.has(ref.id)||unavailable.has(ref.id))return false;
+   const cap=capabilities.get(ref.id);
+   if(!cap||!same(capabilityRef(cap),ref)||cap.certification!=='certified'||cap.lifecycle==='archived')return false;
+   const next=new Set(visiting);next.add(ref.id);
+   return cap.dependencies.every(child=>eligible(child,next));
+  }
+  const visible=[...roots.values()].filter(ref=>eligible(ref));
+  check(visible.length>0,'construction_library_empty');
+  const closure=new Map<string,typeof initial.capabilities[number]>();
+  function collect(ref:CapabilityRef){if(closure.has(ref.id))return;const cap=capabilities.get(ref.id)!;closure.set(ref.id,cap);cap.dependencies.forEach(collect);}
+  visible.forEach(collect);
+  const snapshot=createCapabilitySnapshot(owner,visible,[...closure.values()]);
+  return {format:'capability_construction_library_v1',owner,head,snapshot,
+   catalog:visible.map(ref=>{const cap=capabilities.get(ref.id)!;return {capability:ref,
+    contract:cap.contract,implementation:cap.implementation,publication_sha256:publications.get(ref.id)??null};})};
+ }
  async function publish(request:CapabilityValidationContext&{expectedLatest:string|null}){
   const expectedLatest=request.expectedLatest;
   check(expectedLatest===null||isSha(expectedLatest),'expected_latest_required');
@@ -152,5 +194,5 @@ export function createCapabilityStore(options:CapabilityStoreOptions){
   }
   return {status:'published' as const,...loadVersion(publicationSha256)};
  }
- return {publish,loadLatest,loadVersion};
+ return {publish,loadLatest,loadVersion,constructionLibrary};
 }

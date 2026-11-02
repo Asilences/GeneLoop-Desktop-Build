@@ -19,6 +19,29 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def selected_videos(result, specification):
+    expected = specification['outputs']
+    if not any('result_path' in spec for spec in expected):
+        return (result or {}).get('videos', [])
+    videos = []
+    for index, spec in enumerate(expected):
+        path = spec.get('result_path', ['videos', index])
+        if not isinstance(path, list) or not path:
+            raise ValueError('validator_result_path_invalid')
+        value = result
+        for key in path:
+            if isinstance(key, str) and key not in ('__proto__', 'prototype', 'constructor') and isinstance(value, dict):
+                value = value.get(key)
+            elif type(key) is int and key >= 0 and isinstance(value, list):
+                value = value[key] if key < len(value) else None
+            else:
+                raise ValueError('validator_result_path_invalid')
+        if not isinstance(value, dict) or 'video_path' not in value:
+            raise ValueError('validator_video_result_missing')
+        videos.append(value)
+    return videos
+
+
 def verify(manifest, trace, specification, output):
     output = Path(output); output.mkdir(parents=True, exist_ok=True)
     workspace = Path(manifest['workspace']).resolve(strict=True)
@@ -31,7 +54,7 @@ def verify(manifest, trace, specification, output):
         checks.append({'id': name, 'status': 'passed' if condition else 'failed',
                        'observation': str(observation)})
     check('execution', trace.get('status') == 'succeeded', trace.get('status'))
-    videos = (trace.get('result') or {}).get('videos', [])
+    videos = selected_videos(trace.get('result'), specification)
     expected = specification['outputs']
     check('output_count', len(videos) == len(expected) and len(expected) > 0, len(videos))
     seen = set()

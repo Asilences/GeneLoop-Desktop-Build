@@ -54,6 +54,12 @@ accepted here. Use these binding forms for arguments and output:
 {"kind":"array","items":[<binding>,...]}
 An empty path binds the whole value. Paths traverse guaranteed required object
 properties; do not guess fields. Reserved __proto__/prototype/constructor are banned.
+Each steps[i].arguments MUST itself be one binding object with a kind key. It is
+NOT a map from parameter names to bindings. To forward an input object unchanged,
+use {"kind":"input","path":["input_object_field"]}. To assemble fields use
+{"kind":"object","fields":{"parameter_name":<binding>}}. The same rule applies
+recursively to output bindings. On repair return the complete corrected proposal,
+not a patch, explanation or repeated invalid mapping.
 Schemas use one scalar type string, object properties/required/boolean
 additionalProperties, array items, scalar enum/const, oneOf with at least two branches,
 and annotations. Never use type arrays, minimum, pattern, $ref or unsupported keywords
@@ -104,6 +110,29 @@ def parse_proposal(answer):
     if not isinstance(result, dict):
         raise ValueError('proposal_object_required')
     return result
+
+
+def proposal_diagnostics(error, proposal):
+    """Structural compiler feedback, not model-authored repair or certification."""
+    if isinstance(error, json.JSONDecodeError):
+        return {'kind':'json_syntax','line':error.lineno,'column':error.colno,
+                'message':error.msg,'expected':'one complete JSON object, no prose or markdown'}
+    issues=[]
+    def binding(value, path):
+        if not isinstance(value,dict) or value.get('kind') not in ('input','step','literal','object','array'):
+            issues.append({'path':path,'expected':'binding object with kind; named arguments require kind=object and fields'})
+            return
+        if value['kind']=='object' and isinstance(value.get('fields'),dict):
+            for key,child in value['fields'].items():binding(child,path+['fields',key])
+        if value['kind']=='array' and isinstance(value.get('items'),list):
+            for index,child in enumerate(value['items']):binding(child,path+['items',index])
+    if isinstance(proposal,dict):
+        steps=proposal.get('steps',[])
+        if not isinstance(steps,list):steps=[]
+        for index,step in enumerate(steps):
+            if isinstance(step,dict):binding(step.get('arguments'),['steps',index,'arguments'])
+        binding(proposal.get('output'),['output'])
+    return {'kind':'compile','error':safe_error(error),'issues':issues}
 
 
 class CumulativeProposalGate(AbstractContextManager):
@@ -300,7 +329,7 @@ def propose_once(*, task, catalog, snapshot, output, gate=None, repair_from=None
         if not (output/'answer.txt').exists():
             write(output/'answer.txt', final_response(guard.events))
         result.update(status='interrupted' if isinstance(error, (KeyboardInterrupt, SystemExit)) else 'failed',
-                      error=safe_error(error))
+                      error=safe_error(error),diagnostics=proposal_diagnostics(error,locals().get('proposal')))
         if isinstance(error, (KeyboardInterrupt, SystemExit)):
             raise
     finally:
