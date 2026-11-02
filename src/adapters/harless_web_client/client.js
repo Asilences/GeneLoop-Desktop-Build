@@ -1126,7 +1126,7 @@ window.__ModuleLoader__.load({
                     ...(result.finished_at ? [['完成时间', messageClock(result.finished_at)]] : [])] }),
                 result.finished_at && messageClock(result.finished_at) && h('time', { className: 'harless-message-time', dateTime: result.finished_at }, messageClock(result.finished_at))),
                 copied === lane && h('span', { role: 'status', className: 'harless-visually-hidden' }, '已复制')),
-              h('small', null, `模型请求 ${result.stats?.upstream_requests || 0} · ${result.mode === 'shadow' ? '预测候选 ' + (result.stats?.shadow_candidates || 0) : '已验证跳过 ' + (result.stats?.verified_skips || 0)}`),
+              h('small', null, `模型请求 ${result.stats?.upstream_requests || 0} · ${Number.isFinite(result.stats?.program_reuses) ? '程序复用 ' + result.stats.program_reuses + ' 次' : result.mode === 'shadow' ? '预测候选 ' + (result.stats?.shadow_candidates || 0) : '已验证跳过 ' + (result.stats?.verified_skips || 0)}`),
               !single && h('fieldset', { className: 'harless-result-rating',
                 disabled: saving || !value.scoring_available || !result.output_sha256, 'aria-label': title + ' 结果评分' },
                 h('legend', null, '结果评分'),
@@ -2245,8 +2245,8 @@ window.__ModuleLoader__.load({
               id: `option:${field.key}=${JSON.stringify(choice.value)}`, label: choice.label,
               detail: choice.detail || field.label, active: (value.scene_options?.[field.key] ?? field.default) === choice.value,
             }))) : []),
-            ...(!value.paired_comparison && !['files','video-editing'].includes(value.selection.scene) ? ['baseline', 'shadow', 'execute'].map(mode => ({ id: `mode:${mode}`, label: modeLabel(mode), detail: modeDetail(mode), active: value.selection.mode === mode })) : []),
-            ...(!value.paired_comparison && !['files','video-editing'].includes(value.selection.scene) ? [true, false].map(rsi => ({ id: `rsi:${rsi ? 'on' : 'off'}`, label: `Motif 复用：${rsi ? '允许' : '关闭'}`, detail: rsi ? '需选择校验后复用模式；标准执行不受此开关影响' : '本轮按标准流程执行', active: value.selection.rsi === rsi })) : []),
+            ...(!value.paired_comparison && value.selection.scene !== 'files' ? ['baseline', 'shadow', 'execute'].map(mode => ({ id: `mode:${mode}`, label: modeLabel(mode), detail: modeDetail(mode), active: value.selection.mode === mode })) : []),
+            ...(!value.paired_comparison && value.selection.scene !== 'files' ? [true, false].map(rsi => ({ id: `rsi:${rsi ? 'on' : 'off'}`, label: `Motif 复用：${rsi ? '允许' : '关闭'}`, detail: rsi ? '需选择校验后复用模式；标准执行不受此开关影响' : '本轮按标准流程执行', active: value.selection.rsi === rsi })) : []),
           ];
         },
         onSelect: async (option, session) => {

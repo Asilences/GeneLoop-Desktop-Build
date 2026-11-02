@@ -38,7 +38,8 @@ def prepare(plan_path, output, public_origin=None):
     environment = {'SSS_PYTHON': deployment['pythonExecutable']}
     mapping = {'pptMasterRoot':'GENELOOP_PPT_MASTER_ROOT','pdfToolchainRoot':'HARLESS_PDF_TOOLCHAIN_ROOT',
                'pdfOcrRoot':'GENELOOP_PDF_OCR_ROOT','fontRoot':'HARLESS_PPT_FONT_ROOT',
-               'rendererRoot':'HARLESS_PPT_RENDERER_ROOT','paperRendererRoot':'HARLESS_PAPER_RENDERER_ROOT','videoRendererConfig':'GENELOOP_VIDEO_RENDERER_CONFIG'}
+               'rendererRoot':'HARLESS_PPT_RENDERER_ROOT','paperRendererRoot':'HARLESS_PAPER_RENDERER_ROOT','videoRendererConfig':'GENELOOP_VIDEO_RENDERER_CONFIG',
+               'videoMotifStore':'GENELOOP_VIDEO_MOTIF_STORE','videoMotifOwner':'GENELOOP_VIDEO_MOTIF_OWNER'}
     for key, env in mapping.items():
         if deployment.get(key): environment[env] = deployment[key]
     if deployment.get('antiwordRoot'):

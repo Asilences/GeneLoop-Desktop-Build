@@ -1,11 +1,12 @@
 """Session adapter over existing Remotion tools; the model authors all edits."""
 from pathlib import Path
-import base64,hashlib,http.client,importlib.util,json,os,socket,sys,tempfile,time
+import asyncio,base64,hashlib,http.client,importlib.util,json,os,socket,stat,sys,tempfile,time
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from src.adapters.session_files import SessionFiles
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations,CallToolResult
+from scenarios.remotion_edit.web_programs import from_environment
 MEDIA={'.mp4','.mov','.webm','.mkv','.mp3','.wav','.m4a','.aac','.ogg','.png','.jpg','.jpeg','.webp','.gif','.svg'}
 
 def fixed_directory(path):
@@ -20,6 +21,7 @@ def atomic_bytes(path,data):
     temporary.chmod(0o600);os.replace(temporary,path)
 
 def create_server(inputs):
+    programs=from_environment()
     files=SessionFiles(inputs);work=files.root.parent;project=work/'remotion'
     project.mkdir(mode=0o700,exist_ok=True);fixed_directory(project)
     for name in ['public','src','out','node_modules']:
@@ -109,6 +111,44 @@ def create_server(inputs):
     def render_source(text:str)->dict:
         """Write model-authored TSX and actually render it, using the same ordinary renderer."""
         sync();return render_composition(scene.write_source(text)['source_version'])
+    def program_audit(record):
+        path=work/'source-program-audit.jsonl'
+        flags=os.O_WRONLY|os.O_APPEND|os.O_CREAT|getattr(os,'O_NOFOLLOW',0)
+        fd=os.open(path,flags,0o600)
+        try:
+            info=os.fstat(fd)
+            if info.st_nlink!=1 or not stat.S_ISREG(info.st_mode):
+                raise ToolError('invalid video program audit path')
+            data=(json.dumps(record,ensure_ascii=False)+'\n').encode()
+            while data:
+                written=os.write(fd,data)
+                if written<=0:raise ToolError('video program audit write failed')
+                data=data[written:]
+            os.fsync(fd)
+        finally:os.close(fd)
+    def render_program(program_id,parameters):
+        if programs is None:raise ToolError('no learned program is installed for this task; use render_source')
+        with scene.LOCK:
+            value=sync()
+            if value.get('allow_output') is not True:raise ToolError('this task has no output permission')
+            materialized=programs.materialize(program_id,parameters)
+            if sync()!=value:raise ToolError('owning video task changed during materialization')
+            record={'kind':'source_program_selected','time':time.time(),'task_id':value['task_id'],
+                'policy_digest':programs.policy['digest'],
+                **{key:materialized[key] for key in ('program_id','parameters_sha256','source_sha256','library_digest',
+                    'parameters','supplied_parameters_sha256','parameter_binding')}}
+            program_audit(record)
+            programs.check()
+            version=scene.write_source(materialized['source'])['source_version']
+            result=render_composition(version)
+            programs.check()
+            if sync()!=value:raise ToolError('owning video task changed during program render')
+            current=scene.current_source_version()==version
+            if not current:raise ToolError('video source changed during program render')
+            result={**result,'program_id':program_id,'library_digest':materialized['library_digest'],
+                'policy_digest':programs.policy['digest'],'source_current':current}
+            program_audit({**record,'kind':'source_program_rendered','time':time.time(),'render':result,'source_current':current})
+            return result
     def wrapped(fn):
         import functools
         @functools.wraps(fn)
@@ -118,5 +158,13 @@ def create_server(inputs):
     readers=[scene.list_assets,scene.pin_asset,scene.probe_media,scene.probe_asset,scene.read_source,scene.inspect_render]
     for fn in readers+[scene.write_source,render_composition,scene.write_notes,render_source,run_command]:
         server.tool(annotations=ToolAnnotations(readOnlyHint=fn in readers,destructiveHint=False))(wrapped(fn))
+    server._video_programs=programs
+    server._video_execute=render_program
     return server
-if __name__=='__main__':create_server(Path(sys.argv[1])).run(transport='stdio')
+if __name__=='__main__':
+    server=create_server(Path(sys.argv[1]))
+    programs=server._video_programs
+    if programs is None:server.run(transport='stdio')
+    else:
+        from src.adapters.source_program_mcp import serve_source_tools
+        asyncio.run(serve_source_tools(server,programs.catalog['programs'],server._video_execute,programs.naming,programs.binding))

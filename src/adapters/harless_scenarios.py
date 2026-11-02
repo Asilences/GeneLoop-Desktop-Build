@@ -112,6 +112,9 @@ def prepare_scene_registry(root: Path, registry_path: Path, *, default_id: str, 
                 if package['version']!='4.0.539':raise ValueError('unreviewed Remotion version')
                 scene['video_renderer_sha256']=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
             except (KeyError,OSError,ValueError):scene['unavailable_reason']='video_renderer_not_deployed'
+            from .harless_video_program_bundle import configure_video_programs
+            configure_video_programs(root,scene,os.environ.get('GENELOOP_VIDEO_MOTIF_STORE'),
+                os.environ.get('GENELOOP_VIDEO_MOTIF_OWNER'))
         if row.get('adapter') == 'literature':
             from .harless_pdf_deployment import configure_pdf_parser
             try: configure_pdf_parser(scene)

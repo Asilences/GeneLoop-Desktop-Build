@@ -1222,3 +1222,7 @@ TypeScript runtime 核对账号／Task、输入类型和版本、输出授权及
 `inspect_render`按`floor(seconds*fps)`选择明确帧，保持原分辨率并返回`selected_output_frames`实际帧号/时点；验证时长取视频帧数/fps，排除AAC尾部。审阅使用该事实和独立源帧核验，不以显示缩放坐标代替视频坐标。默认预览入口和外环未显式`--call-model`时不发付费调用。
 
 实际命令和质量范围见[视频程序复用入口](../scenarios/remotion_edit/structured/README.md)。机制实现和实测效果状态见[实验记录](experiments/remotion-program-rsi-20261030-v1.md)。
+
+## 视频网页发布程序接口（2026-11-02）
+
+video_program_v1 通过原 source-program runtime 加载已接受的发布形式。两侧按实际 mode 派生工具表并核对完整 schema；Baseline 清空 Motif 环境变量，execute 侧加载类型化程序。video_program_reused 是已核对当前交付的审计事件，前端 program_reuses 与 verified_skips 分开。部署字段及边界见[视频双路记录](experiments/video-paired-motif-20261102.md)。

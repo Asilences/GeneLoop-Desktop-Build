@@ -23,6 +23,7 @@ import type { SceneOptions } from './harless_task_scope.ts';
 import type { Scene, Selection } from './harless_settings.ts';
 import type { NormalizedWebTask, PromptPart, ExecutionMode } from './web_task_request.ts';
 import {bindUploadedPptTask,bindApprovedUploadedReadTask,bindUploadedSourceTask,closedPaperDocumentFirstPage,closedPptSourceFirstPage,closedPptConvertedSource,structuralOnlySimilarity} from './harless_rsi_binding.ts';
+import {videoProgramScene,videoProgramUnavailable,videoProgramReuse} from './harless_video_program.ts';
 import {createPptMasterRecovery} from './ppt_master_recovery.ts';
 import {createComparisonService,ComparisonError} from './harless_comparison.ts';
 import { attachmentContextMessage, attachmentContextPolicy, attachmentEvidence, attachmentImages, attachmentImageKey,
@@ -108,6 +109,7 @@ type Task = {
   ppt_master_recovery?: ReturnType<typeof createPptMasterRecovery>;
   paper_recovery?: ReturnType<typeof createPaperRecovery>;
   bound_binding_sha256?: string | null;
+  video_program_seen?: Set<string>;
 };
 class TaskError extends Error {
   code: string; status: number;
@@ -147,7 +149,7 @@ export function apply(ctx: any) {
   }
   ctx.effect(()=>()=>{for(const timer of progressTimers.values())clearTimeout(timer);progressTimers.clear();taskSubscribers.clear();},'harless-task-progress-lifetime');
   const brokerMode = config.budget_broker_endpoint !== undefined;
-  if (config.comparison_scenes && (!brokerMode || !Array.isArray(config.comparison_scenes) || config.comparison_scenes.some(id => !['ppt', 'paper-proofreading', 'research-data-analysis', 'literature'].includes(id)))) throw Error('Invalid comparison policy');
+  if (config.comparison_scenes && (!brokerMode || !Array.isArray(config.comparison_scenes) || config.comparison_scenes.some(id => !['ppt', 'paper-proofreading', 'research-data-analysis', 'literature', 'video-editing'].includes(id)))) throw Error('Invalid comparison policy');
   let comparisons: ReturnType<typeof createComparisonService> | undefined;
   const taskParents = new Map<string, any>();
   let trash: ReturnType<typeof createSessionTrash>;
@@ -210,6 +212,7 @@ export function apply(ctx: any) {
   function executeUnavailable(scene: Scene): string | null {
     if (scene.unavailable_reason) return scene.unavailable_reason;
     if (scene.rsi_unavailable_reason) return scene.rsi_unavailable_reason;
+    if(scene.runtime_kind==='video_program_v1')return videoProgramUnavailable(scene);
     if(scene.runtime_kind==='paper_shadow_v1')return 'existing_paper_library_shadow_only';
     if(scene.runtime_kind==='data_receipts_v3'){
       try{
@@ -257,7 +260,7 @@ export function apply(ctx: any) {
     return formats ? !inputs.some(row => formats.includes(extname(row.file ?? '').toLowerCase())) : !inputs.length;
   };
   const instructionsFor = (scene: Scene, sourcePending = false) => scene.adapter && scene.id !== 'new-scene'
-    ? `${scene.instructions ?? ''}\n\n交互原则：以上工具流程仅在用户确实需要相应处理时适用。文字、附件及二者组合都走当前场景的正常执行流程，由你根据请求决定直接回答、询问资料或调用工具。正常回应问候、讨论目标、解释方法；不要为闲聊强制运行报告流程或要求上传。具体操作缺少必要来源时自然说明需要什么，不编造数据或交付，不暴露内部配置或服务器路径。${sourcePending ? '当前任务尚无可用于处理的数据来源；这不限制正常问答或可用工具，也不代表用户必须上传。' : ''}`
+    ? `${scene.instructions ?? ''}${scene.video_program_agent_instruction ? '\n\n'+scene.video_program_agent_instruction : ''}\n\n交互原则：以上工具流程仅在用户确实需要相应处理时适用。文字、附件及二者组合都走当前场景的正常执行流程，由你根据请求决定直接回答、询问资料或调用工具。正常回应问候、讨论目标、解释方法；不要为闲聊强制运行报告流程或要求上传。具体操作缺少必要来源时自然说明需要什么，不编造数据或交付，不暴露内部配置或服务器路径。${sourcePending ? '当前任务尚无可用于处理的数据来源；这不限制正常问答或可用工具，也不代表用户必须上传。' : ''}`
     : scene.instructions;
   function bindScene(agent: any, configuredScene: Scene, sourcePending = false) {
     const scene = sessionScene(agent.session.id, configuredScene);
@@ -323,11 +326,7 @@ export function apply(ctx: any) {
     if (sessionId) await ensureOwned(sessionId);
     settingsView(sessionId); // ownership before mutation
     const current = sessionId ? selections.get(sessionId) ?? defaults : defaults;
-    // The video scene has no published Motif library: choose ordinary execution atomically.
-    const requested=patch as any;
-    const selectedPatch=requested?.scene==='video-editing'&&requested.mode===undefined&&requested.rsi===undefined
-      ? {...requested,mode:'baseline',rsi:false}:patch;
-    const next = changeSelection(current, selectedPatch, scenes, executeUnavailable);
+    const next = changeSelection(current, patch, scenes, executeUnavailable);
     if (next.scene !== current.scene && sceneFor(next.scene).unavailable_reason)
       throw new TaskError('scene_not_connected', '该场景暂不可用：' + sceneFor(next.scene).unavailable_reason, 409);
     if (sessionId) {
@@ -654,7 +653,7 @@ export function apply(ctx: any) {
         !ownedSessions.has(request.session_id) || typeof route.budget_session_id !== 'string' ||
         state.task_id !== taskId || state.session_id !== request.session_id) throw Error('Web task index identity mismatch');
     const effective = JSON.parse(readFileSync(join(output, 'effective-config.json'), 'utf8'));
-    const configuredScene = scenes.find(scene=>scene.id===(state.scene??request.capability_profile))??sceneFor(defaults.scene);
+    const configuredScene = videoProgramScene(scenes.find(scene=>scene.id===(state.scene??request.capability_profile))??sceneFor(defaults.scene),request.mode);
     if(!scenes.some(scene=>scene.id===(state.scene??request.capability_profile))||
       (effective.allowed_tools&&digest(effective.allowed_tools)!==digest(configuredScene.allowed_tools)))legacyChatSessions.add(request.session_id);
     const restoredScene = sessionScene(request.session_id, configuredScene);
@@ -984,7 +983,7 @@ export function apply(ctx: any) {
         catch (error) { if (!(error instanceof ApiSessionNotFound)) throw error; absent = true; }
         if (!absent) throw new TaskError('session_not_owned', 'Session is outside this Web run; create a new session');
       }
-      const chosen = request.agentPreset ? scenes.find(scene => scene.preset === request.agentPreset)! : chatScene ?? sceneFor(defaults.scene);
+      const chosen = videoProgramScene(request.agentPreset ? scenes.find(scene => scene.preset === request.agentPreset)! : chatScene ?? sceneFor(defaults.scene), 'baseline');
       if (chosen.unavailable_reason) throw new TaskError('scene_not_connected', chosen.unavailable_reason, 409);
       if (request.cwd !== undefined && request.workspaceId !== undefined)
         throw new TaskError('invalid_workspace', '请选择工作区或目录，不能同时指定两者');
@@ -1250,7 +1249,7 @@ export function apply(ctx: any) {
     }
     if (Buffer.byteLength(JSON.stringify(delivery)) > 768 * 1024) throw new TaskError('request_too_large', 'Resolved input exceeds byte limit', 413);
     const originalScene=paperLearning.resolve(sessionScene(existingSession ?? '', sceneFor(request.capability_profile)));
-    const scene = requestedMode==='baseline'?originalScene:pptLearning.resolve(originalScene);
+    const scene = videoProgramScene(requestedMode==='baseline'?originalScene:pptLearning.resolve(originalScene),request.mode);
     if (existingSession && legacyChatSessions.has(existingSession) && request.content.some(part => part.type !== 'text'))
       throw new TaskError('new_session_required', '历史会话可以继续文字对话；使用文件或场景工具请新建会话。', 409);
     if (scene.unavailable_reason) throw new TaskError('scene_not_connected', scene.unavailable_reason, 409);
@@ -1309,6 +1308,7 @@ export function apply(ctx: any) {
     if (request.mode === 'execute' && scene.runtime_kind!=='data_receipts_v3') {
       if (scene.certified_tool_schemas && !certifiedSchemaMatches(scene, tools))
         throw new TaskError('execute_unavailable', 'certified_tool_schema_mismatch', 409);
+      if(scene.runtime_kind!=='video_program_v1'){
       const manifest = JSON.parse(readFileSync(scene.manifest!, 'utf8'));
       const offered = new Map(tools.map((tool: any) => [tool.name, tool]));
       if (Object.entries(manifest.contracts).some(([name, contract]) => !offeredSchemaMatches(offered, name, contract)))
@@ -1317,6 +1317,7 @@ export function apply(ctx: any) {
         const binding = JSON.parse(readFileSync(scene.task!, 'utf8'));
         await loopbackSimilarity(scene.embedding_endpoint!, scene.embedding_model!)(binding.intent, ['Runtime admission probe']);
       } catch { throw new TaskError('execute_unavailable', 'embedding_service_unavailable', 409); }
+      }
     }
     selections.set(request.session_id, selection);
     const snapshot = await controller.inspect(request.session_id);
@@ -1339,7 +1340,7 @@ export function apply(ctx: any) {
       humans: priorHumans, current_humans: new Set(), sources,
       model_option: chosenModel, reasoning_effort: chosenReasoning, budget_session_id: budgetSessionId,
       source_task_id: firstSources ? taskId : previousTask?.source_task_id ?? previousTask?.request.task_id ?? taskId,
-      stats: { tool_calls: 0, tool_errors: 0, llm_decisions: 0, motif_attempts: 0, shadow_candidates: 0, verified_skips: 0,
+      stats: { ...(scene.runtime_kind==='video_program_v1'?{program_reuses:0}:{}),tool_calls: 0, tool_errors: 0, llm_decisions: 0, motif_attempts: 0, shadow_candidates: 0, verified_skips: 0,
         upstream_requests: 0, model_requests: 0, actual_paid_usd: config.provider_mode === 'mock' ? 0 : null } };
     for (const filename of ['events.jsonl', 'motif-audit.jsonl']) writeFileSync(join(output, filename), '', { mode: 0o600 });
     await control('/tasks/register', { task_id: taskId, session_id: budgetSessionId,
@@ -1410,6 +1411,12 @@ export function apply(ctx: any) {
   function configureMotif(task: Task) {
     if (task.request.mode === 'baseline') return;
     const parts = task.request.content, scene = task.scene;
+    if(scene.runtime_kind==='video_program_v1'){
+      const reason=videoProgramUnavailable(scene);
+      if(reason){task.fallback_reason=reason;audit(task,{kind:'motif_fallback',reason});return;}
+      audit(task,{kind:'published_program_library_loaded',runtime_kind:scene.runtime_kind,library_digest:scene.video_program_library_digest,policy_digest:scene.video_program_policy_digest,mode:task.request.mode});
+      return;
+    }
     if(scene.runtime_kind==='data_receipts_v3'||scene.runtime_kind==='paper_shadow_v1'){
       try{
         if(fileSha(scene.runtime_library)!==scene.runtime_library_sha256)throw Error('existing_library_changed');
@@ -2057,7 +2064,7 @@ export function apply(ctx: any) {
       // native preset stays immutable. Reinstall the tool guard for the actual
       // mounted branch scope, not its next-send selection after cold recovery.
       const mountedScene = readBranchInputs(agent.session.id)?.mounted_scene ?? restoredMountedScene(agent);
-      const configuredScene = sceneFor(task?.scene.id ?? mountedScene ?? selections.get(agent.session.id)?.scene ?? defaults.scene);
+      const configuredScene = task?.scene ?? videoProgramScene(sceneFor(mountedScene ?? selections.get(agent.session.id)?.scene ?? defaults.scene),selections.get(agent.session.id)?.mode??'baseline');
       if (restoredSessions.has(agent.session.id) && !task && !comparisons?.isLane(agent.session.id) && !legacyChatSessions.has(agent.session.id)) {
         // Comparison-only parents have no ordinary task/effective-config to
         // detect old preset drift. Keep their immutable mounted tools closed;
@@ -2072,6 +2079,10 @@ export function apply(ctx: any) {
     agent.ctx.on('tools/result', (execution: any, result: any) => {
       const task=forSession(agent.session.id);
       task?.interceptor?.observe(agent.session.id, execution, result);
+      if(task?.status==='running'&&task.request.mode==='execute'&&task.scene.runtime_kind==='video_program_v1'){
+        const reused=videoProgramReuse(task.scene,task.request.task_id,task.workspace,execution,result,task.video_program_seen??=new Set());
+        if(reused){task.stats.program_reuses=Number(task.stats.program_reuses??0)+1;audit(task,reused);}
+      }
       if(task?.status==='running'&&task.scene.adapter==='ppt'&&task.scene.ppt_execution_strategy!=='ppt_master'){
         task.ppt_recovery??=createPptRecovery();task.ppt_recovery.observe(execution,result);
       }
