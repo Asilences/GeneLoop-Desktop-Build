@@ -10,13 +10,25 @@
 
 在已配置服务器的项目检出中加载 `source .local/remote-env.sh`，使用 `node scripts/project.mjs python` 调用模块，避免依赖系统 Python 版本。
 
-1. `prepare_inputs` 生成真实项目只读副本及受控版本；`freeze` 在模型请求前固定任务、评价器和预算。原文件不修改。
+1. `prepare_inputs` 生成真实项目只读副本及受控版本；`freeze` 在模型请求前固定任务、评价器和预算。原文件不修改。新实验必须给出 `--experiment-id` 与带时区的未来 `--deadline-utc`，不继承本轮日期；每次使用新目录。
 2. `source_phase --request <配置>` 生成并原生认证底层程序。`prepare_C` 固定实际解析输出与独立输入，`run --request <配置>` 使用公共控制器构造 C。
 3. `prepare_D --base <私有实验根> --output <新目录> --c-plan <C-plan> --c-run <C-run> --code-commit <SHA>` 冻结研究。`--v2 --final-manifest <新留出清单>` 创建三组各两格；`--task-file`、`--study-name` 新建条件，不覆盖旧配置。第三条件还传入全部 `--prior-journal`，核验六美元研究估费上界。
 4. 按 `ordered-requests.json` 顺序执行 `run --request <cell/request.json>`，每格一次完整获取回合。**全部构造结束之后**才执行 `finalize_D --directory <study> --base <实验根>`；最终结果不得送回本轮模型修复。全部报告与请求归属封账后，已发布根的独立失败接回原 `CapabilityFeedback` 撤回机制，供未来 Builder 过滤；原发布证据不删除，环境错误记为未知、不推测叶节点责任。`final-feedback.json` 保存本次回写，已撤回根不能仅凭一个成功事实恢复。
 5. `replay_program --request <重放配置>` 可用保存的原程序零模型定位认证、包装及质量失败。它不冒充新自主构造；所有输出使用新目录。
 
 `run` 请求包含 `plan`/`protocol` 文件引用、`cell`、`budget_usd`、`journal`、Unix `deadline`，可附正式 `study` 的计划引用、独立 journal 和 episode ID。底层计划遵循 `schemas/capability-improvement-v1.schema.json`。每个引用均为 `{path,sha256}`，使用前校验原字节。
+
+设置本次服务器上的 `FRONTIER_INPUTS`、`FRONTIER_FREEZE`、`FRONTIER_EXPERIMENT_ID`、`FRONTIER_DEADLINE_UTC` 后，冻结命令为：
+
+```sh
+node scripts/project.mjs python -m scenarios.paper_proofreading.frontier.freeze \
+  --inputs "$FRONTIER_INPUTS" --output "$FRONTIER_FREEZE" \
+  --experiment-id "$FRONTIER_EXPERIMENT_ID" --deadline-utc "$FRONTIER_DEADLINE_UTC"
+```
+
+`prepare_C`、`prepare_D` 都支持 `--protocol "$FRONTIER_FREEZE/protocol.json"`，直接读取其任务引用和截止时间；缺省优先读取历史 `frozen-v1/protocol-server.json`，否则使用标准 `protocol.json`，不需要手工改名。新 C 的 Capability owner 默认为实验 ID；复用旧 Store 时通过 freezer 的 `--owner` 或 prepare_C 的 `--owner` 指定旧命名空间，不改变模型账号或原账本。D 仍沿用已有 C 的 owner。原冻结配置保持原样，过期后不能改旧截止时间继续跑，必须新建条件。
+
+`run` 在费用与 owner 登记前核对请求截止时间和冻结协议；正式 study 还核对精确预算、任务、种子与实际初始能力池。初次构造前再核对一次可见池，之后本回合新学到的材料按原协议登记与计费。改请求文件不能绕过原 study 的预算或隐藏 C 的条件。`freeze`/`prepare_*` 不调用模型；`run`/`source_phase` 会按研究预算调用真实 API。
 
 ## 模型需要决定什么
 

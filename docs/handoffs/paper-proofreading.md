@@ -7,12 +7,13 @@
 - 当前目标与结果：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结见[七小时协议](../capability-frontier-protocol-v1.md)。C 已真实发布；三种冻结条件全部结束，最后条件 WithC 2/2、Direct 1/2 通过 Mamba 两对检查，Flat 一格失败、一格无候选。已发布 D 全部完整重写、未调用 C/J；自主 C→D 与递归效率收益 pending。
 - 执行窗口：约 00:48–07:48（Asia/Shanghai）；先固定真实/公开输入、独立判据、组间可见能力和有限实验预算，再运行。沿用原累计账本；生产服务、旧库与默认聊天不改。
 - 已实现：JSON 值桥接与65KB认证报告、双文件角色绑定、函数入口胶合与完整程序机械包装、按能力池版本恢复机会准入；复用原公共控制器/原生认证/TS执行与发布，没有另造Agent循环。
-- 已验证：`951aeea`本地全量1869 Python通过/239跳过、1516 Node通过/20跳过；`8085c37`的smoke/motif:check通过。最新服务器原生及公共控制器定向85 Python、前轮20 Node通过/1平台跳过。`f06a0dc`补档案成员`count('/')`误拒绝；`dc75d8a`把未可靠采集的构造耗时改为null，旧封账报告保留并标明限制。PR反馈接线head `9453869` Linux/Windows全套通过，材料续接CI以最新head为准。
+- 已验证：`e6d46f6`本地全量1879 Python通过/239跳过、1516 Node通过/20跳过；`8085c37`的smoke/motif:check通过。最新服务器原生及公共控制器定向95 Python、前轮20 Node通过/1平台跳过。`f06a0dc`补`count('/')`误拒绝；`dc75d8a`把未可靠采集的构造耗时改为null。PR材料续接head `c66c5cc` Linux/Windows全套通过，最后复现补丁CI以最新head为准。
 - 最终反馈接线：`e1f25ad`在最终研究封账后将独立质量回写现有Feedback。三份真实错误D退出后续Builder目录，四份合格D保留，原发布/证据不删。无候选、环境错误和未知结果不当算法反例，已撤回根不凭成功事实自动恢复；代码与实际结果见`frontier/feedback.py`和`code-16/.local/post-study-feedback-001/`。
 - 构造续接：实际H0第一次请求已经学到正确JSON比较程序，入池后旧控制器清空上一步意图，别名c4→c5却无完成提示。`951aeea`新增按当前snapshot绑定的材料获取记录与当前别名，保留用途/证据、避免重发完整源码；普通repair仍不跨snapshot。第一份原程序+C的零模型强制组合也通过原发布/后继及Mamba两对，证据`code-17/.local/first-H0-material-diagnostic-001/`。这不是自主选择；修正后的模型行为/成本尚未重跑，保持pending。
+- 复现与预登记：`10a0dc6`消除写死的日期/owner，默认新D采用已澄清语义；新实验显式冻结ID/带时区截止，旧配置不修改。`e6d46f6`在开跑前核对预算/截止/任务/初始池；原16格保存记录全部匹配。新日期/owner的CLI准备通过12原生检查，未启动模型；原账本未变。证据`code-18/.local/preparation-diagnostic-001/`、`code-19/.local/preflight-audit-001/`，新参数见研究README。
 - 零模型诊断：C 本身在 Mamba 三版本全部正确；宿主强制接成 C(before)+C(after)+原模型比较程序，经原认证/发布/后继与 Mamba 两对检查通过，每对真实调用C两次。它是执行机制证据，不计自主选择。Flat 1原提案解除误拒绝后仍因影响传播过度被独立检查拒绝，未晋级。
 - 费用与数据：C20请求/USD0.075317172，D三条件12+30+17请求/USD0.264833400；总79/USD0.340150572代理估费，新增unknown0，账单/人工/机器成本未知。原账本3236→3315，前缀不变。服务器快照code-08/13/14分别对应三个正式条件，code-15只作零模型诊断。结果已同步本地`.local/capability-frontier-20261103/server-evidence/`，不含`.env`、dsh凭证目录与node_modules。
-- 入口：服务器加载`.local/remote-env.sh`后用`node scripts/project.mjs python -m scenarios.paper_proofreading.frontier.run --request <新冻结request.json>`；最终验收用`frontier.finalize_D --directory <新study> --base <私有实验根>`。旧study已封账，不能重发或覆盖。公共入口说明见[研究README](../../scenarios/paper_proofreading/frontier/README.md)，精确SHA/反例见[实验](../experiments/capability-frontier-20261103.md)。当前独立研究分支已推送并创建草稿PR123；材料续接收尾待推送，未合并/部署。
+- 入口：服务器加载`.local/remote-env.sh`后用`node scripts/project.mjs python -m scenarios.paper_proofreading.frontier.run --request <新冻结request.json>`；最终验收用`frontier.finalize_D --directory <新study> --base <私有实验根>`。新freeze要求`--experiment-id`、`--deadline-utc`，准备器支持`--protocol`，旧study已封账不能重发/覆盖。公共说明见[研究README](../../scenarios/paper_proofreading/frontier/README.md)，精确SHA/反例见[实验](../experiments/capability-frontier-20261103.md)。独立研究分支已推送到草稿PR123，最后复现补丁随本次收尾推送，未合并/部署。
 - 接手下一步：审阅独立研究PR和CI；先用新协议检验材料获取后的真实续接，再决定是否修改普通程序调用已有能力的接口或选择更需要既有抽象的任务。原H0第一次材料足以构造D但模型没走该路径，不可把“信息丢失已修”写成“自主递归已修好”。当前不追加模型调提示；不得把小样本配置差异、强制调用或旧视频收益称作本轮递归因果收益。
 - 权限与回退：真实模型测试授权保留，平台null与原账本不变；无后台付费请求。外部应用写入/投稿/生产接管未授权。本分支独立研究入口可停用；回退共享变更时连同精确兼容配置一起回退到`f594e19`，旧库/证书与所有原始失败均保留。
 
