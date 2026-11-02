@@ -11,7 +11,7 @@ from pathlib import PurePosixPath
 from .capability_improvement import evidence
 from .capability_contract import capability_ref, capability_digest, validate_capability_snapshot
 from .capability_builder import compile_proposal
-from .capability_authoring import aliases, expand_binding, AuthoringError
+from .capability_authoring import aliases, expand_binding, compact_binding, AuthoringError
 
 
 PROGRAM_SLOT = '$program'
@@ -87,7 +87,21 @@ def encode_program_composition(task,snapshot,program_ref,intent_ref,library_ref,
         elif step['capability'] not in snapshot['roots']:
             raise ValueError('program_composition_existing_reference_not_visible')
     if not used:raise ValueError('program_composition_program_slot_missing')
-    candidate=compile_proposal(proposal,snapshot,snapshot['owner'])
+    try:candidate=compile_proposal(proposal,snapshot,snapshot['owner'])
+    except ValueError as error:
+        # Keep the failed bindings visible while rebasing only their reference
+        # spelling. Never pretend this invalid graph is a compiled proposal.
+        reverse={ref['id']:name for name,ref in aliases(snapshot).items()}
+        error.program_composition_repair_context={
+            'format':'capability_program_composition_repair_v1',
+            'current_snapshot_sha256':snapshot['digest'],
+            'originating_snapshot_sha256':intent['construction_snapshot_sha256'],
+            'scope':'Frozen model choices with current alias spellings; bindings remain invalid and unrepaired. No dependency or argument was added.',
+            'steps':[{'id':step['id'],'capability':copy.deepcopy(step['capability']),
+                'current_alias':reverse[step['capability']['id']],
+                'arguments':compact_binding(step['arguments'])} for step in proposal['steps']],
+            'output':compact_binding(proposal['output'])}
+        raise
     return {'proposal':proposal,'candidate':candidate,'source_program_id':next(
         cap['implementation']['legacy_ref']['object_id'] for cap in snapshot['capabilities'] if capability_ref(cap)==certified[0]),
         'encoding_scope':'model_explicit_composition_fixed_before_certification_only_program_slot_resolved'}

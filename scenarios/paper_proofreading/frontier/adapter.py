@@ -81,7 +81,17 @@ class FrontierAdapter(CapabilityImprovementAdapter):
                 if pending.get('composition_intent_ref'):
                     result['originating_composition_intent_ref']=pending['composition_intent_ref']
                 if encoding_error:
-                    write(output/'answer.txt',evidence(pending['answer_ref']).decode('utf-8'))
+                    result['originating_answer_ref']=pending['answer_ref']
+                    repair_context=getattr(encoding_error,'program_composition_repair_context',None)
+                    if repair_context is not None:
+                        write(output/'composition-repair-context.json',repair_context)
+                        result['composition_repair_context_ref']=reference(output/'composition-repair-context.json')
+                    # The original answer names aliases from an older pool.
+                    # Preserve its source reference, never present it as the
+                    # answer authored against this new snapshot.
+                    write(output/'answer.txt',json.dumps({'format':'capability_host_encoding_failure_v1',
+                        'error':str(encoding_error),'originating_answer_ref':pending['answer_ref'],
+                        'originating_composition_intent_ref':pending['composition_intent_ref']}))
                     result.update(error=str(encoding_error),diagnostics=diagnose(encoding_error))
                     write(output/'result.json',result);return result
                 write(output/'proposal.json',encoded['proposal']);write(output/'candidate.json',encoded['candidate'])

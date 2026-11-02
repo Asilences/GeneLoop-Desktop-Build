@@ -11,6 +11,7 @@ from src.adapters import capability_proposal as pilot
 from src.adapters.capability_authoring import authoring_context,expand_draft,diagnose
 from src.adapters.capability_builder import compile_proposal
 from src.adapters.capability_program_encoding import freeze_program_composition
+from src.adapters.capability_improvement import evidence
 from src.adapters.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 
@@ -71,6 +72,14 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
         context['example_policy']='Only structural schemas are shown; full native training examples remain pinned for certification. Source strings and project identifiers are not needed to implement the general relation.'
     context['repair']=None if parent is None else {'previous_answer':(Path(parent)/'answer.txt').read_text(encoding='utf-8'),
         'previous_result':pilot.read_json(Path(parent)/'result.json'),'feedback':feedback}
+    if context['repair'] is not None:
+        repair_ref=context['repair']['previous_result'].get('composition_repair_context_ref')
+        if repair_ref:
+            repair_context=json.loads(evidence(repair_ref))
+            if (repair_context.get('format')!='capability_program_composition_repair_v1'
+                    or repair_context.get('current_snapshot_sha256')!=library['snapshot']['digest']):
+                raise ValueError('proposal_composition_repair_context_changed')
+            context['repair']['frozen_composition_intent']=repair_context
     prompt=SYSTEM+'\nFROZEN CONSTRUCTION CONTEXT:\n'+json.dumps(context,ensure_ascii=False)
     pilot.write(output/'prompt.md',prompt)
     session='frontier-'+uuid4().hex;effective.update(prompt_sha256=pilot.sha(prompt),session_id=session,

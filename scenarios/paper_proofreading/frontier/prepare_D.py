@@ -1,6 +1,6 @@
-"""Freeze all four D episodes and their initial exposure before any D call."""
-import argparse,copy,json,shutil,subprocess
-from decimal import Decimal
+"""Freeze D episodes and their initial exposure before any D call."""
+import argparse,copy,json,re,shutil,subprocess
+from decimal import Decimal,InvalidOperation
 from pathlib import Path
 from src.adapters.capability_scene import ROOT,reference
 from src.adapters.capability_improvement import evidence,read,save
@@ -34,15 +34,85 @@ def read_journal(path):
     return [json.loads(line) for line in raw.splitlines()]
 
 
+def finite_budget(value):
+    try:amount=Decimal(str(value))
+    except InvalidOperation as error:raise ValueError('frontier_research_budget_invalid') from error
+    if not amount.is_finite() or amount<0:raise ValueError('frontier_research_budget_invalid')
+    return str(amount)
+
+
+def load_final_projects(manifest_paths):
+    """Pin supplied projects without executing a candidate or filtering quality.
+
+    Legacy manifests used array order as the version and omitted the project ID.
+    New manifests may name versions explicitly, in any order.
+    """
+    projects=[];ids=set()
+    for raw_path in manifest_paths:
+        path=Path(raw_path).resolve();manifest_ref=reference(path);manifest=json.loads(evidence(manifest_ref))
+        if not isinstance(manifest,dict):raise ValueError('frontier_final_versions_invalid')
+        project_id=manifest.get('id','mamba')
+        if not isinstance(project_id,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}',project_id) or project_id in ids:
+            raise ValueError('frontier_final_project_id_invalid')
+        rows=manifest.get('versions');versions={};sources=set()
+        if not isinstance(rows,list) or len(rows)!=3:raise ValueError('frontier_final_versions_invalid')
+        for index,row in enumerate(rows):
+            if not isinstance(row,dict):raise ValueError('frontier_final_versions_invalid')
+            version=row.get('version',index)
+            if type(version) is not int or version not in (0,1,2) or str(version) in versions:
+                raise ValueError('frontier_final_versions_invalid')
+            name=row.get('file');digest=row.get('sha256')
+            if not isinstance(name,str) or not name or '\\' in name or '\x00' in name:
+                raise ValueError('frontier_final_source_path_invalid')
+            relative=Path(name)
+            if relative.is_absolute() or '..' in relative.parts:raise ValueError('frontier_final_source_path_invalid')
+            source=(path.parent/relative).resolve()
+            if not source.is_relative_to(path.parent) or source in sources or not source.is_file():
+                raise ValueError('frontier_final_source_path_invalid')
+            if not isinstance(digest,str) or not re.fullmatch(r'[0-9a-f]{64}',digest):
+                raise ValueError('frontier_fresh_final_inputs_changed')
+            ref=reference(source)
+            if ref['sha256']!=digest:raise ValueError('frontier_fresh_final_inputs_changed')
+            versions[str(version)]=ref;sources.add(source)
+        ids.add(project_id)
+        projects.append({'id':project_id,'versions':{str(i):versions[str(i)] for i in range(3)},'source_manifest':manifest_ref})
+    if not projects:raise ValueError('frontier_v2_fresh_final_manifest_required')
+    return projects
+
+
+def final_project_checks(projects):
+    return [project['id']+suffix for project in projects for suffix in ('_v0_v1','_v1_v2')]
+
+
+def freeze_research_budget(budget,limit,cell_count,prior_journals):
+    prior={};settled={}
+    for path in prior_journals:
+        for row in read_journal(path):
+            if row['event']=='request_booked':prior[row['request_id']]=Decimal(row['reserved_upper_usd'])
+            elif row['event']=='request_settled':settled[row['request_id']]=row['observed_model_usd']
+    accounted=sum((Decimal(settled[rid]) if settled.get(rid) is not None else reserve for rid,reserve in prior.items()),Decimal(0))
+    upper=accounted+Decimal(finite_budget(budget))*cell_count
+    limit=finite_budget(limit)
+    if upper>Decimal(limit):raise ValueError('frontier_aggregate_research_budget_exceeded')
+    value={'prior_accounted_upper_usd':str(accounted),'aggregate_planned_upper_usd':str(upper),
+           'aggregate_model_estimate_limit_usd':limit}
+    if prior_journals:value['prior_research_journals']=[reference(Path(p).resolve()) for p in prior_journals]
+    return value
+
+
 def main():
     parser=argparse.ArgumentParser()
     for name in ('base','output','C_plan','C_run'):parser.add_argument('--'+name.replace('_','-').lower(),type=Path,required=True,dest=name)
     parser.add_argument('--code-commit',required=True)
-    parser.add_argument('--v2',action='store_true');parser.add_argument('--final-manifest',type=Path)
+    parser.add_argument('--v2',action='store_true');parser.add_argument('--final-manifest',type=Path,action='append',default=[])
     parser.add_argument('--task-file',type=Path);parser.add_argument('--study-name')
     parser.add_argument('--protocol',type=Path)
     parser.add_argument('--prior-journal',type=Path,action='append',default=[])
+    parser.add_argument('--budget-usd');parser.add_argument('--research-limit-usd',default='6.00')
     a=parser.parse_args();base=a.base.resolve();protocol,settings,deadline=protocol_reference(base,a.protocol)
+    budget=finite_budget(a.budget_usd if a.budget_usd is not None else ('0.80' if a.v2 else '1.00'))
+    research_limit=finite_budget(a.research_limit_usd)
+    final_projects=load_final_projects(a.final_manifest) if a.v2 else None
     out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
     c_plan=read(a.C_plan);c_result=read(a.C_run/'result.json')
     published=[r for r in c_result['outcomes'] if r['status']=='published']
@@ -68,7 +138,6 @@ def main():
         raise ValueError('frontier_flat_primitives_do_not_match_C_dependencies')
     relation=None
     if a.v2:
-        if a.final_manifest is None:raise ValueError('frontier_v2_fresh_final_manifest_required')
         base_refs=[r['capability'] for r in native_catalog if r['input_contracts'] and all(c['format']=='zip' for c in r['input_contracts'])]
         relations=[r['capability'] for r in native_catalog if 'value' in r['input_schema'].get('properties',{})]
         if len(base_refs)!=2 or len(relations)!=1:raise ValueError('frontier_v2_vocabulary_partition_invalid')
@@ -101,11 +170,11 @@ def main():
     c_task=json.loads(evidence(settings['tasks']['C']))
     task=reference(a.task_file.resolve()) if a.task_file else settings['tasks']['D'];evidence(task)
     source_files=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py','freeze.py']
-    common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/script_capability_runtime.ts',
+    common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/capability_composition_source.py','src/adapters/script_capability_runtime.ts',
         'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/adapters/efficiency_rsi_registry.py',
         'src/adapters/efficiency_rsi_measurement.py','config/script-runtime-compatibility.json',
         'src/adapters/script_motif_compiler.py','src/adapters/capability_program_encoding.py']
-    budget='0.80' if a.v2 else '1.00';presentation={'schema_only_examples':True,'hide_composition_definitions':True,'hide_redundant_JSON_file_variants':True} if a.v2 else {}
+    presentation={'schema_only_examples':True,'hide_composition_definitions':True,'hide_redundant_JSON_file_variants':True} if a.v2 else {}
     conditions={'format':'frontier_D_conditions_v1','code_commit':a.code_commit,'protocol':protocol,'task':task,
         'C':published[0],'initial_snapshots':{k:v['digest'] for k,v in snapshots.items()},
         'shared_examples':reference(out/'shared-training-examples.json'),'native_libraries':native_refs,
@@ -118,25 +187,12 @@ def main():
         'Direct_equals_Flat':not a.v2,'force_C':False,'presentation':presentation,'auto_wrap_complete_program':a.v2}
     required_checks=['heldout_v0_v1','heldout_v1_v2'];baseline='flat_without_C'
     if a.v2:
-        manifest_ref=reference(a.final_manifest.resolve());manifest=json.loads(evidence(manifest_ref))
-        versions={str(i):reference(a.final_manifest.resolve().parent/row['file']) for i,row in enumerate(manifest['versions'])}
-        if any(versions[str(i)]['sha256']!=row['sha256'] for i,row in enumerate(manifest['versions'])):raise ValueError('frontier_fresh_final_inputs_changed')
         conditions.update(format='frontier_D_conditions_v2',J=relation,
             contrasts=[['direct_L0','flat_without_C'],['flat_without_C','hierarchical_with_C'],['direct_L0','hierarchical_with_C']],
-            final_projects=[{'id':'mamba','versions':versions,'source_manifest':manifest_ref}],
-            final_test_policy='All six episodes finish before fresh Mamba final tests; no final feedback in model calls.')
-        required_checks=['mamba_v0_v1','mamba_v1_v2'];baseline='direct_L0'
-    if a.prior_journal:
-        prior={};settled={}
-        for path in a.prior_journal:
-            for row in read_journal(path):
-                if row['event']=='request_booked':prior[row['request_id']]=Decimal(row['reserved_upper_usd'])
-                elif row['event']=='request_settled':settled[row['request_id']]=row['observed_model_usd']
-        accounted=sum((Decimal(settled[rid]) if settled.get(rid) is not None else reserve for rid,reserve in prior.items()),Decimal(0))
-        upper=accounted+Decimal(budget)*len(snapshots)*2
-        if upper>Decimal('6.00'):raise ValueError('frontier_aggregate_research_budget_exceeded')
-        conditions.update(prior_research_journals=[reference(p.resolve()) for p in a.prior_journal],
-            prior_accounted_upper_usd=str(accounted),aggregate_planned_upper_usd=str(upper),aggregate_model_estimate_limit_usd='6.00')
+            final_projects=final_projects,
+            final_test_policy='All six episodes finish before final project tests; no final feedback in model calls.')
+        required_checks=final_project_checks(final_projects);baseline='direct_L0'
+    conditions.update(freeze_research_budget(budget,research_limit,len(snapshots)*2,a.prior_journal))
     save(out/'conditions.json',conditions)
     (out/'evaluator').mkdir();shutil.copyfile(Path(__file__).with_name('oracle.py'),out/'evaluator/oracle.py')
     arms=[{'id':arm,**{prefix+'_snapshot_sha256':snapshot['digest'] for prefix in ('execution','build')},

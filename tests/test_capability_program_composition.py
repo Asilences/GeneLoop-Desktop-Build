@@ -219,3 +219,55 @@ def test_native_certification_failure_never_creates_pending_intent_or_candidate(
     assert result['status']=='failed' and result['error']=='frontier_native_material_rejected'
     assert instance.pending_complete is None and 'native_library' not in result
     assert instance.acquire({},result,output)=={'status':'deferred','reason':'frontier_no_certified_material'}
+
+
+def test_failed_encoding_repair_rebases_only_aliases_and_keeps_frozen_context(tmp_path,monkeypatch):
+    from scenarios.paper_proofreading.frontier import adapter,author
+    d=data(tmp_path);composition=copy.deepcopy(d.composition)
+    composition['steps'][1]['args']={}
+    intent=put(tmp_path/'invalid-binding-intent.json',freeze_program_composition(d.task,d.before,d.program,composition))
+    original_answer={'program':d.program,'composition':composition}
+    original_ref=put(tmp_path/'original-answer.json',original_answer)
+    instance=adapter.FrontierAdapter.__new__(adapter.FrontierAdapter)
+    instance.plan={'id':'diagnostic','output':str(tmp_path/'run')}
+    instance.templates={'diagnostic':{'auto_wrap_complete_program':True}}
+    gate=SimpleNamespace(register_attempt=lambda *a:None,budget=SimpleNamespace(limit='1'),cell='diagnostic',
+        environment=lambda:{},costs=lambda output:{'provider_requests':0,'observed_model_usd':0})
+    instance.gate=gate
+    instance.pending_complete={'library':d.library,'observations':d.observations,'program':d.program,
+        'program_ref':d.program_ref,'composition_intent_ref':intent,'answer_ref':original_ref}
+    library={'snapshot':d.after,'source_catalog':{}}
+    failed=tmp_path/'run/attempt-1'
+    failure=instance.construct(d.task,library,failed,None,None)
+    assert failure['status']=='failed' and failure['error']=='capability_build_required_input_missing'
+    context=json.loads((failed/'composition-repair-context.json').read_text())
+    current_aliases={ref['id']:name for name,ref in aliases(d.after).items()}
+    assert context['steps'][0]['capability']==d.intent['steps'][0]['capability']
+    assert context['steps'][0]['current_alias']==current_aliases[d.old['id']]!='c1'
+    assert context['steps'][1]['capability']==capability_ref(d.native)
+    assert context['steps'][1]['arguments']=={}  # Missing binding stays missing.
+    assert context['output']==d.composition['output']
+    assert failure['originating_answer_ref']==original_ref
+    assert json.loads((tmp_path/'original-answer.json').read_text())==original_answer
+    assert json.loads((failed/'answer.txt').read_text())['format']=='capability_host_encoding_failure_v1'
+    assert not (failed/'proposal.json').exists()
+    # A deterministic stand-in validates the repair plumbing only. There is no
+    # provider call; the corrected binding itself comes from this test fixture.
+    repaired={'steps':[{'id':'old','use':current_aliases[d.old['id']],'args':{'$input':[]}},
+        {'id':'new','use':current_aliases[d.native['id']],'args':{'value':{'$step':['old']}}}],
+        'output':{'$step':['new','value']}}
+    response=SimpleNamespace(final_response=json.dumps(repaired),finish_reason='completed')
+    class Harness:
+        def __enter__(self):return self
+        def __exit__(self,*args):return False
+        def run(self,*args,**kwargs):return response
+    monkeypatch.setattr(author,'create_harness',lambda **kwargs:Harness())
+    output=tmp_path/'run/attempt-2'
+    result=author.propose(task=d.task,library=library,output=output,gate=gate,parent=failed,
+        feedback={'error':failure['error'],'diagnostics':failure['diagnostics']},owner_id='diagnostic')
+    assert result['status']=='compiled_candidate'
+    prompt=json.loads((output/'prompt.md').read_text().split('FROZEN CONSTRUCTION CONTEXT:\n')[1])
+    assert prompt['repair']['frozen_composition_intent']==context
+    assert json.loads(prompt['repair']['previous_answer'])['originating_answer_ref']==original_ref
+    proposal=json.loads((output/'proposal.json').read_text())
+    assert [step['capability'] for step in proposal['steps']]==[capability_ref(d.old),capability_ref(d.native)]
