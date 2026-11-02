@@ -1296,3 +1296,6 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 新增`script_motif` legacy_ref backend，由`buildScriptCapabilities(path,owner,expectedSha256?)`经原生loader核验库、身份和证书。`runScriptCapability`使用可信`script_capability_task_v1`，沿原沙箱执行，返回绑定native receipt的`script_capability_trace_v1`。公共材料登记支持该后端。raw bytes的旧`mapLegacyLibrary`仍只映射Source/Artifact；Script应使用原生路径入口核验执行版本。
 
 论文场景共享公共改进控制器和发布生命周期。计划、输入/输出、获取路由及限制见[场景协议](capability-scenes-v1.md#论文-script-接入2026-11-02续)。旧认证编译哈希改为来源记录，执行版本可按仓库精确白名单兼容；不改旧证书、不开放未知执行版本。
+## 视频网页发布程序接口（2026-11-02）
+
+video_program_v1 通过原 source-program runtime 加载已接受的发布形式。两侧按实际 mode 派生工具表并核对完整 schema；Baseline 清空 Motif 环境变量，execute 侧加载类型化程序。video_program_reused 是已核对当前交付的审计事件，前端 program_reuses 与 verified_skips 分开。部署字段及边界见[视频双路记录](experiments/video-paired-motif-20261102.md)。

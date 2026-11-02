@@ -161,6 +161,17 @@ def assert_scene_snapshot(plan):
                     value = scene.get(key)
                     if (key == 'runtime_library' and not value) or (value and Path(value).resolve().parent != expected_bundle):
                         raise RuntimeError(label + ' Motif bundle snapshot is stale: ' + scene['id'])
+            if scene['id']=='video-editing' and deployment.get('videoMotifStore'):
+                store=Path(deployment['videoMotifStore']).resolve(strict=True)
+                if (scene.get('runtime_kind')!='video_program_v1' or scene.get('rsi_unavailable_reason') or
+                    scene.get('video_program_store')!=str(store) or scene.get('video_program_owner')!=deployment.get('videoMotifOwner') or
+                    not scene.get('video_program_file_locks') or not scene.get('video_program_policy_digest')):
+                    raise RuntimeError(label + ' published video Motif snapshot is unavailable or stale')
+                for name, expected_hash in scene['video_program_file_locks'].items():
+                    path=Path(name)
+                    if (path.is_symlink() or path.resolve()!=path or not path.is_relative_to(store) or
+                        not path.is_file() or path.stat().st_nlink!=1 or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash):
+                        raise RuntimeError(label + ' published video Motif file changed')
             for path, expected_hash in scene.get('certified_code_locks', {}).items():
                 source = Path(path).resolve(strict=True)
                 if not source.is_relative_to(root) or hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash:

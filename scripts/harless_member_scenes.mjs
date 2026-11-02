@@ -2,6 +2,7 @@
 import { readdirSync, realpathSync, statSync, existsSync, lstatSync, readlinkSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, dirname, basename, isAbsolute, sep, resolve, posix } from 'node:path';
+import {fixedVideoMotifStore} from './harless_video_motif_store.mjs';
 import {pptMasterInstallation} from '../src/adapters/geneloop_skill_installation.mjs';
 
 const inside = (base, value) => value === base || (!relative(base, value).startsWith('..') && !isAbsolute(relative(base, value)));
@@ -44,11 +45,17 @@ export function memberSceneDeployment(policy, deployment) {
   const binary = realpathSync(executable);
   if (!pythonRoots.some(p => inside(p, binary)) || !pythonRoots.some(p=>inside(p,executable)) || !statSync(binary).isFile())
     throw Error('Member Python executable is outside mounted dependencies');
-  const mappings = ['src', 'scripts', 'scenarios', 'benchmarks', 'motif-libraries'].filter(name=>existsSync(join(root,name))).map(name => {
+  const mappings = ['src', 'scripts', 'scenarios', 'benchmarks', 'motif-libraries', 'schemas'].filter(name=>existsSync(join(root,name))).map(name => {
     const source = realpathSync(join(root, name));
     if (!inside(root, source)) throw Error('Member code directory escapes the project');
     return { source, target: '/app/' + name };
   });
+  const packageLock=join(root,'package-lock.json');
+  if(existsSync(packageLock)){
+    const source=fixedPath(packageLock,'file','dependency lock');
+    if(statSync(source).nlink!==1)throw Error('Member dependency lock must be a private regular file');
+    mappings.push({source,target:'/app/package-lock.json'});
+  }
   const mounts = [...mappings, ...pythonRoots.map(source => ({ source, target: source }))];
   const skill=pptMasterInstallation(deployment.pptMasterRoot,root);
   if(skill){mounts.push(skill);mappings.push(skill);}
@@ -153,6 +160,8 @@ export function memberSceneDeployment(policy, deployment) {
     check(source); mounts.push({ source, target: '/app/private-motif-library' });
     mappings.unshift({ source, target: '/app/private-motif-library' });
   }
+  const videoMotifStore=deployment.videoMotifStore?fixedVideoMotifStore(deployment.videoMotifStore):null;
+  if(videoMotifStore){const mapping={source:videoMotifStore,target:'/app/private-video-motif'};mounts.push(mapping);mappings.unshift(mapping);}
   const translate = value => {
     if (typeof value !== 'string') return value;
     if (value === root) return '/app';
@@ -194,11 +203,16 @@ export function memberSceneDeployment(policy, deployment) {
       if(scene.adapter==='video'&&(cfg.serverName!=='remotion'||cfg.args.length!==2||
           cfg.args[0]!==join(root,'scenarios/remotion_edit/web_server.py')||cfg.args[1]!=='__HARLESS_SESSION_WORKSPACE__/inputs'))
         throw Error('Member video MCP requires its exact Session adapter');
+      if(scene.adapter==='video' && (cfg.env?.GENELOOP_VIDEO_MOTIF_STORE || cfg.env?.GENELOOP_VIDEO_MOTIF_OWNER)){
+        if(!videoMotifStore || scene.runtime_kind!=='video_program_v1' || cfg.env.GENELOOP_VIDEO_MOTIF_STORE!==videoMotifStore ||
+           scene.video_program_store!==videoMotifStore || cfg.env.GENELOOP_VIDEO_MOTIF_OWNER!==scene.video_program_owner)
+          throw Error('Member video Motif must use its frozen published installation');
+      }
       cfg.command=cfg.command === 'node' ? 'node' : executable;
       cfg.cwd='/app'; cfg.args=cfg.args.map(translate);
       const env=cfg.env ?? {};
       const parserEnv=['HARLESS_PDF_TOOLCHAIN_ROOT','HARLESS_ANTIWORD_BIN','ANTIWORDHOME','GENELOOP_PDF_OCR_ROOT'];
-      const permittedEnv=scene.adapter==='video'?['HARLESS_PRIVATE_ROOT']:scene.adapter==='data-report'?['HARLESS_REPORT_WORKSPACE','HARLESS_PRIVATE_ROOT','HARLESS_REPORT_FONT',...parserEnv]:scene.adapter==='literature' ? ['SSS_PDF_WEB_TASK','PATH','LD_LIBRARY_PATH'] :
+      const permittedEnv=scene.adapter==='video'?['HARLESS_PRIVATE_ROOT','GENELOOP_VIDEO_MOTIF_STORE','GENELOOP_VIDEO_MOTIF_OWNER']:scene.adapter==='data-report'?['HARLESS_REPORT_WORKSPACE','HARLESS_PRIVATE_ROOT','HARLESS_REPORT_FONT',...parserEnv]:scene.adapter==='literature' ? ['SSS_PDF_WEB_TASK','PATH','LD_LIBRARY_PATH'] :
         scene.adapter==='files' ? ['FM_WEB_WORKSPACE','FM_TASK_FILE','FM_OUTPUT'] :
         cfg.serverName==='paper_checks'?['HARLESS_REPORT_FONT',...parserEnv]:
         cfg.serverName==='paper_trace_rsi'?['HARLESS_PRIVATE_ROOT']:
@@ -244,10 +258,13 @@ export function memberSceneDeployment(policy, deployment) {
     if(next.pdf_toolchain_root)next.pdf_toolchain_root=translate(next.pdf_toolchain_root);
     if(next.antiword_root)next.antiword_root='/opt/harless/antiword';
     for(const key of ['manifest','task','tool_schemas','certification_path','runtime_library']) if(next[key]) {
-      if(!inside(join(root,'motif-libraries'),next[key]) && (!deployment.libraryRoot || !inside(realpathSync(deployment.libraryRoot),next[key])))
+      if(!inside(join(root,'motif-libraries'),next[key]) && (!videoMotifStore || !inside(videoMotifStore,next[key])) && (!deployment.libraryRoot || !inside(realpathSync(deployment.libraryRoot),next[key])))
         throw Error('Member Motif library is outside sanitized runtime artifacts');
       next[key]=translate(next[key]);
     }
+    if(next.video_program_store){if(next.video_program_store!==videoMotifStore)throw Error('Video Motif store differs from the deployment');next.video_program_store=translate(next.video_program_store);}
+    if(next.video_program_file_locks)next.video_program_file_locks=Object.fromEntries(Object.entries(next.video_program_file_locks).map(([path,sha])=>{
+      if(!videoMotifStore || !inside(videoMotifStore,path))throw Error('Video Motif file lock escapes published installation');return [translate(path),sha];}));
     if(next.certified_code_locks)next.certified_code_locks=Object.fromEntries(Object.entries(next.certified_code_locks).map(([path,sha])=>[translate(path),sha]));
     return next;
   });

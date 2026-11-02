@@ -1,0 +1,181 @@
+[
+  {
+    "name": "mcp__remotion__list_assets",
+    "description": "List only current task input filenames and versions. Use media probing for actual stream properties.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "title": "list_assetsArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__pin_asset",
+    "description": "Select and pin one current task asset by exact filename; returns a versioned source handle.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "pin_assetArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__probe_media",
+    "description": "Read actual media properties of a previously selected source_id. No source selection or editing choice.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id"
+      ],
+      "title": "probe_mediaArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__probe_asset",
+    "description": "Direct ordinary-tool baseline: select a filename and read its actual properties in one call.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "probe_assetArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__read_source",
+    "description": "Read the current single-file composition and its exact entry-file SHA256.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "title": "read_sourceArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__inspect_render",
+    "description": "Return native-size pixels for each requested video frame, with exact frame indices and times.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "seconds": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Seconds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "seconds"
+      ],
+      "title": "inspect_renderArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__write_source",
+    "description": "Write src/index.tsx only. Return its SHA256 for the explicit render guard; this is a write operation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "write_sourceArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__render_composition",
+    "description": "Render current source, fully decode it, and publish this task's MP4 and editable source.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "source_version": {
+          "title": "Source Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version"
+      ],
+      "title": "render_compositionArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__write_notes",
+    "description": "Save bounded edit notes in this task's out/edit-notes.md; never modify user originals.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "write_notesArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__render_source",
+    "description": "Write model-authored TSX and actually render it, using the same ordinary renderer.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "render_sourceArguments"
+    }
+  },
+  {
+    "name": "mcp__remotion__run_command",
+    "description": "Run foreground media analysis in this Session's fixed renderer container.\n\n        /work is the current Remotion project; ffmpeg, ffprobe, Node and the\n        installed Remotion runtime are available. No network, credentials,\n        foreign Sessions or writable user originals. Use this for actual audio\n        samples/volume measurements, not native Bash dependency downloads.\n        ",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 180,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "title": "run_commandArguments"
+    }
+  }
+]

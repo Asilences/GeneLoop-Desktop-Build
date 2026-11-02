@@ -467,8 +467,8 @@
   },
   "native_capabilities_compatibility": {
     "method": "reexport_certified_serialized_library",
-    "previous_release": "ppt-master-v30",
-    "previous_certification_sha256": "d8685f889296ae23f395199c844bf9968fa62d5681d8dee14d831b3aa3369ddd",
+    "previous_release": "ppt-master-v37",
+    "previous_certification_sha256": "d98da6790f8a58bd67c5fa05a8d4b0ec515cfd2d48d65fd840b8493b9d348634",
     "same_library_and_evidence": true,
     "same_online_program": true,
     "same_mcp_schema": true,
@@ -497,92 +497,52 @@
     "public_native_tools_in_certified_mcp_schema": false,
     "public_native_tools_learned_or_certified": false,
     "changed_code_locks": [
-      "config/geneloop-capabilities.md",
-      "scenarios/ppt_master/prompt.md",
-      "scripts/harless_gateway.mjs",
+      "scenarios/remotion_edit/web_server.py",
       "scripts/harless_member_scenes.mjs",
       "src/adapters/dsh_web_tasks.ts",
-      "src/adapters/geneloop_command_broker.ts",
-      "src/adapters/geneloop_fs.ts",
-      "src/adapters/geneloop_native_work.ts",
-      "src/adapters/geneloop_shell.ts",
-      "src/adapters/harless_comparison_artifacts.ts",
-      "src/adapters/harless_file_scene.ts",
       "src/adapters/harless_scenarios.py",
       "src/adapters/harless_settings.ts",
-      "src/adapters/harless_task_scope.ts"
+      "src/adapters/harless_task_progress.ts"
     ],
     "additional_code_locks": [
-      "scenarios/remotion_edit/server.py",
-      "scenarios/remotion_edit/structured/server.py",
-      "scenarios/remotion_edit/web-prompt.md",
-      "scenarios/remotion_edit/web-scenario.json",
-      "scenarios/remotion_edit/web_server.py",
-      "scripts/check-native-session-log.mjs",
-      "scripts/reexport-video-audio-compat.py",
-      "scripts/reexport-video-context-compat.py",
-      "scripts/reexport-video-session-compat.py",
-      "scripts/reexport-video-web-compat.py",
-      "scripts/repair-geneloop-session-events.py",
-      "src/adapters/file_event_projection.ts",
-      "src/adapters/geneloop_video.ts"
+      "scenarios/remotion_edit/web-tool-schemas.json",
+      "scenarios/remotion_edit/web_programs.py",
+      "schemas/rsi-protocol-v1.schema.json",
+      "scripts/geneloop_service.py",
+      "scripts/harless_video_motif_store.mjs",
+      "scripts/materialize-source-program.mjs",
+      "scripts/prepare-release-scenes.py",
+      "scripts/reexport-video-paired-compat.py",
+      "src/adapters/harless_video_program.ts",
+      "src/adapters/harless_video_program_bundle.py",
+      "src/adapters/rsi_protocol.ts",
+      "src/adapters/source_program_mcp.py",
+      "src/adapters/source_program_runtime.ts"
     ],
     "previous_code_lock_differences": {
-      "config/geneloop-capabilities.md": {
-        "previous": "133231d4a16d400eb9baaa2a76af1ee5d072cbb2eba669af84027041c3b6e8d5",
-        "current": "d420d37ba8c7e0d868c0378aaaaca617482727564b038a6d9ca6f70e17a09bef"
-      },
-      "scenarios/ppt_master/prompt.md": {
-        "previous": "f034a67866e06f2af16b389ffaf82a8240db27a72026ddfcedd1fe3af0c7a4fb",
-        "current": "db541dc9cb5e647ee46139cb4c0b8b2603efe3b83a55742b75282eb0af76b369"
-      },
-      "scripts/harless_gateway.mjs": {
-        "previous": "897cf8447706e7bae50b45d2ea0d6026cdc668a44c224850e9595b21989f2919",
-        "current": "5799a9f0fa4b74486d850d7f4f295f55c5176231496f141ecf0e4dbf000bf12f"
+      "scenarios/remotion_edit/web_server.py": {
+        "previous": "1634f117d5c2a3185e5425eaed4d1c1a3b1a190bdc7f6dfb7b9e75c8db9ed007",
+        "current": "819a496f1ae065e4c80d9bfbcc00cd405809f17b17c15870ee6653da748d0d49"
       },
       "scripts/harless_member_scenes.mjs": {
-        "previous": "853c60e9b6b4d38769688fed86abc9925529bb709d384fe53d05f54b6c93f247",
-        "current": "93f7831b9c81c398c097632d1cac153dfe25152d054a485a60baedb6d21f5d4e"
+        "previous": "93f7831b9c81c398c097632d1cac153dfe25152d054a485a60baedb6d21f5d4e",
+        "current": "491a9fe15900dcd802bdff906b7caa04688fc421a42c403cd3c26e1db8b5b117"
       },
       "src/adapters/dsh_web_tasks.ts": {
-        "previous": "bca9417b44242cc7078cd171edb886703f67bdc47b313fa65d6c71c1b927f2f0",
-        "current": "5b825afac3d66a2661d2c3b546c1d4f9c3a4fa6125bc270f9d0d375b47dd6940"
-      },
-      "src/adapters/geneloop_command_broker.ts": {
-        "previous": "19e2922b474bb5f5fcb73b5a4ec3589ccc0158e87aaef357892978fee0bc218d",
-        "current": "2c555f500cf5589b4282dc695b4761760bb6b89e4789e2b353ad36b97c86e374"
-      },
-      "src/adapters/geneloop_fs.ts": {
-        "previous": "fd5c2bf8bb076d86425f42da8f29dada2c41b8bf181e024c816030e6049bfa41",
-        "current": "506ab8b598930e78e1f67e7a14facc770211d044744cb62f6b22b632db76138c"
-      },
-      "src/adapters/geneloop_native_work.ts": {
-        "previous": "43c6d042c98b2543abefc9975a5ae44c84f4de97e6450e77acf56012edd06197",
-        "current": "780fbf3f4bdcb6f9dd31a40a8c5795249541ae60604480e288a27ade6a172fe8"
-      },
-      "src/adapters/geneloop_shell.ts": {
-        "previous": "fe418c0bb94e0be5050b6e3a0a76421165f89af35a10e54c8f7c2ab1ff014c56",
-        "current": "64d9ceb58261ca85f1a9f1f69ea446abef00344fb90e280facec0a9c07980ac3"
-      },
-      "src/adapters/harless_comparison_artifacts.ts": {
-        "previous": "9708c619e492e99993a242b64b6123cc61a46b67fe22107556e32bd4bc05f631",
-        "current": "f298a9f67a40e521c8557c64d240758f0cc4266dff5cb19f4fa4814c15b0d0bd"
-      },
-      "src/adapters/harless_file_scene.ts": {
-        "previous": "27f134dd378968c518923b38aeff1df8e8cdc34e6c8e05da380341de500ad8ae",
-        "current": "1e03d9886f65368a32670793333aa45794d9a78cd73de1335a1eb64c61984cbd"
+        "previous": "5b825afac3d66a2661d2c3b546c1d4f9c3a4fa6125bc270f9d0d375b47dd6940",
+        "current": "4c81bd3e9977b13ec50335e7848f0a9e901802364225eb8ad17bf48d1dc013fe"
       },
       "src/adapters/harless_scenarios.py": {
-        "previous": "f5d97abfff04ef2f5bb9a1c3faeda8885d02fd7f905edd65e43e363226771e50",
-        "current": "dc41e0d55a7585044ba289b97dfe91f3702b552c7b94cf4826ef5a91120146c5"
+        "previous": "dc41e0d55a7585044ba289b97dfe91f3702b552c7b94cf4826ef5a91120146c5",
+        "current": "e7bd2d2da08793ca810b6dc53f137530a292b62e0d2ce31c4d81b862ae2e7194"
       },
       "src/adapters/harless_settings.ts": {
-        "previous": "d8d4fa9f001713627e1cf54b2f3e0a181c8f948866bead5b216925cac9ca55dd",
-        "current": "084359e82eee80fd1f70f12dc92458bb9ec8a6d17dd2010ea15aa01586d99637"
+        "previous": "084359e82eee80fd1f70f12dc92458bb9ec8a6d17dd2010ea15aa01586d99637",
+        "current": "236674930911e42608e85737b9014ef7ff9464510c7dd4b2e7ec0d916af832f6"
       },
-      "src/adapters/harless_task_scope.ts": {
-        "previous": "036e82df3250aa59b2e2d2e76b440d75f5e0af22c190c7465baf1391cd3090c1",
-        "current": "2793c1c266828b82b4349bcad65887aa1234b793fb40352f26a6e601d743adff"
+      "src/adapters/harless_task_progress.ts": {
+        "previous": "66fd17dbfeccf58cb52da553a9d46b5ccad7133546071d0bc1ee2cb29463aff9",
+        "current": "2a56cc24393b18aff34c69130952921ac1ffa3c74826aa20e4658aa1ccfd93dd"
       }
     },
     "unchanged_artifact_sha256": {
@@ -593,21 +553,21 @@
       "source-evidence.json": "87d64e6fff3b57926271b650b13d877d1c4e68c3cc426d1a520e5e698b890dd8"
     },
     "repairs": [
-      "read_only_generated_artifact_paths",
-      "autonomous_design_instruction_alignment",
-      "Session_bound_video_tools_and_delivery",
-      "fixed_private_renderer_broker"
+      "isolated_baseline_and_program_tool_surfaces",
+      "existing_published_form_validation",
+      "task_owned_program_reuse_receipts",
+      "readonly_runtime_store_mount"
     ],
     "raw_traces_replayed": false,
     "new_training_tasks": 0,
     "model_requests": 0,
     "quality_cost_promoted": false,
     "net_cost_reduction_proven": false,
-    "validation_record": "docs/experiments/video-web-integration-20261101.md",
+    "validation_record": "docs/experiments/video-paired-motif-20261102.md",
     "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
-    "release_scope": "server/GitHub integration and isolated ordinary video scene",
-    "video_motif_certified": false,
-    "video_motif_published": false
+    "release_scope": "paired video with existing published source-program form",
+    "runtime_delta": "The shared adapter admits the original published video form and parallel lanes. Paper/PPT learned IR, matching, independent evidence and guards are unchanged.",
+    "video_form_scope": "Separate pre-existing published runtime; this compatibility export neither certifies nor promotes video."
   },
   "common_native_tools": [
     "web_search",
@@ -700,69 +660,5 @@
     "validation_record": "docs/experiments/motif-matching-cleanup-20261030-v1.md",
     "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
     "scope": "matching_cleanup_compatibility_without_new_training_or_raw_trace_replay"
-  },
-  "capability_container_compatibility": {
-    "method": "reexport_certified_serialized_library",
-    "previous_release": "ppt-master-v37",
-    "previous_certification_sha256": "d98da6790f8a58bd67c5fa05a8d4b0ec515cfd2d48d65fd840b8493b9d348634",
-    "same_library_and_evidence": true,
-    "same_online_program": true,
-    "same_mcp_schema": true,
-    "public_native_tools": [
-      "web_search",
-      "web_fetch",
-      "bash",
-      "job_list",
-      "job_output",
-      "job_kill",
-      "read",
-      "read_image",
-      "write",
-      "edit",
-      "glob",
-      "grep",
-      "ask_user_question",
-      "todo_write",
-      "skill",
-      "present",
-      "subagent",
-      "exit_plan_mode",
-      "get_goal",
-      "update_goal"
-    ],
-    "public_native_tools_in_certified_mcp_schema": false,
-    "public_native_tools_learned_or_certified": false,
-    "changed_code_locks": [
-      "scenarios/remotion_edit/server.py"
-    ],
-    "additional_code_locks": [
-      "scripts/reexport-capability-container-compat.py"
-    ],
-    "previous_code_lock_differences": {
-      "scenarios/remotion_edit/server.py": {
-        "previous": "9405bb9a9bc73320d8cd4d0d0fe769fc7bd6345c25077bd5727c8796353623c8",
-        "current": "201c87372690418e6a3c8457f5321be84a4bb03227ce23936ed776327be6a503"
-      }
-    },
-    "unchanged_artifact_sha256": {
-      "library.json": "94273935f2d94e9217c1d79679bad44cf8de889a07483391505d5174071131c7",
-      "online-manifest.json": "093dd70cd6ef8c349ae3e620637a6efbecb20887805d261d1da0016cd92b9c62",
-      "task.json": "7cf5b20765a0fd634053c0382476595eeaff15029b84d18b2d3ae8a669cddb4f",
-      "tool-schemas.json": "2f3fe69c8124c84933e8b3cef33087f4e05842e239603fe1ab1df1ce403b13d8",
-      "source-evidence.json": "87d64e6fff3b57926271b650b13d877d1c4e68c3cc426d1a520e5e698b890dd8"
-    },
-    "repairs": [
-      "optional_explicit_container_name_and_nonce_ownership",
-      "isolate_capability_workers_from_legacy_experiment_cleanup"
-    ],
-    "raw_traces_replayed": false,
-    "new_training_tasks": 0,
-    "model_requests": 0,
-    "quality_cost_promoted": false,
-    "net_cost_reduction_proven": false,
-    "validation_record": "docs/handoffs/efficiency-rsi.md",
-    "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
-    "runtime_delta": "The existing shared Docker launcher is reused. Without the two explicit Capability container environment variables the launch is unchanged; with a validated name/nonce only ownership/name/experiment labels change. Mounts, user, network, capabilities, resource limits, commands and native renderer remain unchanged. This is product source compatibility only; it neither certifies new Capability code nor promotes video/task quality or efficiency.",
-    "capability_runtime_certified": false
   }
 }

@@ -2737,7 +2737,7 @@ test('Legacy progress rebuilds anchored tools once and preserves saved activitie
  });
 });
 
-for(const scene of ['research-data-analysis','paper-proofreading','ppt']) for(const budget of [.25,null]) test(`DeepSeek ${scene} parallel comparison keeps isolated routes and budget ${budget}`,options,async()=>{
+for(const scene of ['research-data-analysis','paper-proofreading','ppt','video-editing']) for(const budget of [.25,null]) test(`DeepSeek ${scene} parallel comparison keeps isolated routes and budget ${budget}`,options,async()=>{
  const scenes=[{...multiScenes[0],id:scene,preset:'sss-compare',adapter:'workspace',mcp_rows:[]}];
  const f=await fixture({budget_usd:budget,broker:true,scenes,capability_profile:scene,comparison_scenes:[scene]});
  try{
