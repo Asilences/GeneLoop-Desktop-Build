@@ -51,6 +51,10 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         return value
 
     def construct(self,task,library,output,parent,feedback):
+        expected=getattr(self,'expected_initial_snapshot_sha256',None)
+        if expected is not None:
+            if library['snapshot']['digest']!=expected:raise ValueError('frontier_study_initial_exposure_changed')
+            self.expected_initial_snapshot_sha256=None
         template=next(iter(self.templates.values()));pending=getattr(self,'pending_complete',None)
         self.pending_complete=None
         if pending and template.get('auto_wrap_complete_program'):
