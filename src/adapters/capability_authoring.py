@@ -106,6 +106,27 @@ def authoring_context(task, snapshot, catalog):
     return context
 
 
+def expand_binding(value, path=(), depth=0):
+    """Encode one compact binding without selecting a capability or a value."""
+    path=list(path)
+    if depth>48:raise AuthoringError('draft_too_deep',path,'depth <=48',depth)
+    if isinstance(value,dict):
+        operators=[k for k in value if k.startswith('$')]
+        if operators:
+            if len(value)!=1 or operators[0] not in ('$input','$step','$literal'):
+                raise AuthoringError('draft_binding',path,'exactly one of $input/$step/$literal',value)
+            operator=operators[0];operand=value[operator]
+            if operator=='$literal':return {'kind':'literal','value':copy.deepcopy(operand)}
+            if not isinstance(operand,list) or any(not isinstance(x,str) or x in ('__proto__','prototype','constructor') for x in operand):
+                raise AuthoringError('draft_path',path+[operator],'array of safe property names',operand)
+            if operator=='$input':return {'kind':'input','path':operand}
+            if not operand:raise AuthoringError('draft_path',path+[operator],'step id followed by optional property names',operand)
+            return {'kind':'step','step_id':operand[0],'path':operand[1:]}
+        return {'kind':'object','fields':{key:expand_binding(child,path+[key],depth+1) for key,child in value.items()}}
+    if isinstance(value,list):return {'kind':'array','items':[expand_binding(child,path+[i],depth+1) for i,child in enumerate(value)]}
+    return {'kind':'literal','value':value}
+
+
 def expand_draft(draft, task, snapshot):
     """Encode decisions into the existing IR, retaining model step order/choices."""
     capability_digest(draft)
@@ -121,24 +142,6 @@ def expand_draft(draft, task, snapshot):
     if not isinstance(steps,list) or not 1<=len(steps)<=64:
         raise AuthoringError('draft_steps',['steps'],'array of 1..64 steps',steps)
 
-    def binding(value,path,depth=0):
-        if depth>48:raise AuthoringError('draft_too_deep',path,'depth <=48',depth)
-        if isinstance(value,dict):
-            operators=[k for k in value if k.startswith('$')]
-            if operators:
-                if len(value)!=1 or operators[0] not in ('$input','$step','$literal'):
-                    raise AuthoringError('draft_binding',path,'exactly one of $input/$step/$literal',value)
-                operator=operators[0];operand=value[operator]
-                if operator=='$literal':return {'kind':'literal','value':copy.deepcopy(operand)}
-                if not isinstance(operand,list) or any(not isinstance(x,str) or x in ('__proto__','prototype','constructor') for x in operand):
-                    raise AuthoringError('draft_path',path+[operator],'array of safe property names',operand)
-                if operator=='$input':return {'kind':'input','path':operand}
-                if not operand:raise AuthoringError('draft_path',path+[operator],'step id followed by optional property names',operand)
-                return {'kind':'step','step_id':operand[0],'path':operand[1:]}
-            return {'kind':'object','fields':{key:binding(child,path+[key],depth+1) for key,child in value.items()}}
-        if isinstance(value,list):return {'kind':'array','items':[binding(child,path+[i],depth+1) for i,child in enumerate(value)]}
-        return {'kind':'literal','value':value}
-
     expanded=[]
     for index,step in enumerate(steps):
         path=['steps',index];_shape(step,['id','use','args'],path)
@@ -146,10 +149,10 @@ def expand_draft(draft, task, snapshot):
         if not isinstance(name,str) or name not in table:
             raise AuthoringError('reference_not_visible',path+['use'],list(table),name)
         expanded.append({'id':step['id'],'capability':table[name],
-                         'arguments':binding(step['args'],path+['args'])})
+                         'arguments':expand_binding(step['args'],path+['args'])})
     return {'format':'capability_compose_proposal_v1','owner':snapshot['owner'],
             'contract':copy.deepcopy(task.get('contract',draft.get('contract'))),
-            'steps':expanded,'output':binding(draft['output'],['output'])}
+            'steps':expanded,'output':expand_binding(draft['output'],['output'])}
 
 
 def diagnose(error, proposal=None):

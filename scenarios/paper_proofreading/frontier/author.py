@@ -10,6 +10,7 @@ from deepseek_harness.api import final_response,finish_reason
 from src.adapters import capability_proposal as pilot
 from src.adapters.capability_authoring import authoring_context,expand_draft,diagnose
 from src.adapters.capability_builder import compile_proposal
+from src.adapters.capability_program_encoding import freeze_program_composition
 from src.adapters.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 
@@ -18,6 +19,8 @@ You may choose an existing-capability composition: {"steps":[{"id":"name","use":
 Use {"$input":["field"]} for current input, {"$step":["earlier_id","field"]} for prior results, ordinary objects/arrays to assemble values, and {"$literal":value} for literal objects. No array-index paths. Select only visible aliases. Host supplies contract/owner/refs.
 Arrays are ordinary JSON lists of bindings. If the task field file is a string and a leaf requires paths as an array, use {"paths":[{"$input":["file"]}]}; {"paths":{"$input":["file"]}} is a string and is invalid. This example illustrates types only; choose actual task fields and operations yourself.
 You may instead request a new ordinary Python program: {"program":{"source":"complete Python source","description":"what it computes and scope","mode":"paths" or "json"}}.
+You may also provide its intended composition in the SAME answer: {"program":{...},"composition":{"steps":[{"id":"name","use":"$program","args":...}],"output":...}}. In composition, use current visible aliases for existing capabilities and "$program" ONLY as a step's use to call the new program. Supply every input binding and output yourself, using the same $input/$step syntax. The host pins your existing references before learning, then substitutes only the independently certified new program reference; it never chooses dependencies or invents bindings. A JSON program's certified native interface takes {"value":<your bound JSON input>} and returns {"stdout":string,"value":<program result>}; a paths program takes {"paths":[<your bound current paths>]} and has the same result wrapper. Ordinary composition and standalone complete programs remain available equally in all arms.
+As a syntax alternative to composition JSON, you may return {"composition_source":"def build(value): ..."}, or {"program":{...},"composition_source":"def build(value): ..."}. This is a STATIC binding language, not executed Python: write sequential assignments calling capability.cN with named arguments from that visible capability's contract, or program(...) for the newly requested program, then return an assembled result. value denotes the task input; prior variables denote their complete call result. String-key indexing, literal objects/lists and JSON constants are allowed for bindings. No loops, imports, arithmetic, filesystem access, dynamic calls or nested calls in this binding function; put new computation in program.source. The host encodes exactly these calls and bindings into the same IR and runs the same guards; this alternative does not add hidden operations or require any prior capability.
 The essential program field is source. mode defaults to the first task.program_interface.modes entry (paths for D); description has a host default. A module defining run is a function_v1 library unless script_v1 is explicitly selected: host retains imports, function definitions and constants, ignores script main control/output statements, and invokes run(value). Select mode json when the function consumes structured prior results; paths when it consumes the current project ZIP paths. D may implement its ENTIRE algorithm in ordinary Python, including both parsers. C's construction restrictions do not apply to D; task.audit_semantics describes output meaning only.
 You may choose interface:"function_v1" inside program and write def run(value): ... returning the JSON object. The host supplies all I/O. In json mode value is the typed JSON input object. In paths mode value is a dictionary mapping the physical input filename stems to current granted paths (e.g. before and after). No argv/stdin/main/print glue is needed for this interface. Existing script_v1 remains allowed. A complete paths solver may be mechanically wrapped in the fixed task contract after native certification; this never bypasses independent quality checks.
 task.program_interface describes ONLY a newly requested program's sandbox ABI. It is not the input of the complete capability and must not be copied into unrelated existing calls. A composition reads the task contract's current input fields using $input; leaf paths are bound to those current task inputs. Print JSON with print(...); sys.stdout.write and file writes are rejected by admission.
@@ -43,11 +46,22 @@ def normalize_program(program,task):
     return value,changes
 
 
+def expand_source_request(draft):
+    """Pure syntax conversion; no candidate source or capability is executed."""
+    if 'composition_source' not in draft:return draft
+    if set(draft) not in ({'composition_source'},{'program','composition_source'}):
+        raise ValueError('frontier_composition_source_shape_invalid')
+    from src.adapters.capability_composition_source import compile_composition_source
+    composition=compile_composition_source(draft['composition_source'])
+    return {'program':draft['program'],'composition':composition} if 'program' in draft else composition
+
+
 def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
     output=Path(output).resolve();gate.register_attempt(output,owner_id)
     effective,_=pilot.prepare_attempt(task=task,catalog=library['source_catalog'],snapshot=library['snapshot'],
                                      output=output,repair_from=parent,feedback=feedback)
-    context=authoring_context(task,library['snapshot'],{'source_catalog':library['source_catalog']})
+    context=authoring_context(task,library['snapshot'],{'source_catalog':library['source_catalog'],
+        'preferred_roots':library.get('selection',{}).get('construction',[])})
     context['program_examples']=library.get('program_examples',[])
     presentation=library.get('presentation',{})
     if presentation.get('hide_composition_definitions'):
@@ -86,11 +100,22 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
         pilot.write(output/'answer.txt',answer);result['finish_reason']=finish
         if finish!='completed':raise ValueError('proposal_incomplete_model_turn')
         draft=pilot.parse_proposal(answer);pilot.write(output/'draft.json',draft)
-        if set(draft)=={'program'}:
+        if 'composition_source' in draft:
+            source=draft['composition_source'];draft=expand_source_request(draft)
+            pilot.write(output/'composition-source.py',source)
+            pilot.write(output/'composition-source-encoding.json',{'source_sha256':pilot.sha(source),
+                'encoded_composition':draft.get('composition',draft),
+                'scope':'static_syntax_encoding_no_Python_execution_or_implicit_calls'})
+        if set(draft) in ({'program'},{'program','composition'}):
             program,normalizations=normalize_program(draft['program'],task)
             pilot.write(output/'program-normalization.json',{'metadata_defaults':normalizations,
                 'source_sha256':pilot.sha(program['source']),'source_body_changed':False})
             pilot.write(output/'program.json',program)
+            if 'composition' in draft:
+                intent=freeze_program_composition(task,library['snapshot'],program,draft['composition'])
+                pilot.write(output/'composition-intent.json',intent)
+                result['composition_intent_ref']={'path':str(output/'composition-intent.json'),
+                    'sha256':pilot.sha((output/'composition-intent.json').read_bytes())}
             result.update(status='deferred',error='capability_construction_gap',
                 construction_gap={'reason':'missing_primitive','requirement':'Acquire and independently certify the model-requested native Python program'},
                 program_request=str(output/'program.json'),model_requested_program=True)

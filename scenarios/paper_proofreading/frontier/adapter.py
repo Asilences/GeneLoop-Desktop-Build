@@ -7,8 +7,8 @@ from src.adapters.capability_improvement import evidence,read,save
 from src.adapters.capability_contract import capability_digest,create_capability_snapshot
 from src.adapters.capability_proposal import write
 from src.adapters import capability_proposal as pilot
-from src.adapters.capability_authoring import compact_proposal
-from src.adapters.capability_program_encoding import encode_complete_script
+from src.adapters.capability_authoring import compact_proposal,diagnose
+from src.adapters.capability_program_encoding import encode_complete_script,encode_program_composition
 from scenarios.paper_proofreading.frontier.author import propose
 from scenarios.paper_proofreading.frontier.learn import learn
 
@@ -57,19 +57,36 @@ class FrontierAdapter(CapabilityImprovementAdapter):
             self.expected_initial_snapshot_sha256=None
         template=next(iter(self.templates.values()));pending=getattr(self,'pending_complete',None)
         self.pending_complete=None
-        if pending and template.get('auto_wrap_complete_program'):
-            encoded=encode_complete_script(task,library['snapshot'],pending['library'],pending['observations'])
-            if encoded:
+        if pending and (pending.get('composition_intent_ref') or template.get('auto_wrap_complete_program')):
+            encoded=None;encoding_error=None
+            try:
+                if pending.get('composition_intent_ref'):
+                    encoded=encode_program_composition(task,library['snapshot'],pending['program_ref'],
+                        pending['composition_intent_ref'],pending['library'],pending['observations'])
+                else:
+                    encoded=encode_complete_script(task,library['snapshot'],pending['library'],pending['observations'])
+            except ValueError as error:
+                if not pending.get('composition_intent_ref'):raise
+                encoding_error=error
+            if encoded or encoding_error:
                 self.gate.register_attempt(output,self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
                 effective,_=pilot.prepare_attempt(task=task,catalog=library['source_catalog'],snapshot=library['snapshot'],output=output)
-                effective.update(model_called=False,host_encoding=encoded['encoding_scope']);write(output/'effective.json',effective)
+                scope=encoded['encoding_scope'] if encoded else 'model_explicit_composition_encoding_failed'
+                effective.update(model_called=False,host_encoding=scope);write(output/'effective.json',effective)
+                result={'status':'failed','construction_snapshot_sha256':library['snapshot']['digest'],
+                    'model_called':False,'provider_requests':0,'request_ids':[],
+                    'observed_model_usd':0,'observed_model_usd_decimal':'0','elapsed_seconds':0,
+                    'host_encoding':scope,'originating_program':pending['program'],
+                    'originating_program_ref':pending['program_ref'],'quality':'not_independently_reviewed'}
+                if pending.get('composition_intent_ref'):
+                    result['originating_composition_intent_ref']=pending['composition_intent_ref']
+                if encoding_error:
+                    write(output/'answer.txt',evidence(pending['answer_ref']).decode('utf-8'))
+                    result.update(error=str(encoding_error),diagnostics=diagnose(encoding_error))
+                    write(output/'result.json',result);return result
                 write(output/'proposal.json',encoded['proposal']);write(output/'candidate.json',encoded['candidate'])
                 write(output/'answer.txt',json.dumps(compact_proposal(encoded['proposal'],task,library['snapshot'])))
-                result={'status':'compiled_candidate','construction_snapshot_sha256':library['snapshot']['digest'],
-                    'candidate_id':encoded['candidate']['capability']['id'],'model_called':False,'provider_requests':0,
-                    'request_ids':[],'observed_model_usd':0,'observed_model_usd_decimal':'0','elapsed_seconds':0,
-                    'host_encoding':encoded['encoding_scope'],'originating_program':pending['program'],
-                    'originating_program_ref':pending['program_ref'],'quality':'not_independently_reviewed'}
+                result.update(status='compiled_candidate',candidate_id=encoded['candidate']['capability']['id'])
                 write(output/'result.json',result);return result
         result=propose(task=task,library=library,output=output,gate=self.gate,parent=parent,feedback=feedback,
                        owner_id=self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
@@ -80,7 +97,9 @@ class FrontierAdapter(CapabilityImprovementAdapter):
                     reference(output/'answer.txt'),large_output=True)
                 result['native_observations']=reference(output/'native/observations.json')
                 self.pending_complete={'library':result['native_library'],'observations':result['native_observations'],
-                    'program':program,'program_ref':reference(output/'program.json')}
+                    'program':program,'program_ref':reference(output/'program.json'),
+                    'answer_ref':reference(output/'answer.txt'),
+                    'composition_intent_ref':result.get('composition_intent_ref')}
             except Exception as error:
                 diagnostics={'native_error':str(error)}
                 for p in (output/'native').glob('**/certification.json'):diagnostics['certification']=read(p)
@@ -95,6 +114,7 @@ class FrontierAdapter(CapabilityImprovementAdapter):
     def acquire(self,job,result,attempt):
         if not result.get('native_library'):return {'status':'deferred','reason':'frontier_no_certified_material'}
         refs=[reference(attempt/'answer.txt'),reference(attempt/'native/certification.json'),job['publication_plan']]
+        if result.get('composition_intent_ref'):refs.append(result['composition_intent_ref'])
         if result.get('native_observations'):refs.append(result['native_observations'])
         material=self.materials.register(backend='script_motif',library=result['native_library'],refs=refs,
             acquisition_key=capability_digest(refs),opportunity=self.opportunity_key(job))
