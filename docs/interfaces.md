@@ -1290,3 +1290,9 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 `store/materials/<owner哈希>/*.json`为追加式`capability_material_v1`登记，包含backend/library/evidence/acquisition_key/opportunity；export重验原字节并重建原生契约后与seed及Store历史合并。Source manifest新增可选`additional_libraries:[{path,sha256}]`，按完整legacy_ref分派，权限/取消/产物检查仍走原Runtime。旧seed/manifest无须改写。
 
 `capability_trajectory_v1`为原事件的派生只读记录，含owner/task_id/scene/mode/status、evidence、steps、tools、accounting。每个step关联实际call/result事件位置、原参数与结果、已有原生文件边界；parameter_sources/dependencies/preconditions未知则null，quality为unreviewed，split为unassigned。论文显式入口为`scripts/observe-capability-paper-tasks.py --request`，复用原owner/scope/task_ids索引，不改旧工作器/证书/轨迹；当前不自动触发学习或授予认证。
+
+### 原生 Script Capability 与执行兼容（2026-11-02续）
+
+新增`script_motif` legacy_ref backend，由`buildScriptCapabilities(path,owner,expectedSha256?)`经原生loader核验库、身份和证书。`runScriptCapability`使用可信`script_capability_task_v1`，沿原沙箱执行，返回绑定native receipt的`script_capability_trace_v1`。公共材料登记支持该后端。raw bytes的旧`mapLegacyLibrary`仍只映射Source/Artifact；Script应使用原生路径入口核验执行版本。
+
+论文场景共享公共改进控制器和发布生命周期。计划、输入/输出、获取路由及限制见[场景协议](capability-scenes-v1.md#论文-script-接入2026-11-02续)。旧认证编译哈希改为来源记录，执行版本可按仓库精确白名单兼容；不改旧证书、不开放未知执行版本。

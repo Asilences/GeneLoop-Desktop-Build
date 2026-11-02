@@ -25,7 +25,7 @@ class CapabilityMaterials:
                 raise ValueError('material_owner_or_format_changed')
             if path.stem != capability_digest(row):
                 raise ValueError('material_record_changed')
-            if row['backend'] not in ('source_program', 'artifact_motif'):
+            if row['backend'] not in ('source_program', 'artifact_motif', 'script_motif'):
                 raise ValueError('material_backend_unsupported')
             for ref in [row['library'], *row['evidence']]:
                 evidence(ref)
@@ -33,7 +33,7 @@ class CapabilityMaterials:
         return rows
 
     def register(self, *, backend, library, refs, acquisition_key, opportunity):
-        if backend not in ('source_program', 'artifact_motif') or not refs:
+        if backend not in ('source_program', 'artifact_motif', 'script_motif') or not refs:
             raise ValueError('material_native_evidence_required')
         row = dict(format='capability_material_v1', owner=self.owner, backend=backend,
                    library=library, evidence=refs, acquisition_key=acquisition_key,

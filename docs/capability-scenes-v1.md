@@ -94,4 +94,31 @@ Source计划可选`learning_routes:{path,sha256}`，文件格式为：
 
 `node scripts/project.mjs python scripts/observe-capability-paper-tasks.py --request "$PRIVATE_PAPER_REQUEST"`读取原论文学习工作器的owner/scope/task_ids请求格式，将派生记录写到同owner私有`capability-trajectories/`。保留实际工具、参数、结果、事件位置、已有before/after边界、环境工具表和账本引用。未知参数来源、依赖与前提为null；失败不删，quality=unreviewed、split=unassigned，不把工具成功当论文正确。
 
-旧工作器和认证库完全保留。直接改旧工作器曾触发有效的认证代码锁拒绝，已撤回，没有改写证书绕过。当前入口需显式运行，尚未接默认任务结束触发，也尚未把投影喂给新Capability论文学习/认证适配器。Script Motif与paper_document_read尚未成为新Runtime后端；不能称论文Capability闭环已经迁移。
+旧工作器和认证库完全保留。当前入口需显式运行，尚未接默认任务结束触发。Script后端及论文学习路由现已接入，详见下节；paper_document_read仍未迁入，真实历史任务路由还需验证。
+
+## 论文 Script 接入（2026-11-02续）
+
+`scene_adapter`指向`scenarios/paper_proofreading/capability_adapter.py`的路径/摘要；`scene_dependencies`应固定同目录发布器、检查器及`src/adapters/paper_bibliography.py`。继续使用公共`npm run rsi:improve -- --plan ...`，只有显式`--call-model`才运行Builder。默认聊天不变。
+
+```sh
+node scripts/run-script-capability.mjs --catalog --library "$SCRIPT_LIBRARY" --owner "$CAPABILITY_OWNER"
+node scripts/run-script-capability.mjs --manifest "$TASK_MANIFEST" --snapshot "$SNAPSHOT" --args "$ARGUMENTS"
+```
+
+目录返回原生引用、输入契约、认证输出形状和excluded原因。支持只读文件输入，参数为`{paths:["/work/inputs/…"]}`。输出含`stdout`；原证书具有稳定JSON形状时还含`value`，可用于组合。原生认证表示源码等价，不直接表示论文质量。
+
+`script_capability_task_v1`由可信宿主提供：`owner/task_id/workspace/registry_path/libraries:[{path,sha256}]/inputs:[{path,sha256}]/grant`。input.path为虚拟输入路径，对应workspace/inputs；grant绑定`id/task_id/snapshot_sha256/root/arguments_sha256/mode/effects/revoked`，effects仅`["read"]`。候选不能自行授予权限。
+
+论文job的`publication_plan`指向JSON摘要引用：
+
+- `libraries`：原生库的`{path,sha256}`列表。
+- `validation`和`followup`：各含`id`、`inputs`、`input`、`specification`，须不同任务、参数及输入内容。
+- `inputs`：`[{path:"/work/inputs/check.bib",source:{path:"私有输入路径",sha256:"摘要"}}]`。
+- `input`：实际组合参数，例如`{paths:["/work/inputs/check.bib"]}`。
+- `specification`：`{kind:"bibtex_inventory_v1",source_path:"/work/inputs/check.bib",fields:{entry_count:["entry_count"],unique_key_count:["unique_key_count"],duplicate_keys:["duplicate_keys"]}}`。fields为组合输出中三个盘点字段的路径，可指向嵌套字段。
+
+适配器为每次尝试创建输入副本，并补任务身份、权限和登记表；候选不能指定检查器。完整可执行配置生成示例见`tests/test_paper_capability.py`中的Linux原生诊断，勿将其确定性提案视为真实模型行为。
+
+`learning_routes`可指向`paper_script_learning_routes_v1`，包含owner及routes。每条route含`scope/backend:"script_motif"/tasks`；tasks首项role为`certification`，其余为`training`，各含`path`和`evidence:[{path,sha256}]`。evidence至少完整包含`project_web_task`返回的原始证据。只接明确missing_primitive，复用原学习器与原生认证，无新增模型调用。失败/中断不自动重跑；入池后由公共控制器重读目录并重新准入。真实历史任务路由待验，直接原生认证诊断不能替代。
+
+旧`code_locks`不改写。四个离线编译文件仅作来源记录，执行路径继续按当前哈希或仓库维护的精确转换表核验。白名单在`config/script-runtime-compatibility.json`，不接受候选自带例外；新增转换须核对具体变更并跑相关回归。

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "transitions": [
+    {
+      "path": "src/adapters/script_motif_runtime.ts",
+      "from_sha256": "61d679a1f971f9efb16a2711c583b35ac005301341a282a9c8ee5e630a2df870",
+      "to_sha256": "0111a59d3aa3d1a2dbde74b1c16c79b7aab32edd79bf48ba5c0bb91076570afb",
+      "reason": "仅将整文件锁检查改为执行兼容策略；程序身份、证书、绑定、沙箱及回执逻辑保持原样",
+      "validation": "tests/test_script_capability_runtime.mjs"
+    }
+  ]
+}

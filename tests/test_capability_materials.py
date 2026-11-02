@@ -21,7 +21,7 @@ def test_materials_are_owner_scoped_append_only_and_recheck_original_evidence(tm
 def test_material_record_tampering_and_unsupported_backend_fail(tmp_path):
     pool=CapabilityMaterials(tmp_path/'pool','owner');ref=put(tmp_path/'source.json',{})
     with pytest.raises(ValueError,match='native_evidence_required'):
-        pool.register(backend='script_motif',library=ref,refs=[ref],acquisition_key='one',opportunity='gap')
+        pool.register(backend='unknown_backend',library=ref,refs=[ref],acquisition_key='one',opportunity='gap')
     pool.register(backend='source_program',library=ref,refs=[ref],acquisition_key='one',opportunity='gap')
     path=next(pool.directory.glob('*.json'));row=json.loads(path.read_text());row['opportunity']='other';path.write_text(json.dumps(row))
     with pytest.raises(ValueError,match='record_changed'):pool.records()

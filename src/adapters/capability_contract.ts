@@ -7,7 +7,7 @@ import {validateSourceProgram} from './source_program_runtime.ts';
 
 export type CapabilityRef={id:string;sha256:string};
 export type Binding={kind:'input';path:string[]}|{kind:'step';step_id:string;path:string[]}|{kind:'literal';value:any}|{kind:'object';fields:Record<string,Binding>}|{kind:'array';items:Binding[]};
-export type LegacyRef={backend:'source_program'|'artifact_motif';library_sha256:string;library_digest:string;object_id:string;object_sha256:string;certificate_sha256:string};
+export type LegacyRef={backend:'source_program'|'artifact_motif'|'script_motif';library_sha256:string;library_digest:string;object_id:string;object_sha256:string;certificate_sha256:string};
 export type CapabilityDefinition={owner:string;contract:{input_schema:any;output_schema:any;effects:string[]};implementation:{kind:'legacy';legacy_ref:LegacyRef}|{kind:'composition';steps:{id:string;capability:CapabilityRef;arguments:Binding}[];output:Binding};dependencies:CapabilityRef[]};
 export type Capability=CapabilityDefinition&{format:'capability_v1';id:string;revision_sha256:string;lifecycle:'active'|'build_only'|'archived';certification:'candidate'|'certified'|'rejected';migration:'legacy'|'testing'|'canary'|'promoted'};
 export type CapabilitySnapshot={format:'capability_snapshot_v1';owner:string;roots:CapabilityRef[];capabilities:Capability[];digest:string};
@@ -82,7 +82,7 @@ export function validateCapability(value:any,expectedOwner?:string):Capability {
  if(new Set(deps).size!==deps.length||JSON.stringify(deps)!==JSON.stringify([...deps].sort()))fail('dependencies_not_unique_sorted');
  const impl=value.implementation;
  if(impl.kind==='legacy'){
-  const ref=impl.legacy_ref;if(!['source_program','artifact_motif'].includes(ref.backend)||deps.length)fail('legacy_backend_or_dependencies');
+  const ref=impl.legacy_ref;if(!['source_program','artifact_motif','script_motif'].includes(ref.backend)||deps.length)fail('legacy_backend_or_dependencies');
   identifier(ref.object_id);for(const k of ['library_sha256','library_digest','object_sha256','certificate_sha256'])sha(ref[k]);
  }else{
   if(impl.steps.length<1||impl.steps.length>64)fail('steps_invalid');const earlier=new Set<string>(),called=new Set<string>();

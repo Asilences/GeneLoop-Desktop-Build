@@ -20,7 +20,7 @@ from jsonschema import Draft202012Validator
 SCHEMA = json.loads((Path(__file__).resolve().parents[2] / 'schemas/capability-v1.schema.json').read_text())
 VALIDATOR = Draft202012Validator(SCHEMA)
 IDENTITY_KEYS = ('owner', 'contract', 'implementation', 'dependencies')
-BACKENDS = ('source_program', 'artifact_motif')
+BACKENDS = ('source_program', 'artifact_motif', 'script_motif')
 
 
 def _fail(message):

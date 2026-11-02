@@ -1,6 +1,11 @@
 # 效率驱动 RSI 当前交接
 
 - 更新时间与交接人：2026-11-02，Codex。
+- 最新全量验证：Python1793通过/237跳过，Node1495通过/18跳过/0失败；Linux smoke通过。此前上传ECONNRESET本次未出现，未针对它修复，不宣称根治。本轮代码和失败证据在`.local/efficiency-rsi-script-20261102/`；本地提交未推送、未部署。
+- 最新Script接线：`script_capability_runtime.ts`、公共材料登记及论文 `capability_adapter.py` 已接入；只读文件程序可进入Builder、组合、独立验证、发布、换输入执行并回到构造池。论文acquire使用原学习器，训练/认证任务分开；真实历史任务路由及模型提案尚未实测。没有默认聊天接管。
+- 最新兼容修正：按用户要求直接拆分认证来源与执行锁。四个离线编译/认证文件保留哈希但不阻止旧程序执行，其他执行锁继续检查；`config/script-runtime-compatibility.json`目前只放行本次loader策略修改的精确旧/新哈希。没有全局skip验证或改写旧证书。联网/argv程序仍走旧路径，未纳入新后端。
+- 最新原生诊断：Linux 21项Script/沙箱测试及4项论文测试通过；论文验证4条/3唯一键/重复P，后继5条/4唯一键/重复T，各4项检查通过。发布 `c1248bde88f533d923456dd888b5e68b0219e15db56fc9cb6eae32e96de73ef3`，下一Builder目录可见且记录构造贡献。输入/提案为诊断夹具，模型调用0。首次schema和Store字段失败均保留并修复，见[记录](../experiments/efficiency-rsi-script-20261102.md)。
+- 最新下一步：用已有真实论文历史任务固定训练/认证分区，实测新acquire路由与真实Builder组合；失败时按具体阶段定位。默认任务结束采集、读取Motif、任意MCP、大规模成本与创造价值效果仍pending。以下“论文Script适配未完成”等段落为此前阶段，已由本条及上述最新接线更新。
 - 已有收益与本轮范围：此前Meta-v6六题已观察到程序复用的前向模型收益：请求44→30（-31.8%）、代理估费USD0.04070525→0.02613575（-35.8%）、输出Token21423→10967（-48.8%），六题均实际程序成片；质量审阅及总学习/研究成本摊销限制仍按[原记录](../experiments/remotion-program-rsi-20261030-v1.md)保留。本轮“收益待测”只指新增公共机制的增量收益，不否定这些历史观察，不应笼统写成项目没有效率增益。
 - 最新推进顺序：已读取网页会话最新正文；先完成材料闭环并接第二真实场景，主动Reuse-Aware执行及自动再投资延期。当前公共接线及Source实装已推进，论文只读证据入口已实现，尚不能称两个真实场景的完整闭环。
 - 最新代码：公共`capability_materials.py/.ts`追加式登记原生材料，控制器支持acquire、入池后重读目录/重新准入、等待机会随目录变化再评价；Source使用原learn_programs/certify_programs，固定scope/训练证据，已有ledger与proposal锁，Source manifest支持additional_libraries。重复/中断学习不自动重放，不重发原用户任务。
