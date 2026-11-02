@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.capability_feedback import CapabilityFeedback, file_ref
 from src.adapters.capability_contract import capability_digest
 from src.adapters.capability_improvement import save
-from scenarios.remotion_edit.structured.run_capability_improvement import run_child
+from src.adapters.capability_scene import run_child
 
 
 def select(plan):

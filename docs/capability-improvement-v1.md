@@ -115,3 +115,8 @@ selection plan含`owner/seed/store/feedback_directory/eligible/scope/manifest/ar
 恢复接口要求可信宿主回调使用新生成的recovery任务身份，实际完成已有独立验证和Store发布/检查后才解除显式撤回，旧证书不能直接恢复。恢复任务尚未自动调度，也没有自动迁移任意旧依赖或崩溃续跑。显式archive只退出默认执行选择，不删除Builder材料；需不同替代根、相同契约和共同scope的独立合格证据，宿主仍负责可替代性判断。
 
 上述工程接线以免费回归验证；未新增真实模型、视频渲染或效率对照。自动发现机会的真实有效性、选择收益、完整C→D以及节余再投资仍待验证。
+
+
+## 跨场景公共入口与构造缺口
+
+发现、提案和反馈现已从Source脚本抽出，`npm run rsi:improve`通过宿主固定的scene_adapter接入不同场景；Source旧入口继续兼容。发布/后继检查共用`capability_cycle.ts`，允许场景声明哪些失败可修复，保留严格证据与权限边界。模型明确报告缺原语/契约不兼容/证据不足时停止修复；能力池更新后可重新尝试。该结果不证明任务不可能。详见[跨场景接入协议](capability-scenes-v1.md)。

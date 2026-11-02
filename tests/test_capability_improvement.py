@@ -69,6 +69,20 @@ def test_preview_has_no_adapter_calls_or_ledger(tmp_path):
     for event in events(plan):validate('event',event)
 
 
+def test_construction_gap_stops_without_another_model_repair(tmp_path):
+    plan,snapshot,proposal=plan_at(tmp_path);plan['jobs']=plan['jobs'][:1]
+    adapter=Adapter(snapshot,proposal);calls=[]
+    def gap(task,library,attempt,parent,feedback):
+        calls.append(task);attempt.mkdir()
+        result={'status':'deferred','error':'capability_construction_gap',
+            'construction_gap':{'reason':'missing_primitive','requirement':'diagnostic missing operation'},'observed_model_usd':None}
+        put(attempt/'result.json',result);return result
+    adapter.construct=gap
+    result=run_improvement(plan,adapter,execute=True)
+    assert len(calls)==1 and result['outcomes'][0]['status']=='deferred'
+    assert not adapter.published
+
+
 def test_publish_refreshes_builder_for_second_generation(tmp_path):
     plan,snapshot,proposal=plan_at(tmp_path);adapter=Adapter(snapshot,proposal)
     result=run_improvement(plan,adapter,execute=True)
@@ -139,6 +153,18 @@ def test_infrastructure_failure_does_not_trigger_paid_model_repair(tmp_path):
     adapter.publish=lambda *args: {'status':'failed','committed':False,'error':'capability_store_cas_conflict'}
     assert run_improvement(plan,adapter,execute=True)['outcomes'][0]['status']=='deferred'
     assert len(adapter.calls)==1
+
+
+def test_scene_declares_repairable_failure_without_core_knowing_scene_error_codes(tmp_path):
+    plan,snapshot,proposal=plan_at(tmp_path);plan['jobs']=plan['jobs'][:1]
+    adapter=Adapter(snapshot,proposal);publish=adapter.publish;calls=[]
+    def once(*args):
+        calls.append(True)
+        if len(calls)==1:return {'status':'failed','committed':False,'repairable':True,'error':'unseen_scene_specific_quality_failure'}
+        return publish(*args)
+    adapter.publish=once
+    result=run_improvement(plan,adapter,execute=True)
+    assert result['outcomes'][0]['status']=='published' and len(adapter.calls)==2
 
 
 def test_corrupted_catalog_never_reaches_builder(tmp_path):

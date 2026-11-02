@@ -1273,3 +1273,12 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 `CapabilityFeedback`持久化执行/构造/尝试证据，向Builder提供稳定别名下的展示顺序，向宿主已准入的执行候选提供排序，并影响机会准入与队列；未知收益/费用仍为null。withdraw传递过滤依赖闭包且保存恢复清单，archive只退出执行入口，恢复需新任务独立验证。
 
 `npm run rsi:select:source -- --plan PLAN [--execute]`默认预览；执行沿用原TS Source Runtime与固定机械检查器，结果进入同一反馈库。`verify_capability_outputs.py`CLI输出新增`evidence_binding`，绑定trace/manifest/specification原字节；旧验证输出不追改。本轮没有接管正式聊天、修改原账本或声明真实收益。
+
+
+### 跨场景改进适配（2026-11-02续）
+
+新增`npm run rsi:improve -- --plan PLAN [--call-model]`。宿主计划可提供`scene_adapter`原字节引用和`scene_dependencies`；模块导出`create_adapter(plan)`并继承`CapabilityImprovementAdapter`，实现inspect_run/freeze_publication_inputs/publish。模型不能选择或改写宿主适配代码。原Source入口和旧plan兼容，提案实现移到`capability_proposal.py`，原脚本只转发。
+
+共同发现器改为接收可信inspector，不枚举固定场景kind；相同输入失败/成功记录都保留，支持数按不同输入计。发布失败的repairable由宿主场景给出，不在核心扩充场景错误码。`completeCapabilityCycle`共用真实执行、严格Store发布、不同任务/输入/真实路径后继验证；`publicationVerdict`分离QA传输绑定与严格发布字段，未知字段不丢弃。
+
+构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。不自动生成或安装新原语。接口、样例和当前边界见[跨场景协议](capability-scenes-v1.md)。

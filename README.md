@@ -11,6 +11,8 @@ F02 审核候选提供一个免费可运行的经验执行协议演示：`npm ru
 
 Source记录到Capability机会、双价值反馈到后续选择现已接入离线控制器；新增`npm run rsi:select:source`连接现有TS执行与独立检查，默认预览。限定场景机制与效果待验证分别记录，见[协议](docs/capability-improvement-v1.md)。
 
+新增[跨场景Capability接入](docs/capability-scenes-v1.md)及`npm run rsi:improve`：Source特定逻辑已拆成适配器，公共发现/提案/反馈/发布生命周期可复用。另有非视频原生计数诊断；实际视频旧候选通过新流程重放，不把接口通用或合成诊断称为普遍有效。
+
 效率驱动 RSI 的开发入口为 `npm run rsi:efficiency:check`：检查固定版本能力契约、组合执行和全尝试评价。该入口只做免费诊断；研究方案、真实联调进度与限制见[当前交接](docs/handoffs/efficiency-rsi.md)，评价口径见[评价协议](docs/efficiency-rsi-evaluation.md)。新能力层尚未接管生产任务。
 
 Capability 离线创建/编译也需安装 Node/npm 依赖：Python 复用 DSH 的 schema 校验入口，线上 TypeScript 不依赖 Python。当前已在Source视频实验中完成真实模型Compose提案、新Runtime实际渲染、独立检查、版本化保存及新任务复用；另通过实际取消检查。共1次模型请求，未做效率对照，未部署正式服务。见[首个闭环记录](docs/experiments/efficiency-rsi-source-loop-20261102.md)。

@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {capabilityDigest,capabilityRef} from '../src/adapters/capability_contract.ts';
-import {createCapabilityStore} from '../src/adapters/capability_store.ts';
+import {completeCapabilityCycle} from '../src/adapters/capability_cycle.ts';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -74,28 +74,19 @@ async function main(){
   if(result.code!==0)throw Error('loop_independent_validation_failed');
   return JSON.parse(result.output);
  }
- let validationRun;
- const validationSpec=read(plan.validation_specification);
- const store=createCapabilityStore({directory:plan.store,owner:plan.owner,
-  runValidation:async({candidateSnapshot,input})=>{
-   validationRun=await run(candidateSnapshot,input,plan.validation_manifest,'validate','validation',validationSpec);return validationRun;
-  },
-  validator:{id:'source-mechanical-v1',sha256:capabilityDigest({code:hash(checkerBytes),specification:validationSpec}),
-   check:async()=>check(validationRun,validationSpec)}});
+ const validationSpec=read(plan.validation_specification),followupSpec=read(plan.followup_specification);
  try{
-  const publication=await store.publish({candidateSnapshot,root:selected,input:read(plan.validation_args),expectedLatest:plan.expected_latest??null});
-  save(resolve(output,'publication.json'),publication.publication);
-  // A distinct load and manifest prove subsequent adoption instead of reusing
-  // the in-memory candidate. The next task has independently frozen inputs.
-  const loaded=await store.loadLatest();
-  if(!loaded||loaded.publication_sha256!==publication.publication_sha256)throw Error('loop_publication_not_adopted');
-  const followupSpec=read(plan.followup_specification);
-  const followup=await run(loaded.snapshot,read(plan.followup_args),plan.followup_manifest,'execute','followup',followupSpec);
-  const verdict=await check(followup,followupSpec);
-  save(resolve(output,'result.json'),{status:'completed',publication_sha256:publication.publication_sha256,
-   candidate:selected,validation_task:validationRun.execution.task_id,followup_task:followup.execution.task_id,
-   followup_passed:verdict.passed,scope:'one_source_composition_validated_published_and_reused',efficiency_conclusion:null});
-  process.stdout.write(JSON.stringify({status:'completed',output,publication_sha256:publication.publication_sha256}));
+  const result=await completeCapabilityCycle({owner:plan.owner,directory:plan.store,candidateSnapshot,root:selected,
+   expectedLatest:plan.expected_latest??null,
+   validation:{id:firstTask.task_id,workspace:realpathSync(firstTask.workspace),input:read(plan.validation_args)},
+   followup:{id:nextTask.task_id,workspace:realpathSync(nextTask.workspace),input:read(plan.followup_args)},
+   validator:{id:'source-mechanical-v1',sha256:capabilityDigest({code:hash(checkerBytes),specification:validationSpec})},
+   run:(snapshot,input,mode,label)=>run(snapshot,input,label==='validation'?plan.validation_manifest:plan.followup_manifest,
+    mode,label,label==='validation'?validationSpec:followupSpec),
+   check:(run,label)=>check(run,label==='validation'?validationSpec:followupSpec),
+   onPublished:publication=>save(resolve(output,'publication.json'),publication)});
+  save(resolve(output,'result.json'),result);
+  process.stdout.write(JSON.stringify({status:'completed',output,publication_sha256:result.publication_sha256}));
  }catch(error){
   save(resolve(output,'result.json'),{status:'failed',error:error.message,efficiency_conclusion:null});throw error;
  }

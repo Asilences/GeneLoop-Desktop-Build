@@ -2,24 +2,29 @@
 
 - 更新时间与交接人：2026-11-02，Codex。
 - 目标与本次范围：先完善共同改进机制、递归构造接线及反馈，再考虑聊天入口。用户明确不强求小样本正向效果；根据实际结果决定追加验证或保留pending等待大规模测试。效果不理想时优先与用户拆解具体失败环节，不扩写总结或自动追求正向结果。
-- 分支 / commit / 工作区：`codex/efficiency-rsi-20261102`，最新反馈接线基于本地3a77af6继续；具体本轮提交见Git。未推送、未开PR、未部署。私人`reference/`不跟踪；旧备份、旧库及累计账本保留。
+- 分支 / commit / 工作区：`codex/efficiency-rsi-20261102`，最新跨场景接线基于本地7463596继续；具体本轮提交见Git。未推送、未开PR、未部署。私人`reference/`不跟踪；旧备份、旧库及累计账本保留。
 - 已完成：`capability_improvement.py`及`capability-improvement-v1.schema.json`共同记录机会、全部尝试、双贡献与实际决策；区分降本/能力获得目标，F02准入复用而非放宽旧评价。
 - 已完成：`capability_store.ts`新增构造库导出，核验全部提交历史，保留种子与历史根，排除候选/拒绝/归档及失效闭包，保留当前种子撤回状态；新能力发布后自动更新下一Builder输入。`run_capability_improvement.py`复用现有Harness与TS执行/发布器，冻结配置、显式修复、重复失败暂缓、已提交后继失败停止，隔离每次尝试目录。
 - 前轮新增：`capability_authoring.py`精简模型draft，宿主补固定字段/契约/引用；开放任务仍由模型设计contract。`run_capability_loop.py`保存raw/draft/展开proposal/aliases，修复校验格式与别名快照。编译器原失败点提供位置、期望、实际值和已通过检查；重复规则同时看错误/位置/候选，不打进度分。
 - 前轮离线重放：新增`scripts/replay-capability-proposal.py`，五份历史回答保持原样。C两份只补各两处对象包装即编译通过，不改选择/数据流；只补第一处会将报错定位移到第二处。两份非法JSON不猜补，D成功提案精简往返一致。详见[短记录](../experiments/efficiency-rsi-authoring-replay-20261102.md)，新增模型/执行/发布均0，不称Agent自主修复成功。
 - 已完成：Source宿主检查器支持固定result_path以验证嵌套交付；新增精确binding位置及JSON行列反馈。共同协议、入口和当前边界见[协议](../capability-improvement-v1.md)及`docs/interfaces.md`。没有第二套Agent循环或在线Runtime。
-- 本轮新增：`capability_observations.py`将已登记Source记录生成jobs，复用旧源码见证；旧视频/PPT学习循环早已存在，缺口是到新Capability控制器的桥接。`capability_feedback.py`将执行/构造事实用于Builder排序、显式准入执行候选、机会排序/暂缓；不是单纯加字段。`rsi:select:source`默认预览，execute沿用TS Runtime和固定检查器，结果回到反馈库。限定场景仍由宿主提供context与验收任务。
-- 本轮生命周期：版本撤回传递过滤后继并持久化恢复清单，保留旧库/无关能力；已发布后继失败隔离，输入变化不全局撤回。通用守卫错误不猜叶级归因。显式执行归档保留Builder材料；恢复需可信宿主新任务独立验证，尚未自动调度。
-- 本轮已验证：本地/Linux定向172 Python、87 Node通过；Linux smoke18项及SDK初始化通过。新增27项为免费机制诊断。最终本地全量1773 Python通过/236跳过，Node1482通过/1失败/17跳过；唯一失败为已出现过的上传typed413 ECONNRESET，未修复。最初12项macOS临时路径别名失败通过canonical TMPDIR复核，未放宽检查。命令/反例见[本轮记录](../experiments/efficiency-rsi-feedback-20261102.md)。
-- 本轮配置与数据：`.local/efficiency-rsi-feedback-20261102/`保存两端代码摘要、完整定向/全量/失败复核日志及隔离Linux代码归档。模型调用/新渲染/发布均0，累计账本和生产服务不变。质量/效率实际效果仍pending。
+- 前轮新增：`capability_observations.py`将已登记Source记录生成jobs，复用旧源码见证；旧视频/PPT学习循环早已存在，缺口是到新Capability控制器的桥接。`capability_feedback.py`将执行/构造事实用于Builder排序、显式准入执行候选、机会排序/暂缓；不是单纯加字段。`rsi:select:source`默认预览，execute沿用TS Runtime和固定检查器，结果回到反馈库。限定场景仍由宿主提供context与验收任务。
+- 前轮生命周期：版本撤回传递过滤后继并持久化恢复清单，保留旧库/无关能力；已发布后继失败隔离，输入变化不全局撤回。通用守卫错误不猜叶级归因。显式执行归档保留Builder材料；恢复需可信宿主新任务独立验证，尚未自动调度。
+- 前轮已验证：本地/Linux定向172 Python、87 Node通过；Linux smoke18项及SDK初始化通过。新增27项为免费机制诊断。最终本地全量1773 Python通过/236跳过，Node1482通过/1失败/17跳过；唯一失败为已出现过的上传typed413 ECONNRESET，未修复。最初12项macOS临时路径别名失败通过canonical TMPDIR复核，未放宽检查。命令/反例见[本轮记录](../experiments/efficiency-rsi-feedback-20261102.md)。
+- 前轮配置与数据：`.local/efficiency-rsi-feedback-20261102/`保存两端代码摘要、完整定向/全量/失败复核日志及隔离Linux代码归档。模型调用/新渲染/发布均0，累计账本和生产服务不变。质量/效率实际效果仍pending。
+- 本轮新增：公共`capability_discovery.py/capability_proposal.py/capability_scene.py`及`capability_cycle.ts`；`rsi:improve`通过宿主摘要固定的scene_adapter接入。Source只保留记录解释、输入冻结和原生发布桥接，旧命令兼容。场景声明repairable，核心不再枚举Source错误码。接口见[跨场景协议](../capability-scenes-v1.md)。
+- 本轮缺口协议：模型可明确报告缺原语/契约不兼容/证据不足，保存缺口和成本并停止修复；同证据/目录暂缓，认证目录变化后可重试。还未自动调用既有学习器补材料，不能宣称开放式能力生成。
+- 本轮真实执行：Linux新Store重放历史模型候选，实际验证与不同输入后继执行各2次叶执行、23项机械检查通过；模型请求0。修复QA绑定字段与严格Store发布不兼容，验证公共发布生命周期确实可运行。原库/原账本/服务不改写。非视频计数适配使用真实子进程，但任务/准入/提案是诊断夹具，不是新模型或收益证据。
+- 本轮已验证：本地/Linux最终179 Python、91 Node定向通过；Linux smoke18项及SDK初始化通过。本地全量1780 Python通过/236跳过，Node1486通过/1旧上传ECONNRESET失败/17跳过，未修复该旧问题。
+- 本轮配置与数据：`.local/efficiency-rsi-scenes-20261102/`保留本地/服务器code、code-final、代码摘要、完整日志、source-replay-summary；实际视频与新测试Store位于服务器code/.local/source-cycle-replay。完整限制与负面结果见[记录](../experiments/efficiency-rsi-scenes-20261102.md)。
 - 前轮真实观察：实验`efficiency-rsi-recursive-20261102`。C连续3次编译失败后暂缓；D第一次JSON失败、第二次直接组合原语成功，4视频验证44项通过、不同参数4视频后继检查44项通过，实际发布并进入后续构造目录。没有发生C构造D；不强制制造谱系。详细反馈修订在此后完成，只通过诊断，未追加模型实验。
 - 前轮研究边界：该轮是两项明确需求的受控真实联调，不是自然用户流或统计样本；没有成本对照、因果创造价值或持续RSI收益。机器媒体检查通过，人工质量未评审。`benefit`/`efficiency_conclusion`保持null。
 - 前轮费用：真实请求3213–3217共5次，全部失败计入，代理估费USD0.02025325。累计3212→3217、预约记账约USD2.668405728，原4569行账本前缀字节不变。账单/机器/人工成本未知，历史未知不改写。
 - 前轮已验证：本地定向145 Python/87 Node通过；全量1746 Python通过/236跳过，Node1483通过/17跳过/0失败。此前间歇性typed413 ECONNRESET该轮未出现，但该轮没有针对它修复，不宣称已根治。Linux定向145 Python/87 Node及smoke通过，paid_model_requests=0；6份核心文件摘要、5份重放结果与本地一致。
 - 前轮配置与数据：`.local/efficiency-rsi-authoring-20261102/`保存原回答只读副本、五份重放、逐处包装检查、代码摘要及回归日志；旧实验与账本未改写。
 - 前轮配置与数据：服务器原项目私有环境、原ledger_root；模型DeepSeek Flash/off/max_tokens393216，费用/请求不限。私有`.local/efficiency-rsi-recursive-20261102/`保留首次运行code、最终code-final、计划、原始请求及全部产物。运行代码摘要见`code/.local/recursive-001/effective.json`；本地同步`delivery/summary.json`、完整事件和后继4个视频。正式服务仍由GENELOOP_SERVICE_HOME/CONFIG定位，本轮未运维。
-- 实验结论：[本轮工程记录](../experiments/efficiency-rsi-feedback-20261102.md)；[前轮真实递归尝试](../experiments/efficiency-rsi-recursive-20261102.md)；前轮成功执行复用及取消验证见[Source首轮](../experiments/efficiency-rsi-source-loop-20261102.md)。两轮结果分开，不用前轮成功覆盖本轮C失败。
+- 实验结论：[本轮跨场景记录](../experiments/efficiency-rsi-scenes-20261102.md)；[前轮反馈记录](../experiments/efficiency-rsi-feedback-20261102.md)；[前轮真实递归尝试](../experiments/efficiency-rsi-recursive-20261102.md)；前轮成功执行复用及取消验证见[Source首轮](../experiments/efficiency-rsi-source-loop-20261102.md)。两轮结果分开，不用前轮成功覆盖本轮C失败。
 - 未完成与pending：真实C→D与新反馈效果；任意开放轨迹/应用的自动发现及普通任务完成后后台触发；容量受限全局淘汰、价值估计/再投资；恢复队列自动调度；大规模总成本与负迁移；任意崩溃恢复。旧测量器F1/F2/F4/F5和深谱系F8未解决，本轮未用其报告收益。
-- 接手下一步：1. 用户决定是否在已登记Source真实记录上验收自动机会/反馈选择，或保留效果pending；不为小样本正向结果加试。2. 独立定位上传typed413的ECONNRESET，全量失败保留，不能称所有回归通过。3. 真正需要恢复时通过已有独立验证/Store发布接入恢复回调，不直接解除撤回或重放副作用。
+- 接手下一步：1. 优先接缺口→既有学习器→原生认证→入池→原机会再试；当前只有Compose及缺口记录，不另造Agent循环。2. 扩普通任务完成记录与原生工具适配；当前叶后端仅Source/Artifact，任意MCP尚未完成。3. 真实模型/创造价值/净成本仍待验证，不强求小样本正向结果；旧上传ECONNRESET独立定位。
 - 权限与预算：测试目的真实API持续授权仍有效，账本不清零；按用户最新要求本轮不再追加模型验证。外部应用写入、私人原件修改、实际投稿未授权。
-- 回退与风险：撤回本轮反馈/发现/选择改动可回到3a77af6，保留此前控制器/目录/精简提案能力；没有修改生产配置或旧库。不可删除失败日志、Store版本和原账本；不存在自动崩溃重放，恢复前需核对提交/副作用状态。
+- 回退与风险：撤回本轮跨场景/缺口协议改动可回到7463596，但该版本包含QA绑定与严格发布接口不兼容，回退时须保留本轮该修复或停用新绑定发布路径；没有修改生产配置或旧库。不可删除失败日志、Store版本和原账本；不存在自动崩溃重放，恢复前需核对提交/副作用状态。

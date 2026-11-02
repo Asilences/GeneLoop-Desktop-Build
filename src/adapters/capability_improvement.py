@@ -128,6 +128,9 @@ def run_improvement(plan, adapter, *, execute=False):
     the published library, so a newly certified C is available when building D.
     """
     validate('plan', plan)
+    def verify_scene():
+        for ref in ([plan['scene_adapter']] if plan.get('scene_adapter') else [])+plan.get('scene_dependencies',[]):evidence(ref)
+    verify_scene()
     if len({j['id'] for j in plan['jobs']}) != len(plan['jobs']):
         raise ValueError('improvement_duplicate_opportunity')
     # Check every task/evidence before any paid work. Frozen bytes are rechecked
@@ -142,6 +145,8 @@ def run_improvement(plan, adapter, *, execute=False):
         policy_sha256=policy_sha, execute=execute, code_sha256={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
         for name in ('src/adapters/capability_improvement.py','schemas/capability-improvement-v1.schema.json',
                      'src/adapters/capability_store.ts','src/adapters/capability_authoring.py','src/adapters/capability_feedback.py',
+                     'src/adapters/capability_discovery.py','src/adapters/capability_scene.py',
+                     'src/adapters/capability_cycle.ts','src/adapters/capability_proposal.py',
                      'scripts/export-capability-construction-library.mjs',
                      'scripts/complete-source-capability-loop.mjs',
                      'scenarios/remotion_edit/structured/run_capability_improvement.py',
@@ -190,6 +195,7 @@ def run_improvement(plan, adapter, *, execute=False):
             parent, feedback, failures, attempt_index = None, None, set(), 0
             while True:
                 # Independent checks and host context cannot change during repair.
+                verify_scene()
                 evidence(job['task'])
                 for ref in job.get('source_evidence',[]):evidence(ref)
                 attempt = folder/('attempt-'+str(attempt_index))
@@ -220,6 +226,7 @@ def run_improvement(plan, adapter, *, execute=False):
                 outcome = None
                 if candidate:
                     decision(job['id'], 'validate', 'compiled_candidate_requires_independent_check', [result_ref])
+                    verify_scene()
                     for ref in job.get('source_evidence',[]):evidence(ref)
                     outcome = adapter.publish(job, candidate, attempt, library['head'])
                     publication_ref = outcome.get('evidence_ref')
@@ -260,11 +267,12 @@ def run_improvement(plan, adapter, *, execute=False):
                 fingerprint = capability_digest(signature)
                 save(attempt/'repair-signature.json', signature)
                 max_repairs = plan['policy']['max_repairs']
-                repairable = outcome is None or reason in ('loop_independent_validation_failed',
-                    'capability_store_validation_failed','loop_video_result_missing')
+                repairable = result.get('status')!='deferred' and (outcome is None or
+                    outcome.get('repairable',reason=='capability_store_validation_failed') is True)
                 retry = repairable and fingerprint not in failures and (max_repairs is None or attempt_index < max_repairs)
                 decision(job['id'], 'repair' if retry else 'defer',
-                         'new_failure_feedback' if retry else 'infrastructure_repeated_failure_or_explicit_repair_limit', [result_ref])
+                         'new_failure_feedback' if retry else 'construction_gap_requires_new_material_or_evidence' if result.get('status')=='deferred'
+                         else 'infrastructure_repeated_failure_or_explicit_repair_limit', [result_ref])
                 if not retry:
                     summary['outcomes'].append(dict(opportunity_id=job['id'], status='deferred', error=reason))
                     break

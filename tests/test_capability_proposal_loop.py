@@ -6,8 +6,17 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from scenarios.remotion_edit.structured import run_capability_loop as pilot
+from src.adapters import capability_proposal as pilot
 from tests.test_capability_builder import setup
+
+
+def test_explicit_missing_primitive_is_a_gap_not_an_invalid_json_repair(tmp_path,monkeypatch):
+    task,catalog,snapshot,_=inputs()
+    fake_harness(monkeypatch,json.dumps({'defer':{'reason':'missing_primitive','requirement':'Need a native operation that reads the required table.'}}))
+    result=pilot.propose_once(task=task,catalog=catalog,snapshot=snapshot,output=tmp_path/'attempt',gate=DiagnosticGate())
+    assert result['status']=='deferred' and result['error']=='capability_construction_gap'
+    assert not (tmp_path/'attempt/candidate.json').exists()
+    assert result['construction_gap']['reason']=='missing_primitive'
 
 
 def inputs():

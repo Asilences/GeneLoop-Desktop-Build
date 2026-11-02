@@ -1,5 +1,7 @@
 ## 2026-11-02：构造接口简化与离线定位
 
+> 2026-11-02效率RSI跨场景续：公共发现/提案/反馈与TS发布生命周期已抽出，保留Source兼容入口；实际视频历史候选经新流程渲染、检查、发布、换输入复用，各23项检查通过。非视频适配为真实子进程诊断，模型调用0。当前优先补缺材料到既有学习器的接线，未接管聊天；定向179 Python+91 Node通过，全量仍有1项旧上传ECONNRESET。见[当前交接](efficiency-rsi.md)。
+
 > 2026-11-02效率RSI续：已登记Source记录→自动机会→Capability控制器、双价值事实→后续选择、最小失效/恢复清单已接线。本地/Linux定向172 Python+87 Node及Linux smoke通过；本地全量保留1项旧上传ECONNRESET失败。新增真实调用0、未部署，研究效果pending；详见[当前交接](efficiency-rsi.md)及[工程记录](../experiments/efficiency-rsi-feedback-20261102.md)。
 
 
