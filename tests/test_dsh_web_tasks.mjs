@@ -38,7 +38,7 @@ const options = { skip: !process.features?.typescript };
 const toolSchemas = [{ name: 'mcp__demo__read_note', description: 'Read a versioned note',
   parameters: { type: 'object', properties: { source_id: { type: 'string' } }, required: ['source_id'] } }];
 
-async function fixture({ broker = false, dshHome = false, visionReply, nativeImageAdmission = false, realSessions=false, fixtureSchemas: schemaOverride, fixture_schemas, strictMountedTools = false, ...overrides } = {}) {
+async function fixture({ broker = false, dshHome = false, visionReply, statsReply, nativeImageAdmission = false, realSessions=false, fixtureSchemas: schemaOverride, fixture_schemas, strictMountedTools = false, ...overrides } = {}) {
   const fixtureSchemas = schemaOverride ?? fixture_schemas ?? toolSchemas;
   const directory = mkdtempSync(join(tmpdir(), 'sss-web-tasks-'));
   const registrations = new Map(), controlCalls = [];
@@ -52,6 +52,7 @@ async function fixture({ broker = false, dshHome = false, visionReply, nativeIma
     if (url.pathname === '/tasks/register') registrations.set(value.session_id,
       { task_id: value.task_id, budget_usd: value.budget_usd, model: value.model });
     const session = value?.session_id ?? url.searchParams.get('session_id');
+    if (url.pathname === '/tasks/stats' && statsReply && await statsReply(req, res)) return;
     if (url.pathname === '/tasks/stats' && !registrations.has(session)) {
       res.writeHead(404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Task session not found' })); return;
     }
@@ -282,6 +283,40 @@ async function fixture({ broker = false, dshHome = false, visionReply, nativeIma
   };
 }
 
+for (const failure of ['disconnect', 'timeout', 'unauthorized']) test(`usage ${failure} never fabricates task completion or resets counters`,options,async()=>{
+ let failing=false;
+ const f=await fixture({statsReply:async(req,res)=>{
+  if(!failing){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({stats:{upstream_requests:9,estimated_cost_usd:0.12,usage_complete:true}}));return true;}
+  if(failure==='disconnect')req.destroy();
+  else if(failure==='unauthorized'){res.writeHead(401);res.end('{}');}
+  else await new Promise(resolve=>req.on('close',resolve));
+  return true;
+ }});
+ try{
+  const task=await f.preview('Keep this task running while observing usage');
+  assert.equal((await f.submit(task)).status,200);
+  const first=(await f.api(undefined,'?task_id='+task.task_id)).value;
+  assert.equal(first.stats.upstream_requests,9);assert.equal(first.stats.estimated_cost_usd,0.12);
+  failing=true;
+  const during=await f.api(undefined,'?task_id='+task.task_id);
+  if(failure==='unauthorized')assert.notEqual(during.status,200,'authorization errors must remain visible');
+  else{
+   assert.equal(during.status,200);
+   assert.equal(during.value.status,'running');
+   assert.equal(during.value.stats.usage_sync,'pending');
+   assert.equal(during.value.stats.usage_complete,false);
+   assert.equal(during.value.stats.upstream_requests,first.stats.upstream_requests);
+   assert.equal(during.value.stats.estimated_cost_usd,first.stats.estimated_cost_usd);
+  }
+  failing=false;
+  await f.complete(task);
+  const after=(await f.api(undefined,'?task_id='+task.task_id)).value;
+  assert.equal(after.status,'completed');assert.equal(after.stats.usage_sync,'current');
+  assert.equal(after.stats.usage_complete,true);
+  assert.equal(f.promptCalls.length,1,'observing/recovering must never resubmit the model task');
+ }finally{await f.close();}
+});
+
 test('native PPT repairs a failed plan within the existing turn, budget and task envelope',options,async()=>{
  const schemas=['render_deck','deliver_deck'].map(name=>({name:'mcp__ppt__'+name,parameters:{type:'object',properties:{}}}));
  const ppt={id:'ppt',label:'PPT',preset:'sss-task',adapter:'ppt',mcp_rows:[],allowed_tools:schemas.map(t=>t.name)};
@@ -378,7 +413,7 @@ function assertProductPresentationOnly(ctx) {
   assert.doesNotMatch(html, /sss-native-confirmation|DeepSeek Harless 任务工作台/);
 }
 
-test('Completed task usage survives a missing or offline budget route while active tasks fail closed',options,async()=>{
+test('Usage observation preserves counters offline but active missing routes still fail closed',options,async()=>{
  const f=await fixture({broker:true});try{
   const task=await f.preview('Preserve historical usage');await f.submit(task);
   Object.assign([...f.registrations.values()][0],{upstream_requests:7,estimated_cost_usd:0.12,prompt_tokens:1234});
@@ -388,7 +423,9 @@ test('Completed task usage survives a missing or offline budget route while acti
   result=await f.api(undefined,'?task_id='+next.task_id);assert.equal(result.status,409);assert.equal(result.value.error.code,'budget_control_failed');
   await f.stopControl();
   result=await f.api(undefined,'?task_id='+task.task_id);assert.equal(result.status,200);assert.equal(result.value.stats.prompt_tokens,1234);assert.equal(result.value.stats.estimated_cost_usd,0.12);
-  result=await f.api(undefined,'?task_id='+next.task_id);assert.notEqual(result.status,200);
+  result=await f.api(undefined,'?task_id='+next.task_id);assert.equal(result.status,200);
+  assert.equal(result.value.status,'running');assert.equal(result.value.stats.usage_sync,'pending');
+  assert.equal(result.value.stats.usage_complete,false);
  }finally{await f.close();}
 });
 

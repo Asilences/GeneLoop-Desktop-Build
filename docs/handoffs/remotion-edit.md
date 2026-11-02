@@ -1,3 +1,5 @@
+> 2026-11-02 网页产品接入：新增独立的 `web_server.py` / `web-scenario.json` / `web-prompt.md`，原实验 server.py、structured/server.py 与全部实验结果保持不变。普通 `/video` 由原 DSH Agent 自主写TSX、调用固定只读依赖与隔离渲染器，实际交付MP4/源码，尚未发布实验Motif。每条视频任务选择场景，普通Chat不自动继承。真实两轮检查和冷恢复维护见[产品集成记录](../experiments/video-web-integration-20261101.md)；PR #118描述记录最终发布/合并状态。正式运维仍走统一入口，私有 renderer、原日志与用户媒体不进入Git。
+
 # Remotion 视频剪辑 当前交接
 
 - 更新时间与交接人：2026-10-31，Codex；用户授权夜间优化，已完成本轮有限真实闭环。

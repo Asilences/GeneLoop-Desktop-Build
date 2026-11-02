@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { memberSceneDeployment } from './harless_member_scenes.mjs';
 import { productPersona } from '../src/adapters/harless_product_prompt.ts';
 import {startCommandBroker} from '../src/adapters/geneloop_command_broker.ts';
+import {videoConfiguration} from '../src/adapters/geneloop_video.ts';
 import {composeNativeHost} from '../src/adapters/geneloop_native_host.mjs';
 import { createPublicRemoteBridge, forwardPublicRpc, isNativeRpcResponse, REMOTE_MUX_PATH } from './harless_public_transport.mjs';
 
@@ -117,6 +118,9 @@ export function memberWatcherEnvironment(environment = process.env) {
 
 export function createGateway(config) {
   const memberWatchers = memberWatcherEnvironment();
+  const videoRenderer=config.memberSceneDeployment?.videoRenderer?videoConfiguration(config.memberSceneDeployment.videoRenderer):undefined;
+  if(videoRenderer&&typeof config.ownerCommandOutput!=='string')throw Error('Video owner command output must be configured');
+  let ownerBrokerReady;
   const sceneDeployment = memberSceneDeployment(config.memberPolicy, config.memberSceneDeployment);
   const dataDir = config.dataDir;
   const dbPath = join(dataDir, 'accounts.json');
@@ -360,6 +364,10 @@ export function createGateway(config) {
     return json(res, 404, { error: '接口不存在' });
   };
   const ownerBackend = async () => {
+    if(videoRenderer){
+      ownerBrokerReady??=(async()=>{const broker=await startCommandBroker({output:config.ownerCommandOutput,python:config.memberSceneDeployment.pythonExecutable,node:process.execPath,resources:{videoRenderer}});commandBrokers.set('owner',broker);store(join(config.ownerCommandOutput,'video-broker.json'),{schema_version:1,socketPath:broker.socketPath});})().catch(error=>{ownerBrokerReady=undefined;throw error;});
+      await ownerBrokerReady;
+    }
     const token = tokenFromFile(config.ownerTokenFile);
     const cached = backends.get('owner');
     if (cached?.token === token) return cached;
@@ -405,8 +413,9 @@ export function createGateway(config) {
       if(sceneDeployment&&!commandBrokers.has(user.id))commandBrokers.set(user.id,await startCommandBroker({
         output:join(userDir,'tasks'),python:config.memberSceneDeployment.pythonExecutable,node:process.execPath,
         resources:{pptMasterRoot:config.memberSceneDeployment.pptMasterRoot,rendererRoot:config.memberSceneDeployment.rendererRoot,
-          fontRoot:config.memberSceneDeployment.fontRoot,projectRoot:config.memberSceneDeployment.projectRoot}}));
+          fontRoot:config.memberSceneDeployment.fontRoot,projectRoot:config.memberSceneDeployment.projectRoot,videoRenderer}}));
       const commandBroker=commandBrokers.get(user.id);
+      if(videoRenderer&&commandBroker)store(join(userDir,'tasks','video-broker.json'),{schema_version:1,socketPath:'/user/config/commands.sock'});
       const bin = '/opt/node/bin/node';
       const args = ['--unshare-user', '--unshare-pid', '--uid', '1000', '--gid', '1000', '--die-with-parent',
         '--ro-bind', '/usr', '/usr', '--ro-bind', '/bin', '/bin', '--ro-bind', '/lib', '/lib',

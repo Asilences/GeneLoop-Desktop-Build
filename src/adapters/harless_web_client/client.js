@@ -63,7 +63,7 @@ window.__ModuleLoader__.load({
     const endpoint = '/api/harless/settings';
     const observers = new Map(), lexiconObservers = new Map(), cache = new Map(), choosing = new Map(), revisions = new Map();
     const draftSelections = new Map();
-    const aliases = { ppt: 'ppt', 'paper-proofreading': 'paper', 'research-data-analysis': 'data', files:'file', 'new-scene': 'chat' };
+    const aliases = { ppt: 'ppt', 'paper-proofreading': 'paper', 'research-data-analysis': 'data', 'video-editing':'video', files:'file', 'new-scene': 'chat' };
     const shortcut = scene => scene.id === 'files' ? 'file' : scene.shortcut || aliases[scene.id] || scene.id;
     const selectableScene = scene => !['new-scene'].includes(scene.id) && !['chat', 'files'].includes(shortcut(scene));
     const modeLabel = mode => ({ baseline: '标准执行', shadow: '观察候选', execute: '校验后复用' })[mode] || mode;
@@ -247,7 +247,7 @@ window.__ModuleLoader__.load({
           const value = args[key];
           if (typeof value !== 'string' || value.length > 200 || /^(?:[a-z]:|[\\/])|(?:^|[\\/])\.\.(?:[\\/]|$)/i.test(value)) continue;
           const name = value.split(/[\\/]/).pop();
-          if (/^[^\x00-\x1f<>:"|?*]{1,100}\.(?:pdf|docx?|xlsx?|csv|tsv|json|txt|md|pptx?|png|jpe?g|webp)$/i.test(name)) return name;
+          if (/^[^\x00-\x1f<>:"|?*]{1,100}\.(?:pdf|docx?|xlsx?|csv|tsv|json|txt|md|pptx?|png|jpe?g|webp|mp4|webm|mov|mp3|wav|m4a)$/i.test(name)) return name;
         }
       };
       const workLabel = (name, subject) => {
@@ -473,13 +473,24 @@ window.__ModuleLoader__.load({
       const previewType = name => {
         const ext = name.split('.').pop().toLowerCase();
         if (ext === 'pdf') return 'pdf';
+        if (/^(mp4|webm|mov)$/.test(ext)) return 'video';
+        if (/^(mp3|wav|m4a|aac|ogg)$/.test(ext)) return 'audio';
         if (/^(png|jpe?g|gif|webp|bmp|ico|svg)$/.test(ext)) return 'image';
         if (/^(md|markdown)$/.test(ext)) return 'markdown';
         if (/^(csv|tsv)$/.test(ext)) return 'table';
         if (/^(docx|pptx|xlsx)$/.test(ext)) return 'office';
-        if (/^(txt|json|jsonl|log|tex|bib|py|js|ts|css|yaml|yml|xml|html|htm)$/.test(ext)) return 'text';
+        if (/^(txt|json|jsonl|log|tex|bib|py|js|ts|tsx|css|yaml|yml|xml|html|htm)$/.test(ext)) return 'text';
         return 'unsupported';
       };
+      // Start media downloads in the original user gesture. The authenticated
+      // attachment route verifies account ownership and immutable file bytes.
+      // Preview and all non-media downloads retain client-side integrity checks.
+      function nativeMediaDownload(value, lane, file) {
+        if (!['video', 'audio'].includes(previewType(file.name))) return false;
+        const link = document.createElement('a'); link.href = comparisonUrl(value, lane, file);
+        link.download = artifactName(file); link.hidden = true;
+        document.body.appendChild(link); link.click(); link.remove(); return true;
+      }
       // CSV keeps quoted delimiters and embedded newlines. Rendering uses text nodes.
       function previewTable(text, delimiter = ',') {
         const rows = []; let row = [], cell = '', quoted = false;
@@ -681,6 +692,7 @@ window.__ModuleLoader__.load({
               if (kind === 'table') content = previewTable(content.replace(/^\uFEFF/, ''), /\.tsv$/i.test(name) ? '\t' : ',');
               else if (/\.json$/i.test(name)) { try { content = JSON.stringify(JSON.parse(content), null, 2); } catch {} }
             } else if (kind === 'pdf') content = new Uint8Array(await blob.arrayBuffer());
+            else if (kind === 'video' || kind === 'audio') objectUrl = URL.createObjectURL(new Blob([blob], {type:kind==='video'?(name.endsWith('.webm')?'video/webm':name.endsWith('.mov')?'video/quicktime':'video/mp4'):(name.endsWith('.wav')?'audio/wav':'audio/mpeg')}));
             else if (kind === 'image') objectUrl = URL.createObjectURL(new Blob([blob], { type: /\.svg$/i.test(name) ? 'image/svg+xml' : 'image/' + name.split('.').pop().replace('jpg', 'jpeg') }));
             if (!abort.signal.aborted) setState({ phase: 'ready', kind, content, objectUrl, file, current, companion: companion && artifactName(companion) });
           })().catch(error => { if (!abort.signal.aborted) setState(previous => ({ ...previous, phase: 'error', message: networkMessage(error) })); });
@@ -689,6 +701,7 @@ window.__ModuleLoader__.load({
         const downloadCurrent = async () => {
           if (busy.current || !state.file) return; busy.current = true; setDownloadState('正在准备下载…');
           try {
+            if (nativeMediaDownload(state.current, identity.lane, state.file)) { setDownloadState('已请求下载，请查看浏览器下载列表。'); return; }
             const blob = await withDeadline(tab.signal, 60000, signal => readArtifact(state.current, identity.lane, state.file, signal));
             if (tab.signal.aborted) return;
             const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; link.hidden = true;
@@ -712,6 +725,7 @@ window.__ModuleLoader__.load({
               state.kind === 'pdf' ? renderSlot('geneloop.delivery.document', { resourceAddress: address, content: { kind: 'bytes', data: state.content }, wrap: true, scrollportRef },
                 { entryKey: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/pdf', hookContext: useTabInfo, fallback: h('p', null, 'PDF 预览器暂未就绪，请刷新重试。') })
               : state.kind === 'image' ? h('img', { src: state.objectUrl, alt: name, onError: () => setState(previous => ({ ...previous, phase: 'error', message: '无法显示这张图片，请下载原文件查看。' })) })
+              : state.kind === 'video' || state.kind === 'audio' ? h(state.kind, {src:state.objectUrl,controls:true,playsInline:true,preload:'metadata',style:{width:'100%',maxHeight:'75vh'},'aria-label':'播放 '+name,onError:()=>setState(previous=>({...previous,phase:'error',message:'浏览器无法播放此媒体，请下载原文件查看。'}))})
               : state.kind === 'markdown' && MarkdownText ? h(MarkdownText, { text: state.content, streaming: false, labels: markdownLabels })
               : state.kind === 'table' ? table(state.content)
               : state.kind === 'office' ? state.content.map((part, i) => h('section', { key: i, className: 'geneloop-office-page' }, h('h2', null, part.title), part.rows ? table(part.rows) : part.paragraphs.map((p, j) => h('p', { key: j }, p))))
@@ -999,6 +1013,7 @@ window.__ModuleLoader__.load({
           const state = row => { if (alive.current) setDownloads(old => ({ ...old, [key]: row })); };
           state({ phase: 'pending', message: '正在准备下载…' });
           try {
+            if (nativeMediaDownload(value, lane, file)) { state({ phase: 'success', message: '已请求下载，请查看浏览器下载列表。' }); return; }
             const blob = await withDeadline(abort.signal, 60000, requestSignal => readArtifact(value, lane, file, requestSignal));
             if (abort.signal.aborted) return;
             const url = URL.createObjectURL(blob), link = document.createElement('a');
@@ -1564,9 +1579,10 @@ window.__ModuleLoader__.load({
         // navigation, focus, outside-click dismissal and atomic reference picks.
         const menuFaces = new WeakMap();
         function menuIcon(item) {
-          const key = item.value, color = key === 'ppt' ? '#c28b42' : key === 'research-data-analysis' ? '#42a99b' : key === 'paper-proofreading' ? '#729cf7' : 'currentColor';
+          const key = item.value, color = key === 'video-editing' ? '#bf87d7' : key === 'ppt' ? '#c28b42' : key === 'research-data-analysis' ? '#42a99b' : key === 'paper-proofreading' ? '#729cf7' : 'currentColor';
           const paths = key === 'ppt' ? ['M3 4h18v12H3zM12 16v5M8 21l4-5 4 5M7 8h10M7 12h6']
             : key === 'research-data-analysis' ? ['M4 3v17h17M8 16v-5M13 16V7M18 16V4']
+            : key === 'video-editing' ? ['M3 5h18v14H3zM7 5v14M17 5v14M3 10h4M3 15h4M17 10h4M17 15h4']
             : key === 'paper-proofreading' ? ['M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6']
             : ['M8 13l7-7a3 3 0 0 1 4 4l-9 9a5 5 0 0 1-7-7l9-9a7 7 0 0 1 10 10l-8 8'];
           return h('svg', { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.6,
@@ -2168,7 +2184,7 @@ window.__ModuleLoader__.load({
           return [...(!query && uploads.has(session.sessionId) ? [{ name: '添加照片或文件', value: 'upload', section: '添加', description: '从电脑上传' }] : []),
             ...value.scenes.filter(scene => selectableScene(scene) && shortcut(scene).startsWith(query)).map(scene => ({
             name: shortcut(scene), value: scene.id, section: '场景', description: scene.available === false
-              ? `暂不可用：${scene.unavailable_reason}` : ({ ppt: '演示文稿', 'paper-proofreading': '论文校对', 'research-data-analysis': '数据分析',files:'文件管理' })[scene.id] || scene.label,
+              ? `暂不可用：${scene.unavailable_reason}` : ({ ppt: '演示文稿', 'paper-proofreading': '论文校对', 'research-data-analysis': '数据分析','video-editing':'视频剪辑',files:'文件管理' })[scene.id] || scene.label,
           }))];
         },
         onPick: pick => {
@@ -2229,8 +2245,8 @@ window.__ModuleLoader__.load({
               id: `option:${field.key}=${JSON.stringify(choice.value)}`, label: choice.label,
               detail: choice.detail || field.label, active: (value.scene_options?.[field.key] ?? field.default) === choice.value,
             }))) : []),
-            ...(!value.paired_comparison && value.selection.scene !== 'files' ? ['baseline', 'shadow', 'execute'].map(mode => ({ id: `mode:${mode}`, label: modeLabel(mode), detail: modeDetail(mode), active: value.selection.mode === mode })) : []),
-            ...(!value.paired_comparison && value.selection.scene !== 'files' ? [true, false].map(rsi => ({ id: `rsi:${rsi ? 'on' : 'off'}`, label: `Motif 复用：${rsi ? '允许' : '关闭'}`, detail: rsi ? '需选择校验后复用模式；标准执行不受此开关影响' : '本轮按标准流程执行', active: value.selection.rsi === rsi })) : []),
+            ...(!value.paired_comparison && !['files','video-editing'].includes(value.selection.scene) ? ['baseline', 'shadow', 'execute'].map(mode => ({ id: `mode:${mode}`, label: modeLabel(mode), detail: modeDetail(mode), active: value.selection.mode === mode })) : []),
+            ...(!value.paired_comparison && !['files','video-editing'].includes(value.selection.scene) ? [true, false].map(rsi => ({ id: `rsi:${rsi ? 'on' : 'off'}`, label: `Motif 复用：${rsi ? '允许' : '关闭'}`, detail: rsi ? '需选择校验后复用模式；标准执行不受此开关影响' : '本轮按标准流程执行', active: value.selection.rsi === rsi })) : []),
           ];
         },
         onSelect: async (option, session) => {

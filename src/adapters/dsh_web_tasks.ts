@@ -323,7 +323,11 @@ export function apply(ctx: any) {
     if (sessionId) await ensureOwned(sessionId);
     settingsView(sessionId); // ownership before mutation
     const current = sessionId ? selections.get(sessionId) ?? defaults : defaults;
-    const next = changeSelection(current, patch, scenes, executeUnavailable);
+    // The video scene has no published Motif library: choose ordinary execution atomically.
+    const requested=patch as any;
+    const selectedPatch=requested?.scene==='video-editing'&&requested.mode===undefined&&requested.rsi===undefined
+      ? {...requested,mode:'baseline',rsi:false}:patch;
+    const next = changeSelection(current, selectedPatch, scenes, executeUnavailable);
     if (next.scene !== current.scene && sceneFor(next.scene).unavailable_reason)
       throw new TaskError('scene_not_connected', '该场景暂不可用：' + sceneFor(next.scene).unavailable_reason, 409);
     if (sessionId) {
@@ -528,7 +532,7 @@ export function apply(ctx: any) {
     });
     const value: any = await response.json();
     if (allowMissing && response.status === 404) return null;
-    if (!response.ok) throw new TaskError('budget_control_failed', value.error || 'Budget service refused request', 409);
+    if (!response.ok) throw new TaskError('budget_control_failed', value?.error || 'Budget service refused request', 409);
     return value;
   }
   async function broker(path: string, payload: unknown) {
@@ -740,12 +744,14 @@ export function apply(ctx: any) {
     let counters;
     try { counters = await control('/tasks/stats?session_id=' + encodeURIComponent(task.budget_session_id), undefined, terminal.has(task.status)); }
     catch (error) {
-      // A replaced budget process may no longer retain an old task route. Its
-      // persisted final usage is still evidence, never a new zero-cost budget.
-      // Active tasks and authorization/response errors remain fail-closed.
-      if (!terminal.has(task.status) || !(error instanceof TypeError || (error as Error).name === 'TimeoutError')) throw error;
+      // This is an observation, not model admission. A temporary transport
+      // failure must not fail a live comparison and detach its subscriber.
+      // Keep the last counters, mark them incomplete, and retry on the next
+      // poll. Register/activate/cancel and HTTP authorization errors still fail.
+      if (!(error instanceof TypeError || (error as Error).name === 'TimeoutError')) throw error;
+      Object.assign(task.stats, {usage_complete: false, usage_sync: 'pending'});
     }
-    if (counters) { const {request_receipts,...stats}=counters.stats??counters;Object.assign(task.stats,stats); }
+    if (counters) { const {request_receipts,...stats}=counters.stats??counters;Object.assign(task.stats,stats,{usage_sync:'current'}); }
     task.stats.model_requests = Number(task.stats.upstream_requests ?? 0);
     task.stats.actual_paid_usd = config.provider_mode === 'mock' ? 0 : null;
     if (task.started_at) task.stats.elapsed_seconds =
@@ -1281,9 +1287,11 @@ export function apply(ctx: any) {
     const reuseWorkspace = previousTask && scene.adapter && !firstSources;
     const sceneInputs = reuseWorkspace ? previousTask.scene_inputs : scene.adapter ? await bindSceneInputs(ctx, agents.get(request.session_id), workspace, scene,
       request.content, options, delivery.filter(part => part.type === 'text').map(part => (part as any).text).join('\n'), taskId) : [];
+    if(scene.adapter==='video')json(join(workspace,'video-output-grant.json'),{schema_version:1,task_id:taskId,allow_output:options.allow_output===true});
     const files = request.content.filter((part: any) => part.type === 'file');
     const contextInputFiles = reuseWorkspace ? [] : sceneInputs.filter((_row: any, index: number) =>
-      !internal.inherited_receipts?.has((files[index] as any)?.receiptId)).map((row: any) => row.file);
+      !internal.inherited_receipts?.has((files[index] as any)?.receiptId)).map((row: any) => row.file)
+      .filter((name:string)=>scene.adapter!=='video'||/\.(txt|md|json|pdf|docx?)$/i.test(name));
     // All approved originals stay bound for tools, but a historical source is
     // not a file uploaded by the user in this turn.
     const humanDelivery = delivery.filter((part: any) => part.type !== 'file' || !(internal.hidden_receipts??internal.inherited_receipts)?.has(part.receiptId));
@@ -1673,7 +1681,7 @@ export function apply(ctx: any) {
         }).filter((row:any)=>row.verification==='code-output-v1')
           .map((row:any)=>({turn:'native-'+task.request.task_id,task:task.request.task_id,lane:'baseline',row})));
       const result = await comparisons.admit(request.sessionId, { ...request, content }, {
-        scene: selected.scene, options: {...(scene.adapter === 'ppt' ? {allow_output:true} : {}),...(optionSelections.get(request.sessionId)?.[selected.scene] ?? {})},
+        scene: selected.scene, options: {...(['ppt','video'].includes(scene.adapter??'') ? {allow_output:true} : {}),...(optionSelections.get(request.sessionId)?.[selected.scene] ?? {})},
         prior_context_by_lane: readBranchInputs(request.sessionId)?.context,
         prior_evidence_by_lane:priorEvidenceByLane,
         presentation: config.comparison_scenes?.includes(selected.scene) ? 'paired' : 'single',
@@ -1807,6 +1815,7 @@ export function apply(ctx: any) {
           const accepts = (name: string) => {
             const suffix = extname(name).toLowerCase();
             if (target.adapter === 'ppt') return true;
+            if(target.adapter==='video')return /\.(mp4|mov|mkv|webm|mp3|wav|m4a|aac|ogg|png|jpg|jpeg|webp|gif|svg|tsx|txt|md|json)$/i.test(name);
             if (target.id === 'research-data-analysis') return ['.csv','.tsv','.json','.txt','.md'].includes(suffix);
             if (target.id === 'paper-proofreading') return ['.pdf','.docx','.doc','.tex','.bib','.bbl','.log','.md','.txt','.json'].includes(suffix);
             if (target.adapter === 'literature') return suffix === '.pdf';
@@ -2129,6 +2138,11 @@ export function apply(ctx: any) {
           model_requests_skipped_verified: 0 } }));
     });
   }, { global: true });
+  ctx.on('geneloop/presented-proof',(session:any,event:any)=>{
+    const task=forSession(session.id);
+    if(!task||task.status!=='running')return;
+    appendFileSync(join(task.output,'events.jsonl'),JSON.stringify(event)+'\n',{mode:0o600});
+  },{global:true});
   ctx.on('session/event', (session: any, event: any) => {
     if(closingTurns.record(session,event))return;
     const task = forSession(session.id); if (!task || task.status !== 'running') return;

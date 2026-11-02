@@ -83,4 +83,6 @@ class SessionReport:
         path.write_text(json.dumps(receipt,ensure_ascii=False),encoding='utf-8');path.chmod(0o600)
         os.rename(staging,destination)
         return {'exported':True,'page_count':result['page_count'],'artifacts':receipt['files'],
+                'read_paths':{row['name']:'/artifacts/'+row['name'].removeprefix('outputs/')
+                    for row in receipt['files']},
                 'scope':'source_bound_review_not_statistical_or_authenticity_certification'}

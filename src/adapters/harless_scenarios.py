@@ -86,7 +86,7 @@ def prepare_scene_registry(root: Path, registry_path: Path, *, default_id: str, 
             continue
         if type(row.get('diagnostic', False)) is not bool: raise ValueError('diagnostic must be boolean')
         scene['diagnostic'] = row.get('diagnostic', False)
-        if row.get('adapter') not in (None, 'ppt', 'workspace', 'files', 'literature', 'data-report'): raise ValueError('unsupported scene adapter')
+        if row.get('adapter') not in (None, 'ppt', 'workspace', 'files', 'literature', 'data-report', 'video'): raise ValueError('unsupported scene adapter')
         if 'ppt_execution_strategy' in row and (row.get('adapter')!='ppt' or row['ppt_execution_strategy'] not in ('host_delivery','baseline_steps','ppt_master')):
             raise ValueError('invalid server-owned PPT execution strategy')
         path = (root / row['scenario']).resolve(strict=True)
@@ -98,10 +98,20 @@ def prepare_scene_registry(root: Path, registry_path: Path, *, default_id: str, 
                      embedding_endpoint=embedding_endpoint, embedding_model=embedding_model)
         if row.get('adapter'):
             scene.update(adapter=row['adapter'], mcp_rows=prepared['mcp_rows'], environment_references=prepared['environment_references'])
-        if row.get('adapter') in ('data-report','ppt') or row['id']=='paper-proofreading':
+        if row.get('adapter') in ('data-report','ppt','video') or row['id']=='paper-proofreading':
             for mcp in scene['mcp_rows']:
-                if mcp['config']['serverName'] in ('research_report','paper_trace_rsi','ppt'):
+                if mcp['config']['serverName'] in ('research_report','paper_trace_rsi','ppt','remotion'):
                     mcp['config'].setdefault('env',{})['HARLESS_PRIVATE_ROOT']=str(output.resolve())
+        if row.get('adapter') == 'video':
+            try:
+                config_path=Path(os.environ['GENELOOP_VIDEO_RENDERER_CONFIG'])
+                value=json.loads(config_path.read_text())
+                if set(value)!={'image','runtimeRoot','mediaToolsRoot'} or not re.fullmatch('sha256:[a-f0-9]{64}',value['image']):raise ValueError('invalid video installation')
+                for name in ('runtimeRoot','mediaToolsRoot'):_fixed_dependency(Path(value[name]),directory=True)
+                package=json.loads((Path(value['runtimeRoot'])/'node_modules/remotion/package.json').read_text())
+                if package['version']!='4.0.539':raise ValueError('unreviewed Remotion version')
+                scene['video_renderer_sha256']=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+            except (KeyError,OSError,ValueError):scene['unavailable_reason']='video_renderer_not_deployed'
         if row.get('adapter') == 'literature':
             from .harless_pdf_deployment import configure_pdf_parser
             try: configure_pdf_parser(scene)
