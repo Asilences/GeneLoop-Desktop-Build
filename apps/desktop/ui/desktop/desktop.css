@@ -39,3 +39,27 @@
 .result-ratings>span{padding-inline:4px}
 .result-ratings button{min-width:28px;padding-inline:4px}
 .result-metrics{padding-inline:4px}
+.workspace-home{max-width:780px;margin:18px auto 28px}
+.workspace-home-heading,.workspace-home-name,.workspace-recent-heading,.workspace-start>span{display:flex;align-items:center;gap:12px}
+.workspace-home-heading,.workspace-recent-heading{justify-content:space-between}
+.workspace-home-heading{margin-bottom:32px}
+.workspace-home-name{min-width:0}
+.workspace-home-name h2{margin:0;font-size:25px;overflow-wrap:anywhere}
+.workspace-home-name p,.workspace-recent-heading>span{margin:0;color:var(--muted);font-size:12px}
+.workspace-home-icon{display:grid;place-items:center;width:46px;height:46px;flex-shrink:0;border-radius:12px;background:var(--selection);color:var(--blue)}
+.workspace-start{white-space:nowrap}
+.workspace-start svg{width:16px;height:16px}
+.workspace-recent-heading{padding:0 0 9px;border-bottom:1px solid var(--line)}
+.workspace-recent-heading h3{margin:0;font-size:15px}
+.workspace-recent-list{list-style:none;margin:0;padding:0}
+.workspace-recent-list li+li{border-top:1px solid var(--line)}
+.workspace-recent-link{width:100%;padding:14px 10px;border-radius:8px;text-align:left}
+.workspace-recent-content,.workspace-recent-meta{display:flex;align-items:center;gap:12px}
+.workspace-recent-content{justify-content:space-between;flex-wrap:wrap;row-gap:4px}
+.workspace-recent-title{font-weight:550;overflow-wrap:anywhere}
+.workspace-recent-meta{color:var(--muted);font-size:12px}
+.workspace-running{color:var(--blue);background:var(--selection);padding:2px 7px;border-radius:7px}
+.workspace-empty{padding:32px 10px;text-align:center}
+.workspace-empty h4{margin:0}
+.workspace-empty p{color:var(--muted);font-size:13px;margin:7px 0 16px}
+.workspace-empty .scene-cards{margin-inline:auto}

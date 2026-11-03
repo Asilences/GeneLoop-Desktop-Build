@@ -38,7 +38,14 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('[data-action="workspace-home"]').click()`);
  assert.equal(await evaluate(`document.getElementById('session-title').textContent`),'诊断工作区');
  assert.equal(await evaluate(`document.querySelector('.session-row.active')===null`),true);
- await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
+ assert.equal(await evaluate(`document.getElementById('prompt').placeholder`),'在「诊断工作区」中开始新会话');
+ assert.equal(await evaluate(`document.querySelector('.tabs').hidden&&document.getElementById('session-actions').hidden`),true);
+ assert.equal(await evaluate(`document.querySelector('.workspace-home .prompt-example')===null`),true);
+ await evaluate(`[...document.querySelectorAll('.workspace-row')].find(row=>row.textContent==='空工作区').click()`);
+ assert.equal(await evaluate(`!!document.querySelector('.workspace-empty .prompt-example')&&!document.querySelector('.workspace-recent-link')`),true);
+ await evaluate(`[...document.querySelectorAll('.workspace-row')].find(row=>row.textContent==='诊断工作区').click()`);
+ await evaluate(`[...document.querySelectorAll('.workspace-recent-link')].find(row=>row.textContent.includes('协议诊断历史')).click()`);
+ assert.equal(await evaluate(`!document.querySelector('.tabs').hidden&&!document.getElementById('session-actions').hidden`),true);
  assert.equal(await evaluate(`document.getElementById('history').textContent.includes('Motif执行结果')`),true);
  check('工作区菜单切到工作区首页，重复点击不清空会话，返回时立即显示缓存');
  await evaluate(`document.getElementById('new-session').click()`);
