@@ -1,3 +1,9 @@
+!macro customWelcomePage
+  !insertmacro skipPageIfUpdated
+  !define MUI_WELCOMEPAGE_TITLE "GeneLoop Desktop"
+  !insertmacro MUI_PAGE_WELCOME
+!macroend
+
 ; electron-builder 使用 x86 Unicode NSIS。PROCESSENTRY32W 为 556 字节，
 ; szExeFile 位于偏移 36。只读系统快照，不打开其他程序的进程句柄。
 !macro geneLoopFindProcess RESULT

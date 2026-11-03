@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.2.26",
+  "version": "0.2.27",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -34,11 +34,13 @@
     "productName": "GeneLoop Desktop",
     "asar": true,
     "directories": { "output": "release", "buildResources": "assets" },
-    "files": ["dist/**/*", "ui/**/*", "assets/**/*", "package.json"],
+    "files": ["dist/**/*", "ui/**/*", "assets/**/*", "!assets/installer*.bmp", "package.json"],
     "publish": null,
     "win": { "target": ["nsis"], "icon": "assets/icon.ico" },
     "nsis": {
       "include": "installer.nsh",
+      "installerHeader": "assets/installerHeader.bmp",
+      "installerSidebar": "assets/installerSidebar.bmp",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
