@@ -44,10 +44,12 @@ copyFileSync(join(repo, 'src/adapters/brand/geneloop-spiral.svg'), join(assets, 
 manifest.scenes = JSON.parse(readFileSync(join(repo, 'config/harless-scenes.json'), 'utf8')).scenes.map(({ id, label }) => ({ id, label }));
 writeFileSync(join(assets, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 writeFileSync(join(assets, 'THIRD_PARTY_NOTICES.md'), '# GeneLoop Desktop bundled client packages\n\n' + licenses.join('\n'));
-await sharp(join(assets, 'geneloop-spiral.svg')).resize(512, 512, { fit: 'contain', background: '#161618' }).png().toFile(join(assets, 'icon.png'));
+// 图标保持 SVG 的透明背景；非正方形 viewBox 的补边也必须透明。
+const iconResize = { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } };
+await sharp(join(assets, 'geneloop-spiral.svg')).resize(512, 512, iconResize).png().toFile(join(assets, 'icon.png'));
 // Windows 原生 ICO 使用同一品牌 SVG 的多尺寸 PNG 帧，避免构建时再下载转换程序。
 const sizes = [16, 32, 48, 64, 128, 256];
-const frames = await Promise.all(sizes.map(size => sharp(join(assets, 'geneloop-spiral.svg')).resize(size, size, { fit: 'contain', background: '#161618' }).png().toBuffer()));
+const frames = await Promise.all(sizes.map(size => sharp(join(assets, 'geneloop-spiral.svg')).resize(size, size, iconResize).png().toBuffer()));
 const header = Buffer.alloc(6 + frames.length * 16);
 header.writeUInt16LE(1, 2); header.writeUInt16LE(frames.length, 4);
 let offset = header.length;
