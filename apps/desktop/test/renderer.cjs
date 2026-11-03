@@ -31,6 +31,16 @@ app.whenReady().then(async()=>{
  check('无标题空会话不占历史列表，首页示例只填草稿并保护已有文字');
  await evaluate(`document.querySelector('.session-row').click()`);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'历史双路结果');
+ await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
+ assert.equal(await evaluate(`document.getElementById('history').textContent.includes('Motif执行结果')`),true);
+ await evaluate(`document.querySelector('.workspace-entry').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}))`);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('.context-menu button')].map(button=>button.dataset.action)`),['workspace-home','workspace-new','workspace-pin','workspace-rename']);
+ await evaluate(`document.querySelector('[data-action="workspace-home"]').click()`);
+ assert.equal(await evaluate(`document.getElementById('session-title').textContent`),'诊断工作区');
+ assert.equal(await evaluate(`document.querySelector('.session-row.active')===null`),true);
+ await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
+ assert.equal(await evaluate(`document.getElementById('history').textContent.includes('Motif执行结果')`),true);
+ check('工作区菜单切到工作区首页，重复点击不清空会话，返回时立即显示缓存');
  await evaluate(`document.getElementById('new-session').click()`);
  assert.equal(await evaluate(`document.getElementById('prompt').value`),'自己的草稿');
  await evaluate(`document.querySelector('[data-session-id="history"]').click()`);

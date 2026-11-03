@@ -4,6 +4,7 @@ export const button=(label,click,cls='')=>node('button',{type:'button',class:cls
 export function icon(name){
   if(name==='chevron-down')return vector('m7 10 5 5 5-5');
   if(name==='check')return vector('m5 12 4 4L19 6');
+  if(name==='pin')return vector('m9 15-5 5m6-15 4-2 7 7-2 4-4 1-2 3-7-7 3-2Z');
   if(name==='archive')return vector('M4 4h16v4H4ZM5 8v12h14V8M10 12h4');
   if(name==='trash')return vector('M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7');
   if(name==='copy')return vector('M9 8V3h12v13h-5M3 8h13v13H3Z');

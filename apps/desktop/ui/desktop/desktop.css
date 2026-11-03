@@ -22,3 +22,20 @@
 .settings-nav button[aria-current=true]{background:var(--selection);color:var(--blue)}
 .settings-body>h3:first-child{margin-top:4px}
 @media(max-width:650px){.settings-layout{grid-template-columns:128px minmax(0,1fr)}.settings-body{padding-inline:12px}}
+.workspace-entry{position:relative}
+.workspace-entry .workspace-row{padding-right:42px}
+.workspace-entry:hover .workspace-row,.workspace-entry:focus-within .workspace-row{background:var(--hover)}
+.workspace-more{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;opacity:0}
+.workspace-entry:hover .workspace-more,.workspace-entry:focus-within .workspace-more,.workspace-row[aria-current=true]+.workspace-more{opacity:1}
+.workspace-more:hover{background:var(--gl-canvas)}
+@media(hover:none){.workspace-more{opacity:1}}
+.result-actions{gap:8px;margin-top:14px}
+.result-actions button{min-height:30px;padding:4px 9px;border:1px solid var(--line);border-radius:8px;background:var(--gl-canvas);color:var(--gl-ink);font-size:12px}
+.result-actions button>span{display:flex;align-items:center;gap:5px}
+.result-actions button svg{width:14px;height:14px}
+.result-actions button:hover{background:var(--hover);border-color:var(--muted)}
+.result-actions button.selected{border-color:var(--blue);background:var(--selection);color:var(--blue)}
+.result-ratings{display:flex;align-items:center;gap:4px}
+.result-ratings>span{padding-inline:4px}
+.result-ratings button{min-width:28px;padding-inline:4px}
+.result-metrics{padding-inline:4px}
