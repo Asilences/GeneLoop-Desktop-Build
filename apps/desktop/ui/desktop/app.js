@@ -22,6 +22,7 @@ const newWorkspaceDrafts=new Map();
 let activeWorkspaceDraft=null;
 let awaitingHistory=false,historyError='';
 let pinnedWorkspaces=[];
+let directoryRequest=0;
 let homeDelivery=null;
 function changeSelection(action){const operation=selectionChange.catch(()=>{}).then(action);selectionChange=operation;return operation;}
 const errorText=error=>error?.message||String(error);
@@ -60,7 +61,11 @@ async function connectWorkspace(){
     if(frame.type==='baseline'){state.workspaces=frame.value.items||[];state.archived=new Set(frame.value.archivedSessionIds||[]);}
     if(frame.type==='upsert'){const at=state.workspaces.findIndex(row=>row.workspaceId===frame.workspace.workspaceId);if(at<0)state.workspaces.push(frame.workspace);else state.workspaces[at]=frame.workspace;}
     if(frame.type==='remove')state.workspaces=state.workspaces.filter(row=>row.workspaceId!==frame.workspaceId);
-    if(frame.type==='archived')state.archived=new Set(frame.archivedSessionIds);
+    if(frame.type==='archived'){
+      state.archived=new Set(frame.archivedSessionIds);
+      // The server also emits this projection when reversible trash changes.
+      loadSessions({closeDeleted:true}).catch(()=>{});
+    }
     if(frame.type==='order')state.workspaces.sort((a,b)=>frame.workspaceIds.indexOf(a.workspaceId)-frame.workspaceIds.indexOf(b.workspaceId));renderSidebar();if(!state.session)scheduleRender();
   },warning);
   eventFollow=await streams.follow('$events',undefined,frame=>{handleEvent(frame).catch(fail);},warning);
@@ -69,7 +74,20 @@ async function connectWorkspace(){
   clearInterval(pollTimer);pollTimer=setInterval(()=>{if(state.session)refreshTaskPanels().catch(()=>{});},4000);
   if(state.session&&state.sessions.some(row=>row.sessionId===state.session))await selectSession(state.session,{force:true});else state.session=null;
 }
-async function loadSessions(){const value=await rpc('session/list',{});if(!Array.isArray(value.items))throw Error('会话目录响应不兼容');state.sessions=value.items.filter(row=>row.origin!=='subagent');renderSidebar();if(state.session||state.workspace)scheduleRender();}
+async function loadSessions({closeDeleted=false}={}){
+  const revision=++directoryRequest,user=state.user;
+  const value=await rpc('session/list',{});
+  if(!Array.isArray(value.items))throw Error('会话目录响应不兼容');
+  if(user!==state.user||revision!==directoryRequest)return;
+  state.sessions=value.items.filter(row=>row.origin!=='subagent');
+  const id=state.session;
+  if(closeDeleted&&id&&!creatingSession&&!state.submitting&&!state.sessions.some(row=>row.sessionId===id)){
+    openWorkspace(state.workspace);
+    state.drafts.delete(id);historyCache.delete(id);
+  }
+  renderSidebar();
+  if(state.session||state.workspace)scheduleRender();
+}
 function visibleSession(row){
   if(!row||state.archived.has(row.sessionId)||[...newWorkspaceDrafts.values()].some(draft=>draft.sessionId===row.sessionId))return false;
   const draft=state.drafts.get(row.sessionId);

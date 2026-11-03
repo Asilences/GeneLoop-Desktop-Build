@@ -136,5 +136,12 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`document.getElementById('prompt').value`),'工作区草稿诊断');
  await evaluate(`document.getElementById('composer').requestSubmit()`);
  await until(()=>evaluate(`!document.querySelector('.workspace-draft')&&!!document.querySelector('${draftGroup} [data-session-id]')`),'草稿转为工作区正式对话');
+ await evaluate(`document.querySelector('[data-session-id="history"] button').click()`);
+ await until(()=>evaluate(`document.getElementById('session-title').textContent==='协议诊断历史'`),'打开跨端删除测试会话');
+ const externalTrash=action=>evaluate(`fetch('/api/fixture/external-trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'${action}'})}).then(response=>response.ok)`);
+ assert.equal(await externalTrash('delete'),true);
+ await until(()=>evaluate(`!document.querySelector('[data-session-id="history"]')&&document.getElementById('session-title').textContent==='诊断工作区'`),'另一端删除后侧栏和当前对话同步关闭');
+ assert.equal(await externalTrash('restore'),true);
+ await until(()=>evaluate(`!!document.querySelector('[data-session-id="history"]')`),'另一端恢复后侧栏同步');
  report.ok=true;
 }).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');}catch{}console.error(error);}).finally(()=>{writeFileSync(join(fixture.output,'summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));desktop?.permitClose();app.quit();});

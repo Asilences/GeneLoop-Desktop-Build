@@ -33,6 +33,11 @@ const server=createServer(async(req,res)=>{
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
   if(path==='/api/harless/tasks')return json(res,{tasks:[]});
+  if(path==='/api/fixture/external-trash'){
+   if(body.action==='delete')deleted.add('history');else deleted.delete('history');
+   push('workspace/follow',{type:'archived',archivedSessionIds:[...archived]});
+   return json(res,{ok:true});
+  }
   if(path==='/api/harless/session-trash'){
    const id=body.session_id;
    if(body.action==='archive')archived.add(id);
