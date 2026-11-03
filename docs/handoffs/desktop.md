@@ -1,6 +1,7 @@
 # GeneLoop Desktop 当前交接
 
 - 更新时间与交接人：2026-11-03，Codex。
+- 本轮图标修正：`5cc241d` / 0.1.1，仅保留现有彩色纽带，PNG与ICO使用透明补边。512px PNG、ICO六个尺寸通过alpha/颜色检查；ASAR内图标与源文件一致，Windows可执行文件中六帧均为相同透明PNG字节。构建exit 0，安装器125753709字节，SHA256 `cdd6bdb4c934352c38a1912b7dfc07e740b3cf611a99e4152425c621e01cdc50`。默认构建曾下载超时，改用 `npm --prefix apps/desktop run dist -- --config.electronDist=node_modules/electron/dist` 复用已安装的45.2.1运行时完成；未改聊天或服务器代码，无模型调用，未重复全量测试。原0.1.0记录保留如下。
 - 目标与本次范围：独立 GeneLoop Desktop，参考 DSH 桌面宿主；界面、场景交互与视觉复用 GeneLoop 网页版。第一阶段 Agent/工具留在服务器，后续逐步增加本机执行。
 - 分支 / commit / 工作区未提交改动：`codex/geneloop-desktop-remote`，基于远程 ls-remote/fetch 核实的 GitHub main `2f29d34`，独立检出 `.local/desktop-worktree-20261103`。F0/F1/F2 已分别提交 `2e72a5d` / `f8afe72` / `33e1e35`；最终应用修复及安装包源码 `dc5aa18`，Windows验收脚本路径修正与交接随后提交。未推送或合并；原 PPT 分支和两份未跟踪实验文档未动。
 - 已完成：本地打包固定 DSH 原生前端、56 客户端模块及 GeneLoop 品牌/主题/工作区/场景交互；54 节点实际启用图从服务器获取 JSON。桌面拥有标题栏、菜单、托盘、窗口设置、下载和重连。原远程整站窗口原型已替换，未改上游或生产服务。
