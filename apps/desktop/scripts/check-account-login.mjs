@@ -41,6 +41,11 @@ try {
   const child = spawn(require('electron'), ['test/account-login.cjs'], { cwd: app, env: environment, stdio: 'inherit', windowsHide: true });
   const [code] = await once(child, 'exit');
   result = code ?? 1;
+  if(result===0){
+    const restarted=spawn(require('electron'),['test/account-login.cjs'],{cwd:app,env:{...environment,GENELOOP_DESKTOP_ACCOUNT_RESTART:'1'},stdio:'inherit',windowsHide:true});
+    const [restartCode]=await once(restarted,'exit');
+    result=restartCode??1;
+  }
 } finally {
   const closed = once(gateway.server, 'close');
   gateway.close(); await closed;

@@ -33,9 +33,26 @@ export class LocalFrontendHost {
       }
       if(!path.startsWith('/api/'))return new Response('Desktop resource not found',{status:404});
       const headers=new Headers(request.headers);if(request.initiatorOrigin!==undefined)headers.set('origin',request.initiatorOrigin);
+      const remember=headers.get('x-geneloop-remember-login')==='1'&&request.method==='POST'&&
+        request.credentials!=='omit'&&['/api/account/login','/api/account/register'].includes(path);
+      headers.delete('x-geneloop-remember-login');
       this.served.network++;
-      const remote=await session.fetch(request,{headers,credentials:request.credentials==='omit'?'omit':'include',bypassCustomProtocolHandlers:true});
+      const remote=await session.fetch(request,{headers,credentials:request.credentials==='omit'?'omit':'include',bypassCustomProtocolHandlers:true,
+        ...(remember?{redirect:'error' as const}:{})});
       const next=new Headers(remote.headers);for(const key of ['content-encoding','content-length','transfer-encoding','connection','keep-alive'])next.delete(key);
+      if(remember&&remote.ok){
+        const issued=next.getSetCookie().find(cookie=>cookie.startsWith('harless_sess='));
+        const value=issued?.match(/^harless_sess=([A-Za-z0-9_-]{30,100});/)?.[1];
+        if(issued&&value&&!/;\s*(max-age|expires|domain)=/i.test(issued)){
+          try{
+            await session.cookies.set({url:server,name:'harless_sess',value,path:'/',httpOnly:true,
+              secure:origin.startsWith('https:'),sameSite:'lax',expirationDate:Math.floor(Date.now()/1000)+7*86400});
+            await session.cookies.flushStore();
+            next.delete('set-cookie');
+            for(const cookie of remote.headers.getSetCookie())if(cookie!==issued)next.append('set-cookie',cookie);
+          }catch{ /* 登录本身已成功，存储不可用时保留服务器响应。 */ }
+        }
+      }
       return new Response(remote.body,{status:remote.status,statusText:remote.statusText,headers:next});
     }catch{return Response.json({error:{code:'desktop/network',message:'服务器暂时无法连接，请检查网络后重试。'}},{status:503});}
   }

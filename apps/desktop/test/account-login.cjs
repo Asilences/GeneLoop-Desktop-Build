@@ -17,12 +17,24 @@ async function until(fn,label){const deadline=Date.now()+15_000;while(Date.now()
 app.whenReady().then(async()=>{
   assert.equal(app.isPackaged,false);
   const {LocalFrontendHost}=await import(pathToFileURL(resolve(__dirname,'../dist/frontend.js')).href);
-  const remote=session.fromPartition('account-diagnostic');
+  const remote=session.fromPartition('persist:account-diagnostic');
   host=new LocalFrontendHost({session:remote,server:fixture.server+'/',assets:resolve(__dirname,'../assets'),ui:resolve(__dirname,'../ui/desktop'),fail:assert.fail});
   host.install();
   window=new BrowserWindow({show:false,webPreferences:{session:remote,nodeIntegration:false,contextIsolation:true,sandbox:true}});
   await window.loadURL(fixture.server+'/login?next=%2Faccount');
   const evaluate=code=>window.webContents.executeJavaScript(code);
+  if(process.env.GENELOOP_DESKTOP_ACCOUNT_RESTART==='1'){
+    assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user?.username)"),fixture.username);
+    check('完整退出 Electron 并重启后，无需重新输入密码');
+    await evaluate("fetch('/api/account/logout',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(()=>location.reload())");
+    await until(()=>evaluate('!document.getElementById("auth").hidden'),'退出后独立登录界面');
+    assert.equal((await remote.cookies.get({url:fixture.server,name:'harless_sess'})).length,0);
+    assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user)"),null);
+    assert.deepEqual(await evaluate("[document.getElementById('login-user').value,document.getElementById('login-pass').value]"),[fixture.username,'']);
+    check('主动退出清除会话，只预填记住的用户名');
+    report.ok=true;
+    return;
+  }
   await until(()=>evaluate('!document.getElementById("auth").hidden'),'独立桌面登录表单');
   assert.equal(await evaluate("document.getElementById('auth-server').textContent === '连接到 ' + location.origin && !document.getElementById('auth-server').hidden"),true);
   const submit=async password=>evaluate(`document.getElementById('login-user').value=${JSON.stringify(fixture.username)};document.getElementById('login-pass').value=${JSON.stringify(password)};document.getElementById('login-form').requestSubmit();`);
@@ -34,19 +46,15 @@ app.whenReady().then(async()=>{
   await until(()=>evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user?.username==="+JSON.stringify(fixture.username)+")"),'原网关认证成功');
   const cookies=await remote.cookies.get({url:fixture.server,name:'harless_sess'});
   assert.equal(cookies.length,1);assert.equal(cookies[0].httpOnly,true);
+  assert.equal(cookies[0].session,false);
   assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user.username)"),fixture.username);
   check('正确的临时账号可登录，HttpOnly Cookie生效并读取同一网关账户');
   const reloaded=once(window.webContents,'did-finish-load');window.webContents.reload();await reloaded;
   assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user.username)"),fixture.username);
   check('刷新独立页面后，服务器HttpOnly登录状态仍保持（本夹具未启动Agent工作空间）');
-  await evaluate("fetch('/api/account/logout',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(()=>location.reload())");
-  await until(()=>evaluate('!document.getElementById("auth").hidden'),'退出后独立登录界面');
-  assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user)"),null);
-  assert.equal((await remote.cookies.get({url:fixture.server,name:'harless_sess'})).length,0);
-  check('退出走原网关POST，服务器会话与本机会话Cookie失效');
   report.ok=true;
 }).catch(error=>{report.ok=false;report.error=String(error.stack);console.error(error);}).finally(()=>{
   if(window&&!window.isDestroyed())window.destroy();host?.dispose();
-  writeFileSync(join(fixture.output,'account-summary.json'),JSON.stringify(report,null,2)+'\n');
+  writeFileSync(join(fixture.output,process.env.GENELOOP_DESKTOP_ACCOUNT_RESTART==='1'?'restart-summary.json':'account-summary.json'),JSON.stringify(report,null,2)+'\n');
   console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));app.exit(report.ok?0:1);
 });

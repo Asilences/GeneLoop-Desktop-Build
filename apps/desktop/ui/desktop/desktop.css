@@ -63,3 +63,4 @@
 .workspace-empty h4{margin:0}
 .workspace-empty p{color:var(--muted);font-size:13px;margin:7px 0 16px}
 .workspace-empty .scene-cards{margin-inline:auto}
+.auth-card .auth-remember{display:flex;align-items:center;gap:8px;color:var(--muted)}.auth-remember input{width:15px;height:15px;margin:0;accent-color:var(--blue)}
