@@ -18,6 +18,21 @@ def inputs():
     return snapshot, task, audit, operation, names
 
 
+@pytest.mark.parametrize('source', ["# 中文\ndef run(value):\n    return value\n",
+                                    "def run(value):\r\n    return value\r\n"])
+def test_source_writer_preserves_bytes_with_windows_text_defaults(tmp_path, monkeypatch, source):
+    original_open = pilot.Path.open
+    def windows_text_open(path, mode='r', *args, **kwargs):
+        if mode == 'w' and kwargs.get('newline') is None:
+            kwargs['newline'] = '\r\n'
+        return original_open(path, mode, *args, **kwargs)
+    monkeypatch.setattr(pilot.Path, 'open', windows_text_open)
+    path = tmp_path/'source.py'
+    pilot.write(path, source)
+    assert path.read_bytes() == source.encode('utf-8')
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == pilot.sha(source)
+
+
 def test_public_entry_keeps_new_algorithm_and_exact_intent_for_native_acquire(tmp_path, monkeypatch):
     snapshot, task, audit, _, names = inputs()
     original = copy.deepcopy(snapshot)

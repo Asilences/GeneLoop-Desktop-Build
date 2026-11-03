@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from scenarios.paper_proofreading.frontier.author import source_primary_context
 from scenarios.paper_proofreading.frontier.prepare_D import authoring_presentation
 from src.adapters.capability_authoring import authoring_context,aliases
@@ -96,6 +98,19 @@ def test_semantic_file_hash_fields_and_null_feedback_are_not_host_metadata(tmp_p
         'feedback':{'checks':[{'expected':expected,'actual':None}]}}
     view=source_primary_context(full)
     assert view['repair']['feedback']['checks']==[{'expected':expected,'actual':None}]
+
+
+@pytest.mark.parametrize('host_path', ['/private/source', r'C:\private\source',
+    'C:/private/source', r'\\server\share\source', r'\private\source', 'C:cache/source'])
+def test_host_evidence_paths_are_filtered_independently_of_current_os(tmp_path, host_path):
+    d=data(tmp_path);full=context(d.task,d.after)
+    semantic={'path':'refs.bib','sha256':'semantic_version'}
+    full['repair']={'previous_answer':'{}','previous_result':{'status':'failed'},
+        'feedback':{'evidence':[{'path':host_path,'sha256':'HOST'}],'expected':semantic}}
+    original=copy.deepcopy(full)
+    feedback=source_primary_context(full)['repair']['feedback']
+    assert feedback['evidence']==[] and feedback['expected']==semantic
+    assert full==original  # Filtering the model view preserves the host audit.
 
 
 def test_profile_selects_new_view_without_changing_legacy_presentation():

@@ -95,7 +95,8 @@ def sha(raw):
 
 def write(path, value):
     raw = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)+'\n'
-    with Path(path).open('w', encoding='utf-8') as stream:
+    # Source digests describe exact UTF-8 bytes; Windows must not add CR bytes.
+    with Path(path).open('w', encoding='utf-8', newline='') as stream:
         os.chmod(path, 0o600)
         stream.write(raw)
 

@@ -49,7 +49,7 @@ def test_located_native_acquisition_failure_repairs_same_attempt_context_without
     parent,feedback=count[1]
     assert parent.name=='attempt-0' and feedback['error']=='native_source_rejected'
     assert feedback['diagnostics']['issues'][0]['path']==['program','source']
-    assert feedback['acquisition_ref']['path'].endswith('/attempt-0/acquisition.json')
+    assert Path(feedback['acquisition_ref']['path']).parts[-2:]==('attempt-0','acquisition.json')
     assert [(name,row['status']) for name,row,_ in records]==[('attempt-0','failed'),('attempt-1','compiled_candidate')]
     assert sum(row.get('observed_model_usd') or 0 for _,row,_ in records)==0.125
     path,raw=original[0];assert path.read_bytes()==raw and read(path)['status']=='deferred'

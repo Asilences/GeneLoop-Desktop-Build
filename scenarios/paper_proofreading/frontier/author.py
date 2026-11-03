@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import copy
 import ast
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import time
 from uuid import uuid4
 
@@ -54,7 +54,9 @@ def _diagnostic_view(value,aliases):
     if not isinstance(value,dict):return copy.deepcopy(value)
     if set(value)=={'id','sha256'} and isinstance(value.get('id'),str) and value['id'].startswith('cap_'):
         return {'current_alias':aliases.get((value['id'],value['sha256']),'unavailable_reference')}
-    if isinstance(value.get('path'),str) and isinstance(value.get('sha256'),str) and Path(value['path']).is_absolute():return _OMIT
+    if isinstance(value.get('path'),str) and isinstance(value.get('sha256'),str):
+        path=value['path'];windows=PureWindowsPath(path)
+        if PurePosixPath(path).is_absolute() or windows.drive or windows.root:return _OMIT
     return {key:item for key,child in value.items() if key not in _HOST_DIAGNOSTIC_FIELDS
         and (item:=_diagnostic_view(child,aliases)) is not _OMIT}
 
