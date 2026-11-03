@@ -54,7 +54,7 @@ internal sealed class InstallerWindow : Window
         hero.Children.Add(new Image { Source = logo, Width = 64, Height = 64, HorizontalAlignment = HorizontalAlignment.Center });
         hero.Children.Add(Text("GeneLoop Desktop", 25, "#192232", true));
         hero.Children.Add(Text("让研究，向前一步。", 13, "#495B71", false));
-        install = MakeButton(target.Existing ? "立即升级" : "立即安装", true);
+        install = MakeButton("立即安装", true);
         install.Width = 222;
         install.Margin = new Thickness(0, 22, 0, 4);
         install.IsDefault = true;
@@ -74,14 +74,11 @@ internal sealed class InstallerWindow : Window
         pathLabel = Text(target.Path, 12, "#263850", false);
         pathLabel.TextAlignment = TextAlignment.Left;
         options.Children.Add(pathLabel);
-        options.Children.Add(Text(target.Machine ? "沿用已有的所有用户安装" : target.Existing ? "沿用已有的当前用户安装" : "仅为当前 Windows 用户安装", 11, "#526277", false));
-        if (!target.Existing)
-        {
-            var browse = MakeButton("更改位置…", false);
-            browse.HorizontalAlignment = HorizontalAlignment.Left;
-            browse.Click += delegate { ChooseFolder(); };
-            options.Children.Add(browse);
-        }
+        options.Children.Add(Text(target.Machine ? "为所有 Windows 用户安装" : "仅为当前 Windows 用户安装", 11, "#526277", false));
+        var browse = MakeButton("更改位置…", false);
+        browse.HorizontalAlignment = HorizontalAlignment.Left;
+        browse.Click += delegate { ChooseFolder(); };
+        options.Children.Add(browse);
         details.Click += delegate
         {
             bool open = options.Visibility != Visibility.Visible;
@@ -94,13 +91,25 @@ internal sealed class InstallerWindow : Window
     {
         using (var dialog = new Forms.FolderBrowserDialog())
         {
-            dialog.Description = "选择 GeneLoop Desktop 的安装目录";
+            dialog.Description = "选择安装位置，GeneLoop Desktop 将放在独立文件夹中";
+            if (Directory.Exists(target.Path)) dialog.SelectedPath = target.Path;
             if (dialog.ShowDialog() != Forms.DialogResult.OK) return;
             string root = Path.GetFullPath(dialog.SelectedPath).TrimEnd(Path.DirectorySeparatorChar);
+            if (String.Equals(root, target.Path.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                return;
             target.Path = String.Equals(Path.GetFileName(root), "GeneLoop Desktop", StringComparison.OrdinalIgnoreCase)
                 ? root : Path.Combine(root + Path.DirectorySeparatorChar, "GeneLoop Desktop");
             pathLabel.Text = target.Path;
         }
+    }
+
+    internal void VerifyLocationControls()
+    {
+        details.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        if (options.Visibility != Visibility.Visible || pathLabel.Text != target.Path ||
+            !(options.Children[options.Children.Count - 1] is Button) ||
+            !Object.Equals(install.Content, "立即安装"))
+            throw new InvalidOperationException("安装位置选项未能展开。");
     }
 
     private async Task RunInstallation()
@@ -110,7 +119,7 @@ internal sealed class InstallerWindow : Window
         install.IsEnabled = close.IsEnabled = details.IsEnabled = false;
         options.Visibility = Visibility.Collapsed;
         details.Content = "安装位置  ▾";
-        install.Content = target.Existing ? "正在升级…" : "正在安装…";
+        install.Content = "正在安装…";
         status.Text = target.Machine ? "如果 Windows 请求管理员权限，请在系统提示中确认。" : "正在准备安装文件…";
         progress.Visibility = Visibility.Visible;
         progress.IsIndeterminate = true;
@@ -126,7 +135,7 @@ internal sealed class InstallerWindow : Window
                 throw new InvalidOperationException("未能确认所选位置已安装此次版本。");
             completed = true;
             install.Content = "完成";
-            status.Text = target.Existing ? "GeneLoop Desktop 已升级。" : "GeneLoop Desktop 已安装。";
+            status.Text = "GeneLoop Desktop 已安装。";
         }
         catch (Win32Exception error)
         {
@@ -178,7 +187,7 @@ internal sealed class InstallTarget
 {
     private const string RegistryKey = @"Software\df43dd29-397e-5d1c-b2f3-fe84b0ec1dc1";
     public string Path;
-    public bool Machine, Existing;
+    public bool Machine;
 
     private static string ExistingPath(RegistryHive hive)
     {
@@ -193,9 +202,9 @@ internal sealed class InstallTarget
     public static InstallTarget Detect()
     {
         var user = ExistingPath(RegistryHive.CurrentUser);
-        if (!String.IsNullOrWhiteSpace(user)) return new InstallTarget { Existing = true, Path = user };
+        if (!String.IsNullOrWhiteSpace(user)) return new InstallTarget { Path = user };
         var machine = ExistingPath(RegistryHive.LocalMachine);
-        if (!String.IsNullOrWhiteSpace(machine)) return new InstallTarget { Existing = true, Machine = true, Path = machine };
+        if (!String.IsNullOrWhiteSpace(machine)) return new InstallTarget { Machine = true, Path = machine };
         return new InstallTarget { Path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "GeneLoop Desktop") };
     }
 }
@@ -238,6 +247,10 @@ internal static class InstallEngine
             if (args.Length <= 2 && args.Length > 0 && args[0] == "--check-ui")
             {
                 var check = new InstallerWindow(target);
+                check.VerifyLocationControls();
+                var fresh = new InstallerWindow(new InstallTarget { Path = @"C:\Programs\GeneLoop Desktop" });
+                fresh.VerifyLocationControls();
+                fresh.Close();
                 if (args.Length == 2)
                 {
                     var content = (FrameworkElement)check.Content;
