@@ -32,6 +32,15 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('.session-row').click()`);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'历史双路结果');
  assert.equal(await evaluate(`document.querySelector('.workspace-group .workspace-children [data-session-id="history"]')!==null`),true);
+ const toggleGroup=`[...document.querySelectorAll('.workspace-row')].find(row=>row.textContent==='诊断工作区')`;
+ await evaluate(`${toggleGroup}.click()`);
+ assert.equal(await evaluate(`${toggleGroup}.getAttribute('aria-expanded')==='false'&&!document.querySelector('[data-session-id="history"]')`),true);
+ await evaluate(`document.getElementById('search').value='协议诊断历史';document.getElementById('search').dispatchEvent(new Event('input'))`);
+ assert.equal(await evaluate(`!!document.querySelector('[data-session-id="history"]')`),true);
+ await evaluate(`document.getElementById('search').value='';document.getElementById('search').dispatchEvent(new Event('input'))`);
+ assert.equal(await evaluate(`!document.querySelector('[data-session-id="history"]')`),true);
+ await evaluate(`${toggleGroup}.click()`);
+ assert.equal(await evaluate(`${toggleGroup}.getAttribute('aria-expanded')==='true'&&!!document.querySelector('[data-session-id="history"]')`),true);
  assert.equal(await evaluate(`document.querySelector('.result-score-scale [aria-pressed=true]').textContent`),'5');
  assert.equal(await evaluate(`document.querySelector('.result-metrics').textContent`),'161 次模型请求');
  await evaluate(`document.querySelector('[data-session-id="history"]').click()`);

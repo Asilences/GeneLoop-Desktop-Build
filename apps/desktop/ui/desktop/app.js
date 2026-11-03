@@ -19,6 +19,7 @@ let scratchText='';
 const historyCache=new Map();
 const workspaceDrafts=new Map();
 const newWorkspaceDrafts=new Map();
+const collapsedWorkspaces=new Set();
 let activeWorkspaceDraft=null;
 let awaitingHistory=false,historyError='';
 let pinnedWorkspaces=[];
@@ -119,16 +120,32 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     const draft=newWorkspaceDrafts.get(group.workspaceId);
     const showDraft=draft&&(!query||'新会话 · 草稿'.includes(query));
     if(query&&!rows.length&&!showDraft&&!group.title.toLowerCase().includes(query))continue;
-    const header=button(node('span',{},group.title),()=>openWorkspace(group.workspaceId),'workspace-row');
-    header.prepend(icon('folder'));
+    const id=group.workspaceId,hasChildren=rows.length>0||Boolean(showDraft);
+    const expanded=hasChildren&&(Boolean(query)||!collapsedWorkspaces.has(id));
+    const header=button(node('span',{},group.title),()=>{
+      if(state.workspace!==id){
+        collapsedWorkspaces.delete(id);
+        openWorkspace(id);
+      }else if(hasChildren&&!query){
+        if(expanded)collapsedWorkspaces.add(id);else collapsedWorkspaces.delete(id);
+        renderSidebar();
+      }else if(!hasChildren)openWorkspace(id);
+      [...list.querySelectorAll('.workspace-row')].find(row=>row.dataset.workspaceId===id)?.focus({preventScroll:true});
+    },'workspace-row');
+    header.dataset.workspaceId=id;
+    if(hasChildren)header.setAttribute('aria-expanded',String(expanded));
+    const indicator=icon(expanded?'chevron-down':'chevron-right');
+    indicator.classList.add('workspace-disclosure');
+    if(!hasChildren)indicator.setAttribute('visibility','hidden');
+    header.prepend(indicator,icon(expanded?'folder-open':'folder'));
     if(state.workspace===group.workspaceId)header.setAttribute('aria-current','true');
     const more=button(icon('more'),()=>workspaceMenu(group,{anchor:more}),'workspace-more icon');
     more.setAttribute('aria-label','工作区菜单：'+group.title);more.setAttribute('aria-haspopup','menu');
     const row=node('div',{class:'workspace-entry'},header,more);
     row.addEventListener('contextmenu',event=>{event.preventDefault();workspaceMenu(group,{anchor:header,x:event.clientX,y:event.clientY});});
     const section=node('section',{class:'workspace-group','aria-label':group.title},row);
-    const children=rows.map(sessionButton);
-    if(showDraft){
+    const children=expanded?rows.map(sessionButton):[];
+    if(expanded&&showDraft){
       const label=button('新会话 · 草稿',()=>beginWorkspaceDraft(group.workspaceId).catch(fail),'session-link');
       if(draft===activeWorkspaceDraft)label.setAttribute('aria-current','true');
       children.unshift(node('div',{class:'session-row workspace-draft'+(draft===activeWorkspaceDraft?' active':'')},label));
@@ -170,7 +187,8 @@ function saveComposer(){
 }
 async function beginWorkspaceDraft(id){
   if(creatingSession||state.submitting)return;
-  if(activeWorkspaceDraft?.workspaceId===id){$('prompt').focus();return;}
+  const wasCollapsed=collapsedWorkspaces.delete(id);
+  if(activeWorkspaceDraft?.workspaceId===id){if(wasCollapsed)renderSidebar();$('prompt').focus();return;}
   openWorkspace(id,{focus:true});
   const draft=newWorkspaceDrafts.get(id)||{workspaceId:id,sessionId:null,text:'',attachments:[]};
   newWorkspaceDrafts.set(id,draft);

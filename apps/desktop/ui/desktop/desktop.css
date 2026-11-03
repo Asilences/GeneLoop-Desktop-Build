@@ -97,9 +97,13 @@
 .file-row a{border-radius:7px}
 .file-row a:hover{background:var(--hover)}
 @media(max-width:580px){.theme-cards{grid-template-columns:1fr}.theme-preview{height:56px}}
-.workspace-group + .workspace-group{margin-top:6px}
-.workspace-children{margin:3px 0 5px 20px;padding-left:9px;border-left:1px solid color-mix(in srgb,var(--muted) 28%,transparent)}
-.workspace-children .session-link{padding-left:9px}
+.workspace-group + .workspace-group{margin-top:3px}
+.workspace-entry .workspace-row{gap:6px;padding:7px 38px 7px 5px;min-height:34px}
+.workspace-row>svg{width:16px;height:16px;flex:none}
+.workspace-row>svg.workspace-disclosure{width:13px;height:13px}
+.workspace-children{margin:1px 0 3px 24px;padding-left:6px;border-left:1px solid color-mix(in srgb,var(--muted) 28%,transparent)}
+.workspace-children .session-row{margin:1px 0}
+.workspace-children .session-link{padding:5px 8px}
 .result-footer{display:grid;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
 .result-tools{display:flex;align-items:center;gap:4px}
 .result-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;color:var(--muted);background:var(--panel)}
