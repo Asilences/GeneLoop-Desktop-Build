@@ -16,8 +16,18 @@ app.whenReady().then(async()=>{
  await until(async()=>!(await menusHidden()),'工作区左上角菜单');
  assert.equal(await evaluate(`['light','dark'].every(theme=>{const body=document.body,dark=body.hasAttribute('data-ds-dark-theme');body.toggleAttribute('data-ds-dark-theme',theme==='dark');const ok=getComputedStyle(document.getElementById('auth')).backgroundColor===getComputedStyle(document.getElementById('workspace')).backgroundColor && getComputedStyle(document.getElementById('loading')).backgroundColor===getComputedStyle(document.querySelector('.auth-art')).backgroundColor;body.toggleAttribute('data-ds-dark-theme',dark);return ok})`),true);
  check('启动等待时隐藏左上角菜单，工作区就绪后显示');
+ assert.equal(await evaluate(`document.querySelector('[data-session-id="empty-fixture"]')===null`),true);
+ await evaluate(`document.querySelector('.prompt-example').click()`);
+ assert.match(await evaluate(`document.getElementById('prompt').value`),/参考文献/);
+ await evaluate(`document.getElementById('prompt').value='自己的草稿';document.querySelector('.prompt-example').click()`);
+ assert.equal(await evaluate(`document.getElementById('prompt').value`),'自己的草稿');
+ check('无标题空会话不占历史列表，首页示例只填草稿并保护已有文字');
  await evaluate(`document.querySelector('.session-row').click()`);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'历史双路结果');
+ await evaluate(`document.getElementById('new-session').click()`);
+ assert.equal(await evaluate(`document.getElementById('prompt').value`),'自己的草稿');
+ await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
+ await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'返回历史对话');
  assert.equal(await evaluate('document.querySelectorAll(".comparison-result").length'),1);assert.equal(await evaluate('document.querySelector(".comparison-result").previousElementSibling.classList.contains("user")'),true);check('原生日志元数据恢复历史、Markdown与标准/Motif双路结果，结果跟随对应用户消息');
  await evaluate(`document.getElementById('deliveries-toggle').click()`);await until(()=>evaluate('document.getElementById("delivery-list").textContent.includes("diagnostic.txt")'),'交付卡片');await evaluate(`document.querySelector('#delivery-list button').click()`);await until(()=>evaluate('document.getElementById("preview").textContent.includes("diagnostic file contents")'),'交付预览');check('任务文件卡片和安全文本预览读取服务器实际字节');
  await evaluate(`fetch('/api/fixture/approval')`);await until(()=>evaluate('Boolean(document.querySelector("dialog"))'),'权限确认');await evaluate(`document.querySelector('dialog .primary').click()`);await until(()=>evaluate('!document.querySelector("dialog")'),'显式确认回复');check('有副作用的请求显示桌面确认，仅点击后回复单次允许');

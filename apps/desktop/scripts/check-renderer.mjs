@@ -19,6 +19,7 @@ const event=(seq,type,data)=>({type:'event',event:{seq,type,time:Date.now(),data
 const records=[event(1,'user/message',{source:{kind:'user'},content:[{type:'text',text:'历史协议诊断'}],harless_comparison:{id:comparison.id,value:comparison}}),event(2,'assistant/message',{message:{content:[{type:'text',text:'## 历史记录\n这是**合成诊断**，不代表模型回答。'}]}})];
 sessions.push({sessionId:'history',blank:false,running:false,projections:{asOfSeq:2,values:{title:'协议诊断历史'}}});
 sessions.push({sessionId:'menu-fixture',blank:true,running:false,projections:{asOfSeq:0,values:{title:'菜单诊断'}}});
+sessions.push({sessionId:'empty-fixture',blank:true,running:false});
 const settings=id=>({selection:selections.get(id)||{scene:'new-scene',mode:'baseline',rsi:false},scenes,scene_options:{},scene_option_fields:[],paired_comparison:false});
 const json=(res,value,status=200)=>{res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(value));};
 const push=(endpoint,value,sessionId)=>{for(const [key,row]of streams)if(row.endpoint===endpoint&&(!sessionId||row.sessionId===sessionId))row.socket.send(JSON.stringify({type:'item',streamId:key,value}));};
@@ -69,6 +70,7 @@ const env={...process.env,GENELOOP_RENDERER_FIXTURE:fixture};delete env.ELECTRON
 let result=1;
 try{const child=spawn(require('electron'),['test/renderer.cjs'],{cwd:app,env,stdio:'inherit',windowsHide:true});const [code,signal]=await once(child,'exit');result=code??1;console.log(JSON.stringify({diagnostic_child_exit:code,signal}));if(!JSON.parse(readFileSync(join(output,'summary.json'))).ok)throw Error('Renderer diagnostic failed before quit');
  const prompts=requests.filter(row=>row.path==='/api/session/prompt');if(prompts.length!==2)throw Error('Expected exactly two synthetic prompt submissions');
+ if(requests.some(row=>row.path==='/api/session/create'))throw Error('Filling a welcome example must not create a session');
  if(prompts[0].body.payload.args.request.content[0].text!=='/ppt 诊断发送')throw Error('Scene shortcut missing from wire prompt');
  if(prompts[1].body.payload.args.request.content[0].text!=='普通下一轮')throw Error('Scene selection did not reset per turn');
  const selected=requests.findIndex(row=>row.path==='/api/session/selectModel'),sent=requests.findIndex(row=>row.path==='/api/session/prompt');if(selected<0||selected>sent)throw Error('Prompt did not await model selection');
