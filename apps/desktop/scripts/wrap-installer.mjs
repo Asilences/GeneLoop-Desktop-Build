@@ -31,7 +31,7 @@ execFileSync(compiler,[
   '/out:'+join(release,prefix+'-Setup.exe'),
   '/win32icon:'+join(app,'assets/icon.ico'),
   ...['WindowsBase','PresentationCore','PresentationFramework'].map(name=>'/reference:'+join(framework,'WPF',name+'.dll')),
-  '/reference:System.Xaml.dll','/reference:System.Windows.Forms.dll',
+  '/reference:System.Xaml.dll','/reference:System.Windows.Forms.dll','/reference:Microsoft.CSharp.dll',
   '/resource:'+join(release,prefix+'-Engine.exe')+',GeneLoop.InstallEngine',
   '/resource:'+join(app,'assets/icon.png')+',GeneLoop.Brand',
   join(app,'setup/Installer.cs'),

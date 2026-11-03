@@ -18,12 +18,17 @@ internal sealed class InstallerWindow : Window
     private readonly StackPanel options;
     private readonly TextBlock pathLabel, spaceLabel, status;
     private readonly Button install, close, details, browse;
+    private readonly CheckBox openApp;
     private readonly ProgressBar progress;
     private bool busy, completed;
+    private readonly bool returnLaunchToParent;
+    public bool LaunchRequested { get; private set; }
+    private bool ShouldOpenApp { get { return completed && openApp.IsChecked == true; } }
 
-    public InstallerWindow(InstallTarget installTarget)
+    public InstallerWindow(InstallTarget installTarget, bool launchFromParent = false)
     {
         target = installTarget;
+        returnLaunchToParent = launchFromParent;
         Title = "GeneLoop Desktop 安装";
         Width = 548;
         SizeToContent = SizeToContent.Height;
@@ -66,6 +71,9 @@ internal sealed class InstallerWindow : Window
         status = Text("", 12, "#526277", false);
         status.Margin = new Thickness(8, 8, 8, 4);
         shell.Children.Add(status);
+        openApp = new CheckBox { Content = "打开 GeneLoop Desktop", IsChecked = true, Visibility = Visibility.Collapsed,
+            HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 7, 0, 14), Foreground = Brush("#31425D") };
+        shell.Children.Add(openApp);
         progress = new ProgressBar { Height = 4, Margin = new Thickness(32, 5, 32, 8), Foreground = Brush("#3265CB"), Visibility = Visibility.Collapsed };
         shell.Children.Add(progress);
         details = MakeButton("自定义设置  ▾", false);
@@ -156,9 +164,42 @@ internal sealed class InstallerWindow : Window
             throw new InvalidOperationException("安装位置选项未能展开。");
     }
 
+    private void ShowCompletion()
+    {
+        if (options.Visibility == Visibility.Visible) details.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        completed = true;
+        install.Content = "完成";
+        status.Text = "GeneLoop Desktop 已安装。";
+        openApp.Visibility = Visibility.Visible;
+        details.Visibility = Visibility.Collapsed;
+    }
+
+    internal void VerifyCompletionControls(bool launch)
+    {
+        ShowCompletion();
+        if (openApp.Visibility != Visibility.Visible || openApp.IsChecked != true ||
+            !Object.Equals(install.Content, "完成"))
+            throw new InvalidOperationException("安装完成选项未正确显示。");
+        openApp.IsChecked = launch;
+        if (ShouldOpenApp != launch) throw new InvalidOperationException("启动选项未正确生效。");
+    }
+
     private async Task RunInstallation()
     {
-        if (completed) { Close(); return; }
+        if (completed)
+        {
+            if (ShouldOpenApp)
+            {
+                if (returnLaunchToParent) LaunchRequested = true;
+                else
+                {
+                    try { InstallEngine.OpenApp(target); }
+                    catch { status.Text = "GeneLoop Desktop 已安装，请从开始菜单打开。"; openApp.IsChecked = false; return; }
+                }
+            }
+            Close();
+            return;
+        }
         busy = true;
         install.IsEnabled = close.IsEnabled = details.IsEnabled = false;
         if (options.Visibility == Visibility.Visible) details.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -176,9 +217,7 @@ internal sealed class InstallerWindow : Window
                 Assembly.GetExecutingAssembly(), typeof(AssemblyInformationalVersionAttribute));
             if (!File.Exists(installed) || FileVersionInfo.GetVersionInfo(installed).FileVersion != expected.InformationalVersion)
                 throw new InvalidOperationException("未能确认所选位置已安装此次版本。");
-            completed = true;
-            install.Content = "完成";
-            status.Text = "GeneLoop Desktop 已安装。";
+            ShowCompletion();
         }
         catch (Win32Exception error)
         {
@@ -258,10 +297,28 @@ internal sealed class InstallTarget
 
 internal static class InstallEngine
 {
+    private const int LaunchAfterInstall = 42;
+
     private static bool IsElevated()
     {
         using (var identity = WindowsIdentity.GetCurrent())
             return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
+    internal static void OpenApp(InstallTarget target)
+    {
+        var path = Path.Combine(target.Path, "GeneLoop Desktop.exe");
+        if (!IsElevated())
+        {
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true, WorkingDirectory = target.Path });
+            return;
+        }
+        // Use the existing desktop shell so the app does not inherit the setup token.
+        dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application"));
+        object location = 0, empty = null;
+        int handle;
+        dynamic desktop = shell.Windows().FindWindowSW(ref location, ref empty, 8, out handle, 1);
+        desktop.Document.Application.ShellExecute(path, "", target.Path, "open", 1);
     }
 
     public static int Run(InstallTarget target, string arguments)
@@ -301,11 +358,12 @@ internal static class InstallEngine
             var target = InstallTarget.Detect(elevatedUi);
             if (args.Length <= 2 && args.Length > 0 && args[0] == "--check-ui")
             {
-                var check = new InstallerWindow(target);
+                var check = new InstallerWindow(target, true);
                 check.VerifyLocationControls();
-                var fresh = new InstallerWindow(new InstallTarget { Path = @"C:\Programs\GeneLoop Desktop" });
+                var fresh = new InstallerWindow(new InstallTarget { Path = @"C:\Programs\GeneLoop Desktop" }, true);
                 fresh.VerifyLocationControls();
-                fresh.Close();
+                check.VerifyCompletionControls(true);
+                fresh.VerifyCompletionControls(false);
                 if (args.Length == 2)
                 {
                     var content = (FrameworkElement)check.Content;
@@ -319,6 +377,7 @@ internal static class InstallEngine
                     using (var stream = File.Create(args[1])) png.Save(stream);
                 }
                 check.Close();
+                fresh.Close();
                 return 0;
             }
             if (args.Length > 0 && !elevatedUi)
@@ -333,11 +392,15 @@ internal static class InstallEngine
                 using (var elevated = Process.Start(new ProcessStartInfo(setup, "--elevated-ui") { UseShellExecute = true, Verb = "runas" }))
                 {
                     elevated.WaitForExit();
-                    return elevated.ExitCode;
+                    if (elevated.ExitCode != LaunchAfterInstall) return elevated.ExitCode;
+                    try { OpenApp(InstallTarget.Detect(true)); }
+                    catch { MessageBox.Show("GeneLoop Desktop 已安装，请从开始菜单打开。", "GeneLoop Desktop"); }
+                    return 0;
                 }
             }
-            new Application().Run(new InstallerWindow(target));
-            return 0;
+            var window = new InstallerWindow(target, elevatedUi);
+            new Application().Run(window);
+            return window.LaunchRequested ? LaunchAfterInstall : 0;
         }
         catch (Win32Exception error) { return error.NativeErrorCode; }
         catch { return 1; }
