@@ -51,10 +51,19 @@ class CapabilityImprovementAdapter:
         self.materials = CapabilityMaterials(Path(plan['store'])/'materials', plan['owner'])
         self.templates = {}
         self.pending_programs = {}
+        self.learned_candidates = {}
         self.configure_jobs(plan['jobs'])
 
     def configure_jobs(self,jobs):
         for job in jobs:
+            if job.get('learned_candidate'):
+                if self.plan.get('recursive_abstraction',{}).get('enabled') is not True:
+                    raise ValueError('improvement_recursive_abstraction_disabled')
+                evidence(job['learned_candidate'])
+                key=capability_digest(json.loads(evidence(job['task'])))
+                if key in self.learned_candidates and self.learned_candidates[key]!=job['learned_candidate']:
+                    raise ValueError('improvement_ambiguous_learned_candidate')
+                self.learned_candidates[key]=copy.deepcopy(job['learned_candidate'])
             template=self.freeze_publication_inputs(job)
             if 'program_learning' in template:
                 self.validate_program_learning(template['program_learning'])
@@ -327,6 +336,38 @@ class CapabilityImprovementAdapter:
                 'remaining_usd':str(max(amount(0),limit-spent-pending))}
 
     def construct(self, task, library, output, parent, feedback):
+        learned_ref=getattr(self,'learned_candidates',{}).get(capability_digest(task))
+        if learned_ref is not None:
+            # A frozen host candidate is compiled and independently published by
+            # the SAME controller. Neither its metadata nor Motif certificate
+            # upgrades the Capability's certification or chooses the validator.
+            from .capability_builder import compile_proposal
+            from .capability_authoring import diagnose
+            from .capability_proposal import prepare_attempt,write
+            row=json.loads(evidence(learned_ref))
+            prepare_attempt(task=task,catalog=self.construction_catalog(library),
+                            snapshot=library['snapshot'],output=output)
+            result={'status':'failed','construction_snapshot_sha256':library['snapshot']['digest'],
+                'model_called':False,'provider_requests':0,'request_ids':[],
+                'observed_model_usd':0,'observed_model_usd_decimal':'0','billing_usd':None,
+                'learned_candidate_ref':learned_ref,'publication_authorized':False,
+                'quality':'not_independently_reviewed'}
+            try:
+                for ref in row.get('provenance',{}).get('evidence',[]):evidence(ref)
+                if row['proposal']['contract']!=task.get('contract'):
+                    raise ValueError('improvement_learned_contract_changed')
+                candidate=compile_proposal(row['proposal'],library['snapshot'],self.plan['owner'])
+                if capability_ref(candidate['capability'])!=capability_ref(row['compiled']['capability']):
+                    raise ValueError('improvement_learned_identity_changed')
+                write(output/'proposal.json',row['proposal']);write(output/'candidate.json',candidate)
+                write(output/'learning-provenance.json',row.get('provenance',{}))
+                if row.get('evolution'):write(output/'evolution.json',row['evolution'])
+                result.update(status='compiled_candidate',candidate_path=str(output/'candidate.json'),
+                              candidate_id=candidate['capability']['id'])
+            except (ValueError,KeyError,TypeError) as error:
+                result.update(error=str(error),diagnostics=diagnose(error))
+            write(output/'result.json',result)
+            return result
         reconsider=library.get('source_catalog',{}).get('construction_feedback',{}).get('reconsider') is True
         pending=self.pending_programs.pop(capability_digest(task),None) if parent is None else None
         continuation_ref=None if reconsider else pending
@@ -375,12 +416,15 @@ class CapabilityImprovementAdapter:
                 write(output/'answer.txt',json.dumps({'format':'capability_host_encoding_failure_v1','error':str(error),
                     'originating_source_ref':pending['capability_source_ref']}))
             write(output/'result.json',result);return result
+        rae=self.plan.get('recursive_abstraction',{})
+        abstraction_view=rae.get('enabled') is True and rae.get('semantic_view') is True
         gate=getattr(self,'gate',None)
         if gate is not None:
             from .capability_proposal import propose_once
             gate.register_attempt(output,self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
             return propose_once(task=task,catalog=self.construction_catalog(library),snapshot=library['snapshot'],
-                output=output,gate=gate,repair_from=parent,feedback=feedback)
+                output=output,gate=gate,repair_from=parent,feedback=feedback,
+                abstraction_view=abstraction_view)
         context = output.parent/(output.name+'-context'); context.mkdir(mode=0o700)
         save(context/'task.json', task); save(context/'snapshot.json', library['snapshot'])
         # Preserve original leaf descriptions/examples and append verified learned
@@ -390,6 +434,8 @@ class CapabilityImprovementAdapter:
                 '--task',str(context/'task.json'),'--catalog',str(context/'catalog.json'),
                 '--snapshot',str(context/'snapshot.json'),'--output',str(output),
                 '--ledger-root',self.plan['ledger_root'],'--call-model']
+        if abstraction_view:
+            args.append('--abstraction-view')
         if parent:
             save(context/'feedback.json', feedback)
             args += ['--repair-from',str(parent),'--feedback',str(context/'feedback.json')]

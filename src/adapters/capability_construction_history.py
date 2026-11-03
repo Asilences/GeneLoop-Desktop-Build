@@ -21,7 +21,7 @@ def capture(job, attempt, snapshot, candidate=None, outcome=None, *, output=None
     """Index a completed host attempt without rewriting its result or expenses."""
     attempt=Path(attempt)
     refs={name:file_ref(attempt/name) for name in ('result.json','requests.jsonl','strategy.json',
-        'candidate.json','acquisition.json','effective.json') if (attempt/name).is_file()}
+        'candidate.json','acquisition.json','effective.json','learning-provenance.json','evolution.json') if (attempt/name).is_file()}
     result=json.loads(evidence(refs['result.json']))
     if result.get('construction_snapshot_sha256',snapshot['digest'])!=snapshot['digest']:
         raise ValueError('construction_history_snapshot_changed')
