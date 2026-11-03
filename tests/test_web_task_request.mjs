@@ -149,3 +149,15 @@ test('User text beyond former byte limit is preserved without consuming image ca
  assert.equal(result.summary.content[0].sha256,sha(original));
  assert.equal(result.content[1].data,'YQ==');
 });
+
+test('native decoded image limits allow 20 MiB and 20 images independently of file count',options,async()=>{
+ const {normalizeWebTaskRequest}=await load();
+ const image={type:'image',mediaType:'image/png',data:Buffer.alloc(20*1024*1024).toString('base64')};
+ assert.equal(normalizeWebTaskRequest({content:[image]},context).summary.content[0].bytes,20*1024*1024);
+ assert.throws(()=>normalizeWebTaskRequest({content:[{...image,data:Buffer.alloc(20*1024*1024+1).toString('base64')}]},context),e=>e.code==='image_too_large');
+ const tiny={...image,data:'YQ=='};
+ assert.equal(normalizeWebTaskRequest({content:Array(20).fill(tiny)},context).content.length,20);
+ assert.throws(()=>normalizeWebTaskRequest({content:Array(21).fill(tiny)},context),e=>e.code==='too_many_images');
+ assert.throws(()=>normalizeWebTaskRequest({content:Array(3).fill(tiny)},{...context,image_limits:{maxImageBytes:1,maxImagesPerMessage:20,maxMessageImageBytes:2}}),e=>e.code==='images_too_large');
+ assert.equal(normalizeWebTaskRequest({content:Array.from({length:100},(_,i)=>({type:'file',receiptId:'receipt-'+i}))},context).content.length,100);
+});

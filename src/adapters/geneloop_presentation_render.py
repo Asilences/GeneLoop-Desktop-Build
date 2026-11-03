@@ -10,11 +10,12 @@ import tempfile
 
 
 def render(request):
+    maximum = request['max_file_bytes']  # Host-selected capacity, never a user field.
     source = Path('/work/inputs') / request['file']
     if source.parent != Path('/work/inputs') or source.is_symlink() or not source.is_file():
         raise ValueError('invalid_presentation_source')
     data = source.read_bytes()
-    if len(data) > 20 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != request['sha256']:
+    if len(data) > maximum or hashlib.sha256(data).hexdigest() != request['sha256']:
         raise ValueError('presentation_version_changed')
     suffix = request['suffix']
     if suffix not in ('.pptx', '.ppt', '.docx', '.doc', '.xlsx'):
@@ -52,13 +53,13 @@ def render(request):
                     'writer_pdf_Export' if suffix in ('.docx', '.doc') else 'calc_pdf_Export')
         convert('pdf:' + exporter, output)
         pdf = output / 'reference.pdf'
-        if pdf.is_symlink() or not pdf.is_file() or not 0 < pdf.stat().st_size <= 20 * 1024 * 1024:
+        if pdf.is_symlink() or not pdf.is_file() or not 0 < pdf.stat().st_size <= maximum:
             raise ValueError('presentation_render_unavailable_or_too_large')
         normalized = None
         if suffix == '.ppt':
             convert('pptx:Impress MS PowerPoint 2007 XML', output)
             pptx = output / 'reference.pptx'
-            if pptx.is_symlink() or not pptx.is_file() or not 0 < pptx.stat().st_size <= 20 * 1024 * 1024:
+            if pptx.is_symlink() or not pptx.is_file() or not 0 < pptx.stat().st_size <= maximum:
                 raise ValueError('presentation_normalization_failed')
             normalized = {'path': str(pptx), 'sha256': hashlib.sha256(pptx.read_bytes()).hexdigest(),
                           'derived_from_sha256': request['sha256']}

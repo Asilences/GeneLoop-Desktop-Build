@@ -6,6 +6,11 @@ and explicit extraction coverage. Unsupported files remain accepted metadata.
 """
 from __future__ import annotations
 
+try:
+    from .geneloop_upload_limits import FILE_MAX_BYTES
+except ImportError:
+    from geneloop_upload_limits import FILE_MAX_BYTES
+
 import codecs
 import csv
 import hashlib
@@ -23,9 +28,9 @@ import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
-MAX_FILE_BYTES = 20 * 1024 * 1024  # Existing upload boundary, not a text limit.
+MAX_FILE_BYTES = FILE_MAX_BYTES  # Existing upload boundary, not a text limit.
 # Match the existing Office parser's archive-bomb protection. No text is sliced.
-MAX_ARCHIVE_BYTES = 150 * 1024 * 1024
+MAX_ARCHIVE_BYTES = 1024 * 1024 * 1024
 MAX_ARCHIVE_FILES = 5000
 TEXT_SUFFIXES = {'.txt', '.md', '.markdown', '.csv', '.tsv', '.json', '.jsonl',
                  '.yaml', '.yml', '.xml', '.html', '.htm', '.tex', '.bib', '.bbl',

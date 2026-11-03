@@ -107,7 +107,7 @@ test('paper upload binding freezes admitted bytes and an observed read continuat
     assert.throws(()=>bindApprovedUploadedReadTask(root,inputs,request,manifest,'new-scene'),/requires_approved/);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
-test('paper Motif binding accepts sixteen verified uploads and rejects a seventeenth', {skip:!process.features?.typescript}, async()=>{
+test('paper Motif binding admits seventeen approved uploads without a scene quota', {skip:!process.features?.typescript}, async()=>{
   const {bindApprovedUploadedReadTask}=await import('../src/adapters/harless_rsi_binding.ts');
   const root=realpathSync(mkdtempSync(join(tmpdir(),'paper-full-binding-')));mkdirSync(join(root,'inputs'));
   try{
@@ -125,6 +125,6 @@ test('paper Motif binding accepts sixteen verified uploads and rejects a sevente
     assert.equal(bindApprovedUploadedReadTask(root,inputs.slice(0,16),request,manifest,'paper-proofreading').task_id,'task-full');
     files[inputs[16].file]=inputs[16].version_sha256;
     writeFileSync(join(root,'approved-inputs.json'),JSON.stringify({files}));
-    assert.throws(()=>bindApprovedUploadedReadTask(root,inputs,request,manifest,'paper-proofreading'),/requires_approved/);
+    assert.equal(bindApprovedUploadedReadTask(root,inputs,request,manifest,'paper-proofreading').task_id,'task-full');
   }finally{rmSync(root,{recursive:true,force:true});}
 });

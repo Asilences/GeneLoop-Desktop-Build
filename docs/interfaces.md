@@ -1379,3 +1379,7 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 新材料改变别名后，显式意图仍引用原精确版本；编译失败的repair通过SHA验证的 `frozen_composition_intent` 显示当前alias投影及原参数，原始回答保留引用，不把旧alias冒充新回答。缺失参数继续保持缺失，交给模型修复。Frontier 同时消费原 `selection.construction` 排序。
 
 `prepare_D --final-manifest` 可重复，以多个宿主冻结manifest生成项目与独立检查；项目ID安全唯一，0/1/2版本和输入SHA逐项核验，旧无ID清单仍解释为mamba。`--budget-usd` 和 `--research-limit-usd` 显式配置新条件的有限研究预算，默认值与旧条件不变，未知历史请求仍完整预留；平台null额度与原账本不改。复现命令见[研究入口](../scenarios/paper_proofreading/frontier/README.md)，效果边界见[上午实验](experiments/recursive-construction-20261103.md)。
+
+
+### 网页大文件传输（2026-11-03）
+`POST /api/harless/uploads?action=begin|chunk|complete|abort&session=...` 是已登录所属会话的分块传输接口。begin 提交名称/总字节并取得随机上传 ID；chunk 携 ID/offset 顺序提交最多 8 MiB，完全相同的最近块可幂等重放；complete 要求收到声明全部字节并调用原生 fileUploads.uploadStream，返回原生 `{ok:true,value:{receiptId,file}}`；abort 只清理该会话的上传。仍校验来源、会话归属、长度和取消；不接受私有对照子会话。完整容量规则见 [upload-rules](upload-rules.md)。

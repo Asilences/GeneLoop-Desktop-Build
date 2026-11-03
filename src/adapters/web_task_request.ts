@@ -7,6 +7,7 @@
  * 仍由官方 Controller 执行。SSS mode 与其 queue/steer delivery 无关。
  */
 import { createHash, randomUUID } from 'node:crypto';
+import {nativeImageLimits} from './geneloop_upload_limits.ts';
 
 export type ExecutionMode = 'baseline' | 'shadow' | 'execute';
 export type PromptPart =
@@ -25,6 +26,7 @@ export type RequestContext = {
   allowed_profiles: readonly string[];
   /** Encoded image payload safety limit; user text is not length-capped. */
   max_content_bytes?: number;
+  image_limits?: typeof nativeImageLimits;
   max_parts?: number;
   max_messages?: number;
   max_resources?: number;
@@ -127,11 +129,12 @@ export function normalizeWebTaskRequest(input: unknown, context: RequestContext)
   if (!context.allowed_profiles.includes(context.default_profile)) {
     fail('context.default_profile', 'not registered by the server', 'invalid_context');
   }
-  const maximumBytes = limit(context.max_content_bytes, 20 * 1024 * 1024, 'context.max_content_bytes');
-  const maximumParts = limit(context.max_parts, 64, 'context.max_parts');
+  const maximumBytes = limit(context.max_content_bytes, Infinity, 'context.max_content_bytes');
+  const maximumParts = limit(context.max_parts, Infinity, 'context.max_parts');
   const maximumMessages = limit(context.max_messages, 32, 'context.max_messages');
   const maximumResources = limit(context.max_resources, 64, 'context.max_resources');
-  let contentBytes = 0;
+  let contentBytes = 0, imageBytes = 0, imageCount = 0;
+  const imageLimits=context.image_limits??nativeImageLimits;
   const countBytes = (value: string, field: string): void => {
     contentBytes += Buffer.byteLength(value, 'utf8');
     if (contentBytes > maximumBytes) fail(field, 'content exceeds server byte limit', 'request_too_large');
@@ -155,6 +158,11 @@ export function normalizeWebTaskRequest(input: unknown, context: RequestContext)
       const data = text(row.data, `${field}.data`); countBytes(data, field);
       if (!data.length || data.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(data) ||
           Buffer.from(data, 'base64').toString('base64') !== data) fail(`${field}.data`, 'must be canonical base64');
+      const bytes=Buffer.byteLength(data,'base64');
+      imageBytes+=bytes;imageCount++;
+      if(bytes>imageLimits.maxImageBytes)fail(field,'图片超过原生单张 20 MiB 限制','image_too_large');
+      if(imageCount>imageLimits.maxImagesPerMessage)fail(field,'本轮图片数量超过原生限制','too_many_images');
+      if(imageBytes>imageLimits.maxMessageImageBytes)fail(field,'本轮图片总大小超过原生限制','images_too_large');
       const result: PromptPart = { type: 'image', mediaType: row.mediaType as 'image/png', data };
       if (row.name !== undefined) result.name = token(row.name, `${field}.name`);
       return result;

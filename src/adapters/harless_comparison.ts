@@ -27,6 +27,10 @@ type Turn = { id: string; session_id: string; request_id: string; fingerprint: s
   published?: boolean; cancellation_requested?: boolean; source_files?:Record<string,any>; prior_context?: Partial<Record<LaneName,string>> };
 const turnLanes = (t: Pick<Turn,'presentation'>): readonly LaneName[] => t.presentation === 'single' ? ['baseline'] : lanes;
 const admissionMessages: Record<string, string> = {
+  image_too_large:'单张图片不能超过 20 MiB，请选择较小的图片。',
+  images_too_large:'本轮图片合计不能超过 200 MiB。',
+  too_many_images:'本轮最多上传 20 张图片。',
+  file_too_large:'单文件不能超过 200 MiB。',
   data_requires_csv_or_tsv: '此前任务未能读取附件，请重新发送；如果仍有问题，请反馈给管理员。',
   data_input_format_unsupported: '此前任务未能读取附件，请重新发送；如果仍有问题，请反馈给管理员。',
   data_text_requires_utf8: '需求说明文件不是有效的 UTF-8 文本。请将 TXT/MD 另存为 UTF-8 编码后重新上传。',

@@ -1,3 +1,5 @@
+import {installChunkedUpload} from './geneloop_chunked_upload.ts';
+import {FILE_MAX_BYTES} from './geneloop_upload_limits.ts';
 /** Dynamic business tasks on the official Harness Web/Session lifecycle. */
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, appendFileSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'node:fs';
@@ -1091,7 +1093,7 @@ export function apply(ctx: any) {
         mkdirSync(directory,{recursive:true,mode:0o700});
         const names = new Map<string,string>(), sourceSeqs = new Map<string,number>(), seen = new Set<string>(); let total = 0;
         const copy = (name: string, bytes: Uint8Array, sourceSeq: number) => {
-          const version = sha(bytes);if(seen.has(version)||names.size>=32||bytes.length>20*1024*1024||total+bytes.length>80*1024*1024)return;
+          const version = sha(bytes);if(seen.has(version))return;if(bytes.length>FILE_MAX_BYTES)throw new TaskError('file_too_large','单文件不能超过 200 MiB。',413);
           const safe = basename(name).replace(/[^\p{L}\p{N}._-]/gu,'_').slice(-110);
           const filename = `${names.size+1}-${safe}${extname(safe).toLowerCase()==='.json'?'.txt':''}`;
           writeFileSync(join(directory,filename),bytes,{mode:0o600,flag:'wx'}); names.set('outputs/'+filename,safe);sourceSeqs.set('outputs/'+filename,mappedSeq(sourceSeq));seen.add(version);total+=bytes.length;
@@ -1122,9 +1124,9 @@ export function apply(ctx: any) {
         }
         for (const row of (inherited?.lanes?.[inheritedLane]??[]).filter(inCut)) copy(row.name,store.read(sourceSessionId,inheritedLane,row),row.source_seq);
         for (const event of [...sourceEvents].reverse()) if(event.type==='user/message') for(const part of event.data.content??[]) {
-          if(part.type!=='file'||!part.attachment||part.attachment.bytes>20*1024*1024)continue;
+          if(part.type!=='file'||!part.attachment||part.attachment.bytes>FILE_MAX_BYTES)continue;
           const ref=part.attachment,chunks:Buffer[]=[];let bytes=0;
-          for await(const chunk of ctx.attachments.readFileStream(ref)){bytes+=chunk.length;if(bytes>20*1024*1024)throw new TaskError('scene_input_limit','分支资料过大。');chunks.push(Buffer.from(chunk));}
+          for await(const chunk of ctx.attachments.readFileStream(ref)){bytes+=chunk.length;if(bytes>FILE_MAX_BYTES)throw new TaskError('scene_input_limit','分支资料过大。');chunks.push(Buffer.from(chunk));}
           const data=Buffer.concat(chunks);if(bytes!==ref.bytes||(typeof ref.sha256==='string'&&sha(data)!==ref.sha256))throw new TaskError('file_bytes_changed','分支资料版本已改变。');
           copy(ref.name,data,event.seq);
         }
@@ -1230,7 +1232,7 @@ export function apply(ctx: any) {
     const request = normalizeWebTaskRequest(taskInput, { task_id: taskId, session_id: tentativeSession,
       default_mode: selected.mode, default_budget_usd: config.budget_usd, max_budget_usd: config.budget_usd,
       default_profile: selected.scene, allowed_profiles: scenes.map(scene => scene.id),
-      max_content_bytes: 768 * 1024, max_parts: 32 });
+      image_limits: ctx.attachments.imageLimits });
     const requestedMode = request.mode;
     if (!selected.rsi) {
       request.mode = 'baseline';
@@ -1247,7 +1249,6 @@ export function apply(ctx: any) {
       sources.push({ resource_id: reference.resource_id, version: resource.version, sha256: sha(resource.text) });
       delivery.push({ type: 'text', text: `\n\n[来源 ${reference.resource_id}；版本 ${resource.version}]\n${resource.text}` });
     }
-    if (Buffer.byteLength(JSON.stringify(delivery)) > 768 * 1024) throw new TaskError('request_too_large', 'Resolved input exceeds byte limit', 413);
     const originalScene=paperLearning.resolve(sessionScene(existingSession ?? '', sceneFor(request.capability_profile)));
     const scene = videoProgramScene(requestedMode==='baseline'?originalScene:pptLearning.resolve(originalScene),request.mode);
     if (existingSession && legacyChatSessions.has(existingSession) && request.content.some(part => part.type !== 'text'))
@@ -1640,10 +1641,7 @@ export function apply(ctx: any) {
       if (priorTask && !terminal.has(priorTask.status)) throw new TaskError('session_busy', '请等待当前回复完成或取消后再发送。', 409);
       await priorTask?.closing;
       const scene = sceneFor(selected.scene), parent = agents.get(request.sessionId);
-      const mediaLimit = selected.scene === 'paper-proofreading' ? 16 : 8;
-      if (!Array.isArray(content) || !content.length || content.some((part: any) => !['text', 'file', 'image'].includes(part.type)) ||
-          (content.filter((part: any) => part.type !== 'text').length > mediaLimit ||
-           content.filter((part: any) => part.type === 'image').length > 8)) throw new TaskError('unsupported_input', `请发送文字和最多 ${mediaLimit} 份图片或文件（图片最多 8 份）。`);
+      if (!Array.isArray(content) || !content.length || content.some((part:any)=>!['text','file','image'].includes(part.type))) throw new TaskError('unsupported_input','请发送文字、图片或文件。');
       const images = content.filter((part: any) => part.type === 'image');
       // Use the public Harness decoder and image limits before any child task
       // is created. Preserve native pixels as well as exact file provenance.
@@ -1653,7 +1651,7 @@ export function apply(ctx: any) {
       const sourceFiles:Record<string,any>={};
       const files = content.filter((part: any) => part.type === 'file').map((part: any) => {
         const ref = ctx.fileUploads.resolve(parent, part.receiptId)??comparisons.sourceFor(request.sessionId,request.requestId,part.receiptId);
-        if (!ref || ref.bytes > 20 * 1024 * 1024) throw new TaskError('file_receipt_not_owned', '资料回执不属于当前会话或文件过大。');
+        if (!ref || ref.bytes > FILE_MAX_BYTES) throw new TaskError('file_receipt_not_owned', '资料回执不属于当前会话或文件过大。');
         sourceFiles[part.receiptId]=structuredClone(ref);
         return { name: ref.name, bytes: ref.bytes, digest: digest(ref) };
       });
@@ -1719,7 +1717,7 @@ export function apply(ctx: any) {
       try{appendFileSync(join(config.output,'prompt-admission-errors.jsonl'),JSON.stringify({at:utc(),
         session_id:request.sessionId,request_id:request.requestId,code:error?.code??error?.name??'unknown',
         active_task_ids:[...active.keys()]})+'\n',{mode:0o600});}catch{}
-      if(error instanceof TaskError||error instanceof ComparisonError)
+      if(error instanceof TaskError||error instanceof ComparisonError||error instanceof WebTaskRequestError)
         throw new RemoteError(error.code as any,error.message,{} as any);
       throw error;
     }
@@ -1760,14 +1758,13 @@ export function apply(ctx: any) {
         const previous = forSession(child), content: any[] = [];
         const inheritedReceipts=new Set<string>(),hiddenReceipts=new Set<string>(),contextNotes:string[]=[];
         const inheritedImages=previous?[]:turn.prior_images??[];
-        const maxInputs = turn.scene === 'paper-proofreading' ? 16 : 8;
         const seen = new Set<string>(), names = new Set<string>();
         const readSource = async (ref: any) => {
-          if (!ref || ref.bytes > 20 * 1024 * 1024) throw new TaskError('scene_input_limit', '资料过大。');
+          if (!ref || ref.bytes > FILE_MAX_BYTES) throw new TaskError('scene_input_limit', '资料过大。');
           const chunks: Buffer[] = []; let bytes = 0;
           for await (const chunk of ctx.attachments.readFileStream(ref)) {
             bytes += chunk.length;
-            if (bytes > 20 * 1024 * 1024) throw new TaskError('scene_input_limit', '资料过大。');
+            if (bytes > FILE_MAX_BYTES) throw new TaskError('scene_input_limit', '资料过大。');
             chunks.push(Buffer.from(chunk));
           }
           const data = Buffer.concat(chunks);
@@ -1778,12 +1775,11 @@ export function apply(ctx: any) {
         const addFile = async (name: string, bytes: Uint8Array, inherited = false, hidden = inherited) => {
           const original = basename(name), hash = sha(bytes), key = JSON.stringify([original, hash]);
           if (seen.has(key)) return false;
-          if (content.filter(part => part.type === 'file').length >= maxInputs || bytes.length > 20 * 1024 * 1024)
-            throw new TaskError('scene_input_limit', '本轮与历史附件合计超出上传限制，请在新对话中选择所需文件。');
+          if (bytes.length > FILE_MAX_BYTES) throw new TaskError('file_too_large','单文件不能超过 200 MiB。',413);
           let leaf = original;
           // Keep the current filename and retain older same-name versions under
           // distinct names. Never overwrite either immutable source snapshot.
-          if (inherited && names.has(leaf.toLowerCase())) {
+          if (names.has(leaf.toLowerCase())) {
             const suffix = extname(original), stem = original.slice(0, original.length - suffix.length).slice(0, 90);
             let index = 0;
             do { leaf = `${stem}-previous-${hash.slice(0, 8)}${index++ ? '-' + index : ''}${suffix}`; }
@@ -1803,7 +1799,7 @@ export function apply(ctx: any) {
             if (!previous) {
               const extensions:Record<string,string>={'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp','image/gif':'.gif'};
               const bytes=Buffer.from(part.data,'base64'), extension=extensions[part.mediaType];
-              if (!extension || bytes.length>20*1024*1024) throw new TaskError('invalid_image','图片格式或大小不受支持。');
+              if (!extension || bytes.length>(ctx.attachments.imageLimits?.maxImageBytes??20*1024*1024)) throw new TaskError('invalid_image','图片格式或大小不受支持。');
               const requestedName=typeof part.name==='string'?basename(part.name):'';
               const name=requestedName&&extname(requestedName).toLowerCase()===extension?requestedName:`image-${sha(bytes).slice(0,16)}${extension}`;
               await addFile(name, bytes, false, true);
@@ -1814,20 +1810,14 @@ export function apply(ctx: any) {
           // Retrying keeps that snapshot; it must not rebind upload receipts.
           if (previous) continue;
           const ref = turn.source_files?.[part.receiptId]??ctx.fileUploads.resolve(agents.get(turn.session_id), part.receiptId);
-          if (!ref || ref.bytes > 20 * 1024 * 1024) throw new TaskError('file_receipt_not_owned', '资料回执不属于原会话。');
+          if (!ref || ref.bytes > FILE_MAX_BYTES) throw new TaskError('file_receipt_not_owned', '资料回执不属于原会话。');
           await addFile(ref.name, await readSource(ref));
         }
         if (!previous) {
           const target = sceneFor(turn.scene);
-          const accepts = (name: string) => {
-            const suffix = extname(name).toLowerCase();
-            if (target.adapter === 'ppt') return true;
-            if(target.adapter==='video')return /\.(mp4|mov|mkv|webm|mp3|wav|m4a|aac|ogg|png|jpg|jpeg|webp|gif|svg|tsx|txt|md|json)$/i.test(name);
-            if (target.id === 'research-data-analysis') return ['.csv','.tsv','.json','.txt','.md'].includes(suffix);
-            if (target.id === 'paper-proofreading') return ['.pdf','.docx','.doc','.tex','.bib','.bbl','.log','.md','.txt','.json'].includes(suffix);
-            if (target.adapter === 'literature') return suffix === '.pdf';
-            return false;
-          };
+          // All same-conversation sources remain available across scenes. Tool parsers
+          // decide supported formats; scene selection must not silently drop originals/results.
+          const accepts = (_name:string) => true;
           const carried: { name: string; original_name: string; sha256: string }[] = [];
           const carry = async (name: string, bytes: Uint8Array) => {
             const leaf = await addFile(name, bytes, true);
@@ -1836,9 +1826,7 @@ export function apply(ctx: any) {
           // Originals are cumulative even when this turn adds attachments. Do
           // not silently discard comparison inputs to make room for deliveries.
           for (const ref of turn.prior_sources ?? []) await carry(ref.name, await readSource(ref));
-          let omittedResults = 0;
           const carryResult = async (name: string, read: () => Uint8Array) => {
-            if (content.filter(part => part.type === 'file').length >= maxInputs) { omittedResults++; return; }
             await carry(name, read());
           };
           const inheritedArtifacts = [...(turn.prior_artifacts?.[lane] ?? [])].reverse().sort((a: any,b: any) => Number(/(?:research_)?report\.pdf$/i.test(b.row.name)) - Number(/(?:research_)?report\.pdf$/i.test(a.row.name)));
@@ -1863,7 +1851,6 @@ export function apply(ctx: any) {
             await carryResult(row.name, () => artifacts.read(turn.session_id,lane,row));
           }
           if (carried.length) contextNotes.push('历史可用资料版本：'+JSON.stringify(carried));
-          if (omittedResults) contextNotes.push(`当前附件容量内未自动带入 ${omittedResults} 个历史结果文件；不能声称已核验这些未带入的结果。`);
         }
         if (!previous && turn.prior_context?.[lane]) contextNotes.push(
           '此前交流记录，仅用于承接目标，不是当前用户提问或已验证证据：\n' + turn.prior_context[lane]);
@@ -2254,6 +2241,10 @@ export function apply(ctx: any) {
       }
     },
   }), 'harless-native-deliveries');
+  installChunkedUpload(ctx,config.output,async id=>{
+    await ensureOwned(id);trash.assertVisible(id);
+    if(comparisons?.isLane(id))throw new TaskError('session_not_owned','请在原对话上传文件。',403);
+  });
   const taskRoute = { methods: ['GET', 'POST'] as const, requestBody: 'buffered' as const,
     fetch: async (request: Request) => {
       try {
@@ -2284,13 +2275,13 @@ export function apply(ctx: any) {
             if (task.model_option.provider === 'harless-glm') throw new TaskError('unsupported_input', 'The GLM connection currently supports text only', 400);
             const paperZip = task.scene.id === 'paper-proofreading' &&
               typeof body.name === 'string' && extname(body.name).toLowerCase() === '.zip';
-            const uploadLimit = paperZip ? 5 * 1024 * 1024 : 256 * 1024;
+            const uploadLimit = FILE_MAX_BYTES;
             if (typeof body.name !== 'string' || !body.name.length || body.name.length > 255 || /[\x00-\x1f]/.test(body.name) ||
                 typeof body.data !== 'string' || body.data.length > Math.ceil(uploadLimit / 3) * 4 ||
                 Buffer.from(body.data, 'base64').toString('base64') !== body.data) throw new TaskError('invalid_upload', 'Invalid file name or canonical base64');
             const data = Buffer.from(body.data, 'base64');
             if (!data.length || data.length > uploadLimit) throw new TaskError('upload_too_large',
-              paperZip ? 'Paper ZIP limit is 5 MiB' : 'File limit is 256 KiB', 413);
+              '单文件不能超过 200 MiB。', 413);
             const uploaded = await ctx.fileUploads.uploadStream({ sessionId: task.request.session_id,
               name: body.name, data: (async function* () { yield data; })(), signal: request.signal });
             const changed = normalizeWebTaskRequest({ content: [...task.request.content, { type: 'file', receiptId: uploaded.receiptId }],
@@ -2298,7 +2289,7 @@ export function apply(ctx: any) {
               request_id: task.request.request_id, capability_profile: task.request.capability_profile }, {
               task_id: task.request.task_id, session_id: task.request.session_id, default_mode: config.mode,
               default_budget_usd: config.budget_usd, max_budget_usd: config.budget_usd,
-              default_profile: task.scene.id, allowed_profiles: [task.scene.id], max_parts: 32, max_content_bytes: 768 * 1024 });
+              default_profile: task.scene.id, allowed_profiles: [task.scene.id], image_limits: ctx.attachments.imageLimits });
             task.request = changed; task.delivery.push({ type: 'file', receiptId: uploaded.receiptId });
             if (task.scene.adapter) {
               task.scene_inputs = await bindSceneInputs(ctx, agents.get(task.request.session_id), task.workspace, task.scene,
