@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc && node scripts/prepare-assets.mjs",
     "dev": "npm run build && electron .",
-    "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs",
+    "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs ../../tests/test_desktop_frontend.mjs",
     "smoke": "npm run build && node scripts/check-local-ui.mjs",
     "pack": "npm run build && electron-builder --dir --publish never",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never"

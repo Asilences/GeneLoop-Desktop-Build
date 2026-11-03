@@ -7,6 +7,7 @@ import { sameServer } from './policy.ts';
 
 type Graph = Parameters<typeof bootInjections>[0];
 type Manifest = { format: number; dshVersion: string; sourceCommit: string; staticFiles: string[]; clients: Record<string, { file: string; version: string }> };
+type FrontendOptions = { session: Session; server: string; assets: string; fail: (message: string) => void };
 const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.webmanifest': 'application/manifest+json' };
 
 /** 只读取上游结构化 JSON 注入；服务器页面中的脚本和样式不执行。 */
@@ -34,8 +35,10 @@ export class LocalFrontendHost {
   private bundles = new Map<string, string[]>();
   private installed = false;
   private readonly scheme: string;
+  private options: FrontendOptions;
 
-  constructor(private options: { session: Session; server: string; assets: string; fail: (message: string) => void }) {
+  constructor(options: FrontendOptions) {
+    this.options = options;
     this.manifest = JSON.parse(readFileSync(join(options.assets, 'manifest.json'), 'utf8'));
     if (this.manifest.format !== 1) throw Error('桌面界面资源无法识别，请重新安装。');
     this.scheme = new URL(options.server).protocol.slice(0, -1);
@@ -105,6 +108,7 @@ export class LocalFrontendHost {
           return this.local(new Uint8Array(readFileSync(join(assets, 'frontend', url.pathname.slice(1)))), MIME[extname(url.pathname)] || 'application/octet-stream', request.method);
         }
         if (url.pathname === '/assets/geneloop-spiral.svg') return this.local(new Uint8Array(readFileSync(join(assets, 'geneloop-spiral.svg'))), 'image/svg+xml', request.method);
+        if (/^\/assets\/.*\.(?:js|css)$/.test(url.pathname)) throw Error('服务器界面资源已变化，请更新 GeneLoop Desktop。');
         if (['/login', '/register', '/claim', '/account', '/starting'].includes(url.pathname)) {
           const html = readFileSync(join(assets, 'harless_account.html'), 'utf8').replace('</head>', '<style>' + readFileSync(join(assets, 'geneloop_theme.css'), 'utf8') + '</style></head>');
           return this.local(html, MIME['.html'], request.method);
@@ -119,7 +123,7 @@ export class LocalFrontendHost {
           throw Error('服务器客户端插件已变化，请更新 GeneLoop Desktop 后重试。');
         }
         if (url.pathname === '/' || url.pathname === '/index.html') {
-          const remote = await this.network(request);
+          const remote = await this.network(request.method === 'HEAD' ? new Request(request, { method: 'GET' }) : request);
           if (remote.status >= 300 && remote.status < 400) {
             const target = remote.headers.get('location');
             if (!target || !sameServer(new URL(target, server).href, server)) throw Error('服务器跳转到了其他地址，请检查连接设置。');
@@ -136,7 +140,7 @@ export class LocalFrontendHost {
       const remote = await this.network(request);
       return new Response(remote.body, { status: remote.status, statusText: remote.statusText, headers: responseHeaders(remote.headers) });
     } catch (error) {
-      this.options.fail(error instanceof Error ? error.message : '桌面连接暂时不可用。');
+      this.options.fail(error instanceof Error && error.message.startsWith('服务器') ? error.message : '桌面资源或网络暂时不可用，请重试。');
       return new Response('GeneLoop Desktop connection unavailable', { status: 503 });
     }
   }

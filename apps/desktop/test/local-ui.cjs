@@ -69,6 +69,20 @@ app.whenReady().then(async () => {
   report.local_script_requests = desktop.frontend.served.localScripts;
   assert.deepEqual(await contents.executeJavaScript('[typeof require,typeof process,typeof window.geneLoopDesktop]'), ['undefined', 'undefined', 'undefined']);
   check('本地打包的 DSH 原生聊天/设置/场景组件加载，无本地 Node 权限');
+  await contents.executeJavaScript(`(() => { const button = [...document.querySelectorAll('button')].find(item => item.textContent.trim() === '新会话'); if (!button) throw Error('新会话入口未找到'); button.click(); })()`);
+  await until(async () => contents.executeJavaScript('Boolean(document.querySelector(\'[contenteditable="true"]\'))'), '服务器新会话与输入框');
+  check('通过原生接口创建服务器空会话并恢复输入框，未发送模型消息');
+  const source = 'GeneLoop desktop download diagnostic\n';
+  const downloaded = new Promise((resolveDownload, reject) => {
+    contents.session.once('will-download', (_event, item) => {
+      item.setSavePath(join(output, 'download-diagnostic.txt'));
+      item.once('done', (_downloadEvent, state) => state === 'completed' ? resolveDownload() : reject(Error('下载未完成：' + state)));
+    });
+  });
+  await contents.executeJavaScript(`(() => { const anchor = document.createElement('a'); const url = URL.createObjectURL(new Blob([${JSON.stringify(source)}], {type:'text/plain'})); anchor.href=url; anchor.download='download-diagnostic.txt'; anchor.click(); setTimeout(()=>URL.revokeObjectURL(url),5000); })()`);
+  await Promise.race([downloaded, new Promise((_, reject) => setTimeout(() => reject(Error('下载超时')), 10_000))]);
+  assert.equal(readFileSync(join(output, 'download-diagnostic.txt'), 'utf8'), source);
+  check('原生下载实际保存字节与合成来源一致');
   const before = contents.id;
   desktop.showSettings();
   await until(async () => desktop.window.webContents.executeJavaScript('!document.getElementById("settings").hidden'), '桌面连接设置');
