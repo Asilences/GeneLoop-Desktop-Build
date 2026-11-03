@@ -31,6 +31,9 @@ app.whenReady().then(async()=>{
  check('无标题空会话不占历史列表，首页示例只填草稿并保护已有文字');
  await evaluate(`document.querySelector('.session-row').click()`);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'历史双路结果');
+ assert.equal(await evaluate(`document.querySelector('.workspace-group .workspace-children [data-session-id="history"]')!==null`),true);
+ assert.equal(await evaluate(`document.querySelector('.result-score-scale [aria-pressed=true]').textContent`),'5');
+ assert.equal(await evaluate(`document.querySelector('.result-metrics').textContent`),'161 次模型请求');
  await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
  assert.equal(await evaluate(`document.getElementById('history').textContent.includes('Motif执行结果')`),true);
  await evaluate(`document.querySelector('.workspace-entry').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}))`);

@@ -90,7 +90,9 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     more.setAttribute('aria-label','工作区菜单：'+group.title);more.setAttribute('aria-haspopup','menu');
     const row=node('div',{class:'workspace-entry'},header,more);
     row.addEventListener('contextmenu',event=>{event.preventDefault();workspaceMenu(group,{anchor:header,x:event.clientX,y:event.clientY});});
-    list.append(row,...rows.map(sessionButton));
+    const section=node('section',{class:'workspace-group','aria-label':group.title},row);
+    if(rows.length)section.append(node('div',{class:'workspace-children'},rows.map(sessionButton)));
+    list.append(section);
   }
   const ungrouped=state.sessions.filter(row=>!grouped.has(row.sessionId)&&visible(row));if(ungrouped.length)list.append(node('div',{class:'workspace-heading'},'其他对话'),...ungrouped.map(sessionButton));
   if(!list.children.length)list.append(node('p',{class:'empty'},query?'没有匹配的对话':'创建工作区，开始第一段研究。'));

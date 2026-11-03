@@ -3,6 +3,9 @@ export const node=(tag,attributes={},...children)=>{const el=document.createElem
 export const button=(label,click,cls='')=>node('button',{type:'button',class:cls,onclick:click},label);
 export function icon(name){
   const additions={
+    like:'M7 10v10H3V10Zm0 0 5-7a2 2 0 0 1 2 2l-1 4h6a2 2 0 0 1 2 2l-2 7a2 2 0 0 1-2 2H7',
+    dislike:'M7 14V4H3v10Zm0 0 5 7a2 2 0 0 0 2-2l-1-4h6a2 2 0 0 0 2-2l-2-7a2 2 0 0 0-2-2H7',
+    trace:'M4 6h6m4 0h6M4 12h10m4 0h2M4 18h3m4 0h9',
     document:'M6 3h8l4 4v14H6ZM14 3v5h4M9 12h6m-6 4h6',
     image:'M4 4h16v16H4Zm0 13 5-5 4 4 3-3 4 4M9 8h.01',
     download:'M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4',
