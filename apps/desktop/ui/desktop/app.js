@@ -17,6 +17,8 @@ let selectionChange=Promise.resolve(),creatingSession;
 let scratchText='';
 const historyCache=new Map();
 const workspaceDrafts=new Map();
+const newWorkspaceDrafts=new Map();
+let activeWorkspaceDraft=null;
 let awaitingHistory=false,historyError='';
 let pinnedWorkspaces=[];
 function changeSelection(action){const operation=selectionChange.catch(()=>{}).then(action);selectionChange=operation;return operation;}
@@ -39,7 +41,7 @@ function restoreLoginPreference(){
   $('login-user').value=username||'';
   $('remember-login').checked=localStorage.getItem('geneloop.desktop.remember-login')!=='off';
 }
-function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();restoreLoginPreference();screen('auth');$('login-pass').value='';}
+function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();newWorkspaceDrafts.clear();activeWorkspaceDraft=null;pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();restoreLoginPreference();screen('auth');$('login-pass').value='';}
 async function initialize(){screen('loading');$('connect-retry').hidden=true;$('loading-message').textContent='正在读取账号与工作空间…';try{
     let account;
     try{account=await request('/api/account/me');}catch(error){if(error.status===404||error.code==='http/200'){await rpc('session/list',{});account={user:{id:'standalone-host',displayName:'工作空间',standalone:true}};}else throw error;}
@@ -67,7 +69,7 @@ async function connectWorkspace(){
 }
 async function loadSessions(){const value=await rpc('session/list',{});if(!Array.isArray(value.items))throw Error('会话目录响应不兼容');state.sessions=value.items.filter(row=>row.origin!=='subagent');renderSidebar();if(state.session||state.workspace)scheduleRender();}
 function visibleSession(row){
-  if(!row||state.archived.has(row.sessionId))return false;
+  if(!row||state.archived.has(row.sessionId)||[...newWorkspaceDrafts.values()].some(draft=>draft.sessionId===row.sessionId))return false;
   const draft=state.drafts.get(row.sessionId);
   return row.blank!==true||row.running||titleOf(row)!=='新会话'||Boolean(draft?.text.trim()||draft?.attachments.length);
 }
@@ -82,7 +84,9 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
   const groups=[...state.workspaces].sort((a,b)=>Number(pinnedWorkspaces.includes(b.workspaceId))-Number(pinnedWorkspaces.includes(a.workspaceId)));
   for(const group of groups){
     const rows=group.sessionIds.map(id=>state.sessions.find(row=>row.sessionId===id)).filter(visible);
-    if(query&&!rows.length&&!group.title.toLowerCase().includes(query))continue;
+    const draft=newWorkspaceDrafts.get(group.workspaceId);
+    const showDraft=draft&&(!query||'新会话 · 草稿'.includes(query));
+    if(query&&!rows.length&&!showDraft&&!group.title.toLowerCase().includes(query))continue;
     const header=button(node('span',{},group.title),()=>openWorkspace(group.workspaceId),'workspace-row');
     header.prepend(icon('folder'));
     if(state.workspace===group.workspaceId)header.setAttribute('aria-current','true');
@@ -91,7 +95,13 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     const row=node('div',{class:'workspace-entry'},header,more);
     row.addEventListener('contextmenu',event=>{event.preventDefault();workspaceMenu(group,{anchor:header,x:event.clientX,y:event.clientY});});
     const section=node('section',{class:'workspace-group','aria-label':group.title},row);
-    if(rows.length)section.append(node('div',{class:'workspace-children'},rows.map(sessionButton)));
+    const children=rows.map(sessionButton);
+    if(showDraft){
+      const label=button('新会话 · 草稿',()=>beginWorkspaceDraft(group.workspaceId).catch(fail),'session-link');
+      if(draft===activeWorkspaceDraft)label.setAttribute('aria-current','true');
+      children.unshift(node('div',{class:'session-row workspace-draft'+(draft===activeWorkspaceDraft?' active':'')},label));
+    }
+    if(children.length)section.append(node('div',{class:'workspace-children'},children));
     list.append(section);
   }
   const ungrouped=state.sessions.filter(row=>!grouped.has(row.sessionId)&&visible(row));if(ungrouped.length)list.append(node('div',{class:'workspace-heading'},'其他对话'),...ungrouped.map(sessionButton));
@@ -101,7 +111,7 @@ function workspaceMenu(group,position){
   const id=group.workspaceId,pinned=pinnedWorkspaces.includes(id);
   popupMenu([
     {id:'workspace-home',label:'打开工作区',icon:'folder',action:()=>openWorkspace(id)},
-    {id:'workspace-new',label:'在此新建会话',icon:'plus',action:()=>openWorkspace(id,{focus:true})},
+    {id:'workspace-new',label:'在此新建会话',icon:'plus',action:()=>beginWorkspaceDraft(id).catch(fail)},
     {id:'workspace-pin',label:pinned?'取消置顶':'置顶工作区',icon:'pin',action:async()=>{
       try{const value=await post('/api/harless/workspaces/preferences',{workspace_id:id,pinned:!pinned});pinnedWorkspaces=value.pinned_workspace_ids;renderSidebar();}catch(error){fail(error);}
     }},
@@ -115,10 +125,34 @@ function clearSessionPanels(){
   state.deliveries=[];renderDeliveries();renderQuestions([]);$('preview').replaceChildren();
   if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
 }
+function saveComposer(){
+  const content={text:$('prompt').value,attachments:state.attachments};
+  if(activeWorkspaceDraft){
+    const draft=activeWorkspaceDraft;
+    activeWorkspaceDraft=null;
+    Object.assign(draft,content);
+    if(!content.text.trim()&&!content.attachments.length)newWorkspaceDrafts.delete(draft.workspaceId);
+    if(draft.sessionId)state.drafts.delete(draft.sessionId);
+  }else if(state.session)state.drafts.set(state.session,content);
+  else scratchText=content.text;
+}
+async function beginWorkspaceDraft(id){
+  if(creatingSession||state.submitting)return;
+  if(activeWorkspaceDraft?.workspaceId===id){$('prompt').focus();return;}
+  openWorkspace(id);
+  const draft=newWorkspaceDrafts.get(id)||{workspaceId:id,sessionId:null,text:'',attachments:[]};
+  newWorkspaceDrafts.set(id,draft);
+  activeWorkspaceDraft=draft;
+  if(draft.sessionId)await selectSession(draft.sessionId,{workspaceDraft:draft});
+  else{
+    $('prompt').value=draft.text;
+    renderSidebar();renderConversation();
+  }
+  if(activeWorkspaceDraft===draft)$('prompt').focus();
+}
 function openWorkspace(id,{focus=false}={}){
   if(creatingSession||state.submitting)return;
-  if(state.session)state.drafts.set(state.session,{text:$('prompt').value,attachments:state.attachments});
-  else scratchText=$('prompt').value;
+  saveComposer();
   if(id!==state.workspace){
     workspaceDrafts.set(state.workspace,scratchText);
     scratchText=workspaceDrafts.get(id)||'';
@@ -132,18 +166,38 @@ function openWorkspace(id,{focus=false}={}){
   $('history').scrollTop=0;
   if(focus)$('prompt').focus();
 }
-async function ensureSession(){if(state.session)return state.session;if(creatingSession)return creatingSession;creatingSession=(async()=>{const draft={text:$('prompt').value,attachments:state.attachments};if(!state.workspace&&state.workspaces.length)state.workspace=state.workspaces[0].workspaceId;const created=await rpc('session/create',state.workspace?{workspaceId:state.workspace}:{});state.drafts.set(created.sessionId,draft);await loadSessions();await selectSession(created.sessionId,{fromScratch:true});return created.sessionId;})();try{return await creatingSession;}finally{creatingSession=null;}}
-async function selectSession(id,{fromScratch=false,force=false}={}){
+async function ensureSession(){
+  if(state.session)return state.session;
+  if(creatingSession)return creatingSession;
+  creatingSession=(async()=>{
+    const workspaceDraft=activeWorkspaceDraft;
+    if(!state.workspace&&state.workspaces.length)state.workspace=state.workspaces[0].workspaceId;
+    const {sessionId}=await rpc('session/create',state.workspace?{workspaceId:state.workspace}:{});
+    const content={text:$('prompt').value,attachments:state.attachments};
+    if(workspaceDraft)Object.assign(workspaceDraft,content,{sessionId});
+    else state.drafts.set(sessionId,content);
+    await loadSessions().catch(fail);
+    await selectSession(sessionId,{fromScratch:true,workspaceDraft});
+    return sessionId;
+  })();
+  try{return await creatingSession;}finally{creatingSession=null;}
+}
+async function selectSession(id,{fromScratch=false,force=false,workspaceDraft=null}={}){
+  if((creatingSession||state.submitting)&&!fromScratch)return;
   if(state.session===id&&!force&&!historyError)return;
-  if(!state.session)scratchText=fromScratch?'':$('prompt').value;
-  if(state.session)state.drafts.set(state.session,{text:$('prompt').value,attachments:state.attachments});
+  if(!workspaceDraft){
+    if(fromScratch)scratchText='';
+    else if(!force||state.session!==id)saveComposer();
+    else if(!activeWorkspaceDraft)state.drafts.set(id,{text:$('prompt').value,attachments:state.attachments});
+    else Object.assign(activeWorkspaceDraft,{text:$('prompt').value,attachments:state.attachments});
+  }
   currentFollow?.();currentFollow=null;
   const generation=++state.generation;
   state.session=id;clearSessionPanels();state.composerScene='new-scene';state.trace=false;state.jobs=[];
   const cached=historyCache.get(id);
   state.conversation=cached?.conversation||new Conversation();state.comparisons=cached?.comparisons||new Map();
   awaitingHistory=true;historyError='';$('composer').inert=true;
-  const draft=state.drafts.get(id)||{text:'',attachments:[]};
+  const draft=workspaceDraft||activeWorkspaceDraft||state.drafts.get(id)||{text:'',attachments:[]};
   $('prompt').value=draft.text;state.attachments=draft.attachments;renderAttachments();
   state.workspace=state.workspaces.find(row=>row.sessionIds.includes(id))?.workspaceId||state.workspace;
   renderSidebar();renderConversation();
@@ -190,7 +244,7 @@ function workspaceHome(group){
   const ids=new Set(group.sessionIds);
   const rows=state.sessions.filter(row=>ids.has(row.sessionId)&&visibleSession(row))
     .sort((a,b)=>(b.updatedAt??0)-(a.updatedAt??0));
-  const create=button(node('span',{},icon('plus'),'新会话'),()=>$('prompt').focus(),'secondary workspace-start');
+  const create=button(node('span',{},icon('plus'),'新会话'),()=>beginWorkspaceDraft(group.workspaceId).catch(fail),'secondary workspace-start');
   const summary=node('div',{class:'workspace-home-heading'},
     node('div',{class:'workspace-home-name'},node('span',{class:'workspace-home-icon'},icon('folder')),
       node('div',{},node('h2',{},group.title),node('p',{},'研究工作区'))),
@@ -220,11 +274,12 @@ function renderConversation(){
   const rows=state.conversation.rows(),renderedComparisons=new Set();
   const resultCard=id=>comparisonCard(state.comparisons.get(id),{trace:state.trace,fail,onUpdate:next=>{state.comparisons.set(id,next);scheduleRender();}});
   const group=state.workspaces.find(row=>row.workspaceId===state.workspace);
-  const home=!state.session&&group;
-  $('chat-tab').parentElement.hidden=!state.session;
-  for(const id of ['rename-session','session-actions','deliveries-toggle'])$(id).hidden=!state.session;
-  $('prompt').placeholder=home?'在「'+group.title+'」中开始新会话':'发送消息或创建任务';
-  $('session-title').textContent=state.session?titleOf(state.sessions.find(row=>row.sessionId===state.session)):group?.title||'新会话';
+  const home=!state.session&&!activeWorkspaceDraft&&group;
+  const formal=state.session&&!activeWorkspaceDraft;
+  $('chat-tab').parentElement.hidden=!formal;
+  for(const id of ['rename-session','session-actions','deliveries-toggle'])$(id).hidden=!formal;
+  $('prompt').placeholder=group&&(home||activeWorkspaceDraft)?'在「'+group.title+'」中开始新会话':'发送消息或创建任务';
+  $('session-title').textContent=activeWorkspaceDraft?'新会话 · 草稿':state.session?titleOf(state.sessions.find(row=>row.sessionId===state.session)):group?.title||'新会话';
   $('session-status').textContent=historyError?'会话加载失败':awaitingHistory?'正在加载对话…':state.conversation.running?'正在执行…':state.session?'工作空间已连接':home?'工作区首页':'开始你的研究';
   $('stop').hidden=!state.conversation.running;
   $('chat-tab').classList.toggle('selected',!state.trace);$('trace-tab').classList.toggle('selected',state.trace);
@@ -283,8 +338,15 @@ function renderAttachments(){
   }));
 }
 async function attach(files){await ensureSession();const session=state.session,attachments=state.attachments;for(const file of files){const entry={name:file.name,uploading:true};attachments.push(entry);if(state.session===session)renderAttachments();try{const receipt=await upload(session,file);entry.receiptId=receipt.receiptId;entry.uploading=false;entry.session=session;}catch(error){entry.uploading=false;entry.error=true;fail(error);}if(state.session===session)renderAttachments();}}
+function promoteWorkspaceDraft(sessionId){
+  if(activeWorkspaceDraft?.sessionId!==sessionId)return;
+  const group=state.workspaces.find(row=>row.workspaceId===activeWorkspaceDraft.workspaceId);
+  if(group&&!group.sessionIds.includes(sessionId))group.sessionIds=[sessionId,...group.sessionIds];
+  newWorkspaceDrafts.delete(activeWorkspaceDraft.workspaceId);
+  activeWorkspaceDraft=null;
+}
 async function send(event){event?.preventDefault();if(state.submitting)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;$('send').disabled=true;try{
-    await selectionChange;const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);state.composerScene='new-scene';renderScenes();}state.conversation.running=true;scheduleRender();
+    await selectionChange;const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);promoteWorkspaceDraft(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);state.composerScene='new-scene';renderScenes();}state.conversation.running=true;scheduleRender();
   }catch(error){if(error.status>=400&&error.status<500)state.pending.delete(state.session);fail(error);}finally{state.submitting=false;$('send').disabled=false;}}
 async function refreshTaskPanels(){const session=state.session;if(!session)return;const generation=state.generation;const [tasks,questions]=await Promise.allSettled([request('/api/harless/tasks'),request('/api/harless/questions?session_id='+encodeURIComponent(session))]);if(generation!==state.generation)return;
   if(questions.status==='fulfilled')renderQuestions(questions.value.questions||[]);

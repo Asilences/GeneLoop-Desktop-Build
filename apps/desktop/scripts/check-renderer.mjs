@@ -69,8 +69,10 @@ const fixture=join(output,'fixture.json');writeFileSync(fixture,JSON.stringify({
 const env={...process.env,GENELOOP_RENDERER_FIXTURE:fixture};delete env.ELECTRON_RUN_AS_NODE;
 let result=1;
 try{const child=spawn(require('electron'),['test/renderer.cjs'],{cwd:app,env,stdio:'inherit',windowsHide:true});const [code,signal]=await once(child,'exit');result=code??1;console.log(JSON.stringify({diagnostic_child_exit:code,signal}));if(!JSON.parse(readFileSync(join(output,'summary.json'))).ok)throw Error('Renderer diagnostic failed before quit');
- const prompts=requests.filter(row=>row.path==='/api/session/prompt');if(prompts.length!==2)throw Error('Expected exactly two synthetic prompt submissions');
- if(requests.some(row=>row.path==='/api/session/create'))throw Error('Filling a welcome example must not create a session');
+ const prompts=requests.filter(row=>row.path==='/api/session/prompt');if(prompts.length!==3)throw Error('Expected exactly three synthetic prompt submissions');
+ const created=requests.filter(row=>row.path==='/api/session/create');
+ if(created.length!==1||created[0].body.payload.args.request.workspaceId!=='empty-workspace')throw Error('Only the submitted draft should create a session in its workspace');
+ if(prompts[2].body.payload.args.request.content[0].text!=='工作区草稿诊断')throw Error('Draft content was not sent');
  if(prompts[0].body.payload.args.request.content[0].text!=='/ppt 诊断发送')throw Error('Scene shortcut missing from wire prompt');
  if(prompts[1].body.payload.args.request.content[0].text!=='普通下一轮')throw Error('Scene selection did not reset per turn');
  const selected=requests.findIndex(row=>row.path==='/api/session/selectModel'),sent=requests.findIndex(row=>row.path==='/api/session/prompt');if(selected<0||selected>sent)throw Error('Prompt did not await model selection');
