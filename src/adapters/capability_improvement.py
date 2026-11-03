@@ -133,7 +133,7 @@ def repair_signature(result, outcome, attempt):
     locations = [issue.get('path', []) for issue in diagnostics.get('issues', [])]
     if diagnostics.get('kind') == 'json_syntax':
         locations.append([diagnostics.get('line'), diagnostics.get('column')])
-    if outcome:
+    if outcome and (outcome.get('feedback') or {}).get('checks'):
         locations = [check.get('id') for check in (outcome.get('feedback') or {}).get('checks', [])
                      if check.get('status') != 'passed']
     candidate_sha = None
@@ -176,6 +176,9 @@ def run_improvement(plan, adapter, *, execute=False):
                      'src/adapters/capability_store.ts','src/adapters/capability_authoring.py','src/adapters/capability_feedback.py',
                      'src/adapters/capability_discovery.py','src/adapters/capability_scene.py',
                      'src/adapters/capability_cycle.ts','src/adapters/capability_proposal.py',
+                     'src/adapters/capability_source_authoring.py','src/adapters/capability_program_encoding.py',
+                     'src/adapters/capability_program_training.py','src/adapters/capability_script_learning.py',
+                     'src/adapters/capability_script_execution.py',
                      'src/adapters/capability_materials.py','src/adapters/capability_materials.ts',
                      'src/adapters/capability_trajectory.py','src/adapters/source_capability_runtime.ts',
                      'scenarios/remotion_edit/structured/capability_learning.py',
@@ -324,7 +327,7 @@ def run_improvement(plan, adapter, *, execute=False):
                         summary['outcomes'].append(dict(opportunity_id=job['id'], status='committed_followup_failed'))
                         save(journal.directory/'result.json', summary)
                         return summary
-                if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
+                feedback_result=result;recorded=False;acquisition_ref=None
                 if result.get('status')=='deferred' and hasattr(adapter,'acquire'):
                     verify_scene()
                     for ref in job.get('source_evidence',[]):evidence(ref)
@@ -333,6 +336,8 @@ def run_improvement(plan, adapter, *, execute=False):
                     acquisition_ref={'path':str(attempt/'acquisition.json'),
                         'sha256':hashlib.sha256((attempt/'acquisition.json').read_bytes()).hexdigest()}
                     if acquisition.get('status')=='registered':
+                        if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
+                        recorded=True
                         refreshed=adapter.library()
                         next_snapshot=validate_capability_snapshot(refreshed['snapshot'],plan['owner'])
                         if any(c['certification']!='certified' or c['lifecycle']=='archived' for c in next_snapshot['capabilities']):
@@ -348,27 +353,37 @@ def run_improvement(plan, adapter, *, execute=False):
                             parent,feedback,failures,repairs=None,None,set(),0
                             attempt_index+=1
                             continue
-                    decision(job['id'],'defer',acquisition.get('reason','learning_did_not_change_available_material'),[acquisition_ref])
-                reason = (outcome or result).get('error', 'construction_failed')
-                signature = repair_signature(result, outcome, attempt)
+                    if acquisition.get('status')=='failed' and acquisition.get('repairable') is True:
+                        # Working feedback only: retain the original model
+                        # result, acquisition evidence and its cost unchanged.
+                        feedback_result={**result,'status':'failed','error':acquisition.get('error',acquisition.get('reason','native_acquisition_failed')),
+                            'diagnostics':acquisition.get('diagnostics')}
+                        outcome={**acquisition,'evidence_ref':acquisition_ref,'committed':False}
+                    else:
+                        decision(job['id'],'defer',acquisition.get('reason','learning_did_not_change_available_material'),[acquisition_ref])
+                if not recorded and hasattr(adapter,'record_outcome'):
+                    adapter.record_outcome(job,attempt,feedback_result,candidate,outcome)
+                reason = (outcome or feedback_result).get('error', 'construction_failed')
+                signature = repair_signature(feedback_result, outcome, attempt)
                 fingerprint = capability_digest(signature)
                 save(attempt/'repair-signature.json', signature)
                 max_repairs = plan['policy']['max_repairs']
-                repairable = result.get('status')!='deferred' and (outcome is None or
+                repairable = feedback_result.get('status')!='deferred' and (outcome is None or
                     outcome.get('repairable',reason=='capability_store_validation_failed') is True)
                 retry = repairable and fingerprint not in failures and (max_repairs is None or repairs < max_repairs)
                 decision(job['id'], 'repair' if retry else 'defer',
-                         'new_failure_feedback' if retry else 'construction_gap_requires_new_material_or_evidence' if result.get('status')=='deferred'
-                         else 'infrastructure_repeated_failure_or_explicit_repair_limit', [result_ref])
+                         'new_failure_feedback' if retry else 'construction_gap_requires_new_material_or_evidence' if feedback_result.get('status')=='deferred'
+                         else 'infrastructure_repeated_failure_or_explicit_repair_limit', [result_ref]+([acquisition_ref] if acquisition_ref else []))
                 if not retry:
                     summary['outcomes'].append(dict(opportunity_id=job['id'], status='deferred', error=reason))
                     waiting[job['id']]=(job,snapshot['digest'])
                     break
                 failures.add(fingerprint)
-                feedback = dict(error=reason, diagnostics=result.get('diagnostics'),
+                feedback = dict(error=reason, diagnostics=feedback_result.get('diagnostics'),
                                 repeat_signature=signature, progress='not_established',
                                 validation=outcome.get('feedback') if outcome else None,
                                 source_attempt_id=attempt_id, scope='training_or_validation')
+                if acquisition_ref is not None:feedback['acquisition_ref']=acquisition_ref
                 parent, attempt_index = attempt, attempt_index+1
                 repairs+=1
     except BaseException as error:

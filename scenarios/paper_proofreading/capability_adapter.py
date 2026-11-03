@@ -19,6 +19,7 @@ class PaperCapabilityAdapter(CapabilityImprovementAdapter):
     withdrawal_reasons=CapabilityImprovementAdapter.withdrawal_reasons|{'script_capability_leaf_changed'}
 
     def acquire(self,job,result,attempt):
+        if result.get('model_requested_program'):return super().acquire(job,result,attempt)
         gap=result.get('construction_gap') or {};ref=self.plan.get('learning_routes')
         if gap.get('reason')!='missing_primitive' or not ref:
             return {'status':'deferred','reason':'paper_learning_route_unavailable'}
