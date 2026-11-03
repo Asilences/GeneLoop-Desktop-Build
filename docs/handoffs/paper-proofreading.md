@@ -1,5 +1,17 @@
 # 论文校对 当前交接
 
+## 2026-11-03 上午：自主递归构造与组会交付（当前）
+
+- 更新时间与交接人：2026-11-03上午，Codex；用户要求一小时内推进并准备组会，长期目标继续是完整效率反馈，未标完成。
+- 起点/代码：PR123已合并到远程main `2f29d34a`。当前工作区分支`codex/recursive-construction-20261103`，新接口源码`4af5c56f`；私人`reference/`未动。本轮尚未推送、合并、部署，文档/平台测试小修在工作区。
+- 已实现：同答`{program,composition}`、受限`composition_source`静态前端；认证前锁定模型选择/绑定，认证后只解析`$program`；编译失败repair按当前alias显示精确意图。多项目最终清单与显式有限研究预算；公共运行/权限/原库不改。
+- 已观察：`continuation-study-001`四对真实检查点消融，on四格全合格、两格模型完整C→D，off两格合格、无完整C。on/off模型估费0.005062164/0.068178516，局部低92.6%，不是无C对照或新盲测。
+- 从初始池结果：`generative-primitives-001`三组各两格；WithC1模型自主新写3273字符比较程序和C调用，DoRA/BitFit四项最终检查全过、每项2次C回执。D为`cap_c962563a382f4c1d2e1f598c`。实际用JSON意图，不是Python拼写。WithC0完整重写2/4；Flat1完整重写4/4且费用更低；另三格最终未评审。完整理论反馈未闭合。
+- 验证/费用：本地1979Python通过/239skip、1516Node通过/20skip，Linux原生/公共129通过，smoke/motif通过，诊断无模型。真实38请求、USD0.139684764用量估费，原账本3315→3353，全部结算unknown0；实付、Codex开发、人机成本未知。
+- 证据入口：公开[组会报告](../experiments/recursive-construction-20261103.md)含一分钟讲稿、完整矩阵和失败；[新协议](../recursive-construction-protocol-20261103.md)。私有`.local/recursive-construction-20261103/server-evidence/`保留两个study及配置/原始回答/质量/回执。服务器同名私有根`code-20`=main、`code-21`=`4af5c56f`，加载既有`.local/remote-env.sh`后用研究README入口；不重发已关闭格。
+- 接手下一步：①减轻新程序调用与原生value包装等作者接口负担，仍由模型明确参数关系；②补array.items类型与确定数据形状错误的修复诊断，保留已提交后继失败的撤回/新机会；③再做可执行C/仅描述/无C的创造价值和同一任务流净节余→再投资→D→E对照，不追加重复任务凑回本。
+- 权限/风险：真实DeepSeek持续授权、平台null与原累计账本不变；生产/默认聊天/外部应用/私人原件未改。独立研究入口可停用，回退源码到main `2f29d34a`；保留所有失败与不可变研究快照。
+
 ## 2026-11-03：Capability Frontier 七小时主线
 
 - 起点：已核对远程 main `f594e19`，PR #122 已合并。当前分支 `codex/capability-frontier-20261103`，沿用当前工作区，私人 `reference/` 未跟踪。

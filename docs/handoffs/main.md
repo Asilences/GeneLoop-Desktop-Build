@@ -1,4 +1,8 @@
-## 2026-11-03：Capability Frontier 夜间研究（最新）
+## 2026-11-03 上午：自主递归构造（最新）
+
+main `2f29d34a`已合并PR123；当前同工作区分支`codex/recursive-construction-20261103`，源码`4af5c56f`，尚未推送/部署。四对检查点信息消融已封账：on4/4合格、2格完整C；off2/4合格、0格完整C；费用USD0.005062164/0.068178516，为局部信息作用，不是C对无C增益。新增同答program+显式组合意图/静态Python拼写，精确版本在认证前固定，错误repair显示当前alias，不替模型补绑定。从初始池六格另行封账：一格模型新写3273字符比较程序+完整C，在DoRA/BitFit四项检查全过、每项2次C回执；成功实际用JSON意图，Python拼写尚无真实模型使用证据。另一个WithC重写仅过2/4；Flat1完整重写过4/4且更便宜。完整效率RSI仍未达标。38请求/USD0.139684764含失败，原账本3315→3353，无unknown；本地1979Python/1516Node、Linux129、smoke/motif通过。协议、全量结果/失败、组会一分钟讲稿见[上午报告](../experiments/recursive-construction-20261103.md)、[推进协议](../recursive-construction-protocol-20261103.md)；当前接手见[论文交接](paper-proofreading.md)。
+
+## 2026-11-03：Capability Frontier 夜间研究
 
 起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D可发布/复用；H0第一份材料已够用但入池后丢构造意图，已补新snapshot续接，模型效果未重跑。独立反例已回到原撤回机制，三份错误D退出后续选择。79次DeepSeek请求估费USD0.340150572，旧账本不变；源码`e6d46f6`还修复日期写死与付费前条件核对，原16格匹配。全量1879 Python/1516 Node、Linux原生/公共95项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)的`a92f278`（含最后源码）Ubuntu/Windows push/PR四项CI全部通过；后续仅文档收尾，最新head见PR，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
 

@@ -71,7 +71,10 @@ def test_final_source_cannot_escape_manifest_directory(tmp_path,name):
 def test_final_source_symlink_escape_and_hash_mutation_are_rejected(tmp_path):
     path,value=manifest(tmp_path)
     outside=tmp_path/'outside.zip';outside.write_bytes(b'outside')
-    (path.parent/'link.zip').symlink_to(outside)
+    try:
+        (path.parent/'link.zip').symlink_to(outside)
+    except OSError:
+        pytest.skip('当前平台不允许创建测试符号链接')
     value['versions'][0]['file']='link.zip';path.write_text(json.dumps(value))
     with pytest.raises(ValueError,match='source_path_invalid'):load_final_projects([path])
     value['versions'][0]['file']='v0.zip';path.write_text(json.dumps(value))

@@ -1327,3 +1327,13 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 - Frontier 新freeze显式给定实验ID与带时区未来截止，C/D准备器读取冻结协议及任务引用，支持`--protocol`与旧重定位文件，不继承本轮日期。`run`在owner/费用登记前核对精确研究预算、截止、任务、种子与实际初始能力池，首构造再次核对；不一致不调用模型，后续原生学习按回合协议更新池。研究截止须有限有效，平台null配额策略和原累计账本不改。
 
 新增执行仍是既有只读 Script 沙箱后端，不接管聊天，不宣称插件已去除 Python 或任意 MCP 自动组合已完成。真实效果与限制独立见[Frontier 记录](experiments/capability-frontier-20261103.md)。
+
+## 能力生成语言与显式构造意图（2026-11-03 上午）
+
+Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{steps,output}`，新程序只在 step.use 使用 `$program` 占位；其余步骤由模型明确指定当前可见 alias。`freeze_program_composition` 在学习前将旧 alias 固定成精确版本引用，保存原绑定、task/program/snapshot摘要。`encode_program_composition` 待原生认证及入池后只解析同源码、同库、同mode且仍可见的新材料，再经原 IR 编译和独立发布；不补依赖、算法或参数。
+
+另可提交 `{composition_source}` 或 `{program,composition_source}`。`compile_composition_source` 将唯一 `def build(value)` 中顺序赋值的 `capability.cN(...)` / `program(...)` 及字符串字段绑定静态编码为同一draft；拒绝导入、循环、动态调用/索引和任意求值。新增计算仍在受限的 program.source 中认证执行，编排源代码本身不执行。原 JSON 和完整普通程序入口保留。
+
+新材料改变别名后，显式意图仍引用原精确版本；编译失败的repair通过SHA验证的 `frozen_composition_intent` 显示当前alias投影及原参数，原始回答保留引用，不把旧alias冒充新回答。缺失参数继续保持缺失，交给模型修复。Frontier 同时消费原 `selection.construction` 排序。
+
+`prepare_D --final-manifest` 可重复，以多个宿主冻结manifest生成项目与独立检查；项目ID安全唯一，0/1/2版本和输入SHA逐项核验，旧无ID清单仍解释为mamba。`--budget-usd` 和 `--research-limit-usd` 显式配置新条件的有限研究预算，默认值与旧条件不变，未知历史请求仍完整预留；平台null额度与原账本不改。复现命令见[研究入口](../scenarios/paper_proofreading/frontier/README.md)，效果边界见[上午实验](experiments/recursive-construction-20261103.md)。

@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-03 上午，[自主递归构造验收](docs/experiments/recursive-construction-20261103.md)首次观察到模型从初始池生成新关系程序并自主调用完整C构造D，在DoRA/BitFit两个新项目四项检查全过。另有四对真实检查点信息消融，有续接组4/4合格、模型费局部低约92.6%；不是C对无C收益。新增同答构造意图与静态调用语法；本轮38次真实请求估费USD0.139684764。新C构造样本仍比合格扁平方案贵，完整效率反馈未闭合，未部署。以下79请求是此前夜间条件。
+
 2026-11-03，[Capability Frontier 研究入口](scenarios/paper_proofreading/frontier/README.md)已接通真实程序学习、C 发布与跨版本 D 独立验收。C 在新留出项目通过；模型自主生成的 D 尚未调用 C，零模型强制组合可以执行并通过检查。三种条件及全部失败、79 次真实请求的 USD0.340150572 代理估费见[实验记录](docs/experiments/capability-frontier-20261103.md)。自主递归收益仍 pending，生产服务未切换。
 
 2026-11-03，论文书目公共 Capability 完成首个受控真实验收：正常任务学习、缺口补材料、模型组合，经显式工程恢复后通过 27 条验证和 29 条后继，发布能力进入下一 Builder。尚未接管聊天或证明新增机制降本；范围、费用与失败见[真实记录](docs/experiments/paper-capability-real-20261102.md)。
