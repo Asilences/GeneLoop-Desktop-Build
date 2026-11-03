@@ -2,7 +2,7 @@
 
 - 更新时间与交接人：2026-11-03，Codex。
 - 目标与本次范围：独立桌面前端0.2.0预览版；参考网页风格/场景，自行实现布局、组件与状态，只复用服务器账号/API和场景Agent。第一阶段不迁移本机执行。
-- 分支 / 工作区：`codex/geneloop-desktop-independent-ui`，`.local/desktop-independent-20261103`，从冻结基线 `15af73e` 分出；最初已核实的GitHub main为 `2f29d34`。本次重新查询GitHub时本机代理不可用，单次直连也超时，未声称重新核实最新tip。仅本地提交，未推送/合并/部署。
+- 分支 / 工作区：`codex/geneloop-desktop-independent-ui`，`.local/desktop-independent-20261103`，从冻结基线 `15af73e` 分出；最初已核实的GitHub main为 `2f29d34`。开发交付时代理/直连查询失败，交付后按用户要求再次直连，已成功推送至 `https://github.com/jingyio/GeneLoop/tree/codex/geneloop-desktop-independent-ui` 并设置upstream；仓库旧地址DeepSeek-Harless由GitHub重定向至GeneLoop。此时重新核对远端main为 `2b3d0051113c74bcfca384b15b19c3ba892b56f0`，桌面分支尚未合入这个后续main。未合并/部署，未修改全局代理配置。
 - 已完成：`apps/desktop/ui/desktop/` 全部为独立页面、样式与交互模块；登录注册、侧栏/工作区/会话、模型/推理选择、六场景入口/选项、文件上传、实时消息、历史恢复、双路结果、反馈/评分入口、交付预览、权限确认、人类问答、设置/账户/归档/最近删除。`src/frontend.ts` 仅提供本地白名单UI与原服务器 `/api/` 代理，不读取远程网页/boot图，不打包DSH网页或网页插件；生产Node依赖为空。
 - 保留：透明纽带图标、32px主题菜单、Origin恢复与跨源拒绝、按服务器隔离Cookie、原下载检查、NSIS准确exe名检测、不自动结束用户应用。退出改为窗口销毁前释放子视图/连接，dispose幂等。
 - 已验证：12项定向检查通过；原网关临时合成账号4项通过；真实Electron+原项目隔离mock Host8项通过（原生RPC/会话/上传/重连，正式只读未登录账号检测）；合成协议渲染6项通过（包括双路结果、写确认、人类多选、发送顺序与设置），正常退出连续3次exit 0。原生Host诊断无模型消息，合成渲染回答不作为模型验收。真实模型请求0。
