@@ -98,10 +98,9 @@
 .file-row a:hover{background:var(--hover)}
 @media(max-width:580px){.theme-cards{grid-template-columns:1fr}.theme-preview{height:56px}}
 .workspace-group + .workspace-group{margin-top:3px}
-.workspace-entry .workspace-row{gap:6px;padding:7px 38px 7px 5px;min-height:34px}
+.workspace-entry .workspace-row{gap:8px;padding:7px 38px 7px 9px;min-height:34px}
 .workspace-row>svg{width:16px;height:16px;flex:none}
-.workspace-row>svg.workspace-disclosure{width:13px;height:13px}
-.workspace-children{margin:1px 0 3px 24px;padding-left:6px;border-left:1px solid color-mix(in srgb,var(--muted) 28%,transparent)}
+.workspace-children{margin:1px 0 3px 17px;padding-left:6px;border-left:1px solid color-mix(in srgb,var(--muted) 28%,transparent)}
 .workspace-children .session-row{margin:1px 0}
 .workspace-children .session-link{padding:5px 8px}
 .result-footer{display:grid;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
@@ -147,3 +146,12 @@
 #account-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account-avatar{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:50%;background:var(--selection);color:var(--blue)}
 .account-avatar svg{width:15px;height:15px}
+.header-actions .icon{color:var(--muted)}
+.header-actions .icon svg{width:17px;height:17px;stroke-width:1.5}
+.header-actions .icon:hover,.header-actions .icon:focus-visible{color:var(--gl-ink)}
+.sidebar{position:relative}
+.sidebar>.wordmark{padding-inline:8px}
+#sidebar-divider{position:absolute;z-index:6;top:0;bottom:0;right:-5px;width:9px;cursor:col-resize;touch-action:none;user-select:none}
+#sidebar-divider::after{content:"";position:absolute;inset:0 3px;background:transparent;transition:background-color .15s}
+#sidebar-divider:hover::after,#sidebar-divider.dragging::after,#sidebar-divider:focus-visible::after{background:var(--blue)}
+body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}

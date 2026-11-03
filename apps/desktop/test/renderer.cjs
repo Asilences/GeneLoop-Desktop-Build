@@ -41,6 +41,24 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`!document.querySelector('[data-session-id="history"]')`),true);
  await evaluate(`${toggleGroup}.click()`);
  assert.equal(await evaluate(`${toggleGroup}.getAttribute('aria-expanded')==='true'&&!!document.querySelector('[data-session-id="history"]')`),true);
+ assert.equal(await evaluate(`${toggleGroup}.querySelectorAll('svg').length`),1);
+ const dividerX=await evaluate(`Math.round(document.getElementById('sidebar-divider').getBoundingClientRect().left+4)`);
+ const sidebarWidth=()=>evaluate(`document.getElementById('sidebar').getBoundingClientRect().width`);
+ const initialWidth=await sidebarWidth();
+ const debuggerClient=desktop.workspace.webContents.debugger;
+ debuggerClient.attach('1.3');
+ try{
+   const mouse=(type,x,buttons)=>debuggerClient.sendCommand('Input.dispatchMouseEvent',{type,x,y:200,button:'left',buttons,clickCount:1});
+   await mouse('mousePressed',dividerX,1);
+   await mouse('mouseMoved',dividerX+48,1);
+   await mouse('mouseReleased',dividerX+48,0);
+ }finally{debuggerClient.detach();}
+ await until(async()=>await sidebarWidth()===initialWidth+48,'鼠标拖动分隔线调整侧栏');
+ assert.equal(await evaluate(`localStorage.getItem('geneloop.desktop.sidebar-width')`),String(initialWidth+48));
+ await evaluate(`document.getElementById('sidebar-divider').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}))`);
+ assert.equal(await sidebarWidth(),initialWidth+36);
+ await evaluate(`document.getElementById('sidebar-divider').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))`);
+ assert.equal(await sidebarWidth(),initialWidth);
  assert.equal(await evaluate(`document.querySelector('.result-score-scale [aria-pressed=true]').textContent`),'5');
  assert.equal(await evaluate(`document.querySelector('.result-metrics').textContent`),'161 次模型请求');
  await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
