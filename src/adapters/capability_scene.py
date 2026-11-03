@@ -316,9 +316,21 @@ class CapabilityImprovementAdapter:
         if value['snapshot'] is None:raise ValueError('feedback_no_available_capability')
         return value
 
+    def construction_budget(self,job):
+        """Expose a trusted finite research gate, never platform null as zero."""
+        from .capability_construction_history import amount
+        budget=getattr(getattr(self,'gate',None),'budget',None)
+        if budget is None:return None
+        limit=amount(budget.limit);spent=amount(budget.spent)
+        pending=sum((amount(value) for value in budget.pending.values()),start=amount(0))
+        return {'limit_usd':str(limit),'spent_usd':str(spent),'pending_usd':str(pending),
+                'remaining_usd':str(max(amount(0),limit-spent-pending))}
+
     def construct(self, task, library, output, parent, feedback):
-        continuation_ref=self.pending_programs.pop(capability_digest(task),None) if parent is None else None
-        if continuation_ref is None and parent is None:
+        reconsider=library.get('source_catalog',{}).get('construction_feedback',{}).get('reconsider') is True
+        pending=self.pending_programs.pop(capability_digest(task),None) if parent is None else None
+        continuation_ref=None if reconsider else pending
+        if continuation_ref is None and parent is None and not reconsider:
             # Persisted continuation evidence also supports a resumed public
             # controller; aliases from the original source are never replayed.
             continuation=library.get('source_catalog',{}).get('material_continuation',{})
@@ -363,6 +375,12 @@ class CapabilityImprovementAdapter:
                 write(output/'answer.txt',json.dumps({'format':'capability_host_encoding_failure_v1','error':str(error),
                     'originating_source_ref':pending['capability_source_ref']}))
             write(output/'result.json',result);return result
+        gate=getattr(self,'gate',None)
+        if gate is not None:
+            from .capability_proposal import propose_once
+            gate.register_attempt(output,self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
+            return propose_once(task=task,catalog=self.construction_catalog(library),snapshot=library['snapshot'],
+                output=output,gate=gate,repair_from=parent,feedback=feedback)
         context = output.parent/(output.name+'-context'); context.mkdir(mode=0o700)
         save(context/'task.json', task); save(context/'snapshot.json', library['snapshot'])
         # Preserve original leaf descriptions/examples and append verified learned

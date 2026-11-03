@@ -119,7 +119,8 @@ class FrontierAdapter(CapabilityImprovementAdapter):
             self.expected_initial_snapshot_sha256=None
         template=next(iter(self.templates.values()));pending=getattr(self,'pending_complete',None)
         self.pending_complete=None
-        if pending and (pending.get('composition_intent_ref') or template.get('auto_wrap_complete_program')):
+        reconsider=library.get('source_catalog',{}).get('construction_feedback',{}).get('reconsider') is True
+        if pending and not reconsider and (pending.get('composition_intent_ref') or template.get('auto_wrap_complete_program')):
             encoded=None;encoding_error=None
             try:
                 if pending.get('composition_intent_ref'):
