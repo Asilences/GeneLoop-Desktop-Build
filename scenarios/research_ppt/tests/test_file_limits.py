@@ -15,7 +15,7 @@ class FileLimitTests(unittest.TestCase):
             with source.open('wb') as stream:
                 stream.truncate(documents.MAX_BYTES)
             expected = hashlib.sha256()
-            for _ in range(100):
+            for _ in range(documents.MAX_BYTES // (1024 * 1024)):
                 expected.update(b'\0' * (1024 * 1024))
             # Large files must not be buffered in one read during hashing.
             with patch.object(Path, 'read_bytes', side_effect=AssertionError('unbounded read')):
@@ -27,11 +27,11 @@ class FileLimitTests(unittest.TestCase):
             with source.open('wb') as stream:
                 stream.truncate(documents.MAX_BYTES + 1)
             with patch.object(Path, 'open', side_effect=AssertionError('must not read')):
-                with self.assertRaisesRegex(ValueError, '100 MiB'):
+                with self.assertRaisesRegex(ValueError, '200 MiB'):
                     documents.file_hash(source)
 
     def test_library_and_parser_share_the_limit(self):
-        self.assertEqual(documents.MAX_BYTES, 100 * 1024 * 1024)
+        self.assertEqual(documents.MAX_BYTES, 200 * 1024 * 1024)
         self.assertEqual(knowledge_library.MAX_DOCUMENT_BYTES, documents.MAX_BYTES)
 
     def test_growth_during_hashing_remains_bounded(self):
@@ -40,5 +40,5 @@ class FileLimitTests(unittest.TestCase):
             source.write_bytes(b'abcdef')
             with patch.object(documents, 'MAX_BYTES', 4), patch.object(
                     Path, 'stat', return_value=type('Size', (), {'st_size': 4, 'st_mode': 0o100600})()):
-                with self.assertRaisesRegex(ValueError, '100 MiB'):
+                with self.assertRaisesRegex(ValueError, '200 MiB'):
                     documents.file_hash(source)

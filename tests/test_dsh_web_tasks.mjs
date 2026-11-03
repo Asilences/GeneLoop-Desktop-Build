@@ -2385,21 +2385,32 @@ test('changed historical attachment bytes fail before any subsequent model dispa
  }finally{await f.close();}
 });
 
-test('attachment inheritance reports capacity overflow instead of silently omitting originals',options,async()=>{
- const f=await fixture({broker:true,scenes:attachmentScenes(),capability_profile:'new-scene',comparison_scenes:['ppt']});
+test('file batches and cross-scene history exceed former quotas without becoming current uploads',options,async()=>{
+ const f=await fixture({broker:true,scenes:attachmentScenes(),capability_profile:'new-scene',comparison_scenes:['ppt','paper-proofreading','research-data-analysis']});
  try{
   const {sessionId}=await f.ctx.sessionController.create({}),files=[];
-  for(let i=0;i<8;i++){
+  for(let i=0;i<35;i++){
    const file=await f.ctx.fileUploads.uploadStream({sessionId,name:`source-${i}.txt`,data:(async function*(){yield Buffer.from('source '+i);})()});
    files.push({type:'file',receiptId:file.receiptId});
   }
-  const initial=await f.ctx.sessionController.prompt({sessionId,requestId:'capacity-a',mode:'queue',content:[{type:'text',text:'Read originals'},...files]},new AbortController().signal);
-  await settleAttachmentTurn(f,sessionId,initial.comparison_id);
-  const extra=await f.ctx.fileUploads.uploadStream({sessionId,name:'extra.txt',data:(async function*(){yield Buffer.from('extra');})()});
-  const calls=f.promptCalls.length;
-  const next=await f.ctx.sessionController.prompt({sessionId,requestId:'capacity-b',mode:'queue',content:[{type:'text',text:'Compare all nine originals'},{type:'file',receiptId:extra.receiptId}]},new AbortController().signal);
-  const result=await settleAttachmentTurn(f,sessionId,next.comparison_id);
-  assert.equal(result.status,'failed');assert.match(result.lanes.baseline.failure,/附件超出上传限制/);assert.equal(f.promptCalls.length,calls);
+  const send=(requestId,text,content=[])=>f.ctx.sessionController.prompt({sessionId,requestId,mode:'queue',content:[{type:'text',text},...content]},new AbortController().signal);
+  const initial=await send('capacity-a','Read originals',files);
+  assert.equal((await settleAttachmentTurn(f,sessionId,initial.comparison_id,undefined,{timeoutMs:60000})).status,'completed');
+  const extra=await f.ctx.fileUploads.uploadStream({sessionId,name:'source-0.txt',data:(async function*(){yield Buffer.from('new version');})()});
+  for(const [index,prefix] of ['/ppt ','/paper ','/data ',''].entries()){
+   if(index===2)await f.restart();
+   const next=await send('capacity-'+index,prefix+'Use the earlier originals',index===0?[{type:'file',receiptId:extra.receiptId}]:[]);
+   const result=await settleAttachmentTurn(f,sessionId,next.comparison_id,undefined,{timeoutMs:60000});
+   assert.equal(result.status,'completed',JSON.stringify(result));
+   for(const lane of Object.values(result.lanes)){
+    const task=(await f.api()).value.tasks.find(row=>row.task_id===lane.task_id);
+    assert.equal(task.scene_inputs.length,36,'both versions and every earlier original remain available');
+    const call=f.promptCalls.find(row=>row.requestId===task.request_id);
+    assert.equal(call.content.filter(p=>p.type==='file').length,index===0?1:0,'history is not a fresh upload');
+    const texts=task.scene_inputs.map(row=>readFileSync(join(f.directory,'sessions',lane.session_id,'work','inputs',row.file),'utf8'));
+    assert.ok(texts.includes('source 0'));assert.ok(texts.includes('new version'));
+   }
+  }
  }finally{await f.close();}
 });
 
@@ -2955,4 +2966,24 @@ test('native command deliveries pin private bytes, survive restart, and reject a
   const saved=join(f.directory,'comparison-artifacts',value.id,'baseline/0',row.id);writeFileSync(saved,'tampered snapshot');
   assert.equal((await read(fileQuery)).status,409);
  } finally {await f.close();}
+});
+
+// Regression: a valid image larger than the former 576 KiB ceiling passes both paired lanes.
+test('large native images pass paired task preview without base64 or scene quotas',options,async()=>{
+ const f=await fixture({broker:true,scenes:attachmentScenes(),capability_profile:'new-scene',comparison_scenes:['paper-proofreading']});
+ try{
+  const {sessionId}=await f.ctx.sessionController.create({});
+  const head=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8ZkAAAAASUVORK5CYII=','base64');
+  const bytes=Buffer.concat([head,Buffer.alloc(1024*1024)]);
+  const image={type:'image',mediaType:'image/png',name:'large.png',data:bytes.toString('base64')};
+  const first=await f.ctx.sessionController.prompt({sessionId,requestId:'large-paired',mode:'queue',content:[{type:'text',text:'/paper Read images'},...Array.from({length:9},(_,i)=>({...image,name:`large-${i}.png`}))]},new AbortController().signal);
+  const result=await settleAttachmentTurn(f,sessionId,first.comparison_id,undefined,{timeoutMs:60000});
+  assert.equal(result.status,'completed',JSON.stringify(result));
+  for(const lane of Object.values(result.lanes)){
+   const task=(await f.api()).value.tasks.find(row=>row.task_id===lane.task_id);
+   const call=f.promptCalls.find(row=>row.requestId===task.request_id);
+   assert.equal(call.content.filter(p=>p.type==='image').length,9);
+   assert.equal(call.content.find(p=>p.type==='image').data,image.data);
+  }
+ }finally{await f.close();}
 });

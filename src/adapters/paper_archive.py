@@ -1,6 +1,11 @@
 """Read a task-approved LaTeX ZIP into an immutable, session-private source view."""
 from __future__ import annotations
 
+try:
+    from .geneloop_upload_limits import FILE_MAX_BYTES
+except ImportError:
+    from geneloop_upload_limits import FILE_MAX_BYTES
+
 from hashlib import sha256
 from io import BytesIO
 import json
@@ -15,8 +20,8 @@ from src.adapters.file_lock import exclusive_lock
 
 
 MAX_ENTRIES = 128
-MAX_ENTRY_BYTES = 20 * 1024 * 1024
-MAX_TOTAL_BYTES = 32 * 1024 * 1024
+MAX_ENTRY_BYTES = FILE_MAX_BYTES
+MAX_TOTAL_BYTES = 1024 * 1024 * 1024
 
 
 def _entries(data: bytes):

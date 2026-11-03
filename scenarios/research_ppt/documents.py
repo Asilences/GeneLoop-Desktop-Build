@@ -11,7 +11,8 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 from defusedxml import ElementTree as ET
 
-MAX_BYTES = 100 * 1024 * 1024
+from src.adapters.geneloop_upload_limits import FILE_MAX_BYTES
+MAX_BYTES = FILE_MAX_BYTES
 NS = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
 P = 'http://schemas.openxmlformats.org/presentationml/2006/main'
 R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
@@ -20,13 +21,13 @@ PACKAGE_R = 'http://schemas.openxmlformats.org/package/2006/relationships'
 
 def file_hash(path: Path) -> str:
     if not path.is_file() or path.stat().st_size > MAX_BYTES:
-        raise ValueError('输入必须是大小不超过 100 MiB 的文件')
+        raise ValueError('输入必须是大小不超过 200 MiB 的文件')
     digest, total = hashlib.sha256(), 0
     with path.open('rb') as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             total += len(block)
             if total > MAX_BYTES:
-                raise ValueError('输入必须是大小不超过 100 MiB 的文件')
+                raise ValueError('输入必须是大小不超过 200 MiB 的文件')
             digest.update(block)
     return digest.hexdigest()
 
@@ -34,7 +35,7 @@ def file_hash(path: Path) -> str:
 def safe_zip(path: Path):
     archive = zipfile.ZipFile(path)
     infos = archive.infolist()
-    if len(infos) > 5000 or sum(i.file_size for i in infos) > 150 * 1024 * 1024:
+    if len(infos) > 5000 or sum(i.file_size for i in infos) > 1024 * 1024 * 1024:
         archive.close()
         raise ValueError('PPTX 展开大小超出限制')
     return archive

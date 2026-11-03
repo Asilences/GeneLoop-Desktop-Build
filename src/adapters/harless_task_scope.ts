@@ -1,6 +1,7 @@
+import {FILE_MAX_BYTES} from './geneloop_upload_limits.ts';
 /** Session-local compositions and inputs; no cwd/env mutation or Agent loop. */
 import { randomUUID, createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, unlinkSync, lstatSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, unlinkSync, lstatSync, rmSync } from 'node:fs';
 import { join, basename, extname, dirname } from 'node:path';
 import type { Scene } from './harless_settings.ts';
 import type { PromptPart } from './web_task_request.ts';
@@ -108,16 +109,17 @@ function writeFileTask(workspace: string, taskId: string, instruction: string, a
 export async function bindSceneInputs(ctx: any, agent: any, workspace: string, scene: Scene, content: PromptPart[],
     options: SceneOptions, instruction: string, taskId: string) {
   const inputs: any[] = [];
-  const preparedFiles: { path: string; data: Buffer }[] = [];
+  const preparedFiles: { path: string; staged: string; bytes:number }[] = [];
+  const staging=join(workspace,'.input-stage-'+randomUUID());mkdirSync(staging,{mode:0o700});
+  try {
   for (const part of content) {
     if (part.type !== 'file') continue;
     const ref = ctx.fileUploads.resolve(agent, part.receiptId);
     if (!ref) throw Error('file_receipt_not_owned');
-    const maxInputs = scene.id === 'paper-proofreading' ? 16 : 8;
-    if (inputs.length >= maxInputs || ref.bytes > 20 * 1024 * 1024) throw Error('scene_input_limit');
+    if (ref.bytes > FILE_MAX_BYTES) throw Error('scene_input_limit');
     const chunks: Buffer[] = []; let bytes = 0;
     for await (const chunk of ctx.attachments.readFileStream(ref)) {
-      bytes += chunk.length; if (bytes > 20 * 1024 * 1024) throw Error('scene_input_limit');
+      bytes += chunk.length; if (bytes > FILE_MAX_BYTES) throw Error('scene_input_limit');
       chunks.push(Buffer.from(chunk));
     }
     if (bytes !== ref.bytes) throw Error('file_bytes_changed');
@@ -130,12 +132,13 @@ export async function bindSceneInputs(ctx: any, agent: any, workspace: string, s
     const leaf = (scene.id === 'paper-proofreading'||scene.adapter==='video') && safeOriginal ? original : `doc_${inputs.length + 1}-${original.replace(/[^\p{L}\p{N}._-]/gu, '_').slice(-120)}`;
     if (preparedFiles.some(file => file.path === join(workspace, 'inputs', leaf))) throw Error('duplicate_scene_filename');
     const path = join(workspace, 'inputs', leaf);
-    preparedFiles.push({ path, data });
+    const staged=join(staging,String(preparedFiles.length));writeFileSync(staged,data,{mode:0o600});
+    preparedFiles.push({ path, staged, bytes:data.length });
     inputs.push({ document_id: `doc_${inputs.length + 1}`, name: ref.name, path, version_sha256: sha(data) });
   }
   if (scene.adapter === 'literature' && !instruction.trim()) throw Error('literature_requires_question');
   for (const file of readdirSync(join(workspace, 'inputs'))) unlinkSync(join(workspace, 'inputs', file));
-  for (const file of preparedFiles) writeFileSync(file.path, file.data, { mode: 0o600 });
+  for (const file of preparedFiles) renameSync(file.staged,file.path);
   if (scene.adapter === 'files') writeFileTask(workspace, taskId, instruction, options.allow_output === true,
     inputs.map(row => basename(row.path)));
   save(join(workspace,'approved-inputs.json'),{files:Object.fromEntries(inputs.map(row=>[basename(row.path),row.version_sha256]))});
@@ -158,12 +161,13 @@ export async function bindSceneInputs(ctx: any, agent: any, workspace: string, s
     const papers = inputs.filter(row => extname(row.path).toLowerCase() === '.pdf').sort((a, b) => basename(a.path).localeCompare(basename(b.path), 'en')).map(row => {
       const filename = basename(row.path);
       return { paper_id: 'pdf:local:' + sha(JSON.stringify(filename)).slice(0, 24), filename,
-        pdf_sha256: row.version_sha256, bytes: preparedFiles.find(file => file.path === row.path)!.data.length };
+        pdf_sha256: row.version_sha256, bytes: preparedFiles.find(file => file.path === row.path)!.bytes };
     });
     save(join(directory, 'task.json'), { schema_version: 1, question: instruction,
       sources: { schema_version: 1, root: join(workspace, 'inputs'), papers } });
   }
   return inputs.map(({ path, ...row }) => ({ ...row, file: basename(path) }));
+  } finally {rmSync(staging,{recursive:true,force:true});}
 }
 
 /** Read approved attachment text without granting uploaded files execution rights. */
@@ -178,7 +182,7 @@ export async function sceneAttachmentContext(workspace: string, inputs: any[], o
   const script=fileURLToPath(new URL('./harless_attachment_text.py',import.meta.url));
   const directory=attachmentEvidenceDirectory(workspace,options.cacheDirectory??join(dirname(workspace),'attachment-evidence'));
   const versions=['harless_attachment_text.py','geneloop_pdf.py','geneloop_presentation.py',
-    'geneloop_presentation_render.py','geneloop_presentation.ts','geneloop_pdf_vision.ts']
+    'geneloop_presentation_render.py','geneloop_presentation.ts','geneloop_pdf_vision.ts','geneloop_upload_limits.json']
     .map(name=>sha(readFileSync(fileURLToPath(new URL('./'+name,import.meta.url)))));
   const runtime=['SSS_PYTHON','GENELOOP_PDF_OCR_ROOT','HARLESS_PDF_TOOLCHAIN_ROOT','HARLESS_ANTIWORD_BIN','ANTIWORDHOME']
     .map(key=>[key,process.env[key]??null]);

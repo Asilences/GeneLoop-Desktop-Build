@@ -4,6 +4,13 @@ import WebSocket, { WebSocketServer } from 'ws';
 export const REMOTE_MUX_PATH = '/api/remote.mux';
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const publicMessages = new Map([
+  ['image_too_large','单张图片不能超过 20 MiB。'],
+  ['images_too_large','本轮图片合计不能超过 200 MiB。'],
+  ['too_many_images','本轮最多上传 20 张图片。'],
+  ['file_too_large','单文件不能超过 200 MiB。'],
+  ['IMAGE_TOO_LARGE','单张图片不能超过 20 MiB。'],
+  ['IMAGES_TOO_LARGE','本轮图片合计不能超过 200 MiB。'],
+  ['TOO_MANY_IMAGES','本轮最多上传 20 张图片。'],
   ['gateway/cancelled', '请求已取消。'],
   ['session/not-found', '该对话暂时不可用，请刷新后重试。'],
   ['session/agent-busy', '当前回复尚未结束，请稍后重试。'],
@@ -16,7 +23,7 @@ const publicMessages = new Map([
   ['model_not_allowed', '暂时无法切换到所选模型，请等待当前回复结束后重试，并检查模型及推理模式。'],
 ]);
 export function publicTransportError(error) {
-  const code = typeof error?.code === 'string' && /^[a-z][a-z0-9_-]*(?:\/[a-z][a-z0-9_-]*)?$/.test(error.code)
+  const code = typeof error?.code === 'string' && (publicMessages.has(error.code) || /^[a-z][a-z0-9_-]*(?:\/[a-z][a-z0-9_-]*)?$/.test(error.code))
     ? error.code : 'gateway/internal';
   return { code, message: publicMessages.get(code) ?? '请求未能完成，请稍后重试。', details: {} };
 }
@@ -104,7 +111,7 @@ export function createRemoteProjection() {
  */
 export function createPublicRemoteBridge() {
   const selected = new WeakMap(), active = new Set();
-  const server = new WebSocketServer({ noServer: true, clientTracking: false, perMessageDeflate: false,
+  const server = new WebSocketServer({ noServer: true, clientTracking: false, maxPayload: 300*1024*1024, perMessageDeflate: false,
     autoPong: false, handleProtocols: (_protocols, req) => selected.get(req) || false });
   let stopped = false;
   return {
@@ -128,7 +135,7 @@ export function createPublicRemoteBridge() {
       socket.once('error', () => pair.close());
       try {
         upstream = new WebSocket(`ws://127.0.0.1:${backend.port}${req.url}`, protocols, {
-          headers: forwarded, autoPong: false, perMessageDeflate: false, handshakeTimeout: 12000,
+          headers: forwarded, maxPayload: 300*1024*1024, autoPong: false, perMessageDeflate: false, handshakeTimeout: 12000,
           followRedirects: false,
         });
       } catch { fail(); return; }

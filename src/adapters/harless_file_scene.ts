@@ -1,3 +1,4 @@
+import {FILE_MAX_BYTES} from './geneloop_upload_limits.ts';
 /** File-only extension; existing Paper/PPT/Data hosts and certificates stay intact.
  * Uses the installed Harness SDK runner, not another semantic decision loop.
  */
@@ -183,9 +184,9 @@ export function installFileScene(ctx:any,launch:typeof spawn=spawn){
    if(part.type==='image'){content.push(part);continue;}
    if(part.type==='text'){content.push(part);continue;}
    if(part.type!=='file')throw Error('不支持的文件任务输入类型。');
-   const ref=ctx.fileUploads.resolve(agent,part.receiptId);if(!ref||sources.length>=40||ref.bytes>20*1024*1024)throw Error('file_receipt_not_owned_or_limit');
+   const ref=ctx.fileUploads.resolve(agent,part.receiptId);if(!ref||ref.bytes>FILE_MAX_BYTES)throw Error('file_receipt_not_owned_or_limit');
    const name=basename(ref.name);if(name!==ref.name||name.startsWith('.')||/[\x00-\x1f\\/]/.test(name)||name.length>160||sources.some(s=>s.name===name))throw Error('invalid_or_duplicate_filename');
-   const chunks:Buffer[]=[];let bytes=0;for await(const chunk of ctx.attachments.readFileStream(ref)){bytes+=chunk.length;if(bytes>20*1024*1024)throw Error('file_size_limit');chunks.push(Buffer.from(chunk));}
+   const chunks:Buffer[]=[];let bytes=0;for await(const chunk of ctx.attachments.readFileStream(ref)){bytes+=chunk.length;if(bytes>FILE_MAX_BYTES)throw Error('file_size_limit');chunks.push(Buffer.from(chunk));}
    if(bytes!==ref.bytes)throw Error('file_bytes_changed');const data=Buffer.concat(chunks),path=join(directory,'inputs',name);writeFileSync(path,data,{mode:0o600});sources.push({name,path,sha256:hash(data)});
    content.push({type:'file',attachment:ref});receipts.push(part.receiptId);
   }
