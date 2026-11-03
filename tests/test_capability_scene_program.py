@@ -200,7 +200,9 @@ def test_public_default_acquire_certifies_registers_refreshes_and_executes_new_a
     from src.adapters.capability_script_execution import execute
     construction=[];old_cases=[]
     for i,n in enumerate((2,8)):
-        source=put(tmp_path/('input-'+str(i)+'.json'),{'n':n})
+        path=tmp_path/('input-'+str(i)+'.json')
+        path.write_text(json.dumps({'n':n},sort_keys=True,separators=(',',':')),encoding='utf-8')
+        source=scene.reference(path)
         item={'path':'/work/inputs/value.json','source':source}
         old_cases.append({'id':'old-'+str(i),'inputs':[item]})
         construction.append({'id':'training-'+str(i),'split':'training','input':{'first':{'n':n}},'inputs':[item]})
@@ -241,7 +243,9 @@ def test_public_default_acquire_certifies_registers_refreshes_and_executes_new_a
     assert compiled['status']=='compiled_candidate' and not compiled['model_called']
     candidate=json.loads((output/'candidate.json').read_text())
     libraries=[old_library,records[0]['library']]
-    heldout_source=put(tmp_path/'independent.json',{'n':14})
+    heldout_path=tmp_path/'independent.json'
+    heldout_path.write_text(json.dumps({'n':14},sort_keys=True,separators=(',',':')),encoding='utf-8')
+    heldout_source=scene.reference(heldout_path)
     trace=execute(candidate['snapshot'],capability_ref(candidate['capability']),libraries,
         [{'path':'/work/inputs/value.json','source':heldout_source}],{'first':{'n':14}},tmp_path/'independent',
         'independent-public-check',mode='validate')
