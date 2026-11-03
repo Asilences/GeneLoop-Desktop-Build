@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -162,7 +163,7 @@ internal sealed class InstallerWindow : Window
         install.IsEnabled = close.IsEnabled = details.IsEnabled = false;
         if (options.Visibility == Visibility.Visible) details.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         install.Content = "正在安装…";
-        status.Text = target.Machine ? "如果 Windows 请求管理员权限，请在系统提示中确认。" : "正在准备安装文件…";
+        status.Text = "正在准备安装文件…";
         progress.Visibility = Visibility.Visible;
         progress.IsIndeterminate = true;
         try
@@ -244,18 +245,25 @@ internal sealed class InstallTarget
     {
         return Microsoft.Win32.RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
     }
-    public static InstallTarget Detect()
+    public static InstallTarget Detect(bool machineOnly = false)
     {
-        var user = ExistingPath(RegistryHive.CurrentUser);
+        var user = machineOnly ? null : ExistingPath(RegistryHive.CurrentUser);
         if (!String.IsNullOrWhiteSpace(user)) return new InstallTarget { Path = user };
         var machine = ExistingPath(RegistryHive.LocalMachine);
         if (!String.IsNullOrWhiteSpace(machine)) return new InstallTarget { Machine = true, Path = machine };
+        if (machineOnly) throw new InvalidOperationException("找不到原有的所有用户安装。");
         return new InstallTarget { Path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "GeneLoop Desktop") };
     }
 }
 
 internal static class InstallEngine
 {
+    private static bool IsElevated()
+    {
+        using (var identity = WindowsIdentity.GetCurrent())
+            return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
     public static int Run(InstallTarget target, string arguments)
     {
         string directory = Path.Combine(Path.GetTempPath(), "GeneLoop-Setup-" + Guid.NewGuid().ToString("N"));
@@ -271,7 +279,7 @@ internal static class InstallEngine
                 flags.IndexOf("/allusers", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 (target.Machine && flags.IndexOf("/currentuser", StringComparison.OrdinalIgnoreCase) < 0);
             using (var lockFile = new FileStream(engine, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (var process = Process.Start(new ProcessStartInfo(engine, flags) { UseShellExecute = true, Verb = elevate ? "runas" : "" }))
+            using (var process = Process.Start(new ProcessStartInfo(engine, flags) { UseShellExecute = true, Verb = elevate && !IsElevated() ? "runas" : "" }))
             {
                 process.WaitForExit();
                 return process.ExitCode;
@@ -288,7 +296,9 @@ internal static class InstallEngine
     {
         try
         {
-            var target = InstallTarget.Detect();
+            bool elevatedUi = args.Length == 1 && args[0] == "--elevated-ui";
+            if (elevatedUi && !IsElevated()) return 740;
+            var target = InstallTarget.Detect(elevatedUi);
             if (args.Length <= 2 && args.Length > 0 && args[0] == "--check-ui")
             {
                 var check = new InstallerWindow(target);
@@ -311,11 +321,20 @@ internal static class InstallEngine
                 check.Close();
                 return 0;
             }
-            if (args.Length > 0)
+            if (args.Length > 0 && !elevatedUi)
             {
                 string raw = Environment.CommandLine;
                 int end = raw[0] == '"' ? raw.IndexOf('"', 1) + 1 : raw.IndexOf(' ');
                 return Run(target, raw.Substring(end).TrimStart());
+            }
+            if (target.Machine && !IsElevated())
+            {
+                var setup = Assembly.GetExecutingAssembly().Location;
+                using (var elevated = Process.Start(new ProcessStartInfo(setup, "--elevated-ui") { UseShellExecute = true, Verb = "runas" }))
+                {
+                    elevated.WaitForExit();
+                    return elevated.ExitCode;
+                }
             }
             new Application().Run(new InstallerWindow(target));
             return 0;
