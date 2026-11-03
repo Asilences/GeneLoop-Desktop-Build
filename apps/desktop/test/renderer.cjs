@@ -102,8 +102,11 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`(()=>{const box=document.querySelector('.check-row input').getBoundingClientRect(),label=document.querySelector('.check-row span').getBoundingClientRect();return box.right<label.left&&Math.abs((box.top+box.bottom-label.top-label.bottom)/2)<2})()`),true);
  await evaluate(`document.querySelector('dialog header button').click()`);
  await until(()=>evaluate('!document.querySelector("dialog")'),'场景选项关闭');
- await evaluate(`document.getElementById('scene-select').click();[...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/paper')).click()`);
- await until(()=>evaluate(`document.getElementById('scene-select').value==='new-scene'&&document.getElementById('toast').textContent.includes('场景同步诊断拒绝')`),'服务器拒绝时恢复原选择');
+ await evaluate(`document.getElementById('prompt').value='同步失败草稿';document.getElementById('scene-select').click();[...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/paper')).click()`);
+ assert.equal(await evaluate(`!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),true);
+ assert.equal(await evaluate(`document.getElementById('send').click();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
+ await until(()=>evaluate(`document.getElementById('scene-select').value==='new-scene'&&document.getElementById('toast').textContent.includes('场景同步诊断拒绝')&&!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),'服务器拒绝时恢复原选择和发送箭头');
+ assert.equal(await evaluate(`document.getElementById('prompt').value`),'同步失败草稿');
  await evaluate(`const input=document.getElementById('prompt');input.value='/pp';input.dispatchEvent(new Event('input'));input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`);
  assert.equal(await evaluate(`document.getElementById('scene-select').value==='ppt'&&document.getElementById('scene-select').hasAttribute('data-pending')&&document.getElementById('prompt').value===''`),true);
  await evaluate(`document.getElementById('scene-select').click()`);
@@ -111,9 +114,10 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`[...document.querySelectorAll('.scene-command-name')].every(label=>getComputedStyle(label).fontWeight==='400')`),true);
  await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
  check('复选框与文字同一行，斜杠快捷选择与下拉框同步');
- await evaluate(`document.querySelector('[aria-label="推理强度"].choice-trigger').click();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));document.activeElement.click();document.getElementById('prompt').value='诊断发送';document.getElementById('composer').requestSubmit()`);
+ assert.equal(await evaluate(`document.querySelector('[aria-label="推理强度"].choice-trigger').click();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));document.activeElement.click();const prompt=document.getElementById('prompt');prompt.value='诊断发送';prompt.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));document.getElementById('composer').requestSubmit();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("协议诊断响应完成")'),'合成流式与持久消息');await until(()=>evaluate('document.getElementById("stop").hidden'),'任务终止状态');
  assert.equal(await evaluate('document.getElementById("scene-select").value'),'new-scene');check('配置确认后发送、实时消息/结束状态与逐轮场景重置');
+ assert.equal(await evaluate(`!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),true);
  await evaluate(`document.getElementById('prompt').value='普通下一轮';document.getElementById('composer').requestSubmit()`);await until(()=>evaluate('document.getElementById("prompt").value===""'),'第二次发送');
  await evaluate(`fetch('/api/fixture/questions')`);await until(()=>evaluate('!document.getElementById("questions").hidden'),'原生人类提问');await evaluate(`document.querySelectorAll('#questions input[type=checkbox]').forEach(input=>input.click());document.querySelector('#questions form').requestSubmit()`);await until(()=>evaluate('document.getElementById("questions").hidden'),'回答提交');check('人类问题支持原协议多选与标签答案，轮询保持未提交输入');
  await evaluate(`document.getElementById('account-nav').click()`);

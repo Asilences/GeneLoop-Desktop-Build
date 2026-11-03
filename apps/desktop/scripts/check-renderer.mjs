@@ -34,7 +34,10 @@ const server=createServer(async(req,res)=>{
    if(req.method==='GET'&&id&&id!=='history')await new Promise(resolve=>setTimeout(resolve,450));
    if(req.method==='POST'){
     if(body.selection?.scene==='ppt')await new Promise(resolve=>setTimeout(resolve,750));
-    if(body.selection?.scene==='paper-proofreading')return json(res,{error:{message:'场景同步诊断拒绝'}},409);
+    if(body.selection?.scene==='paper-proofreading'){
+     await new Promise(resolve=>setTimeout(resolve,250));
+     return json(res,{error:{message:'场景同步诊断拒绝'}},409);
+    }
     selections.set(id,{...settings(id).selection,...body.selection});
    }
    return json(res,settings(id));
