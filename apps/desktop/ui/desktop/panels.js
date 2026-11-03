@@ -1,5 +1,30 @@
 import {request,post} from './api.js';
-import {node,button,dialog,icon} from './components.js';
+import {node,button,dialog,icon,choiceControl} from './components.js';
+
+const conversationSizes=[12,14,16,18,20];
+export function conversationPreferences(){
+  const size=Number(localStorage.getItem('geneloop.desktop.conversation-size'));
+  return {
+    size:conversationSizes.includes(size)?size:14,
+    display:localStorage.getItem('geneloop.desktop.conversation-display')==='detailed'?'detailed':'compact',
+  };
+}
+
+function conversationSettings(apply){
+  const prefs=conversationPreferences();
+  const setting=(label,hint,key,value,options)=>{
+    const select=node('select',{},options.map(([id,name])=>node('option',{value:id},name)));
+    select.value=value;
+    select.onchange=()=>{
+      localStorage.setItem('geneloop.desktop.conversation-'+key,select.value);
+      apply();
+    };
+    return node('div',{class:'settings-row'},node('div',{},node('strong',{},label),node('p',{},hint)),choiceControl(select,label));
+  };
+  return node('section',{class:'settings-connection'},node('h4',{},'对话阅读'),
+    setting('对话字号','仅调整会话消息内容。','size',prefs.size,conversationSizes.map(size=>[size,size+' px'])),
+    setting('过程显示','详细模式会默认展开已完成回复的思考过程。','display',prefs.display,[['compact','紧凑'],['detailed','详细']]));
+}
 
 function themeCards(apply){
   const cards=node('div',{class:'theme-cards',role:'group','aria-label':'主题'});
@@ -32,9 +57,18 @@ export function settingsPanel(context,initial='appearance'){
     for(const tab of menu.children)tab.setAttribute('aria-current',String(tab.dataset.page===id));
     if(!preserveScroll){body.replaceChildren();body.scrollTop=0;}
     if(id==='appearance'){
-      body.append(node('h3',{},'桌面外观'),node('p',{},'选择桌面主题，点击后立即应用。'),themeCards(context.theme),
+      body.append(node('h3',{},'桌面外观'),node('p',{},'选择桌面主题，点击后立即应用。'),themeCards(context.theme),conversationSettings(context.applyConversationPreferences),
         node('section',{class:'settings-connection'},node('h4',{},'服务器连接'),node('p',{},location.origin),
           node('p',{},'可在「文件」菜单中修改连接设置。'),button('刷新服务器状态',guard(async()=>{modal.close();await context.refresh();}),'secondary')));
+    }else if(id==='models'){
+      body.append(node('h3',{},'模型'),node('p',{},'查看服务器开放的模型和推理档位。当前会话的模型可在输入框旁切换。'));
+      const models=context.models();
+      if(!models.length)body.append(node('p',{},'当前服务器没有返回可显示的模型。'));
+      for(const model of models){
+        const modes=(model.reasoning_modes||[]).filter(mode=>mode.available!==false).map(mode=>mode.label||mode.id);
+        body.append(node('section',{class:'settings-connection'},node('h4',{},model.label||model.model),
+          node('p',{},model.available===false?(model.unavailable_reason||'暂不可用'):(modes.join(' · ')||'由服务器管理推理档位'))));
+      }
     }else if(id==='archive'){
       body.replaceChildren(node('h3',{},'已归档对话'));const rows=context.archivedSessions();
       if(!rows.length)body.append(node('p',{},'暂无归档对话。'));
@@ -67,7 +101,7 @@ export function settingsPanel(context,initial='appearance'){
   };
   context.sessionChanges.addEventListener('change',updateSessionPage);
   modal.addEventListener('close',()=>context.sessionChanges.removeEventListener('change',updateSessionPage),{once:true});
-  for(const [id,label,symbol]of [['appearance','外观','sun'],['archive','已归档对话','archive'],['trash','最近删除','trash'],['account','账户与安全','user']]){
+  for(const [id,label,symbol]of [['appearance','通用设置','sun'],['models','模型','files'],['archive','已归档对话','archive'],['trash','最近删除','trash'],['account','账户与安全','user']]){
     const tab=button([icon(symbol),label],guard(()=>page(id)));
     tab.dataset.page=id;
     menu.append(tab);

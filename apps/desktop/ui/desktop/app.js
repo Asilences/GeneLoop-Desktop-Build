@@ -2,7 +2,7 @@ import {request,post,rpc,upload,RemoteStreams} from './api.js';
 import {Conversation} from './conversation.js';
 import {node,button,blocks,markdown,dialog,icon,popupMenu,choiceControl,refreshChoice} from './components.js';
 import {promptContent} from './composer.js';
-import {settingsPanel} from './panels.js';
+import {settingsPanel,conversationPreferences} from './panels.js';
 import {comparisonCard} from './comparison.js';
 import {bindScenePicker} from './scene-picker.js';
 import {deliveryPath,deliveryFiles,deliveryName,presentation,presentationCard,previewPresentation} from './deliveries.js';
@@ -34,6 +34,13 @@ function warning(error){$('connection-warning').textContent=errorText(error)+' �
 let streams=new RemoteStreams(warning);
 function theme(){const value=localStorage.getItem('geneloop.desktop.theme')||'system';document.body.toggleAttribute('data-ds-dark-theme',value==='dark'||value==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
 theme();matchMedia('(prefers-color-scheme:dark)').addEventListener('change',theme);
+let reading=conversationPreferences();
+document.body.style.setProperty('--conversation-size',reading.size+'px');
+function applyConversationPreferences(){
+  reading=conversationPreferences();
+  document.body.style.setProperty('--conversation-size',reading.size+'px');
+  renderConversation();
+}
 function titleOf(row){const value=row?.projections?.values?.title;return typeof value==='string'?value:value?.title||value?.text||row?.title||'新会话';}
 function renderLoginServer(){
   const label=$('auth-server');
@@ -398,7 +405,12 @@ function renderConversation(){
     if(row.role==='assistant')article.append(node('div',{class:'message-label'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),'GeneLoop'));
     const decks=nativeAt.get(row.seq)||[];
     const groupedNames=new Set(decks.flatMap(({deck,slides})=>(deck?[deck,...slides]:slides).map(deliveryName)));
-    article.append(blocks(row.blocks.filter(block=>!groupedNames.has(block.attachment?.name))));
+    const message=blocks(row.blocks.filter(block=>!groupedNames.has(block.attachment?.name)));
+    message.classList.add('message-content');
+    if(row.role==='assistant'&&reading.display==='detailed'){
+      for(const detail of message.querySelectorAll('details.reasoning'))detail.open=true;
+    }
+    article.append(message);
     for(const deck of decks){article.append(presentationCard(deck));shownNative.add(deck);}
     if(row.role==='assistant')article.append(node('div',{class:'message-meta'},button('复制',()=>navigator.clipboard.writeText(row.blocks.filter(block=>block.type==='text').map(block=>block.text).join('\n'))),new Date(row.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),row.interrupted?'已中断':null));
     history.append(article);
@@ -481,6 +493,7 @@ function askText(title,label,initial,submit){const input=node('input',{value:ini
 function settings(initial='appearance'){
   return settingsPanel({
     user:state.user,titleOf,theme,fail,toast,refresh:connectWorkspace,logout:showAuth,sessionChanges,
+    applyConversationPreferences,models:()=>state.models,
     archivedSessions:()=>state.sessions.filter(row=>state.archived.has(row.sessionId)),
     async restoreSession(action,id){
       await post('/api/harless/session-trash',{action,session_id:id});

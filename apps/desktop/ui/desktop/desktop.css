@@ -135,3 +135,6 @@
 .slide-stage{display:grid;place-items:center;height:min(56vh,510px);background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .slide-stage img{min-height:0}
 .slide-unavailable{padding:6px;text-align:center;color:var(--muted);font-size:12px}
+.message-content{font-size:var(--conversation-size,14px)}
+.message-content .reasoning{font-size:.86em}
+.settings-row>div>p{margin:4px 0 0}

@@ -95,6 +95,17 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`!document.body.hasAttribute('data-ds-dark-theme')`),true);
  writeFileSync(join(fixture.output,'theme-preview.png'),(await desktop.workspace.webContents.capturePage()).toPNG());
  await evaluate(`document.querySelector('[data-theme="system"]').click()`);
+ const chooseSetting=(label,value)=>evaluate(`document.querySelector('.choice-trigger[aria-label="${label}"]').click();[...document.querySelectorAll('.choice-menu:popover-open button')].find(button=>button.textContent==='${value}').click()`);
+ await chooseSetting('对话字号','18 px');
+ assert.equal(await evaluate(`getComputedStyle(document.querySelector('.message-content')).fontSize`),'18px');
+ await chooseSetting('过程显示','详细');
+ assert.equal(await evaluate(`document.querySelector('.message details.reasoning').open`),true);
+ await chooseSetting('过程显示','紧凑');
+ assert.equal(await evaluate(`document.querySelector('.message details.reasoning').open`),false);
+ await evaluate(`document.querySelector('[data-page="models"]').click()`);
+ assert.match(await evaluate(`document.querySelector('.settings-body').textContent`),/协议诊断模型.*关闭 · 高/);
+ await evaluate(`document.querySelector('[data-page="appearance"]').click()`);
+ assert.equal(await evaluate(`document.querySelector('.choice-trigger[aria-label="对话字号"]').textContent`),'18 px');
  const settingsBounds=()=>evaluate(`(()=>{const {width,height}=document.querySelector('.settings-dialog').getBoundingClientRect();return [width,height]})()`);
  const dimensions=await settingsBounds();
  await evaluate(`document.querySelector('[data-page="account"]').click()`);

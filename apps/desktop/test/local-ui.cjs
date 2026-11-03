@@ -1,5 +1,5 @@
 /** 真实Electron + 原生隔离Host协议诊断；不发送模型请求，不代表场景质量验收。 */
-const {app,session}=require('electron');
+const {app,session,BrowserWindow}=require('electron');
 const assert=require('node:assert/strict');
 const {mkdirSync,readFileSync,writeFileSync}=require('node:fs');
 const {join,resolve}=require('node:path');
@@ -9,7 +9,7 @@ const runId=process.env.GENELOOP_DESKTOP_DIAGNOSTIC_RUN_ID;
 assert.match(runId||'',/^[a-f0-9]{32}$/);
 const output=resolve(__dirname,'../.local/validation',runId);mkdirSync(output,{recursive:true});
 app.setPath('userData',join(output,'profile'));app.disableHardwareAcceleration();
-const report={kind:'independent-desktop-native-protocol-diagnostic',model_requests:0,checks:[],console_errors:[]};let desktop;
+const report={kind:'independent-desktop-native-protocol-diagnostic',model_requests:0,checks:[],console_errors:[]};let desktop,web;
 app.on('web-contents-created',(_,contents)=>contents.on('console-message',details=>{if(details.level==='error')report.console_errors.push(details.message.slice(0,400));}));
 const check=name=>{report.checks.push(name);console.log('通过：'+name);};
 async function until(fn,label){const deadline=Date.now()+20_000;while(Date.now()<deadline){if(await fn())return;await new Promise(done=>setTimeout(done,80));}throw Error('等待超时：'+label);}
@@ -49,6 +49,61 @@ app.whenReady().then(async()=>{
  check('桌面连接设置、关闭到托盘和恢复保留独立界面');
  await desktop.connect(server);desktop.workspace.webContents.setBackgroundThrottling(false);await until(()=>desktop.workspace.webContents.executeJavaScript('!document.getElementById("workspace").hidden'),'重连');assert.ok(await desktop.workspace.webContents.executeJavaScript('document.body.textContent.includes("独立桌面协议检查")'));
  check('重新连接从服务器恢复会话，无自动重发');
+ if(process.argv.includes('--sync')){
+  const packaged=require('@electron/asar');
+  const archive=resolve(__dirname,'../release/win-unpacked/resources/app.asar');
+  const manifest=JSON.parse(packaged.extractFile(archive,'assets/manifest.json'));
+  assert.equal(JSON.parse(packaged.extractFile(archive,'package.json')).version,require('../package.json').version);
+  for(const [file,digest] of Object.entries(manifest.rendererSha256)){
+   assert.equal(createHash('sha256').update(readFileSync(resolve(__dirname,'../ui/desktop',file))).digest('hex'),digest);
+  }
+  desktop.workspace.webContents.setBackgroundThrottling(false);
+  const desk=code=>desktop.workspace.webContents.executeJavaScript(code);
+  const title='独立桌面协议检查',group='桌面独立诊断';
+  const id=await desk(`[...document.querySelectorAll('.session-row')].find(row=>row.textContent.includes('${title}')).dataset.sessionId`);
+  web=new BrowserWindow({show:false,width:1280,height:860,webPreferences:{partition:'sync-test-web',sandbox:true,contextIsolation:true,backgroundThrottling:false}});
+  const authorized=await web.webContents.session.fetch(access,{credentials:'include'});
+  assert.ok(authorized.ok,'隔离网页授权请求失败');
+  await web.loadURL(server);
+  const page=code=>web.webContents.executeJavaScript(code);
+  const webVisible=`(()=>{const row=[...document.querySelectorAll('.geneloop-chat-row')].find(row=>row.textContent.includes('${title}'));return !!row?.closest('section')?.querySelector('.geneloop-workspace-name')?.textContent.includes('${group}')})()`;
+  const deskVisible=`!!document.querySelector('section[aria-label="${group}"] [data-session-id="${id}"]')`;
+  try{
+   await until(()=>page(`!![...document.querySelectorAll('.geneloop-workspace-name')].find(button=>button.textContent.includes('${group}'))`),'网页版加载真实工作区');
+  }catch(error){
+   report.webBody=await page('document.body.innerText.slice(0,400)');
+   throw error;
+  }
+  if(!await page(webVisible))await page(`[...document.querySelectorAll('.geneloop-workspace-name')].find(button=>button.textContent.includes('${group}')).click()`);
+  await until(()=>page(webVisible),'两端同一会话和工作区');
+  const observed=[];
+  const synchronize=async(direction,action,trigger,observe,visible)=>{
+   const started=Date.now();
+   await trigger();
+   await until(async()=>await observe()===visible,direction+' '+action);
+   observed.push({direction,action,elapsed_ms:Date.now()-started});
+  };
+  const webMutation=action=>page(`fetch('/api/harless/session-trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'${action}',session_id:'${id}'})}).then(async response=>{if(!response.ok)throw Error('网页会话操作 HTTP '+response.status);return true;})`);
+  const openDeskMenu=action=>desk(`document.querySelector('[data-session-id="${id}"] .session-more').click();document.querySelector('[data-action="${action}"]').click()`);
+  const restoreDesk=async tab=>{
+   await desk(`document.getElementById('settings-nav').click();document.querySelector('[data-page="${tab}"]').click()`);
+   await until(()=>desk(`[...document.querySelectorAll('.settings-row')].some(row=>row.textContent.includes('${title}'))`),'桌面设置找到恢复项');
+   await desk(`[...document.querySelectorAll('.settings-row')].find(row=>row.textContent.includes('${title}')).querySelector('button').click()`);
+  };
+  const closeSettings=()=>desk(`document.querySelector('.settings-dialog header button').click()`);
+  const seenOnWeb=()=>page(webVisible),seenOnDesktop=()=>desk(deskVisible);
+  await synchronize('桌面 → 网页','归档',()=>openDeskMenu('archive'),seenOnWeb,false);
+  await synchronize('桌面 → 网页','取消归档',()=>restoreDesk('archive'),seenOnWeb,true);
+  await closeSettings();
+  await synchronize('桌面 → 网页','删除',async()=>{await openDeskMenu('trash');await desk(`document.querySelector('dialog .primary').click()`);},seenOnWeb,false);
+  await synchronize('桌面 → 网页','恢复',()=>restoreDesk('trash'),seenOnWeb,true);
+  await closeSettings();
+  for(const [action,label,visible] of [['archive','归档',false],['unarchive','取消归档',true],['delete','删除',false],['restore','恢复',true]]){
+   await synchronize('网页 → 桌面',label,()=>webMutation(action),seenOnDesktop,visible);
+  }
+  report.sync=observed;
+  check('独立浏览器与桌面共享隔离 Host，双向会话变更自动更新，恢复仍属原工作区');
+ }
  if(process.argv.includes('--public')){await desktop.connect('https://geneloop.ai/');await until(()=>desktop.workspace.webContents.executeJavaScript('!document.getElementById("auth").hidden'),'公开服务只读登录页');writeFileSync(join(output,'public-login.png'),(await desktop.workspace.webContents.capturePage()).toPNG());check('同一公开服务只读账号检测，登录界面由独立桌面提供');}
  report.ok=true;
-}).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');writeFileSync(join(output,'failed.png'),(await desktop.workspace.webContents.capturePage()).toPNG());}catch{}console.error(error);}).finally(()=>{writeFileSync(join(output,'local-ui-summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:output},null,2));if(desktop&&!desktop.window.isDestroyed())desktop.window.destroy();app.exit(report.ok?0:1);});
+}).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');writeFileSync(join(output,'failed.png'),(await desktop.workspace.webContents.capturePage()).toPNG());}catch{}console.error(error);}).finally(()=>{writeFileSync(join(output,'local-ui-summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:output},null,2));if(web&&!web.isDestroyed())web.destroy();if(desktop&&!desktop.window.isDestroyed())desktop.window.destroy();app.exit(report.ok?0:1);});
