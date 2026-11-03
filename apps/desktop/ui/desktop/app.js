@@ -252,18 +252,19 @@ async function selectSession(id,{fromScratch=false,force=false,workspaceDraft=nu
   state.conversation=cached?.conversation||new Conversation();state.comparisons=cached?.comparisons||new Map();
   // The newly allocated session has no history to display. Its subscription
   // and settings still initialize in the background before the action proceeds.
-  awaitingHistory=!fromScratch;historyError='';$('composer').inert=!fromScratch;
+  awaitingHistory=!fromScratch;historyError='';$('composer').inert=!fromScratch;renderSendButton();
   const draft=workspaceDraft||activeWorkspaceDraft||state.drafts.get(id)||{text:'',attachments:[]};
   $('prompt').value=draft.text;state.attachments=draft.attachments;renderAttachments();
   state.workspace=state.workspaces.find(row=>row.sessionIds.includes(id))?.workspaceId||state.workspace;
   renderSidebar();renderConversation();
   const current=()=>generation===state.generation;
-  const onError=error=>{if(current()){awaitingHistory=false;historyError=errorText(error);warning(error);scheduleRender();}};
+  const onError=error=>{if(current()){awaitingHistory=false;historyError=errorText(error);renderSendButton();warning(error);scheduleRender();}};
   const follow=streams.follow('session/follow',{address:{kind:'session',sessionId:id},maxMessages:80,assistantStream:true},frame=>{
     if(!current())return;
     state.conversation.accept(frame);
     if(frame.type==='snapshot'){
       awaitingHistory=false;
+      renderSendButton();
       state.conversation.running||=Boolean(state.sessions.find(row=>row.sessionId===id)?.running);
       historyCache.delete(id);historyCache.set(id,{conversation:state.conversation,comparisons:state.comparisons});
       if(historyCache.size>8)historyCache.delete(historyCache.keys().next().value);
@@ -281,7 +282,7 @@ async function selectSession(id,{fromScratch=false,force=false,workspaceDraft=nu
     if(!current())return;
     if(file?.selected)settings.selection={scene:'files',mode:'execute',rsi:true};
     state.settings=settings;state.models=catalog.models||[];state.defaultModel=catalog.session_selection||catalog.default;
-    renderScenes();renderModels();$('composer').inert=false;
+    $('composer').inert=false;renderScenes();renderModels();
   }catch(error){onError(error);}
   await follow;
 }
@@ -517,15 +518,16 @@ function promoteWorkspaceDraft(sessionId){
 }
 function renderSendButton(){
   const control=$('send');
-  const busy=sceneSelection.pending||state.submitting;
-  const label=sceneSelection.pending?'正在同步场景':state.submitting?'正在发送':'发送';
+  const loading=awaitingHistory||$('composer').inert;
+  const busy=loading||sceneSelection.pending||state.submitting;
+  const label=loading?(historyError?'会话加载失败':'正在加载对话'):sceneSelection.pending?'正在同步场景':state.submitting?'正在发送':'发送';
   control.disabled=busy;
   control.setAttribute('aria-busy',String(busy));
   control.setAttribute('aria-label',label);
   control.title=label;
   control.replaceChildren(busy?node('span',{class:'send-spinner','aria-hidden':'true'}):icon('send'));
 }
-async function send(event){event?.preventDefault();if(state.submitting||sceneSelection.pending)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;renderSendButton();try{
+async function send(event){event?.preventDefault();if($('send').disabled)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;renderSendButton();try{
     await selectionChange;
     const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);promoteWorkspaceDraft(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);resetComposerScene();renderScenes();}state.conversation.running=true;scheduleRender();
   }catch(error){if(error.status>=400&&error.status<500)state.pending.delete(state.session);fail(error);}finally{state.submitting=false;renderSendButton();}}

@@ -85,7 +85,8 @@ app.whenReady().then(async()=>{
  await evaluate(`[...document.querySelectorAll('.workspace-row')].find(row=>row.textContent==='空工作区').click()`);
  assert.equal(await evaluate(`!!document.querySelector('.workspace-empty .prompt-example')&&!document.querySelector('.workspace-recent-link')`),true);
  await evaluate(`[...document.querySelectorAll('.workspace-row')].find(row=>row.textContent==='诊断工作区').click()`);
- await evaluate(`[...document.querySelectorAll('.workspace-recent-link')].find(row=>row.textContent.includes('协议诊断历史')).click()`);
+ assert.equal(await evaluate(`[...document.querySelectorAll('.workspace-recent-link')].find(row=>row.textContent.includes('协议诊断历史')).click();!!document.querySelector('#send[aria-busy=true]:disabled .send-spinner')`),true);
+ await until(()=>evaluate(`!!document.querySelector('#send:not(:disabled) svg')`),'对话加载后恢复发送箭头');
  await until(()=>evaluate(`document.querySelector('.comparison-result .presentation-card')?.textContent.includes('2 页可预览')`),'对话按执行通道呈现 PPT 交付');
  assert.equal(await evaluate(`!document.querySelector('.tabs').hidden&&!document.getElementById('session-actions').hidden`),true);
  assert.equal(await evaluate(`document.getElementById('history').textContent.includes('Motif执行结果')`),true);
