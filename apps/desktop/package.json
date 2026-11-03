@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.2.39",
+  "version": "0.2.40",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",

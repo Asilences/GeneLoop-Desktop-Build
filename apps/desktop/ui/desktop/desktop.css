@@ -183,3 +183,5 @@ body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
 .scene-command-item[data-scene=research-data-analysis]{--scene-accent:#238777}
 .scene-command-item[data-scene=video-editing]{--scene-accent:#9359bb}
 body[data-ds-dark-theme] .scene-command-symbol{color:color-mix(in srgb,var(--scene-accent,var(--muted)) 72%,white)}
+
+.workspace-delete-list{max-height:32vh;overflow:auto;overflow-wrap:anywhere}

@@ -67,7 +67,7 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
  assert.equal(await evaluate(`document.getElementById('history').textContent.includes('Motif执行结果')`),true);
  await evaluate(`document.querySelector('.workspace-entry').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}))`);
- assert.deepEqual(await evaluate(`[...document.querySelectorAll('.context-menu button')].map(button=>button.dataset.action)`),['workspace-home','workspace-new','workspace-pin','workspace-rename']);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('.context-menu button')].map(button=>button.dataset.action)`),['workspace-home','workspace-new','workspace-pin','workspace-rename','workspace-delete']);
  await evaluate(`document.querySelector('[data-action="workspace-home"]').click()`);
  assert.equal(await evaluate(`document.getElementById('session-title').textContent`),'诊断工作区');
  assert.equal(await evaluate(`document.querySelector('.session-row.active')===null`),true);
@@ -222,5 +222,17 @@ app.whenReady().then(async()=>{
  assert.equal(await externalTrash('restore'),true);
  await until(()=>evaluate(`!!document.querySelector('section[aria-label="诊断工作区"] [data-session-id="history"]')&&!document.querySelector('.settings-body').textContent.includes('协议诊断历史')`),'另一端恢复后回到原工作区并移出最近删除');
  check('跨端归档、取消归档、删除和恢复即时更新桌面侧栏及打开的设置页');
+ await evaluate(`document.querySelector('dialog header button').click()`);
+ await evaluate(`fetch('/api/harless/session-trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'restore',session_id:'menu-fixture'})})`);
+ await until(()=>evaluate(`!!document.querySelector('[data-session-id="menu-fixture"]')`),'恢复用于部分删除的对话');
+ const deleteWorkspace=()=>evaluate(`document.querySelector('section[aria-label="诊断工作区"] .workspace-more').click();document.querySelector('[data-action=workspace-delete]').click()`);
+ await deleteWorkspace();
+ assert.equal(await evaluate(`document.querySelectorAll('.workspace-delete-list input').length===2&&!document.querySelector('.workspace-delete-list input:checked')`),true);
+ await evaluate(`document.querySelector('dialog footer .secondary').click()`);
+ assert.equal(await evaluate(`!!document.querySelector('section[aria-label="诊断工作区"]')`),true);
+ await deleteWorkspace();
+ await evaluate(`document.querySelector('.workspace-delete-list input[value="menu-fixture"]').click();document.querySelector('dialog footer .primary').click()`);
+ await until(()=>evaluate(`!document.querySelector('section[aria-label="诊断工作区"]')&&!!document.querySelector('[data-session-id="history"]')&&!document.querySelector('[data-session-id="menu-fixture"]')`),'删除分组，仅将勾选对话移入最近删除');
+ check('工作区删除须确认，可保留未勾选对话');
  report.ok=true;
 }).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');}catch{}console.error(error);}).finally(()=>{writeFileSync(join(fixture.output,'summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));desktop?.permitClose();app.quit();});

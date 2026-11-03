@@ -171,7 +171,66 @@ function workspaceMenu(group,position){
       const {workspace}=await rpc('workspace/rename',{workspaceId:id,title});
       state.workspaces=state.workspaces.map(row=>row.workspaceId===id?workspace:row);renderSidebar();renderConversation();
     })},
+    {separator:true},
+    {id:'workspace-delete',label:'删除工作区',icon:'trash',danger:true,action:()=>confirmWorkspaceDelete(group)},
   ],position);
+}
+function confirmWorkspaceDelete(group){
+  const rows=group.sessionIds.map(id=>state.sessions.find(row=>row.sessionId===id)).filter(Boolean);
+  const list=node('div',{class:'workspace-delete-list'});
+  const checks=rows.map(row=>{
+    const input=node('input',{type:'checkbox',value:row.sessionId,disabled:row.running});
+    list.append(node('label',{class:'check-row'},input,node('span',{},titleOf(row)+(row.running?' · 执行中':''))));
+    return input;
+  });
+  const selectable=checks.filter(input=>!input.disabled);
+  const selectAll=button('全选可删除对话',()=>{
+    const remaining=selectable.filter(input=>!input.disabled);
+    const checked=!remaining.every(input=>input.checked);
+    for(const input of remaining)input.checked=checked;
+    selectAll.textContent=checked?'取消全选':'全选可删除对话';
+  },'link');
+  selectAll.hidden=!selectable.length;
+  const error=node('p',{class:'error',role:'alert',hidden:true});
+  let busy=false,moved=0;
+  const cancel=button('取消',()=>modal.close(),'secondary');
+  const submit=button('删除工作区',async()=>{
+    if(busy)return;
+    busy=true;submit.disabled=true;cancel.disabled=true;list.inert=true;selectAll.disabled=true;
+    modal.querySelector('header button').disabled=true;
+    error.hidden=true;
+    try{
+      for(const input of selectable.filter(input=>input.checked&&!input.disabled)){
+        await post('/api/harless/session-trash',{action:'delete',session_id:input.value});
+        moved++;input.disabled=true;input.checked=false;
+        input.closest('label').append(node('small',{},'已移入最近删除'));
+        state.drafts.delete(input.value);historyCache.delete(input.value);
+      }
+      await rpc('workspace/delete',{workspaceId:group.workspaceId});
+    }catch(cause){
+      error.textContent=(moved?'已移入最近删除 '+moved+' 个对话，工作区未删除。':'工作区未删除。')+' '+errorText(cause);
+      error.hidden=false;
+      await loadSessions({closeDeleted:true}).catch(()=>{});
+      return;
+    }finally{
+      busy=false;submit.disabled=false;cancel.disabled=false;list.inert=false;selectAll.disabled=false;
+      modal.querySelector('header button').disabled=false;
+    }
+    const id=group.workspaceId;
+    state.workspaces=state.workspaces.filter(row=>row.workspaceId!==id);
+    pinnedWorkspaces=pinnedWorkspaces.filter(key=>key!==id);
+    if(state.workspace===id&&!state.session)openWorkspace(null);
+    if(state.workspace===id)state.workspace=null;
+    workspaceDrafts.delete(id);newWorkspaceDrafts.delete(id);
+    modal.close();
+    await loadSessions({closeDeleted:true}).catch(fail);
+    renderSidebar();renderConversation();
+    toast(moved?'工作区已删除，'+moved+' 个对话已移入最近删除。':'工作区已删除，已有对话和文件已保留。');
+  },'primary');
+  const modal=dialog('删除工作区',node('div',{},node('h3',{},group.title),
+    node('p',{},'勾选的对话将移入「最近删除」。其余对话会保留在「其他对话」，工作区文件会保留。'),
+    selectAll,list,error),[cancel,submit]);
+  modal.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
 }
 function clearSessionPanels(){
   state.deliveries=[];state.nativePresentations=[];homeDelivery=null;renderDeliveries();renderQuestions([]);$('preview').replaceChildren();

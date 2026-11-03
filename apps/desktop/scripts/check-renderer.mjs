@@ -79,6 +79,7 @@ const server=createServer(async(req,res)=>{
    push('session/follow',{type:'assistant-stream',frame:{type:'chunk',attemptId:'fixture',revision:2,chunk:{type:'text-delta',index:0,text:'正在呈现协议诊断流'}}},id);
    setTimeout(()=>{push('session/follow',event(5,'assistant/message',{message:{content:[{type:'text',text:'协议诊断响应完成'}]}}),id);push('session/follow',event(6,'turn/end',{turn:1}),id);},250);
   }
+  else if(endpoint==='workspace/delete'){push('workspace/follow',{type:'remove',workspaceId:request.workspaceId});value={deleted:true};}
   else if(endpoint==='session/cancel')value={accepted:true};
   else if(endpoint==='$events/result')value={accepted:true};
   else return json(res,{error:{message:'fixture endpoint missing: '+endpoint}},404);
