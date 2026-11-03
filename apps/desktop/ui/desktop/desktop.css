@@ -168,6 +168,10 @@ body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
 #attach{border-radius:50%;background:var(--panel);color:var(--muted)}
 #attach:hover,#attach:focus-visible{background:var(--hover);color:var(--gl-ink)}
 #attach svg{width:16px;height:16px;stroke-width:1.6}
+.composer-add{flex:none;border-radius:50%;color:var(--gl-ink)}
+.composer-add[aria-expanded=true]{background:var(--hover)}
+.composer-add svg{width:17px;height:17px;stroke-width:1.6}
+.context-menu-heading{padding:4px 10px;color:var(--muted);font-size:11px}
 .scene-command-item>.scene-command-symbol{display:grid;place-items:center;flex:none;width:18px;color:var(--scene-accent,var(--muted))}
 .scene-command-symbol svg{width:17px;height:17px}
 .scene-command-item>.scene-command-label{justify-content:flex-start;gap:8px}

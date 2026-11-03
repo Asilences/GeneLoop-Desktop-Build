@@ -118,6 +118,12 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`(()=>{const row=document.querySelector('#scene-command-menu [data-scene=ppt]');return !!row.querySelector('.scene-command-symbol svg')&&row.querySelector('.scene-command-label').textContent==='ppt演示文稿'})()`),true);
  await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
  assert.equal(await evaluate(`(()=>{const attach=document.getElementById('attach');let opened=false;document.getElementById('file-input').addEventListener('click',event=>{event.preventDefault();opened=true;},{once:true});attach.click();return opened&&!!attach.querySelector('svg')&&attach.getAttribute('aria-label')==='上传文件'})()`),true);
+ await evaluate(`document.querySelector('.composer-add').click()`);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('[role=menu][aria-label="添加"] [role=menuitem]')].map(row=>row.textContent)`),['上传文件','选择场景','场景选项']);
+ assert.equal(await evaluate(`(()=>{let opened=false;document.getElementById('file-input').addEventListener('click',event=>{event.preventDefault();opened=true;},{once:true});document.querySelector('[data-action=composer-upload]').click();return opened&&!document.querySelector('[role=menu][aria-label="添加"]')})()`),true);
+ await evaluate(`document.querySelector('.composer-add').click();document.querySelector('[data-action=composer-scene]').click()`);
+ assert.equal(await evaluate(`!document.getElementById('scene-command-menu').hidden`),true);
+ await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
  check('复选框与文字同一行，斜杠快捷选择与下拉框同步');
  assert.equal(await evaluate(`document.querySelector('[aria-label="推理强度"].choice-trigger').click();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));document.activeElement.click();const prompt=document.getElementById('prompt');prompt.value='诊断发送';prompt.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));document.getElementById('composer').requestSubmit();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("协议诊断响应完成")'),'合成流式与持久消息');await until(()=>evaluate('document.getElementById("stop").hidden'),'任务终止状态');

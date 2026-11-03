@@ -634,6 +634,16 @@ $('stop').onclick=async()=>{try{await rpc('session/cancel',{sessionId:state.sess
 $('deliveries-toggle').onclick=()=>{$('deliveries').hidden=!$('deliveries').hidden;renderDeliveries();};$('deliveries-close').onclick=()=>$('deliveries').hidden=true;
 for(const [id,name]of Object.entries({'sidebar-toggle':'sidebar','rename-session':'edit','deliveries-toggle':'files','refresh-session':'refresh','new-workspace':'plus','attach':'paperclip','send':'send','deliveries-close':'close'}))$(id).replaceChildren(icon(name));
 $('attach').setAttribute('aria-label','上传文件');
+const addAction=button(icon('plus'),()=>popupMenu([
+  {id:'composer-upload',label:'上传文件',icon:'paperclip',action:()=>$('attach').click()},
+  {id:'composer-scene',label:'选择场景',icon:'scenes',action:()=>$('scene-select').click()},
+  {id:'composer-options',label:'场景选项',icon:'settings',action:()=>$('scene-options').click()},
+],{anchor:addAction,above:true,heading:'添加'}),'icon composer-add');
+addAction.setAttribute('aria-label','添加');
+addAction.setAttribute('aria-haspopup','menu');
+addAction.setAttribute('aria-expanded','false');
+addAction.title='添加';
+$('attach').before(addAction);
 $('new-session').replaceChildren(icon('plus'),'新会话');
 for(const [id,label] of [['model-select','模型'],['effort-select','推理强度']]){
   const select=$(id),anchor=document.createComment('');
