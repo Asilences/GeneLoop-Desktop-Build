@@ -54,6 +54,7 @@ def test_publication_reconsiders_unmet_need_and_new_goal_enters_original_builder
     assert len(calls)==1 and len(adapter.calls)==2
     assert [r['status'] for r in result['outcomes']]==['published','published']
     request=calls[0];assert request['origin']=='capability_update'
+    assert request['allowed_effects']==['read']
     assert request['previous_snapshot']['digest']!=request['capability_snapshot']['digest']
     assert request['newly_visible']==[adapter.published[0]]
     row=json.loads(round_files(plan['opportunity_discovery'],'decisions.json')[0].read_text())[0]
@@ -212,3 +213,17 @@ def test_material_acquisition_failure_is_not_reported_as_independent_quality_fai
     records=[json.loads(p.read_text()) for p in round_files(plan['opportunity_discovery'],'outcome-*.json')]
     row=next(r for r in records if r.get('acquisition_result'))
     assert row['acquisition_result']==acquisition and row['verification'] is None and row['observed_model_usd'] is None
+
+
+def test_goal_identity_includes_actual_need_evidence_not_just_reused_scope_name(tmp_path):
+    ids=[]
+    for index in range(2):
+        directory=tmp_path/str(index);directory.mkdir()
+        plan,adapter,_=wire(directory,review='pending')
+        context=json.loads(Path(plan['opportunity_discovery']['context']['path']).read_text())
+        context['needs'][0]['evidence']=[put(directory/'distinct-need.json',{'actual_task_revision':index})]
+        plan['opportunity_discovery']['context']=put(directory/'context-version.json',context)
+        run_improvement(plan,adapter,execute=True)
+        rows=json.loads(round_files(plan['opportunity_discovery'],'decisions.json')[0].read_text())
+        ids.append(rows[0]['goal_id'])
+    assert ids[0]!=ids[1]

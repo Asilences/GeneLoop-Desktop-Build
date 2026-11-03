@@ -68,6 +68,7 @@ class OpportunityDiscovery:
         self.rounds += 1
         request = {'format':'capability_opportunity_request_v1','trigger_id':key,'owner':self.owner,
             'origin':'capability_update','task_scope':context['task_scope'],
+            'allowed_effects':copy.deepcopy(context['allowed_effects']),
             'supporting_evidence':self.config['context'],'needs':needs,
             'previous_snapshot':previous,'capability_snapshot':current,'newly_visible':added,
             'publication_evidence':publication_ref,
@@ -93,6 +94,7 @@ class OpportunityDiscovery:
                 try:
                     need = self._validate_goal(proposal,needs,current)
                     goal_id = 'goal-'+capability_digest({'scope':context['task_scope'],'need':need['id'],
+                        'need_evidence':sorted(ref['sha256'] for ref in need['evidence']),
                         'goal':' '.join(proposal['proposed_goal'].split())})[:24]
                     row.update(goal_id=goal_id,task_scope=context['task_scope'],origin='capability_update',
                         capability_snapshot=current['digest'],supporting_evidence=need['evidence'],
