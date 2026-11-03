@@ -15,6 +15,34 @@ test('桌面只解析结构化启动 JSON，不执行或复制远程页面代码
   assert.throws(() => module.bootGlobals('<script>globalThis["__DSH_BOOT__"] = execute()</script>'));
 });
 
+test('桌面仅根据 Chromium 可信同源发起信息恢复 Origin，拒绝跨源和不透明请求', { skip: !available }, async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'geneloop-origin-'));
+  const forwarded = [];
+  try {
+    writeFileSync(join(directory, 'manifest.json'), JSON.stringify({ format: 1 }));
+    const host = new module.LocalFrontendHost({ server: 'https://fixture.example/', assets: directory, fail: assert.fail, readBoot: assert.fail, session: {
+      fetch: async (request, options) => {
+        forwarded.push({ url: request.url, origin: options.headers.get('origin'), credentials: options.credentials, body: await request.text() });
+        return Response.json({ ok: true });
+      },
+    } });
+    const request = (initiator, headers = {}, url = 'https://fixture.example/api/account/login') => {
+      const value = new Request(url, { method: 'POST', credentials: 'omit', headers, body: '{"diagnostic":true}' });
+      if (initiator !== undefined) Object.defineProperty(value, 'initiatorOrigin', { value: initiator });
+      return value;
+    };
+    assert.equal((await host.fetch(request('https://fixture.example'))).status, 200);
+    assert.deepEqual(forwarded[0], { url: 'https://fixture.example/api/account/login', origin: 'https://fixture.example', credentials: 'omit', body: '{"diagnostic":true}' });
+    for (const value of [request('https://external.example'), request('null'), request(undefined), request('https://fixture.example', { origin: 'https://external.example' }), request('https://fixture.example', { 'sec-fetch-site': 'cross-site' })]) {
+      assert.equal((await host.fetch(value)).status, 403);
+    }
+    assert.equal(forwarded.length, 1);
+    await host.fetch(request('https://fixture.example', {}, 'https://external.example/resource'));
+    assert.equal(forwarded[1].origin, null, '不把服务器身份套给外域请求');
+    assert.equal(forwarded[1].credentials, 'omit');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('安装资源与服务器执行接口分离；未知 UI 不回退远程加载', { skip: !available }, async () => {
   const directory = mkdtempSync(join(tmpdir(), 'geneloop-frontend-'));
   const network = [], failures = [];

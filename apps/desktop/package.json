@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -14,6 +14,7 @@
     "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs ../../tests/test_desktop_frontend.mjs",
     "smoke": "npm run build && node scripts/check-local-ui.mjs",
     "smoke:packaged": "node scripts/check-package.mjs",
+    "smoke:account": "npm run build && node scripts/check-account-login.mjs",
     "pack": "npm run build && electron-builder --dir --publish never",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never"
   },

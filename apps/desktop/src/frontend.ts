@@ -8,6 +8,8 @@ import { sameServer } from './policy.ts';
 type Graph = Parameters<typeof bootInjections>[0];
 type Manifest = { format: number; dshVersion: string; sourceCommit: string; staticFiles: string[]; clients: Record<string, { file: string; version: string; declaration?: { inject?: string[]; external?: string[]; immediately?: boolean } }> };
 type FrontendOptions = { session: Session; server: string; assets: string; fail: (message: string) => void; readBoot: (request: Request) => Promise<Response> };
+// Electron 45 protocol.handle 提供的原始发起源，由 Chromium 设置，不信任页面的 referrer。
+type FrontendRequest = Request & { readonly initiatorOrigin?: string };
 const ACCOUNT_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'";
 const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.webmanifest': 'application/manifest+json' };
 
@@ -61,11 +63,14 @@ export class LocalFrontendHost {
     return new Response(method === 'HEAD' ? null : body, { headers: { 'content-type': type, 'cache-control': 'no-store', 'x-geneloop-desktop-resource': 'local', 'x-content-type-options': 'nosniff' } });
   }
 
-  private async network(request: Request): Promise<Response> {
+  private async network(request: FrontendRequest): Promise<Response> {
     this.served.network++;
     if (/^\/(?:plugins\/\?\?|assets\/.*\.(?:js|css))/.test(new URL(request.url).pathname + new URL(request.url).search)) this.served.networkScripts.push(new URL(request.url).pathname);
     const credentials = request.credentials === 'omit' ? 'omit' : sameServer(request.url, this.options.server) ? 'include' : request.credentials;
-    return this.options.session.fetch(request, { bypassCustomProtocolHandlers: true, credentials });
+    const headers = new Headers(request.headers);
+    // protocol.handle 不保留浏览器生成的 Origin；转发只能从校验过的可信发起源恢复。
+    if (sameServer(request.url, this.options.server) && request.initiatorOrigin !== undefined) headers.set('origin', request.initiatorOrigin);
+    return this.options.session.fetch(request, { bypassCustomProtocolHandlers: true, credentials, headers });
   }
 
   private compose(html: string): string {
@@ -103,9 +108,16 @@ export class LocalFrontendHost {
     return renderIndexInjections(index, rows).replace('<title>DeepSeek Harness</title>', '<title>GeneLoop Desktop</title>').replace('<head>', '<head><base href="/">');
   }
 
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: FrontendRequest): Promise<Response> {
     const { server, assets } = this.options;
     if (!sameServer(request.url, server)) return this.network(request);
+    const origin = new URL(server).origin, suppliedOrigin = request.headers.get('origin');
+    const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+    if ((request.initiatorOrigin !== undefined && request.initiatorOrigin !== origin) ||
+        (suppliedOrigin !== null && suppliedOrigin !== origin) || request.headers.get('sec-fetch-site') === 'cross-site' ||
+        (unsafe && request.initiatorOrigin === undefined && suppliedOrigin === null)) {
+      return Response.json({ error: '请求来源无效' }, { status: 403 });
+    }
     const url = new URL(request.url), key = url.pathname + url.search;
     try {
       if (request.method === 'GET' || request.method === 'HEAD') {
