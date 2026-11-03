@@ -1328,6 +1328,13 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 
 新增执行仍是既有只读 Script 沙箱后端，不接管聊天，不宣称插件已去除 Python 或任意 MCP 自动组合已完成。真实效果与限制独立见[Frontier 记录](experiments/capability-frontier-20261103.md)。
 
+
+## 统一邀请码（2026-11-03）
+
+GET `/api/account/shared-invite` 仅所有者读取是否启用、opaque id、创建时间、成功使用次数与最后使用时间；不返回明文或哈希。POST 同路径要求当前密码，`replace:false` 首次创建，已有共享码返回409；明确 `replace:true` 原子撤销旧共享码并生成新码。返回明文仅此一次，服务端只存哈希。共享码永久、无使用次数上限，只创建 member，不改变用户名唯一性、密码、角色、账号隔离或传输检查。注册前及异步 scrypt 后都校验有效性。独立的注册请求频率防滥用检查保留。旧单次码与已注册账号不受换码影响。
+
+服务器运维可通过既有认证管理入口运行 `node scripts/harless_gateway.mjs PRIVATE_CONFIG shared-invite [--replace]`；生产网关运行时走 loopback 管理 API，不直接编辑账号数据库。不要在公共日志或Git中存放邀请码。
+
 ## 能力生成语言与显式构造意图（2026-11-03 上午）
 
 Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{steps,output}`，新程序只在 step.use 使用 `$program` 占位；其余步骤由模型明确指定当前可见 alias。`freeze_program_composition` 在学习前将旧 alias 固定成精确版本引用，保存原绑定、task/program/snapshot摘要。`encode_program_composition` 待原生认证及入池后只解析同源码、同库、同mode且仍可见的新材料，再经原 IR 编译和独立发布；不补依赖、算法或参数。

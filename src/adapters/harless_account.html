@@ -64,7 +64,7 @@
         <form id="login-form"><div class="field"><label for="login-user">用户名</label><input id="login-user" name="username" autocomplete="username" required></div><div class="field"><label for="login-pass">密码</label><input id="login-pass" name="password" type="password" autocomplete="current-password" required></div><button class="primary">登录</button></form>
         <p id="login-error" class="notice" role="status"></p><p class="switch">第一次使用？ <a href="/register">使用邀请码注册</a></p>
       </section>
-      <section id="register-view" hidden><h2>创建你的工作空间</h2><p class="hint">邀请码由管理员提供。账号创建后，你的对话和文件会独立保存在服务器。</p>
+      <section id="register-view" hidden><h2>创建你的工作空间</h2><p class="hint">向管理员获取统一邀请码，可供多人注册。请设置自己的用户名和密码；你的对话和文件独立保存。</p>
         <form id="register-form"><div class="field"><label for="register-invite">邀请码</label><input id="register-invite" name="inviteCode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="在此粘贴邀请码" required></div><div class="field"><label for="register-user">用户名</label><input id="register-user" name="username" minlength="3" maxlength="32" pattern="[a-zA-Z][a-zA-Z0-9_-]{2,31}" autocomplete="username" required><small>用于登录，可在账户设置中修改</small></div><div class="field"><label for="register-name">显示名称</label><input id="register-name" name="displayName" maxlength="40" autocomplete="name" required></div><div class="field"><label for="register-pass">密码</label><input id="register-pass" name="password" type="password" minlength="10" autocomplete="new-password" required><small>至少 10 位。本站暂不提供邮箱找回，请妥善保存。</small></div><button class="primary">创建账号</button></form>
         <p id="register-error" class="notice" role="status"></p><p class="switch">已有账号？ <a href="/login">返回登录</a></p>
       </section>
@@ -79,7 +79,15 @@
     <main class="content"><div class="crumb">设置 / 账户</div><h1>账户设置</h1><p class="intro">管理你的登录信息。更改会保存在服务器，下次登录继续使用。</p>
       <section class="section"><div><h2>个人资料</h2><p>这个名称显示在你的账户中。</p></div><div><form id="profile-form"><div class="field"><label for="profile-name">显示名称</label><input id="profile-name" name="displayName" maxlength="40" required></div><div class="field"><label for="profile-user">用户名</label><input id="profile-user" name="username" minlength="3" maxlength="32" pattern="[a-zA-Z][a-zA-Z0-9_-]{2,31}" required></div><button class="primary">保存资料</button></form><p id="profile-error" class="notice" role="status"></p></div></section>
       <section class="section"><div><h2>密码与安全</h2><p>修改密码后，所有设备都需要重新登录。</p></div><div><form id="password-form"><div class="field"><label for="current-pass">当前密码</label><input id="current-pass" name="currentPassword" type="password" autocomplete="current-password" required></div><div class="field"><label for="new-pass">新密码</label><input id="new-pass" name="newPassword" type="password" minlength="10" autocomplete="new-password" required><small>至少 10 位</small></div><div class="field"><label for="repeat-pass">确认新密码</label><input id="repeat-pass" name="repeatPassword" type="password" minlength="10" autocomplete="new-password" required></div><button class="primary">修改密码</button></form><p id="password-error" class="notice" role="status"></p></div></section>
-      <section id="invite-section" class="section" hidden><div><h2>邀请同学</h2><p>邀请码永久有效，每个码可注册一个账号，使用后失效。</p></div><div><form id="invite-form"><div class="field"><label for="invite-pass">确认当前密码</label><input id="invite-pass" name="currentPassword" type="password" autocomplete="current-password" required></div><div class="field"><label for="invite-count">生成数量（1–20）</label><input id="invite-count" name="count" type="number" min="1" max="20" step="1" value="5" required></div><button class="primary">生成邀请码</button></form><p id="invite-error" class="notice" role="status"></p><div id="invite-code" hidden><button id="invite-copy-all" type="button" class="minor">复制全部邀请码</button><div id="invite-list"></div></div></div></section>
+      <section id="invite-section" class="section" hidden><div><h2>邀请同学</h2><p>把同一个邀请码发给大家。永久有效，可供多人重复注册；每个人使用自己的账号。</p></div><div>
+        <h3>统一邀请码</h3><p id="shared-invite-state" role="status">正在读取邀请码状态…</p>
+        <button id="shared-invite-retry" type="button" class="minor" hidden>重新读取邀请码状态</button>
+        <div id="shared-invite-result" hidden><div class="field"><label for="shared-invite-code">统一邀请码</label><input id="shared-invite-code" readonly spellcheck="false" style="user-select:text;font-family:monospace"></div><button id="shared-invite-copy" type="button" class="minor">复制统一邀请码</button></div>
+        <p id="shared-invite-note" hidden>邀请码只在生成时显示，请保存后分享。关闭页面不会使它失效；遗失后可更换。</p>
+        <button id="shared-invite-replace" type="button" class="minor" hidden>更换统一邀请码</button>
+        <form id="shared-invite-form" aria-label="统一邀请码管理" hidden><p id="shared-invite-warning" hidden>更换后，旧共享邀请码立即失效。已注册的账号不受影响。</p><div class="field"><label for="shared-invite-pass">确认当前密码</label><input id="shared-invite-pass" name="currentPassword" type="password" autocomplete="current-password" required></div><button id="shared-invite-submit" class="primary" type="submit">生成统一邀请码</button><button id="shared-invite-cancel" type="button" class="minor" hidden>取消更换</button></form>
+        <p id="shared-invite-error" class="notice" role="status"></p>
+        <details><summary>单次邀请码（可选）</summary><p>仅在需要单独邀请时使用。单次邀请码永久有效，每个码可注册一个账号，使用后失效。</p><form id="invite-form"><div class="field"><label for="invite-pass">确认当前密码</label><input id="invite-pass" name="currentPassword" type="password" autocomplete="current-password" required></div><div class="field"><label for="invite-count">生成数量（1–20）</label><input id="invite-count" name="count" type="number" min="1" max="20" step="1" value="5" required></div><button class="primary">生成邀请码</button></form><p id="invite-error" class="notice" role="status"></p><div id="invite-code" hidden><button id="invite-copy-all" type="button" class="minor">复制全部邀请码</button><div id="invite-list"></div></div></details></div></section>
       <section class="section"><div><h2>工作空间</h2><p>你的会话、任务与文件仅属于此账号。</p></div><div class="meta"><div>账号类型　<strong id="role"></strong></div><div>创建时间　<strong id="created"></strong></div><div>存储位置　<strong>服务器私有空间</strong></div></div></section>
     </main>
   </div>
@@ -118,6 +126,39 @@
         if(path==='/account'){if(!me){location.replace('/login?next=%2Faccount');return}show('account');$('side-name').textContent=me.displayName;$('avatar').textContent=me.displayName.slice(0,1);$('profile-name').value=me.displayName;$('profile-user').value=me.username;$('role').textContent=me.role==='owner'?'所有者':'成员';$('created').textContent=new Date(me.createdAt).toLocaleString('zh-CN');
           if(me.role==='owner'){
             $('invite-section').hidden=false;const codes=[];
+            let sharedInvite=null, replacingShared=false, sharedBusy=false, sharedCodeId=null;
+            const showShared=()=>{
+              $('shared-invite-replace').hidden=!sharedInvite?.exists||replacingShared;
+              $('shared-invite-form').hidden=!sharedInvite||(sharedInvite.exists&&!replacingShared);
+              $('shared-invite-warning').hidden=!replacingShared;$('shared-invite-cancel').hidden=!replacingShared;
+              $('shared-invite-note').hidden=!sharedInvite?.exists;
+              $('shared-invite-submit').textContent=replacingShared?'确认更换统一邀请码':'生成统一邀请码';
+              $('shared-invite-state').textContent=sharedInvite?.exists?'统一邀请码已启用，已成功注册 '+(sharedInvite.useCount||0)+' 个账号。':'尚未生成统一邀请码。';
+              if(sharedCodeId!==sharedInvite?.id){$('shared-invite-result').hidden=true;$('shared-invite-code').value=''}
+            };
+            const loadShared=async()=>{
+              if(sharedBusy)return;sharedInvite=null;replacingShared=false;showShared();
+              $('shared-invite-state').textContent='正在读取邀请码状态…';$('shared-invite-retry').hidden=true;
+              try{sharedInvite=(await api('shared-invite')).invitation;showShared()}
+              catch(error){$('shared-invite-state').textContent=error.message;$('shared-invite-retry').hidden=false}
+            };
+            $('shared-invite-retry').onclick=loadShared;
+            $('shared-invite-replace').onclick=()=>{if(sharedBusy)return;replacingShared=true;notice('shared-invite-error','');showShared()};
+            $('shared-invite-cancel').onclick=()=>{if(sharedBusy)return;replacingShared=false;$('shared-invite-pass').value='';showShared()};
+            $('shared-invite-code').onfocus=()=>$('shared-invite-code').select();
+            $('shared-invite-copy').onclick=async()=>{try{await navigator.clipboard.writeText($('shared-invite-code').value);notice('shared-invite-error','统一邀请码已复制。',true)}catch{notice('shared-invite-error','浏览器未允许自动复制，请点击邀请码后按 Ctrl+C（Mac：⌘C）复制。')}};
+            $('shared-invite-form').addEventListener('submit',async event=>{
+              event.preventDefault();if(sharedBusy||!sharedInvite||(sharedInvite.exists&&!replacingShared))return;
+              sharedBusy=true;for(const id of ['shared-invite-submit','shared-invite-pass','shared-invite-cancel','shared-invite-replace','shared-invite-retry'])$(id).disabled=true;
+              notice('shared-invite-error','');
+              try{const result=await api('shared-invite',{currentPassword:$('shared-invite-pass').value,replace:sharedInvite.exists&&replacingShared});
+                sharedInvite=result.invitation;sharedCodeId=sharedInvite.id;replacingShared=false;showShared();
+                $('shared-invite-code').value=result.code;$('shared-invite-result').hidden=false;$('shared-invite-pass').value='';
+                notice('shared-invite-error','统一邀请码已生成。请复制保存，再把同一个码分享给需要注册的人。',true);
+              }catch(error){notice('shared-invite-error',error.message)}
+              finally{sharedBusy=false;for(const id of ['shared-invite-submit','shared-invite-pass','shared-invite-cancel','shared-invite-replace','shared-invite-retry'])$(id).disabled=false}
+            });
+            void loadShared();
             const copy=async values=>{try{await navigator.clipboard.writeText(values.join('\n'));notice('invite-error','已复制 '+values.length+' 个邀请码。',true)}catch{notice('invite-error','浏览器未允许自动复制，请点击邀请码后按 Ctrl+C（Mac：⌘C）复制。')}};
             $('invite-copy-all').onclick=()=>copy(codes);
             $('invite-form').addEventListener('submit',async event=>{
