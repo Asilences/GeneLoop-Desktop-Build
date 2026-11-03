@@ -28,6 +28,12 @@ def structural_schema(value):
     return {'type':'null' if value is None else 'boolean' if isinstance(value,bool) else 'number' if isinstance(value,(int,float)) else 'string'}
 
 
+def authoring_presentation(v2,profile):
+    value={'schema_only_examples':True,'hide_composition_definitions':True,'hide_redundant_JSON_file_variants':True} if v2 else {}
+    if profile=='creation_value_v1':value['source_primary']=True
+    return value
+
+
 def read_journal(path):
     raw=Path(path).read_text(encoding='utf-8')
     if not raw.endswith('\n'):raise ValueError('frontier_prior_journal_incomplete')
@@ -181,6 +187,13 @@ def main():
         from scenarios.paper_proofreading.frontier.study_profiles import creation_value_profile
         profile=creation_value_profile(hierarchical,c_ref,base_refs,relation,c_description,replicates=replicates)
         snapshots=profile['snapshots'];reference_interfaces=profile['reference_interfaces'];profile_order=profile['order']
+        from src.adapters.capability_source_authoring import source_callable_interfaces
+        source_interfaces={entry['capability']['id']:entry for entry in source_callable_interfaces(hierarchical)}
+        for cards in reference_interfaces.values():
+            for card in cards:
+                interface=source_interfaces[card['reference']['id']]
+                card['source_contract']={'input_schema':interface['input_schema'],'output_schema':interface['output_schema'],
+                    'effects':copy.deepcopy(card['contract']['effects'])}
     source_files=['adapter.py','author.py','budget.py','learn.py','program_training.py','study_profiles.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py','freeze.py']
     common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/capability_composition_source.py','src/adapters/capability_source_authoring.py','src/adapters/script_capability_runtime.ts',
         'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/adapters/efficiency_rsi_registry.py',
@@ -190,7 +203,7 @@ def main():
         "import {scriptCapabilityFiles} from './src/adapters/script_capability_runtime.ts';process.stdout.write(JSON.stringify(scriptCapabilityFiles));"],
         cwd=ROOT,capture_output=True,text=True,check=True).stdout)
     common_files=list(dict.fromkeys([*common_files,*native_files]))
-    presentation={'schema_only_examples':True,'hide_composition_definitions':True,'hide_redundant_JSON_file_variants':True} if a.v2 else {}
+    presentation=authoring_presentation(a.v2,a.profile)
     conditions={'format':'frontier_D_conditions_v1','code_commit':a.code_commit,'protocol':protocol,'task':task,
         'C':published[0],'initial_snapshots':{k:v['digest'] for k,v in snapshots.items()},
         'shared_examples':reference(out/'shared-training-examples.json'),'native_libraries':native_refs,

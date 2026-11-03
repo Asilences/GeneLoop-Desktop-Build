@@ -1334,6 +1334,14 @@ Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{step
 
 另可提交 `{composition_source}` 或 `{program,composition_source}`。`compile_composition_source` 将唯一 `def build(value)` 中顺序赋值的 `capability.cN(...)` / `program(...)` 及字符串字段绑定静态编码为同一draft；拒绝导入、循环、动态调用/索引和任意求值。新增计算仍在受限的 program.source 中认证执行，编排源代码本身不执行。原 JSON 和完整普通程序入口保留。
 
+### 单源构造接口（2026-11-03，未部署）
+
+`{capability_source}` 将静态 `build(value)`、局部 graph helper 与纯计算 helper 写在同一源码中。宿主只展开模型显式调用和实参，再交原编译、原生认证及发布流程；不执行 graph Python，不生成算法或伪造子能力证书。静态调用至多64步、8层，展开绑定整体至多10000节点。纯计算 helper 在展开图中最多调用一次，其原算法原文保留。
+
+`source_callable_interfaces` 对精确 Script JSON ABI 展示领域对象参数/返回值，宿主恢复原生 `value` 包装，完整原契约和映射保存在审计记录。组合能力自身的业务 `value` 字段不剥离。新研究 `creation_value_v1` 使用同一 `source_primary_v1` 作者视图：模型只见语义接口，完整版本、原生包装和证据仍留在 `authoring-context-audit.json`；旧 JSON、旧作者视图和完整普通程序入口保留。C说明卡只提供信息，只有目录中的alias能调用。
+
+新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](recursive-efficiency-protocol-v2.md)。
+
 新材料改变别名后，显式意图仍引用原精确版本；编译失败的repair通过SHA验证的 `frozen_composition_intent` 显示当前alias投影及原参数，原始回答保留引用，不把旧alias冒充新回答。缺失参数继续保持缺失，交给模型修复。Frontier 同时消费原 `selection.construction` 排序。
 
 `prepare_D --final-manifest` 可重复，以多个宿主冻结manifest生成项目与独立检查；项目ID安全唯一，0/1/2版本和输入SHA逐项核验，旧无ID清单仍解释为mamba。`--budget-usd` 和 `--research-limit-usd` 显式配置新条件的有限研究预算，默认值与旧条件不变，未知历史请求仍完整预留；平台null额度与原账本不改。复现命令见[研究入口](../scenarios/paper_proofreading/frontier/README.md)，效果边界见[上午实验](experiments/recursive-construction-20261103.md)。

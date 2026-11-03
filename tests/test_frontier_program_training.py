@@ -277,7 +277,7 @@ def test_certified_prefix_native_probe_and_final_candidate_share_the_same_bound_
     number={'type':'number'};record=copy.deepcopy(selected['contract']['input_schema']['properties']['value'])
     task={'id':'native-source-diagnostic','contract':{'input_schema':{'type':'object','properties':{'first':record},'required':['first'],'additionalProperties':False},
         'output_schema':{'type':'object','properties':{'total':number},'required':['total'],'additionalProperties':False},'effects':['read']}}
-    source="def merge(previous, margin):\n    return {'total':previous['n']+margin}\n\ndef build(value):\n    prior = capability.c1(value=value['first'])\n    return merge(prior, 3)\n"
+    source="def merge(previous, margin):\n    return {'total':previous['n']+margin}\n\ndef build(value):\n    prior = capability.c1(n=value['first']['n'])\n    return merge(prior, 3)\n"
     encoded=compile_capability_source(source,task,snapshot)
     program=encoded['program'];program_ref=put(tmp_path/'new-program.json',program)
     intent_ref=put(tmp_path/'model-intent.json',freeze_program_composition(task,snapshot,program,encoded['composition']))
