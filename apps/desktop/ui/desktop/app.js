@@ -453,10 +453,11 @@ async function loadEarlier(){try{const before=Math.min(...state.conversation.eve
 function renderScenes(){
   const trigger=$('scene-select'),id=state.composerScene||'new-scene';
   const scene=state.settings?.scenes?.find(row=>row.id===id);
-  trigger.value=id;
+  trigger.dataset.scene=id;
+  trigger.hidden=id==='new-scene'&&!sceneSelection.pending;
   trigger.toggleAttribute('data-pending',sceneSelection.pending);
   trigger.setAttribute('aria-busy',String(sceneSelection.pending));
-  trigger.replaceChildren(node('span',{},labels[id]||scene?.label||id),icon('chevron-down'));
+  trigger.textContent=labels[id]||scene?.label||id;
 }
 async function chooseScene(id){
   if(state.submitting)throw Error('正在发送消息，请稍后切换场景。');
@@ -624,21 +625,17 @@ $('new-workspace').onclick=()=>askText('新建工作区','工作区名称','',as
 $('new-session').onclick=()=>openWorkspace(state.workspace,{focus:true});
 $('rename-session').onclick=()=>{if(state.session)renameSession(state.session);};
 $('sidebar-toggle').onclick=()=>$('workspace').classList.toggle('sidebar-hidden');$('chat-tab').onclick=()=>{state.trace=false;renderConversation();};$('trace-tab').onclick=()=>{state.trace=true;renderConversation();};
-$('scene-options').onclick=async()=>{
+async function openSceneOptions(){
   const selection=sceneSelection;
   try{await selectionChange;if(selection===sceneSelection)sceneOptions();}catch(error){fail(error);}
-};
+}
 $('model-select').onchange=()=>{renderEfforts();changeModel().catch(fail);};$('effort-select').onchange=()=>changeModel().catch(fail);$('account-nav').onclick=account;
 $('attach').onclick=()=>$('file-input').click();$('file-input').onchange=event=>{attach([...event.target.files]).catch(fail);event.target.value='';};$('composer').onsubmit=send;$('prompt').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();send();}};
 $('stop').onclick=async()=>{try{await rpc('session/cancel',{sessionId:state.session});toast('已请求停止，等待服务器确认。');}catch(error){fail(error);}};
 $('deliveries-toggle').onclick=()=>{$('deliveries').hidden=!$('deliveries').hidden;renderDeliveries();};$('deliveries-close').onclick=()=>$('deliveries').hidden=true;
 for(const [id,name]of Object.entries({'sidebar-toggle':'sidebar','rename-session':'edit','deliveries-toggle':'files','refresh-session':'refresh','new-workspace':'plus','attach':'paperclip','send':'send','deliveries-close':'close'}))$(id).replaceChildren(icon(name));
 $('attach').setAttribute('aria-label','上传文件');
-const addAction=button(icon('plus'),()=>popupMenu([
-  {id:'composer-upload',label:'上传文件',icon:'paperclip',action:()=>$('attach').click()},
-  {id:'composer-scene',label:'选择场景',icon:'scenes',action:()=>$('scene-select').click()},
-  {id:'composer-options',label:'场景选项',icon:'settings',action:()=>$('scene-options').click()},
-],{anchor:addAction,above:true,heading:'添加'}),'icon composer-add');
+const addAction=node('button',{type:'button',class:'icon composer-add'},icon('plus'));
 addAction.setAttribute('aria-label','添加');
 addAction.setAttribute('aria-haspopup','menu');
 addAction.setAttribute('aria-expanded','false');
@@ -695,7 +692,9 @@ divider.addEventListener('keydown',event=>{
 divider.addEventListener('dblclick',()=>{localStorage.removeItem(sidebarWidthKey);restoreSidebarWidth();});
 window.addEventListener('resize',restoreSidebarWidth);
 restoreSidebarWidth();
-bindScenePicker({input:$('prompt'),select:$('scene-select'),container:$('composer'),getScenes:()=>state.settings?.scenes||[],choose:chooseScene,fail,label:scene=>labels[scene.id]||scene.label});
+bindScenePicker({input:$('prompt'),trigger:addAction,container:$('composer'),getScenes:()=>state.settings?.scenes||[],
+  getSelected:()=>state.composerScene||'new-scene',choose:chooseScene,fail,label:scene=>labels[scene.id]||scene.label,
+  upload:()=>$('attach').click(),options:openSceneOptions});
 const actions=button(icon('more'),sessionActions,'icon');actions.id='session-actions';actions.title='管理对话';actions.setAttribute('aria-label','管理对话');$('rename-session').after(actions);
 window.addEventListener('beforeunload',()=>{streams.close();clearInterval(pollTimer);if(previewUrl)URL.revokeObjectURL(previewUrl);});
 initialize();

@@ -11,16 +11,26 @@ const sceneSymbols={
 };
 
 /** 下拉与斜杠菜单选择同一个本轮场景；文本里的已识别命令转换为选择状态。 */
-export function bindScenePicker({input,select,container,getScenes,choose,fail,label}){
+export function bindScenePicker({input,trigger,container,getScenes,getSelected,choose,fail,label,upload,options}){
   let suggestions=[],active=0;
   let openedByButton=false;
   const menu=node('div',{id:'scene-command-menu',class:'scene-command-menu',role:'listbox','aria-label':'选择当前消息的场景',hidden:true});
   container.prepend(menu);input.setAttribute('aria-controls',menu.id);input.setAttribute('aria-expanded','false');
-  select.title='选择当前消息的场景，也可输入 / 快速选择';
-  select.setAttribute('aria-controls',menu.id);
-  const close=()=>{menu.hidden=true;input.setAttribute('aria-expanded','false');select.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
+  trigger.setAttribute('aria-controls',menu.id);
+  const close=()=>{menu.hidden=true;input.setAttribute('aria-expanded','false');trigger.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
+  function action(id,symbol,title,hint,run){
+    const control=button([node('span',{class:'scene-command-symbol'},icon(symbol)),
+      node('span',{class:'scene-command-label'},node('span',{class:'scene-command-name'},title),hint?node('small',{},hint):null)],
+      ()=>{close();trigger.focus();run();},'scene-command-item');
+    control.dataset.action=id;control.setAttribute('role','menuitem');return control;
+  }
   function render(){
+    menu.setAttribute('role',openedByButton?'menu':'listbox');
+    menu.setAttribute('aria-label',openedByButton?'添加':'选择当前消息的场景');
+    menu.classList.toggle('composer-add-menu',openedByButton);
     menu.replaceChildren(node('div',{class:'scene-command-heading'},'场景'));
+    if(openedByButton)menu.prepend(node('div',{class:'scene-command-heading'},'添加'),
+      action('composer-upload','paperclip','添加照片或文件','从电脑上传',upload));
     suggestions.forEach((scene,index)=>{
       const shortcut=shortcutOf(scene);
       const description=scene.id==='new-scene'?'通用对话':scene.id==='ppt'?'演示文稿':label(scene);
@@ -32,15 +42,17 @@ export function bindScenePicker({input,select,container,getScenes,choose,fail,la
       control.id='scene-command-'+index;
       control.dataset.scene=scene.id;
       if(shortcut)control.dataset.shortcut=shortcut;
-      control.setAttribute('role','option');
-      control.setAttribute('aria-selected',String(scene.id===select.value));
-      if(scene.id===select.value)control.append(icon('check'));
+      control.setAttribute('role',openedByButton?'menuitemradio':'option');
+      const selected=scene.id===getSelected();
+      control.setAttribute(openedByButton?'aria-checked':'aria-selected',String(selected));
+      if(selected)control.append(icon('check'));
       control.disabled=scene.available===false;control.title=scene.unavailable_reason||shortcut||'';menu.append(control);
     });
+    if(openedByButton)menu.append(action('composer-options','settings','场景选项',null,options));
     menu.hidden=false;
-    select.setAttribute('aria-expanded',String(openedByButton));
+    trigger.setAttribute('aria-expanded',String(openedByButton));
     input.setAttribute('aria-expanded',String(!openedByButton));
-    if(openedByButton)menu.querySelectorAll('button')[active]?.focus();
+    if(openedByButton)menu.querySelector('button')?.focus();
     else if(active>=0)input.setAttribute('aria-activedescendant','scene-command-'+active);
   }
   async function pick(id,body){
@@ -59,7 +71,16 @@ export function bindScenePicker({input,select,container,getScenes,choose,fail,la
   });
   function keys(event){
     if(menu.hidden||event.isComposing)return;
-    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();close();if(openedByButton)select.focus();return;}
+    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();close();if(openedByButton)trigger.focus();return;}
+    if(openedByButton){
+      if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+        event.preventDefault();
+        const controls=[...menu.querySelectorAll('button:not(:disabled)')],at=controls.indexOf(document.activeElement);
+        const next=event.key==='Home'?0:event.key==='End'?controls.length-1:(at+(event.key==='ArrowDown'?1:-1)+controls.length)%controls.length;
+        controls[next]?.focus();
+      }
+      return;
+    }
     if(['ArrowDown','ArrowUp'].includes(event.key)){
       event.preventDefault();event.stopImmediatePropagation();const enabled=suggestions.map((scene,index)=>scene.available!==false?index:-1).filter(index=>index>=0);
       if(enabled.length){const at=enabled.indexOf(active);active=enabled[(at+(event.key==='ArrowDown'?1:-1)+enabled.length)%enabled.length];render();}return;
@@ -71,15 +92,13 @@ export function bindScenePicker({input,select,container,getScenes,choose,fail,la
   }
   input.addEventListener('keydown',keys,{capture:true});
   menu.addEventListener('keydown',keys);
-  select.addEventListener('click',()=>{
+  trigger.addEventListener('click',()=>{
     if(!menu.hidden&&openedByButton){close();return;}
     openedByButton=true;
     suggestions=getScenes();
-    if(!suggestions.length)return;
-    active=suggestions.findIndex(scene=>scene.id===select.value&&scene.available!==false);
-    if(active<0)active=suggestions.findIndex(scene=>scene.available!==false);
+    active=-1;
     render();
   });
-  document.addEventListener('pointerdown',event=>{if(!menu.contains(event.target)&&!select.contains(event.target)&&event.target!==input)close();});
+  document.addEventListener('pointerdown',event=>{if(!menu.contains(event.target)&&!trigger.contains(event.target)&&event.target!==input)close();});
   return {close};
 }

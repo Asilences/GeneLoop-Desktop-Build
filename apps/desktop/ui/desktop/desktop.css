@@ -156,7 +156,8 @@
 #sidebar-divider:hover::after,#sidebar-divider.dragging::after,#sidebar-divider:focus-visible::after{background:var(--blue)}
 body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
 .scene-command-name{font:400 13px/1.6 "Segoe UI","Microsoft YaHei UI","Microsoft YaHei",sans-serif}
-.scene-trigger[data-pending]::after{content:"同步中";font-size:10px;color:var(--muted)}
+.scene-status{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:8px;background:var(--panel);color:var(--muted);font-size:12px;white-space:nowrap}
+.scene-status[data-pending]::after{content:"同步中";font-size:10px}
 .send[aria-busy=true]{opacity:1;display:grid;place-items:center}
 .send-spinner{width:15px;height:15px;border:1.5px solid #ffffff55;border-top-color:currentColor;border-radius:50%;animation:send-spin .75s linear infinite}
 @keyframes send-spin{to{transform:rotate(360deg)}}
@@ -171,7 +172,8 @@ body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
 .composer-add{flex:none;border-radius:50%;color:var(--gl-ink)}
 .composer-add[aria-expanded=true]{background:var(--hover)}
 .composer-add svg{width:17px;height:17px;stroke-width:1.6}
-.context-menu-heading{padding:4px 10px;color:var(--muted);font-size:11px}
+.scene-command-menu.composer-add-menu{left:0;width:min(390px,100%);max-height:min(420px,58vh)}
+.composer-add-menu button:focus-visible{background:var(--selection)}
 .scene-command-item>.scene-command-symbol{display:grid;place-items:center;flex:none;width:18px;color:var(--scene-accent,var(--muted))}
 .scene-command-symbol svg{width:17px;height:17px}
 .scene-command-item>.scene-command-label{justify-content:flex-start;gap:8px}
