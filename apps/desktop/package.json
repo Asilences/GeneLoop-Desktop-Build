@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.2.28",
+  "version": "0.2.29",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -43,7 +43,6 @@
       "installerSidebar": "assets/installerSidebar.bmp",
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,
       "artifactName": "GeneLoop-Desktop-${version}-${arch}-Setup.${ext}"
     }

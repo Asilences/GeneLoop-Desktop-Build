@@ -61,4 +61,16 @@ await installerBitmap('installerSidebar',164,314,`
     <circle cx="65" cy="252" r="3"/><circle cx="101" cy="220" r="2.5"/><circle cx="133" cy="283" r="2"/>
   </g>
 `,{width:70,height:112,left:47,top:99});
+await installerBitmap('installerHero',500,118,`
+  <defs>
+    <linearGradient id="hero" x2="1" y2=".3"><stop stop-color="#edf0ff"/><stop offset=".54" stop-color="#f6f8ff"/><stop offset="1" stop-color="#e6f8f7"/></linearGradient>
+  </defs>
+  <rect width="500" height="118" fill="url(#hero)"/>
+  <g fill="none" stroke="#9eadd7" stroke-opacity=".45">
+    <path d="M-8 101L51 71L94 89L138 55L183 67M51 71L35 28L95 12M138 55L131 23"/>
+    <path d="M317 67L362 51L401 78L453 51L508 78M362 51L380 16M401 78L420 111M453 51L470 17"/>
+  </g>
+  <g fill="#9eadd7"><circle cx="51" cy="71" r="3"/><circle cx="138" cy="55" r="3"/><circle cx="362" cy="51" r="3"/><circle cx="401" cy="78" r="3"/><circle cx="453" cy="51" r="3"/></g>
+  <circle cx="250" cy="59" r="43" fill="#fff" fill-opacity=".8"/>
+`,{width:35,height:58,left:233,top:30});
 console.log('Prepared independent desktop renderer and brand icons; no DSH web frontend or client modules.');
