@@ -13,7 +13,7 @@ export function bindScenePicker({input,select,container,getScenes,choose,fail,la
   function render(){
     menu.replaceChildren(node('div',{class:'scene-command-heading'},'选择场景'));
     suggestions.forEach((scene,index)=>{
-      const control=button(node('span',{},node('strong',{},label(scene)),node('small',{},shortcutOf(scene))),()=>pick(scene.id),'scene-command-item'+(index===active?' active':''));
+      const control=button(node('span',{},node('span',{class:'scene-command-name'},label(scene)),node('small',{},shortcutOf(scene))),()=>pick(scene.id),'scene-command-item'+(index===active?' active':''));
       control.id='scene-command-'+index;
       control.setAttribute('role','option');
       control.setAttribute('aria-selected',String(scene.id===select.value));
@@ -29,9 +29,8 @@ export function bindScenePicker({input,select,container,getScenes,choose,fail,la
   async function pick(id,body){
     const before=input.value,command=sceneCommand(before,getScenes());
     const next=body??(command?command.text:sceneSuggestions(before,getScenes()).length?'':before);
-    input.value=next;close();
+    input.value=next;close();input.focus();
     try{await choose(id);}catch(error){if(input.value===next)input.value=before;fail(error);}
-    input.focus();
   }
   input.addEventListener('input',event=>{
     if(event.isComposing)return;

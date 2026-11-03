@@ -15,6 +15,12 @@ const examples=[
 ];
 let toastTimer,pollTimer,renderPending=false,registering=false,currentFollow,workspaceFollow,eventFollow,controlFollow,previewUrl;
 let selectionChange=Promise.resolve(),creatingSession;
+let sceneSelection={confirmed:'new-scene',revision:0,pending:false};
+function resetComposerScene(){
+  sceneSelection={confirmed:'new-scene',revision:0,pending:false};
+  state.composerScene='new-scene';
+  selectionChange=selectionChange.catch(()=>{});
+}
 let scratchText='';
 const historyCache=new Map();
 const workspaceDrafts=new Map();
@@ -208,7 +214,7 @@ function openWorkspace(id,{focus=false}={}){
   state.conversation=new Conversation();state.comparisons=new Map();state.jobs=[];state.trace=false;
   awaitingHistory=false;historyError='';$('composer').inert=false;
   $('deliveries').hidden=true;
-  state.composerScene='new-scene';state.attachments=[];$('prompt').value=scratchText;
+  resetComposerScene();state.attachments=[];$('prompt').value=scratchText;
   clearSessionPanels();renderScenes();renderAttachments();renderSidebar();renderConversation();
   $('history').scrollTop=0;
   if(id&&!focus)refreshHomeDelivery(id).catch(()=>{});
@@ -241,7 +247,7 @@ async function selectSession(id,{fromScratch=false,force=false,workspaceDraft=nu
   }
   currentFollow?.();currentFollow=null;
   const generation=++state.generation;
-  state.session=id;clearSessionPanels();state.composerScene='new-scene';state.trace=false;state.jobs=[];
+  state.session=id;clearSessionPanels();if(!fromScratch)resetComposerScene();state.trace=false;state.jobs=[];
   const cached=historyCache.get(id);
   state.conversation=cached?.conversation||new Conversation();state.comparisons=cached?.comparisons||new Map();
   awaitingHistory=true;historyError='';$('composer').inert=true;
@@ -443,9 +449,43 @@ function renderScenes(){
   const trigger=$('scene-select'),id=state.composerScene||'new-scene';
   const scene=state.settings?.scenes?.find(row=>row.id===id);
   trigger.value=id;
+  trigger.toggleAttribute('data-pending',sceneSelection.pending);
+  trigger.setAttribute('aria-busy',String(sceneSelection.pending));
   trigger.replaceChildren(node('span',{},labels[id]||scene?.label||id),icon('chevron-down'));
 }
-async function chooseScene(id){return changeSelection(async()=>{const scene=state.settings.scenes.find(row=>row.id===id);if(scene?.available===false)throw Error(scene.unavailable_reason||'该场景暂不可用');await ensureSession();if(id==='files'||state.settings.selection.scene==='files'){await post('/api/harless/file-scene',{action:'select',session_id:state.session,selected:id==='files'});}if(id!=='files')state.settings=await post('/api/harless/settings',{action:'select',session_id:state.session,selection:{scene:id}});else state.settings={...state.settings,selection:{scene:'files',mode:'execute',rsi:true},scene_option_fields:[]};state.composerScene=id;renderScenes();toast('已选择 '+(labels[id]||id));}).catch(error=>{renderScenes();throw error;});}
+async function chooseScene(id){
+  if(state.submitting)throw Error('正在发送消息，请稍后切换场景。');
+  const scene=state.settings.scenes.find(row=>row.id===id);
+  if(scene?.available===false)throw Error(scene.unavailable_reason||'该场景暂不可用');
+  const selection=sceneSelection,revision=++selection.revision;
+  const latest=()=>selection===sceneSelection&&revision===selection.revision;
+  selection.pending=true;
+  state.composerScene=id;
+  renderScenes();
+  return changeSelection(async()=>{
+    if(!latest())return;
+    try{
+      const sessionId=await ensureSession();
+      if(selection!==sceneSelection)return;
+      const settings=state.settings;
+      if(id==='files'||settings.selection.scene==='files'){
+        await post('/api/harless/file-scene',{action:'select',session_id:sessionId,selected:id==='files'});
+      }
+      const next=id==='files'?{...settings,selection:{scene:'files',mode:'execute',rsi:true},scene_option_fields:[]}
+        :await post('/api/harless/settings',{action:'select',session_id:sessionId,selection:{scene:id}});
+      if(selection!==sceneSelection)return;
+      state.settings=next;
+      selection.confirmed=id;
+      if(latest())toast('已选择 '+(labels[id]||id));
+    }catch(error){
+      if(!latest())return;
+      state.composerScene=selection.confirmed;
+      throw error;
+    }finally{
+      if(latest()){selection.pending=false;renderScenes();}
+    }
+  });
+}
 function renderModels(){const select=$('model-select');select.replaceChildren();for(const model of state.models)select.append(node('option',{value:JSON.stringify([model.provider,model.model]),disabled:model.available===false},model.label||model.model));const selection=state.defaultModel||{};select.value=JSON.stringify([selection.provider,selection.model]);if(select.selectedIndex<0&&select.options.length)select.selectedIndex=0;refreshChoice(select);renderEfforts(selection.reasoning_effort||'off');}
 function renderEfforts(selected='off'){const model=state.models.find(row=>JSON.stringify([row.provider,row.model])===$('model-select').value);const select=$('effort-select');select.replaceChildren();for(const mode of model?.reasoning_modes?.length?model.reasoning_modes:[{id:'off',label:'关闭',available:true}])select.append(node('option',{value:mode.id,disabled:mode.available===false,title:mode.unavailable_reason},mode.label||mode.id));select.value=selected;if(select.selectedIndex<0)select.selectedIndex=0;refreshChoice(select);}
 async function changeModel(){const [provider,model]=JSON.parse($('model-select').value),reasoningEffort=$('effort-select').value;return changeSelection(async()=>{await ensureSession();const selected=await rpc('session/selectModel',{sessionId:state.session,provider,model,reasoningEffort});state.defaultModel={...selected.selected,reasoning_effort:selected.selected.reasoningEffort};renderModels();});}
@@ -469,7 +509,7 @@ function promoteWorkspaceDraft(sessionId){
   activeWorkspaceDraft=null;
 }
 async function send(event){event?.preventDefault();if(state.submitting)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;$('send').disabled=true;try{
-    await selectionChange;const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);promoteWorkspaceDraft(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);state.composerScene='new-scene';renderScenes();}state.conversation.running=true;scheduleRender();
+    await selectionChange;const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);promoteWorkspaceDraft(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);resetComposerScene();renderScenes();}state.conversation.running=true;scheduleRender();
   }catch(error){if(error.status>=400&&error.status<500)state.pending.delete(state.session);fail(error);}finally{state.submitting=false;$('send').disabled=false;}}
 async function refreshTaskPanels(){const session=state.session;if(!session)return;const generation=state.generation;const [tasks,questions]=await Promise.allSettled([request('/api/harless/tasks'),request('/api/harless/questions?session_id='+encodeURIComponent(session))]);if(generation!==state.generation)return;
   if(questions.status==='fulfilled')renderQuestions(questions.value.questions||[]);
@@ -569,7 +609,10 @@ $('new-workspace').onclick=()=>askText('新建工作区','工作区名称','',as
 $('new-session').onclick=()=>openWorkspace(state.workspace,{focus:true});
 $('rename-session').onclick=()=>{if(state.session)renameSession(state.session);};
 $('sidebar-toggle').onclick=()=>$('workspace').classList.toggle('sidebar-hidden');$('chat-tab').onclick=()=>{state.trace=false;renderConversation();};$('trace-tab').onclick=()=>{state.trace=true;renderConversation();};
-$('scene-options').onclick=sceneOptions;
+$('scene-options').onclick=async()=>{
+  const selection=sceneSelection;
+  try{await selectionChange;if(selection===sceneSelection)sceneOptions();}catch(error){fail(error);}
+};
 $('model-select').onchange=()=>{renderEfforts();changeModel().catch(fail);};$('effort-select').onchange=()=>changeModel().catch(fail);$('account-nav').onclick=account;
 $('attach').onclick=()=>$('file-input').click();$('file-input').onchange=event=>{attach([...event.target.files]).catch(fail);event.target.value='';};$('composer').onsubmit=send;$('prompt').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();send();}};
 $('stop').onclick=async()=>{try{await rpc('session/cancel',{sessionId:state.session});toast('已请求停止，等待服务器确认。');}catch(error){fail(error);}};

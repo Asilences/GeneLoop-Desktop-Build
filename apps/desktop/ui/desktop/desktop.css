@@ -155,3 +155,5 @@
 #sidebar-divider::after{content:"";position:absolute;inset:0 3px;background:transparent;transition:background-color .15s}
 #sidebar-divider:hover::after,#sidebar-divider.dragging::after,#sidebar-divider:focus-visible::after{background:var(--blue)}
 body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
+.scene-command-name{font:400 13px/1.6 "Segoe UI","Microsoft YaHei UI","Microsoft YaHei",sans-serif}
+.scene-trigger[data-pending]::after{content:"同步中";font-size:10px;color:var(--muted)}

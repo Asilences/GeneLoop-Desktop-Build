@@ -29,7 +29,15 @@ const server=createServer(async(req,res)=>{
   requests.push({path,method:req.method,body});
   if(path==='/api/account/me'){await new Promise(resolve=>setTimeout(resolve,600));return json(res,{user:{id:'diagnostic',displayName:'协议诊断账号',username:'diagnostic'}});}
   if(path==='/api/workspace/ready')return json(res,{ready:true});
-  if(path==='/api/harless/settings'){const id=body.session_id||url.searchParams.get('session_id');if(req.method==='POST')selections.set(id,{...settings(id).selection,...body.selection});return json(res,settings(id));}
+  if(path==='/api/harless/settings'){
+   const id=body.session_id||url.searchParams.get('session_id');
+   if(req.method==='POST'){
+    if(body.selection?.scene==='ppt')await new Promise(resolve=>setTimeout(resolve,750));
+    if(body.selection?.scene==='paper-proofreading')return json(res,{error:{message:'场景同步诊断拒绝'}},409);
+    selections.set(id,{...settings(id).selection,...body.selection});
+   }
+   return json(res,settings(id));
+  }
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
   if(path==='/api/harless/tasks')return json(res,{tasks:[]});
@@ -60,6 +68,7 @@ const server=createServer(async(req,res)=>{
   else if(endpoint==='session/rename'){const row=sessions.find(row=>row.sessionId===request.sessionId);row.projections.values.title=request.title;value={title:request.title,seq:3};}
   else if(endpoint==='session/selectModel'){modelSelections.set(request.sessionId,{...request,reasoning_effort:request.reasoningEffort});value={selected:request};}
   else if(endpoint==='session/prompt'){
+   if(request.content[0].text==='/ppt 诊断发送'&&selections.get(request.sessionId)?.scene!=='ppt')throw Error('Prompt arrived before scene confirmation');
    value={accepted:true};const id=request.sessionId;
    push('session/follow',event(3,'turn/start',{turn:1}),id);push('session/follow',event(4,'user/message',{source:{kind:'user',rpcId:request.requestId},content:request.content}),id);
    push('session/follow',{type:'assistant-stream',frame:{type:'start',attemptId:'fixture',revision:1}},id);

@@ -102,10 +102,13 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`(()=>{const box=document.querySelector('.check-row input').getBoundingClientRect(),label=document.querySelector('.check-row span').getBoundingClientRect();return box.right<label.left&&Math.abs((box.top+box.bottom-label.top-label.bottom)/2)<2})()`),true);
  await evaluate(`document.querySelector('dialog header button').click()`);
  await until(()=>evaluate('!document.querySelector("dialog")'),'场景选项关闭');
+ await evaluate(`document.getElementById('scene-select').click();[...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/paper')).click()`);
+ await until(()=>evaluate(`document.getElementById('scene-select').value==='new-scene'&&document.getElementById('toast').textContent.includes('场景同步诊断拒绝')`),'服务器拒绝时恢复原选择');
  await evaluate(`const input=document.getElementById('prompt');input.value='/pp';input.dispatchEvent(new Event('input'));input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`);
- await until(()=>evaluate('document.getElementById("scene-select").value==="ppt"&&document.getElementById("prompt").value===""'),'斜杠选择同步下拉框');
+ assert.equal(await evaluate(`document.getElementById('scene-select').value==='ppt'&&document.getElementById('scene-select').hasAttribute('data-pending')&&document.getElementById('prompt').value===''`),true);
  await evaluate(`document.getElementById('scene-select').click()`);
  assert.equal(await evaluate(`document.querySelector('#scene-command-menu [aria-selected=true]').textContent.includes('/ppt')`),true);
+ assert.equal(await evaluate(`[...document.querySelectorAll('.scene-command-name')].every(label=>getComputedStyle(label).fontWeight==='400')`),true);
  await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
  check('复选框与文字同一行，斜杠快捷选择与下拉框同步');
  await evaluate(`document.querySelector('[aria-label="推理强度"].choice-trigger').click();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));document.activeElement.click();document.getElementById('prompt').value='诊断发送';document.getElementById('composer').requestSubmit()`);
