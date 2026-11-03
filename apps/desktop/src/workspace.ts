@@ -23,9 +23,10 @@ export class DesktopWorkspace {
   private stateValue: DesktopState;
   private generation = 0;
   private lastDownloaded?: string;
+  private allowClose = false;
   private readonly page = join(directory, '../ui/index.html');
 
-  constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean }) {
+  constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean; closeToTray?: boolean }) {
     const { settings } = options;
     this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version };
     this.window = new BrowserWindow({
@@ -40,10 +41,11 @@ export class DesktopWorkspace {
     this.window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     this.window.webContents.on('page-title-updated', event => event.preventDefault());
     this.window.on('resize', () => this.fit());
-    this.window.on('close', () => {
+    this.window.on('close', event => {
       const { width, height } = this.window.getNormalBounds();
       options.settings.window = { width, height, maximized: this.window.isMaximized() };
       try { saveSettings(options.settingsFile, options.settings); } catch { /* 退出不因偏好保存失败而挂住。 */ }
+      if (options.closeToTray && !this.allowClose) { event.preventDefault(); this.window.hide(); }
     });
     this.window.on('closed', () => this.dispose());
     ipcMain.handle('geneloop:state', event => { this.requireShell(event); return this.state(); });
@@ -71,6 +73,7 @@ export class DesktopWorkspace {
   }
 
   state(): DesktopState { return { ...this.stateValue }; }
+  permitClose(): void { this.allowClose = true; }
 
   private requireShell(event: IpcMainInvokeEvent): void {
     if (event.sender !== this.window.webContents || event.senderFrame !== this.window.webContents.mainFrame ||

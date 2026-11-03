@@ -49,7 +49,7 @@ app.whenReady().then(async () => {
   });
   const workspace = await created.json();
   assert.ok(workspace.workspace?.workspaceId, JSON.stringify(workspace));
-  desktop = new DesktopWorkspace({ settings: { version: 1, server, window: { width: 1280, height: 860, maximized: false } }, settingsFile: join(output, 'local-ui-settings.json'), version: 'diagnostic', downloadsDirectory: output, allowLoopback: true });
+  desktop = new DesktopWorkspace({ settings: { version: 1, server, window: { width: 1280, height: 860, maximized: false } }, settingsFile: join(output, 'local-ui-settings.json'), version: 'diagnostic', downloadsDirectory: output, allowLoopback: true, closeToTray: true });
   await desktop.ready;
   assert.equal(desktop.state().phase, 'connected', desktop.state().message);
   const contents = desktop.workspace.webContents;
@@ -89,12 +89,27 @@ app.whenReady().then(async () => {
   desktop.showWorkspace();
   assert.equal(desktop.workspace.webContents.id, before);
   check('桌面标题栏、连接设置和原工作区切换保留页面');
+  desktop.window.close();
+  assert.equal(desktop.window.isDestroyed(), false);
+  assert.equal(desktop.window.isVisible(), false);
+  desktop.window.show();
+  check('关闭窗口隐藏到托盘，恢复后保持原工作区');
+  const unavailable = require('node:net').createServer();
+  unavailable.listen(0, '127.0.0.1'); await require('node:events').once(unavailable, 'listening');
+  const unavailableUrl = `http://127.0.0.1:${unavailable.address().port}/`;
+  await new Promise(done => unavailable.close(done));
+  await desktop.connect(unavailableUrl);
+  assert.equal(desktop.state().phase, 'error');
+  await desktop.connect(server);
+  assert.equal(desktop.state().phase, 'connected');
+  await until(async () => desktop.workspace.webContents.executeJavaScript('document.body.innerText.includes("GeneLoop")'), '重连工作区');
+  check('连接失败显示恢复页，重连重新读取服务器状态而不重发模型消息');
   try {
     await new Promise(done => setTimeout(done, 300));
-    writeFileSync(join(output, 'local-workspace.png'), (await contents.capturePage()).toPNG());
+    writeFileSync(join(output, 'local-workspace.png'), (await desktop.workspace.webContents.capturePage()).toPNG());
     report.screenshot = 'local-workspace.png';
   } catch (error) { report.screenshot_unavailable = String(error); }
-  report.graph_entries = await contents.executeJavaScript('window.__DSH_BOOT__.entries.length');
+  report.graph_entries = await desktop.workspace.webContents.executeJavaScript('window.__DSH_BOOT__.entries.length');
   if (process.argv.includes('--public')) {
     await desktop.connect('https://geneloop.ai/');
     assert.equal(desktop.state().phase, 'connected', desktop.state().message);
@@ -104,7 +119,7 @@ app.whenReady().then(async () => {
     check('正式服务认证接入；登录界面仍从本地安装资源加载，未登录或调用模型');
     try { writeFileSync(join(output, 'public-login.png'), (await desktop.workspace.webContents.capturePage()).toPNG()); } catch {}
   }
-  desktop.window.close();
+  desktop.permitClose(); desktop.window.close();
   report.ok = true;
 }).catch(async error => {
   report.ok = false; report.error = error.stack; report.resources = desktop?.frontend?.diagnostics;

@@ -1327,3 +1327,11 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 - Frontier 新freeze显式给定实验ID与带时区未来截止，C/D准备器读取冻结协议及任务引用，支持`--protocol`与旧重定位文件，不继承本轮日期。`run`在owner/费用登记前核对精确研究预算、截止、任务、种子与实际初始能力池，首构造再次核对；不一致不调用模型，后续原生学习按回合协议更新池。研究截止须有限有效，平台null配额策略和原累计账本不改。
 
 新增执行仍是既有只读 Script 沙箱后端，不接管聊天，不宣称插件已去除 Python 或任意 MCP 自动组合已完成。真实效果与限制独立见[Frontier 记录](experiments/capability-frontier-20261103.md)。
+# GeneLoop Desktop 接入（2026-11-03）
+
+桌面客户端复用现有账号、会话、场景、上传/交付与 WebSocket 接口，不新增服务器 Agent 或任务协议。安装包内提供固定 DSH 前端和 GeneLoop 客户端资源，`LocalFrontendHost` 读取结构化 `__DSH_BOOT__` / `__DSH_CONNECTION_RECOVERY__` 并使用原生 boot renderer，不执行下载的整站 HTML。
+
+桌面标题栏与连接页面的 IPC 仅对安装包内页面及其主 frame 开放；工作区无 Node 或该 IPC 桥接。服务器地址只接受 HTTPS 根 origin，Cookie 按服务器分区；开发本机 HTTP fixture 需显式启用且不适用于打包应用。已有认证、文件归属、版本守卫、预算/取消仍由原服务负责。
+
+当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](desktop.md)。
+
