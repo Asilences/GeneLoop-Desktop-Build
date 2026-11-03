@@ -1397,6 +1397,8 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 原修复应暂缓且失败明确可修复时，如宿主`construction_budget(job)`提供有限预算及正的剩余金额，可在同一job/snapshot内增加一次重新选择，且受本轮`max_reconsiderations`总数约束。原修复计数、失败签名、质量契约和预算均不重置；权限、基础设施及已提交后继失败不因该选项重试。新能力进入后的原有重新构造同时消费历史；已有无模型续接不会仅为增加反思而额外调用。
 
+修复期间`catalog_sha256`绑定去除宿主动态`construction_feedback`后的能力目录，任务/版本/别名仍冻结；`catalog_full_sha256`另存完整输入摘要。历史每轮增长必须重核原始引用，不能成为语义目录变更的豁免。
+
 公共场景可提供原有有限研究`gate`：原`construct`直接复用其`register_attempt`及`propose_once`，不再打开竞争累计账本锁的第二个网关。无该gate时保留原子进程路径；平台`null`不限额度不构成新增策略尝试的有限研究授权。
 
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。

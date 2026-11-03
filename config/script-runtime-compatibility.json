@@ -14,6 +14,13 @@
       "to_sha256": "9cef4d6a5e4dba6f66006af4e4f010e71a513e3ec48669a563155986d1d9958b",
       "reason": "旧程序继续使用16000字节上限；新程序仅能使用证书中显式认证的65536上限，增加受认证JSON值输入元数据校验，绑定与沙箱保持原样",
       "validation": "tests/test_script_capability_runtime.mjs tests/test_script_receipt_envelope.mjs"
+    },
+    {
+      "path": "src/adapters/reuse_mediation.ts",
+      "from_sha256": "9551379850c3c16ce1f62bdae738c119493520b734b7588f78b337e3e16a99c3",
+      "to_sha256": "7c2a08564ac5192e21b8762c1a866494007366ad01120d0510ad7098fb68e18d",
+      "reason": "PR127仅将当前任务复用来源读取容量从20MiB固定值改为统一FILE_MAX_BYTES；Script原生输入自身16000000字节上限、来源哈希、路径、权限、绑定和执行逻辑不变。旧程序与证书保留，仅兼容此精确执行版本对。",
+      "validation": "tests/test_script_capability_runtime.mjs tests/test_reuse_mediation.mjs；本轮真实科研材料无模型重放另见docs/experiments/creation-feedback-20261103.md"
     }
   ]
 }

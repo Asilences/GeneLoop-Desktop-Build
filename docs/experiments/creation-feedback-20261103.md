@@ -1,6 +1,6 @@
 # 构造经历反馈与做法重新选择：隔离验收
 
-- 实验ID：`creation-feedback-20261103-001`；状态：真实调用前冻结，结果待追加。
+- 实验ID：`creation-feedback-20261103-001`；状态：首轮真实调用已封账，发现公共接线与旧库兼容阻塞，修复后验收待追加。
 - 目标：检查历史构造失败/费用能否进入真实模型输入，及原Builder能否在受控节点重新选择实现并沿原流程验收。
 - 机制源码：`282c2109`；基于远程main `2b3d0051`。实验驱动为`examples/capability-scenes/compare-construction-feedback.py`，版本和有效配置由本次冻结文件记录。
 
@@ -35,10 +35,10 @@
 
 ## 复现入口
 
-服务器在项目私有环境中，以独立代码目录运行：
+服务器先加载项目私有`remote-env.sh`，通过拥有私有`.env`的原项目入口启动独立代码脚本（仅在环境中传递凭证，不复制到快照）：
 
 ```sh
-node scripts/project.mjs python examples/capability-scenes/compare-construction-feedback.py \
+node "$PROJECT_HOME/scripts/project.mjs" python "$EXPERIMENT_CODE/examples/capability-scenes/compare-construction-feedback.py" \
   --source-plan "$FROZEN_PRIOR_PLAN" --prefix-attempt "$FROZEN_PRIOR_ATTEMPT" \
   --output "$EXPERIMENT_CODE/.local/paired-001" --budget-usd 1 --call-model
 ```
@@ -48,3 +48,16 @@ node scripts/project.mjs python examples/capability-scenes/compare-construction-
 ## 回归与结果
 
 待追加最终实际结果。本地首次全量日志保留；macOS默认`/var`临时路径与真实`/private/var`路径触发12项原有路径/范围检查失败，在真实路径临时目录复核，不放宽业务守卫。确定性回归与真实模型效果分开报告。
+
+
+## 首轮真实结果与离线定位
+
+`paired-001`首次在快照目录启动时未获得原项目`.env`，在发请求前停止，新增请求0；原目录与错误保留。改用原项目入口后，`paired-002`请求3354–3357共4次，A为3次/USD0.016951020，B为1次/USD0.004020648，合计USD0.020971668。原累计请求3353→3357，累计代理记账3.1670299920000007→3.1880016600000007，未清零；不是供应商实付账单。
+
+A原控制器状态completed，但实际outcome为deferred：模型在两次原生材料拒绝后构造出候选，被`script_runtime_changed`拒绝，没有成功发布。不能把运行完成当作质量通过。
+
+B已产生并注册新材料，无模型编码遇到`capability_build_schema_incompatible`；随后正常模型修复在发请求前被`proposal_repair_context_changed`阻断。离线已复现：新增历史改变了catalog摘要，被原固定目录守卫误判。修复把稳定能力目录和动态宿主证据的摘要分开，仍核对任务、版本、语义目录及每份原证据；变更真实能力描述仍被拒绝。
+
+旧原生材料的唯一执行锁差异为PR127将`reuse_mediation.ts`来源读取容量从固定20MiB接到统一上传policy；Script本身16000000字节输入限制、路径/哈希/权限和执行逻辑未改。编译器及认证器的另两项差异原本已属于来源锁。经代码差异核对，按既有策略添加该文件精确旧→新SHA兼容对，不改旧库/证书或未知版本拒绝规则。后续先用保存的A提案做零模型独立验收，再检查修复后的B。
+
+上述是工程阻塞证据，没有效率收益结论。若继续B验收，必须沿用`paired-002/research-requests.jsonl`中的B预算及已花费用，不能新建钱包把失败抹掉。

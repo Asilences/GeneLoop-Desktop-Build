@@ -259,7 +259,9 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
         raise ValueError('proposal_task_id_and_instruction_required')
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=False)
-    hashes = {'task_sha256': capability_digest(task), 'catalog_sha256': capability_digest(catalog),
+    stable_catalog=copy.deepcopy(catalog)
+    stable_catalog.get('source_catalog',stable_catalog).pop('construction_feedback',None)
+    hashes = {'task_sha256': capability_digest(task), 'catalog_sha256': capability_digest(stable_catalog),
               'construction_snapshot_sha256': snapshot['digest'],
               'authoring_format': AUTHORING_FORMAT, 'aliases_sha256': capability_digest(aliases(snapshot))}
     repair = None
@@ -288,7 +290,8 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
         raise ValueError('proposal_prompt_too_large')
     effective = {'format': 'capability_proposal_attempt_v1', 'attempt_id': output.name,
         'parent_attempt_id': repair['parent_attempt_id'] if repair else None,
-        **hashes, 'prompt_sha256': sha(prompt), 'system_sha256':sha(SYSTEM+strategy_instruction), 'model': MODEL, 'provider': 'deepseek-official',
+        **hashes, 'catalog_full_sha256':capability_digest(catalog),
+        'prompt_sha256': sha(prompt), 'system_sha256':sha(SYSTEM+strategy_instruction), 'model': MODEL, 'provider': 'deepseek-official',
         'reasoning_effort': 'off',
         'max_tokens': MAX_TOKENS, 'cap_usd': None, 'max_requests': None,
         'budget_policy': 'uncapped_user_authorized', 'reset_history': False,

@@ -85,10 +85,11 @@ def prepare(source, prefix, out, budget):
     return plans,snapshot
 
 
-def run(plans,snapshot,out,budget):
+def run(plans,snapshot,out,budget,*,journal=None):
     report={'status':'running','arms':{},'creation_efficiency':None,'C_causal_value':None}
     save(out/'started.json',{'time':time.time(),'scope':'New directory, no automatic resume/replay'})
-    with FrontierGate(plans['A']['ledger_root'],out/'research-requests.jsonl',deadline=time.time()+2700) as gate:
+    journal=Path(journal) if journal is not None else out/'research-requests.jsonl'
+    with FrontierGate(next(iter(plans.values()))['ledger_root'],journal,deadline=time.time()+2700) as gate:
         report['cumulative_before']={'requests':gate.state.request_count,'accounted_usd':gate.state.reserved_usd}
         for arm,plan in plans.items():
             gate.activate(arm,str(budget));adapter=AcceptanceAdapter(plan);adapter.gate=gate
@@ -111,6 +112,7 @@ def run(plans,snapshot,out,budget):
                     'strategy':read(folder/'strategy.json') if (folder/'strategy.json').is_file() else None,
                     'runtime_traces':traces})
             report['arms'][arm]={'controller':result,'provider_requests':len(keys),
+                'research_spent_including_prior_usd_decimal':str(gate.budget.spent),'budget_journal':str(journal),
                 'observed_model_usd_decimal':None if total is None else str(total),'attempts':attempts,
                 'requests':[{'request_id':rid,'ledger_ref':str(gate.root/'cost-ledger.jsonl'),
                     'usage':gate.completed.get(rid,{}).get('response_usage'),

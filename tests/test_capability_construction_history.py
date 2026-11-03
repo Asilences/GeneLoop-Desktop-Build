@@ -176,7 +176,7 @@ def test_following_run_consumes_explicit_historical_evidence(tmp_path):
     adapter=Adapter(snapshot,proposal);run_improvement(plan,adapter,execute=True)
     context=adapter.calls[0][0]['source_catalog']['construction_feedback']
     view=json.loads(Path(context['history']['path']).read_text())
-    assert view['attempts'][0]['result_ref']['path'].endswith('historical/result.json')
+    assert Path(view['attempts'][0]['result_ref']['path']).parts[-2:]==('historical','result.json')
     assert view['construction_model_usd_decimal']=='0.100000000000000001'
 
 
@@ -205,3 +205,24 @@ def test_committed_followup_failure_remains_review_only(tmp_path):
     library=feedback_library({'snapshot':snapshot,'source_catalog':{}},history,trigger='construction',budget=None)
     task=json.loads(Path(job['task']['path']).read_text())
     with pytest.raises(ValueError,match='requires_review'):model_context(library['source_catalog'],task,snapshot)
+
+
+def test_repair_freezes_capabilities_while_verified_history_can_grow(tmp_path):
+    task,catalog,snapshot,_=inputs();task_ref=put(tmp_path/'task.json',task)
+    job={'id':'goal','task':task_ref}
+    history=put(tmp_path/'empty-history.json',build_history([],task_ref))
+    before=feedback_library({'snapshot':snapshot,'source_catalog':catalog},history,trigger='construction',budget=None)
+    first,_=pilot.prepare_attempt(task=task,catalog=before['source_catalog'],snapshot=snapshot,output=tmp_path/'first')
+    put(tmp_path/'first/result.json',{'status':'failed','error':'proposal_draft_shape'})
+    (tmp_path/'first/answer.txt').write_text('historical incomplete draft')
+    record=capture(job,tmp_path/'first',snapshot)
+    history=put(tmp_path/'grown-history.json',build_history([record],task_ref))
+    after=feedback_library({'snapshot':snapshot,'source_catalog':catalog},history,trigger='construction',budget=None)
+    second,_=pilot.prepare_attempt(task=task,catalog=after['source_catalog'],snapshot=snapshot,
+        output=tmp_path/'second',repair_from=tmp_path/'first',feedback={'error':'located error'})
+    assert first['catalog_sha256']==second['catalog_sha256']
+    assert first['catalog_full_sha256']!=second['catalog_full_sha256']
+    corrupted=copy.deepcopy(after['source_catalog']);corrupted['programs'][0]['description']='Changed capability semantics'
+    with pytest.raises(ValueError,match='repair_context_changed'):
+        pilot.prepare_attempt(task=task,catalog=corrupted,snapshot=snapshot,output=tmp_path/'invalid',
+            repair_from=tmp_path/'first',feedback={'error':'located error'})
