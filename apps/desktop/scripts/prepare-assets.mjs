@@ -45,4 +45,18 @@ manifest.scenes = JSON.parse(readFileSync(join(repo, 'config/harless-scenes.json
 writeFileSync(join(assets, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 writeFileSync(join(assets, 'THIRD_PARTY_NOTICES.md'), '# GeneLoop Desktop bundled client packages\n\n' + licenses.join('\n'));
 await sharp(join(assets, 'geneloop-spiral.svg')).resize(512, 512, { fit: 'contain', background: '#161618' }).png().toFile(join(assets, 'icon.png'));
+// Windows 原生 ICO 使用同一品牌 SVG 的多尺寸 PNG 帧，避免构建时再下载转换程序。
+const sizes = [16, 32, 48, 64, 128, 256];
+const frames = await Promise.all(sizes.map(size => sharp(join(assets, 'geneloop-spiral.svg')).resize(size, size, { fit: 'contain', background: '#161618' }).png().toBuffer()));
+const header = Buffer.alloc(6 + frames.length * 16);
+header.writeUInt16LE(1, 2); header.writeUInt16LE(frames.length, 4);
+let offset = header.length;
+frames.forEach((frame, i) => {
+  const at = 6 + i * 16;
+  header[at] = sizes[i] === 256 ? 0 : sizes[i]; header[at + 1] = header[at];
+  header.writeUInt16LE(1, at + 4); header.writeUInt16LE(32, at + 6);
+  header.writeUInt32LE(frame.length, at + 8); header.writeUInt32LE(offset, at + 12);
+  offset += frame.length;
+});
+writeFileSync(join(assets, 'icon.ico'), Buffer.concat([header, ...frames]));
 console.log(`Bundled ${Object.keys(manifest.clients).length} client modules and ${manifest.staticFiles.length} frontend files from ${manifest.sourceCommit.slice(0, 7)}.`);

@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url);
 const app = fileURLToPath(new URL('../', import.meta.url));
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
 const runId = randomUUID().replaceAll('-', '');
-const output = join(app, '.local/validation');
+const output = join(app, '.local/validation', runId);
 mkdirSync(output, { recursive: true });
 const log = openSync(join(output, 'host-launch.log'), 'w');
 const reservation = createServer();

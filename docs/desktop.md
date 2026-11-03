@@ -17,7 +17,7 @@
 
 `LocalFrontendHost` 在桌面会话中提供这些静态资源；只从原服务读取结构化 boot JSON、认证、会话/API、事件流及用户文件。服务器整站 HTML 不作为工作区执行。保留真实 HTTPS origin，以沿用 HttpOnly Cookie、WebSocket 和原服务的同源检查；不关闭 Web 安全或证书验证。
 
-前端入口资源或客户端图不兼容时明确提示更新，不静默退回远程 UI 脚本。GeneLoop 自定义客户端与服务器仍需配套发布，尚未验证任意未来版本兼容。当前并未升级或修改上游 Harness。
+前端入口资源、客户端 ID 或依赖声明不兼容时明确提示更新，不静默退回远程 UI 脚本。这些检查不能识别所有“声明相同但源码不同”的变化，GeneLoop 自定义客户端与服务器仍需配套发布，尚未验证任意未来版本兼容。原生启动请求保留 `/starting` 与 `/login` 的真实跳转，历史入口回到本地工作区；账户页面沿用网关 CSP。当前并未升级或修改上游 Harness。
 
 连接设置和 Cookie 保存在 Electron 的本机用户数据目录，各服务器使用不同会话分区。安装包不包含 API Key、账号密码、服务器私有配置或运行日志。更换服务器不会迁移原账号资料；服务器侧账号、工作区和累计计量不随客户端升级清零。
 
@@ -30,9 +30,10 @@ npm run desktop:setup
 npm run desktop:check
 npm run desktop:dev
 npm run desktop:build
+npm --prefix apps/desktop run smoke:packaged
 ```
 
-桌面依赖及锁文件位于 `apps/desktop/`，不改变根运行时依赖。`desktop:build` 生成 Windows x64 NSIS 安装包到 `apps/desktop/release/`，显式禁止自动发布；最终用户运行安装包不需要 Git、Node 或 Python。
+桌面依赖及锁文件位于 `apps/desktop/`，不改变根运行时依赖。`desktop:build` 生成 Windows x64 NSIS 安装包到 `apps/desktop/release/`，显式禁止自动发布；最终用户运行安装包不需要 Git、Node 或 Python。`smoke:packaged` 在独立用户目录启动实际打包程序，只读检查公开登录页和 ASAR 资源，关闭时仅清理它持有的进程树；不执行安装器或登录账号。
 
 `GENELOOP_DESKTOP_URL` 可指定 HTTPS 服务器根地址；优先于保存的连接设置，不接受令牌、用户名/密码、路径或查询参数。仅未打包开发模式可用 `GENELOOP_DESKTOP_ALLOW_HTTP_LOOPBACK=1` 连接本机 HTTP fixture；`GENELOOP_DESKTOP_USER_DATA_DIR` 也仅供未打包调试隔离。它们不是本机 Agent 模式。
 

@@ -13,6 +13,7 @@
     "dev": "npm run build && electron .",
     "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs ../../tests/test_desktop_frontend.mjs",
     "smoke": "npm run build && node scripts/check-local-ui.mjs",
+    "smoke:packaged": "node scripts/check-package.mjs",
     "pack": "npm run build && electron-builder --dir --publish never",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never"
   },
@@ -35,7 +36,7 @@
     "directories": { "output": "release", "buildResources": "assets" },
     "files": ["dist/**/*", "ui/**/*", "assets/**/*", "package.json"],
     "publish": null,
-    "win": { "target": ["nsis"], "icon": "assets/icon.png" },
+    "win": { "target": ["nsis"], "icon": "assets/icon.ico" },
     "nsis": {
       "oneClick": false,
       "perMachine": false,

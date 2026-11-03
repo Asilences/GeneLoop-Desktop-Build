@@ -7,6 +7,7 @@ import { downloadName, externalWebUrl, ownedDownload, sameServer, serverOrigin }
 import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
 import { LocalFrontendHost } from './frontend.ts';
+import { readBootDocument } from './boot-request.ts';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 type DownloadListener = (event: Event, item: DownloadItem, contents: WebContents) => void;
@@ -135,7 +136,7 @@ export class DesktopWorkspace {
       view.setVisible(false);
       this.update('error', message);
     };
-    this.frontend = new LocalFrontendHost({ session: remoteSession, server, assets: join(directory, '../assets'), fail });
+    this.frontend = new LocalFrontendHost({ session: remoteSession, server, assets: join(directory, '../assets'), fail, readBoot: request => readBootDocument(remoteSession, request) });
     this.frontend.install();
     view.webContents.on('will-navigate', (event, url) => {
       if (!sameServer(url, server)) event.preventDefault();

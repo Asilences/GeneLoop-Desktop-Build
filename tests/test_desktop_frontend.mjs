@@ -30,8 +30,8 @@ test('安装资源与服务器执行接口分离；未知 UI 不回退远程加�
     writeFileSync(join(directory, 'clients/fixture.js'), 'LOCAL_PLUGIN');
     for (const file of ['geneloop_theme.css', 'geneloop_brand.js', 'geneloop_workspaces.js', 'harless_account_link.js']) writeFileSync(join(directory, file), '');
     writeFileSync(join(directory, 'harless_account.html'), '<html><head></head><body>LOCAL_LOGIN</body></html>');
-    const host = new module.LocalFrontendHost({ server: 'https://fixture.example/', assets: directory, fail: message => failures.push(message), session: {
-      fetch: async request => { network.push(new URL(request.url).pathname); return new Response(new URL(request.url).pathname === '/' ? remote : 'API_STREAM', { headers: { 'content-encoding': 'gzip', 'content-type': 'text/plain' } }); },
+    const host = new module.LocalFrontendHost({ server: 'https://fixture.example/', assets: directory, fail: message => failures.push(message), readBoot: async () => { network.push('/'); return new Response(remote); }, session: {
+      fetch: async (request, options) => { network.push(new URL(request.url).pathname); if (new URL(request.url).hostname === 'external.example') assert.equal(options.credentials, 'omit'); return new Response('API_STREAM', { headers: { 'content-encoding': 'gzip', 'content-type': 'text/plain' } }); },
     } });
     const fetchPath = path => host.fetch(new Request('https://fixture.example' + path));
     const root = await fetchPath('/');
@@ -40,14 +40,22 @@ test('安装资源与服务器执行接口分离；未知 UI 不回退远程加�
     assert.doesNotMatch(await root.text(), /REMOTE_EXECUTABLE_CODE/);
     assert.equal(await (await fetchPath('/assets/index-fixture.js')).text(), 'LOCAL_FRONTEND');
     assert.equal(await (await fetchPath('/plugins/bootstrap.js')).text(), 'LOCAL_PLUGIN');
-    assert.equal(await (await fetchPath('/login')).text(), '<html><head><style></style></head><body>LOCAL_LOGIN</body></html>');
+    const login = await fetchPath('/login');
+    assert.match(login.headers.get('content-security-policy'), /form-action 'self'/);
+    assert.equal(await login.text(), '<html><head><style></style></head><body>LOCAL_LOGIN</body></html>');
+    for (const alias of ['/harless', '/tasks', '/sss']) { const aliasResponse = await fetchPath(alias); assert.equal(aliasResponse.status, 302); assert.equal(aliasResponse.headers.get('location'), '/'); }
     const api = await fetchPath('/api/result');
     assert.equal(await api.text(), 'API_STREAM');
     assert.equal(api.headers.get('content-encoding'), null);
     assert.deepEqual(network, ['/', '/api/result']);
+    await host.fetch(new Request('https://external.example/resource', { credentials: 'omit' }));
     assert.equal((await fetchPath('/assets/unknown.js')).status, 503);
     assert.equal((await fetchPath('/plugins/unknown.js')).status, 503);
     assert.equal(failures.length, 2);
-    assert.deepEqual(network, ['/', '/api/result']);
+    assert.deepEqual(network, ['/', '/api/result', '/resource']);
+    const cold = new module.LocalFrontendHost({ server: 'https://fixture.example/', assets: directory, session: {}, fail: message => assert.fail(message), readBoot: async () => new Response(null, { status: 303, headers: { location: '/starting?next=%2F' } }) });
+    const coldResponse = await cold.fetch(new Request('https://fixture.example/'));
+    assert.equal(coldResponse.status, 303);
+    assert.equal(coldResponse.headers.get('location'), '/starting?next=%2F');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

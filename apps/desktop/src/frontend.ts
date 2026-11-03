@@ -6,8 +6,9 @@ import { renderIndexInjections } from '@deepseek-ai/dsh-host-webserver';
 import { sameServer } from './policy.ts';
 
 type Graph = Parameters<typeof bootInjections>[0];
-type Manifest = { format: number; dshVersion: string; sourceCommit: string; staticFiles: string[]; clients: Record<string, { file: string; version: string }> };
-type FrontendOptions = { session: Session; server: string; assets: string; fail: (message: string) => void };
+type Manifest = { format: number; dshVersion: string; sourceCommit: string; staticFiles: string[]; clients: Record<string, { file: string; version: string; declaration?: { inject?: string[]; external?: string[]; immediately?: boolean } }> };
+type FrontendOptions = { session: Session; server: string; assets: string; fail: (message: string) => void; readBoot: (request: Request) => Promise<Response> };
+const ACCOUNT_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'";
 const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.webmanifest': 'application/manifest+json' };
 
 /** 只读取上游结构化 JSON 注入；服务器页面中的脚本和样式不执行。 */
@@ -63,7 +64,8 @@ export class LocalFrontendHost {
   private async network(request: Request): Promise<Response> {
     this.served.network++;
     if (/^\/(?:plugins\/\?\?|assets\/.*\.(?:js|css))/.test(new URL(request.url).pathname + new URL(request.url).search)) this.served.networkScripts.push(new URL(request.url).pathname);
-    return this.options.session.fetch(request, { bypassCustomProtocolHandlers: true, credentials: 'include' });
+    const credentials = request.credentials === 'omit' ? 'omit' : sameServer(request.url, this.options.server) ? 'include' : request.credentials;
+    return this.options.session.fetch(request, { bypassCustomProtocolHandlers: true, credentials });
   }
 
   private compose(html: string): string {
@@ -77,6 +79,10 @@ export class LocalFrontendHost {
     for (const row of graph.entries) {
       const client = this.manifest.clients[row.id];
       if (!client || !sameServer(new URL(row.url, server).href, server)) throw Error('服务器使用了桌面尚未包含的客户端插件，请更新应用。');
+      const names = (values: readonly string[] | undefined) => [...values || []].map(name => name.replace(/\/client$/, '')).sort();
+      if (JSON.stringify(names(row.inject)) !== JSON.stringify(names(client.declaration?.inject)) ||
+          JSON.stringify(names(row.external)) !== JSON.stringify(names(client.declaration?.external)) ||
+          (row.immediately === true) !== (client.declaration?.immediately === true)) throw Error('服务器客户端声明与桌面版本不同，请更新应用。');
       const url = new URL(row.url, server);
       this.bundles.set(url.pathname + url.search, [client.file]);
     }
@@ -111,8 +117,11 @@ export class LocalFrontendHost {
         if (/^\/assets\/.*\.(?:js|css)$/.test(url.pathname)) throw Error('服务器界面资源已变化，请更新 GeneLoop Desktop。');
         if (['/login', '/register', '/claim', '/account', '/starting'].includes(url.pathname)) {
           const html = readFileSync(join(assets, 'harless_account.html'), 'utf8').replace('</head>', '<style>' + readFileSync(join(assets, 'geneloop_theme.css'), 'utf8') + '</style></head>');
-          return this.local(html, MIME['.html'], request.method);
+          const response = this.local(html, MIME['.html'], request.method);
+          response.headers.set('content-security-policy', ACCOUNT_CSP);
+          return response;
         }
+        if (['/harless', '/tasks', '/sss'].includes(url.pathname)) return new Response(null, { status: 302, headers: { location: '/' } });
         const files = this.bundles.get(key);
         if (files) {
           this.served.localScripts.push(url.pathname);
@@ -123,7 +132,8 @@ export class LocalFrontendHost {
           throw Error('服务器客户端插件已变化，请更新 GeneLoop Desktop 后重试。');
         }
         if (url.pathname === '/' || url.pathname === '/index.html') {
-          const remote = await this.network(request.method === 'HEAD' ? new Request(request, { method: 'GET' }) : request);
+          this.served.network++;
+          const remote = await this.options.readBoot(request);
           if (remote.status >= 300 && remote.status < 400) {
             const target = remote.headers.get('location');
             if (!target || !sameServer(new URL(target, server).href, server)) throw Error('服务器跳转到了其他地址，请检查连接设置。');
@@ -131,9 +141,6 @@ export class LocalFrontendHost {
           }
           if (!remote.ok) throw Error('服务器工作区暂时无法启动，请稍后重试。');
           const html = await remote.text();
-          if (!bootGlobals(html).__DSH_BOOT__ && /id=["']login-form["']/.test(html)) {
-            return new Response(null, { status: 303, headers: { location: '/login' } });
-          }
           return this.local(this.compose(html), MIME['.html'], request.method);
         }
       }
