@@ -37,7 +37,7 @@ def main():
     files = [*python_tests, 'tests/test_capability_discharge.mjs',
              'src/adapters/capability_motif_learning.py', 'src/adapters/capability_discharge.ts',
              'src/adapters/capability_evolution.py', 'src/adapters/capability_builder_application.py']
-    effective = {'format':'rae_mechanism_acceptance_v1', 'evidence_level':'wiring_passed',
+    effective = {'format':'rae_mechanism_acceptance_v1', 'evidence_level':'wiring_pending',
         'model_requests':0, 'model_cost_usd':'0', 'total_cost':None,
         'autonomous_constructed':False, 'measured_improvement':None,
         'python':sys.version, 'node':subprocess.check_output(['node','--version'],text=True).strip(),
