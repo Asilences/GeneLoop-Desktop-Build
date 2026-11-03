@@ -197,3 +197,18 @@ def test_library_change_during_proposal_keeps_goal_pending(tmp_path):
     row=json.loads(round_files(plan['opportunity_discovery'],'decisions.json')[0].read_text())[0]
     assert row['decision']=='pending' and row['reason']=='capability_snapshot_changed'
     assert len(adapter.calls)==1
+
+
+def test_material_acquisition_failure_is_not_reported_as_independent_quality_failure(tmp_path):
+    plan,adapter,_=wire(tmp_path);run_improvement(plan,adapter,execute=True)
+    path=round_files(plan['opportunity_discovery'],'decisions.json')[0]
+    goal=json.loads(path.read_text())[0]
+    engine=OpportunityDiscovery(plan['opportunity_discovery'],'owner');engine.jobs[goal['goal_id']]=path.parent
+    attempt=tmp_path/'native-material-failure';attempt.mkdir()
+    put(attempt/'result.json',{'status':'deferred','observed_model_usd':None})
+    acquisition=put(attempt/'acquisition.json',{'status':'failed','diagnostics':{'kind':'native_material_acquisition'}})
+    engine.record(goal['job'],attempt,{'observed_model_usd':None},None,
+        {'status':'failed','repairable':True,'evidence_ref':acquisition})
+    records=[json.loads(p.read_text()) for p in round_files(plan['opportunity_discovery'],'outcome-*.json')]
+    row=next(r for r in records if r.get('acquisition_result'))
+    assert row['acquisition_result']==acquisition and row['verification'] is None and row['observed_model_usd'] is None

@@ -175,7 +175,8 @@ class OpportunityDiscovery:
             'observed_model_usd':result.get('observed_model_usd'),
             'observed_model_usd_decimal':result.get('observed_model_usd_decimal'),
             'compiled_dependencies':None if candidate is None else candidate['capability']['dependencies'],
-            'actual_dependencies':None,'verification':outcome,
+            'actual_dependencies':None,'verification':outcome if candidate is not None else None,
+            'acquisition_result':file_ref(Path(attempt)/'acquisition.json') if (Path(attempt)/'acquisition.json').exists() else None,
             'scope':'Compiled/expected dependencies are not execution observations'}
         if outcome and outcome.get('evidence_ref'):evidence(outcome['evidence_ref'])
         # Optional original Runtime traces, bound to this exact candidate.
