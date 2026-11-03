@@ -15,8 +15,8 @@ internal sealed class InstallerWindow : Window
 {
     private readonly InstallTarget target;
     private readonly StackPanel options;
-    private readonly TextBlock pathLabel, status;
-    private readonly Button install, close, details;
+    private readonly TextBlock pathLabel, spaceLabel, status;
+    private readonly Button install, close, details, browse;
     private readonly ProgressBar progress;
     private bool busy, completed;
 
@@ -35,17 +35,18 @@ internal sealed class InstallerWindow : Window
         Foreground = Brush("#192232");
         Closing += delegate(object sender, CancelEventArgs args) { args.Cancel = busy; };
 
-        var shell = new StackPanel { Margin = new Thickness(24) };
+        var shell = new StackPanel();
         Content = new Border { Background = Background, BorderBrush = Brush("#DFE4EF"), BorderThickness = new Thickness(1), Child = shell };
         close = MakeButton("×", false);
         close.Width = 34;
+        close.Margin = new Thickness(0, 12, 18, 0);
         close.HorizontalAlignment = HorizontalAlignment.Right;
         AutomationPropertiesSetName(close, "关闭安装器");
         close.Click += delegate { Close(); };
         shell.Children.Add(close);
         var hero = new StackPanel { Margin = new Thickness(20, 18, 20, 20) };
         var gradient = new LinearGradientBrush(ColorFrom("#EDE9FF"), ColorFrom("#E3F7F5"), 28);
-        shell.Children.Add(new Border { Background = gradient, CornerRadius = new CornerRadius(20), Child = hero });
+        shell.Children.Add(new Border { Margin = new Thickness(24, 0, 24, 0), Background = gradient, CornerRadius = new CornerRadius(20), Child = hero });
         var logo = new BitmapImage();
         using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("GeneLoop.Brand"))
         {
@@ -66,24 +67,47 @@ internal sealed class InstallerWindow : Window
         shell.Children.Add(status);
         progress = new ProgressBar { Height = 4, Margin = new Thickness(32, 5, 32, 8), Foreground = Brush("#3265CB"), Visibility = Visibility.Collapsed };
         shell.Children.Add(progress);
-        details = MakeButton("安装位置  ▾", false);
-        details.HorizontalAlignment = HorizontalAlignment.Center;
+        details = MakeButton("自定义设置  ▾", false);
+        details.Width = 112;
+        details.Margin = new Thickness(0, 0, 24, 9);
+        details.HorizontalAlignment = HorizontalAlignment.Right;
         shell.Children.Add(details);
-        options = new StackPanel { Margin = new Thickness(12), Visibility = Visibility.Collapsed };
-        shell.Children.Add(new Border { Background = Brush("#F1F4FA"), CornerRadius = new CornerRadius(10), Child = options });
+        options = new StackPanel { Visibility = Visibility.Collapsed };
+        var settingsArea = new Border { Background = Brush("#F3F5FA"), BorderBrush = Brush("#E2E7F0"),
+            BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(30, 18, 30, 18), Child = options,
+            Visibility = Visibility.Collapsed };
+        shell.Children.Add(settingsArea);
+        var location = new Grid();
+        location.ColumnDefinitions.Add(new ColumnDefinition());
+        location.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        options.Children.Add(location);
         pathLabel = Text(target.Path, 12, "#263850", false);
         pathLabel.TextAlignment = TextAlignment.Left;
-        options.Children.Add(pathLabel);
-        options.Children.Add(Text(target.Machine ? "为所有 Windows 用户安装" : "仅为当前 Windows 用户安装", 11, "#526277", false));
-        var browse = MakeButton("更改位置…", false);
-        browse.HorizontalAlignment = HorizontalAlignment.Left;
+        pathLabel.TextWrapping = TextWrapping.NoWrap;
+        pathLabel.TextTrimming = TextTrimming.CharacterEllipsis;
+        pathLabel.VerticalAlignment = VerticalAlignment.Center;
+        pathLabel.ToolTip = target.Path;
+        location.Children.Add(new Border { Background = Brush("#FFFFFF"), BorderBrush = Brush("#DCE3EF"),
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(16), Padding = new Thickness(12, 0, 12, 0), Child = pathLabel });
+        browse = MakeButton("更改位置", false);
+        browse.Width = 78;
+        browse.Margin = new Thickness(8, 0, 0, 0);
+        browse.Background = Brush("#F3F5FA");
+        browse.Foreground = Brush("#285CB5");
+        Grid.SetColumn(browse, 1);
         browse.Click += delegate { ChooseFolder(); };
-        options.Children.Add(browse);
+        location.Children.Add(browse);
+        spaceLabel = Text("", 11, "#526277", false);
+        spaceLabel.TextAlignment = TextAlignment.Left;
+        spaceLabel.Margin = new Thickness(2, 8, 0, 0);
+        options.Children.Add(spaceLabel);
+        RefreshLocation();
         details.Click += delegate
         {
             bool open = options.Visibility != Visibility.Visible;
             options.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            details.Content = open ? "安装位置  ▴" : "安装位置  ▾";
+            settingsArea.Visibility = options.Visibility;
+            details.Content = open ? "自定义设置  ▴" : "自定义设置  ▾";
         };
     }
 
@@ -99,15 +123,34 @@ internal sealed class InstallerWindow : Window
                 return;
             target.Path = String.Equals(Path.GetFileName(root), "GeneLoop Desktop", StringComparison.OrdinalIgnoreCase)
                 ? root : Path.Combine(root + Path.DirectorySeparatorChar, "GeneLoop Desktop");
-            pathLabel.Text = target.Path;
+            RefreshLocation();
         }
+    }
+
+    private void RefreshLocation()
+    {
+        pathLabel.Text = target.Path;
+        pathLabel.ToolTip = target.Path;
+        string available;
+        try { available = FormatSize(new DriveInfo(Path.GetPathRoot(target.Path)).AvailableFreeSpace); }
+        catch (IOException) { available = "未知"; }
+        catch (UnauthorizedAccessException) { available = "未知"; }
+        catch (ArgumentException) { available = "未知"; }
+        spaceLabel.Text = "所需空间约 " + FormatSize(SetupBuild.PayloadBytes) + "    可用空间 " + available;
+        spaceLabel.ToolTip = target.Machine ? "为所有 Windows 用户安装" : "仅为当前 Windows 用户安装";
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        return bytes >= 1073741824 ? (bytes / 1073741824d).ToString("0.0") + " GB" :
+            (bytes / 1048576d).ToString("0.0") + " MB";
     }
 
     internal void VerifyLocationControls()
     {
         details.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         if (options.Visibility != Visibility.Visible || pathLabel.Text != target.Path ||
-            !(options.Children[options.Children.Count - 1] is Button) ||
+            !(browse.Parent is Grid) || Grid.GetColumn(browse) != 1 ||
             !Object.Equals(install.Content, "立即安装"))
             throw new InvalidOperationException("安装位置选项未能展开。");
     }
@@ -117,8 +160,7 @@ internal sealed class InstallerWindow : Window
         if (completed) { Close(); return; }
         busy = true;
         install.IsEnabled = close.IsEnabled = details.IsEnabled = false;
-        options.Visibility = Visibility.Collapsed;
-        details.Content = "安装位置  ▾";
+        if (options.Visibility == Visibility.Visible) details.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         install.Content = "正在安装…";
         status.Text = target.Machine ? "如果 Windows 请求管理员权限，请在系统提示中确认。" : "正在准备安装文件…";
         progress.Visibility = Visibility.Visible;
@@ -163,7 +205,7 @@ internal sealed class InstallerWindow : Window
     }
     private static Button MakeButton(string label, bool primary)
     {
-        var body = new FrameworkElementFactory(typeof(Border));
+        var body = new FrameworkElementFactory(typeof(Border), "ButtonChrome");
         body.SetValue(Border.CornerRadiusProperty, new CornerRadius(primary ? 20 : 8));
         body.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
         var content = new FrameworkElementFactory(typeof(ContentPresenter));
@@ -172,12 +214,15 @@ internal sealed class InstallerWindow : Window
         body.AppendChild(content);
         var template = new ControlTemplate(typeof(Button)) { VisualTree = body };
         var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
-        hover.Setters.Add(new Setter(Control.BackgroundProperty, Brush(primary ? "#2254B5" : "#EBEFF8")));
+        hover.Setters.Add(new Setter(Border.BackgroundProperty, Brush(primary ? "#2254B5" : "#EBEFF8"), "ButtonChrome"));
         template.Triggers.Add(hover);
         var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
         disabled.Setters.Add(new Setter(UIElement.OpacityProperty, .58));
         template.Triggers.Add(disabled);
-        return new Button { Content = label, Template = template, Height = primary ? 44 : 32, Cursor = System.Windows.Input.Cursors.Hand,
+        var focus = new Trigger { Property = UIElement.IsKeyboardFocusedProperty, Value = true };
+        focus.Setters.Add(new Setter(Border.BackgroundProperty, Brush(primary ? "#2254B5" : "#E5ECFA"), "ButtonChrome"));
+        template.Triggers.Add(focus);
+        return new Button { Content = label, Template = template, FocusVisualStyle = null, Height = primary ? 44 : 32, Cursor = System.Windows.Input.Cursors.Hand,
             Background = Brush(primary ? "#3265CB" : "#FCFCFF"), Foreground = Brush(primary ? "#FFFFFF" : "#31425D"),
             FontSize = primary ? 15 : 13 };
     }

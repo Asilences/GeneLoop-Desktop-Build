@@ -1,5 +1,5 @@
 import {execFileSync} from 'node:child_process';
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,readdirSync,statSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
@@ -17,7 +17,15 @@ if(process.argv[2]!=='--wrap-only'){
   ],{cwd:app,stdio:'inherit',windowsHide:true});
 }
 const versionSource=join(release,'SetupVersion.cs');
-writeFileSync(versionSource,'[assembly: System.Reflection.AssemblyInformationalVersion('+JSON.stringify(version)+')]\n');
+function directoryBytes(directory){
+  return readdirSync(directory,{withFileTypes:true}).reduce((bytes,entry)=>{
+    const path=join(directory,entry.name);
+    return bytes+(entry.isDirectory()?directoryBytes(path):statSync(path).size);
+  },0);
+}
+const payloadBytes=directoryBytes(join(release,'win-unpacked'));
+writeFileSync(versionSource,'[assembly: System.Reflection.AssemblyInformationalVersion('+JSON.stringify(version)+')]\n'+
+  'internal static class SetupBuild { public const long PayloadBytes = '+payloadBytes+'L; }\n');
 execFileSync(compiler,[
   '/nologo','/target:winexe','/platform:x64','/optimize+','/codepage:65001',
   '/out:'+join(release,prefix+'-Setup.exe'),
