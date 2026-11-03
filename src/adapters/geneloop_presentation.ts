@@ -1,3 +1,4 @@
+import {FILE_MAX_BYTES} from './geneloop_upload_limits.ts';
 /** Render uploaded Office files in the existing Session sandbox; no authoring. */
 import {spawn} from 'node:child_process';
 import {request} from 'node:http';
@@ -29,7 +30,7 @@ export function officeEvidenceVersion(resources:any={}) {
 }
 function stable(path:string) {
   const before=lstatSync(path);
-  if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1||before.size>20*1024*1024)throw Error('invalid presentation file');
+  if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1||before.size>FILE_MAX_BYTES)throw Error('invalid presentation file');
   const bytes=readFileSync(path),after=lstatSync(path);
   if(before.ino!==after.ino||before.size!==after.size||before.mtimeMs!==after.mtimeMs)throw Error('presentation changed');
   return bytes;
@@ -43,7 +44,7 @@ export function renderPresentation(workspace:string,session:string,resources:any
     if(hash(stable(original))!==file.version_sha256)throw Error('presentation version changed');
     const directory='input-visual-'+randomUUID();
     const payload=Buffer.from(JSON.stringify({file:file.file,sha256:file.version_sha256,directory,
-      suffix:/\.(pptx|ppt|docx|doc|xlsx)$/i.exec(file.name)![0].toLowerCase()})).toString('base64');
+      max_file_bytes:FILE_MAX_BYTES,suffix:/\.(pptx|ppt|docx|doc|xlsx)$/i.exec(file.name)![0].toLowerCase()})).toString('base64');
     // Shell operands contain only base64 or server-owned executable paths.
     const code=Buffer.from(helper()).toString('base64');
     const python=process.env.SSS_PYTHON??'/usr/bin/python3';

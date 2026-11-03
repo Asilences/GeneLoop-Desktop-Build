@@ -1,6 +1,14 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-GeneLoop Desktop 0.2.0新增独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
+GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
+
+离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
+
+新增默认关闭的[能力变化后机会重新评价](docs/capability-aware-opportunities-v1.md)：独立发布成功后，结合仍未满足的真实需求提出候选，宿主提供冻结验收条件，再交原Builder。保留全部候选、筛选和结果，区分预期、编译与执行依赖。当前仅机制诊断，不包含节余再投资，不自动开启生产或付费探索。
+
+2026-11-03公共机制续：`rsi:improve`的公共提案入口已接单源构造，原生Script学习、前缀取数与执行移入公共模块；场景提供宿主训练输入及独立发布验收。执行费用进入已有同范围选择，已撤回后继不再增加当前构造排序信用。接口见[公共接线](docs/interfaces.md#公共构造与原生材料接线2026-11-03续)。新增场景研究未启动，自动资源再投资与普遍有效性仍未证明，生产未改。
+
+2026-11-03 上午，[自主递归构造验收](docs/experiments/recursive-construction-20261103.md)首次观察到模型从初始池生成新关系程序并自主调用完整C构造D，在DoRA/BitFit两个新项目四项检查全过。另有四对真实检查点信息消融，有续接组4/4合格、模型费局部低约92.6%；不是C对无C收益。新增同答构造意图与静态调用语法；本轮38次真实请求估费USD0.139684764。新C构造样本仍比合格扁平方案贵，完整效率反馈未闭合，未部署。以下79请求是此前夜间条件。
 
 2026-11-03，[Capability Frontier 研究入口](scenarios/paper_proofreading/frontier/README.md)已接通真实程序学习、C 发布与跨版本 D 独立验收。C 在新留出项目通过；模型自主生成的 D 尚未调用 C，零模型强制组合可以执行并通过检查。三种条件及全部失败、79 次真实请求的 USD0.340150572 代理估费见[实验记录](docs/experiments/capability-frontier-20261103.md)。自主递归收益仍 pending，生产服务未切换。
 
@@ -31,7 +39,7 @@ Capability 离线创建/编译也需安装 Node/npm 依赖：Python 复用 DSH �
 
 新增独立的 Artifact Motif 实验：从真实任务中学到可换输入的 Python 计算／排版程序，经独立输入认证后，通过原生 Bash 复用并保留逐次回执。它仍是显式启用的实验入口，不替换正式服务或默认库；费用下降与反例一起记录。见[接口与复现](docs/interfaces.md#artifact-motif-独立实验接口2026-10-21)和[三场景成本学习](docs/experiments/three-scene-motif-cost-learning-20261021.md)。
 
-管理员可在“设置 → 账户与安全 → 邀请同学”批量生成 1–20 个邀请码（默认 5 个）。邀请码永久有效、每码注册一个账号后失效；支持逐个或全部复制，关闭页面不会使未用码失效。生成结果仅在当前页面显示，请离开前复制保存。
+管理员可在“设置 → 账户与安全 → 邀请同学”生成一个统一邀请码：永久有效、可供多人重复注册，每个人仍设置自己的用户名和密码。明文仅生成时显示，请复制保存；更换需明确确认，旧共享码立即失效，已注册账号不受影响。旧批量单次邀请码保留在折叠选项中。实现与验证见[统一邀请码记录](docs/experiments/shared-invite-20261103.md)。
 
 正式DeepSeek Web已移除账号级并发数量上限，费用、请求次数和应用输出额度均为null，原账本继续累计。普通Chat、三场景及File转发使用393216输出容量，File独立SDK继承同一策略。2026-10-21当前后端运行7e167ed（Paper31/PPT28/File15），已统一发布并完成新一轮五成员、本机网关783次真实请求复测。公网旧Quick Tunnel失效，候选隧道已由统一入口准备且浏览器登录页正常，原Worker更新仍需维护者登录Cloudflare；不能把本机压力结果称为公网恢复。质量反例、费用、测试判据缺陷与未接入能力均见[本轮记录](docs/experiments/dsh-native-capabilities-20261021.md)；早期额度修复见[历史记录](docs/experiments/provider-output-20261020.md)。
 

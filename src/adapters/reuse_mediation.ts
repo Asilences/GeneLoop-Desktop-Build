@@ -1,3 +1,4 @@
+import {FILE_MAX_BYTES} from './geneloop_upload_limits.ts';
 /** Current-task value reuse over the unchanged native tool lifecycle.
  * A reference authorizes no action: the model selects the operation and missing
  * semantic values once; native schema, tool guards and service grants still run.
@@ -113,7 +114,7 @@ export function createReuseMediation({workspace,library,scriptLibrary,audit,tool
  }
  function scope(){
   const approved=JSON.parse(readFixed(join(workspace,'approved-inputs.json')).toString()).files;
-  for(const [name,version] of Object.entries(approved)){if(sha(readFixed(join(workspace,'inputs',name),20*1024*1024))!==version)throw Error('reuse_source_changed');}
+  for(const [name,version] of Object.entries(approved)){if(sha(readFixed(join(workspace,'inputs',name),FILE_MAX_BYTES))!==version)throw Error('reuse_source_changed');}
   return digest(approved);
  }
  function keep(value:any,origin:any,verify:()=>boolean,key:string){

@@ -73,6 +73,11 @@ const passwordValid = value => typeof value === 'string' && value.length >= 10 &
   Buffer.byteLength(value) <= 256;
 const publicUser = user => ({ id: user.id, username: user.username,
   displayName: user.displayName, createdAt: user.createdAt, role: user.role });
+// Legacy invitations remain single-use. Shared invitations are explicitly marked;
+// revocation is checked both before and after asynchronous password hashing.
+const inviteUsable = invite => Boolean(invite && !invite.revokedAt &&
+  (invite.reusable === true || !invite.usedBy));
+
 /** Mount just the public product policy, also for legacy chat-only members. */
 export function memberProductProfile() {
   return {
@@ -319,21 +324,40 @@ export function createGateway(config) {
     if (db.users.some(u => u.username === username)) return json(res, 409, { error: '用户名已被使用' });
     const proof = String(claim ? body.claimCode : body.inviteCode ?? '').trim();
     const proofHash = sha(proof);
-    const invite = db.invites.find(i => i.hash === proofHash && !i.usedBy);
+    const invite = db.invites.find(i => i.hash === proofHash && inviteUsable(i));
     if (claim ? (!db.ownerClaim || db.ownerClaim !== proofHash || db.users.some(u => u.role === 'owner')) : !invite)
       return json(res, 400, { error: claim ? '所有者激活链接无效或已使用' : '邀请码无效或已使用' });
     const passwordHash = await hashPassword(body.password);
-    if (db.users.some(u => u.username === username) || (claim ? db.ownerClaim !== proofHash : invite.usedBy))
+    if (db.users.some(u => u.username === username) || (claim ? db.ownerClaim !== proofHash : !inviteUsable(invite)))
       return json(res, 409, { error: '注册状态已变化，请重试' });
     const user = { id: claim ? 'owner' : random(16), username,
       displayName: name.trim(), passwordHash, role: claim ? 'owner' : 'member', createdAt: new Date().toISOString() };
     db.users.push(user);
-    if (claim) db.ownerClaim = null; else invite.usedBy = user.id;
+    if (claim) db.ownerClaim = null;
+    else if (invite.reusable === true) {
+      invite.useCount = (invite.useCount ?? 0) + 1;
+      invite.lastUsedAt = user.createdAt;
+    } else invite.usedBy = user.id;
     issueSession(res, user);
+  };
+  const sharedInviteReply = (res, body) => {
+    if (body.replace !== undefined && typeof body.replace !== 'boolean')
+      return json(res, 400, { error: 'replace 必须为 true 或 false' });
+    try { return json(res, 200, createSharedInvite({ db, save }, { replace: body.replace ?? false })); }
+    catch (error) {
+      if (error.code === 'SHARED_INVITE_EXISTS')
+        return json(res, 409, { error: error.message, invitation: sharedInviteMetadata({ db }) });
+      throw error;
+    }
   };
   const accountApi = async (req, res, path, user) => {
     if (req.method === 'GET' && path === '/api/account/me')
       return json(res, 200, { user: user ? publicUser(user) : null, registration: 'invite' });
+    if (req.method === 'GET' && path === '/api/account/shared-invite') {
+      if (!user) return json(res, 401, { error: '请先登录' });
+      if (user.role !== 'owner') return json(res, 403, { error: '仅所有者可管理统一邀请码' });
+      return json(res, 200, { invitation: sharedInviteMetadata({ db }) });
+    }
     if (req.method !== 'POST' || !requireOrigin(req)) return json(res, 403, { error: '请求来源无效' });
     if (path === '/api/account/register') return register(req, res);
     if (path === '/api/account/claim') return register(req, res, true);
@@ -347,6 +371,14 @@ export function createGateway(config) {
       return issueSession(res, found);
     }
     if (!user) return json(res, 401, { error: '请先登录' });
+    if (path === '/api/account/shared-invite') {
+      if (user.role !== 'owner') return json(res, 403, { error: '仅所有者可管理统一邀请码' });
+      if (!throttle(req, 'invites', 12, 3600000)) return json(res, 429, { error: '请稍后再试' });
+      const body = await bodyJson(req);
+      if (!await verifyPassword(String(body.currentPassword ?? ''), user.passwordHash))
+        return json(res, 403, { error: '当前密码不正确' });
+      return sharedInviteReply(res, body);
+    }
     if (path === '/api/account/invites') {
       if (user.role !== 'owner') return json(res, 403, { error: '仅所有者可创建邀请码' });
       if (!throttle(req, 'invites', 12, 3600000)) return json(res, 429, { error: '请稍后再试' });
@@ -566,6 +598,7 @@ export function createGateway(config) {
           return json(res, 403, { error: 'forbidden' });
         const input = await bodyJson(req);
         if (input.action === 'invite') return json(res, 200, { codes: createInvites({ db, save }, input.count ?? 1) });
+        if (input.action === 'shared-invite') return sharedInviteReply(res, input);
         if (input.action === 'claim') return json(res, 200, { code: createOwnerClaim({ db, save }) });
         return json(res, 400, { error: 'invalid action' });
       }
@@ -643,12 +676,37 @@ export function createInvites(gateway, count = 1) {
   gateway.save(); return codes;
 }
 
+export function sharedInviteMetadata(gateway) {
+  const invitation = gateway.db.invites.find(row => row.reusable === true && !row.revokedAt);
+  if (!invitation) return { exists: false };
+  return { exists: true, id: invitation.id, createdAt: invitation.createdAt, useCount: invitation.useCount ?? 0,
+    lastUsedAt: invitation.lastUsedAt ?? null, expiresAt: null, maxUses: null };
+}
+export function createSharedInvite(gateway, { replace = false } = {}) {
+  if (typeof replace !== 'boolean') throw Error('replace must be a boolean');
+  const active = gateway.db.invites.filter(row => row.reusable === true && !row.revokedAt);
+  if (active.length && !replace)
+    throw Object.assign(Error('已有统一邀请码；如需更换，请明确确认旧码失效。'), { code: 'SHARED_INVITE_EXISTS' });
+  const code = random(18), createdAt = new Date().toISOString();
+  // Keep the old record and its usage history, including references captured by
+  // in-flight registrations. Rotating a code never changes existing accounts.
+  for (const row of active) row.revokedAt = createdAt;
+  gateway.db.invites.push({ id: random(12), hash: sha(code), createdAt, reusable: true,
+    usedBy: null, useCount: 0, lastUsedAt: null, revokedAt: null });
+  gateway.save();
+  return { code, invitation: sharedInviteMetadata(gateway) };
+}
+
 if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href) {
   const config = read(process.argv[2], null);
   if (!config) throw Error('Gateway config file required');
   const mode = process.argv[3];
-  if (mode === 'claim' || mode === 'invite') {
-    const body = { action: mode, count: Number(process.argv[4] ?? 1) };
+  if (mode === 'claim' || mode === 'invite' || mode === 'shared-invite') {
+    if (mode === 'shared-invite' && (process.argv.length > 5 ||
+        (process.argv[4] !== undefined && process.argv[4] !== '--replace')))
+      throw Error('Usage: harless_gateway.mjs CONFIG shared-invite [--replace]');
+    const body = mode === 'shared-invite' ? { action: mode, replace: process.argv[4] === '--replace' }
+      : { action: mode, count: Number(process.argv[4] ?? 1) };
     try {
       const response = await new Promise((resolve, reject) => {
         const request = http.request({ host: '127.0.0.1', port: config.port, path: '/api/internal/admin', method: 'POST',
@@ -657,12 +715,13 @@ if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).
         });
         request.on('error', reject); request.end(JSON.stringify(body));
       });
-      if (response.status !== 200) throw Error('Gateway admin command rejected');
-      console.log(mode === 'claim' ? response.data.code : response.data.codes.join('\n'));
+      if (response.status !== 200) throw Error(response.data.error ?? 'Gateway admin command rejected');
+      console.log(mode === 'invite' ? response.data.codes.join('\n') : response.data.code);
     } catch (error) {
       if (error.code !== 'ECONNREFUSED') throw error;
       const offline = createGateway(config);
-      console.log(mode === 'claim' ? createOwnerClaim(offline) : createInvites(offline, body.count).join('\n'));
+      console.log(mode === 'claim' ? createOwnerClaim(offline) : mode === 'shared-invite'
+        ? createSharedInvite(offline, body).code : createInvites(offline, body.count).join('\n'));
     }
   } else {
     const sourceEnv = process.env.DEEPSEEK_API_KEY;

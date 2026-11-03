@@ -59,7 +59,7 @@ window.__ModuleLoader__.load({
       return MarkdownText ? React.createElement(MarkdownText, { ...props, text: project ? project(blocks[0].text) : blocks[0].text,
         streaming: streaming || blocks[0].text !== text }) : React.createElement('p', null, blocks[0].text);
     }
-    const inject = ['commandUi', 'inputTriggers', 'sessions', 'conversation', 'uiConversation', 'slots', 'workspaces', 'uiWorkspace', 'layout', 'sidebarRight', 'sidebarRightTabs'];
+    const inject = ['fileUpload', 'commandUi', 'inputTriggers', 'sessions', 'conversation', 'uiConversation', 'slots', 'workspaces', 'uiWorkspace', 'layout', 'sidebarRight', 'sidebarRightTabs'];
     const endpoint = '/api/harless/settings';
     const observers = new Map(), lexiconObservers = new Map(), cache = new Map(), choosing = new Map(), revisions = new Map();
     const draftSelections = new Map();
@@ -149,7 +149,36 @@ window.__ModuleLoader__.load({
         value?.comparison_parent_session_id && React.createElement('button', { type: 'button', onClick: () => openSession(value.comparison_parent_session_id),
           style: { color: 'var(--dsw-alias-link, #729cf7)', background: 'none', border: 0, cursor: 'pointer', padding: '2px 4px', font: 'inherit', flexShrink: 0 } }, '返回双栏结果与下载'));
     }
+    function installLargeFileUpload(ctx){
+      const runtime=ctx.fileUpload;if(!runtime?.upload)return;const original=runtime.upload;
+      const upload=async function(sessionId,data,name,signal,onProgress){
+        const blob=data instanceof Blob?data:data instanceof Uint8Array?new Blob([data]):null;
+        if(!blob||blob.size<=16*1024*1024)return original.call(runtime,sessionId,data,name,signal,onProgress);
+        let id;
+        const call=async(action,body,extra={},abortSignal=signal)=>{
+          const query=new URLSearchParams({action,session:sessionId,...(id?{id}:{}),...extra});
+          const response=await fetch('/api/harless/uploads?'+query,{method:'POST',credentials:'same-origin',signal:abortSignal,
+            headers:{'Content-Type':body instanceof Blob?'application/octet-stream':'application/json'},
+            body:body instanceof Blob?body:JSON.stringify(body??{})});
+          const result=await response.json();
+          if(!response.ok)throw Error(result.error?.message||'文件上传失败，请重试。');
+          return result;
+        };
+        try{
+          const started=await call('begin',{name:name||'attachment',bytes:blob.size});id=started.id;
+          for(let offset=0;offset<blob.size;offset+=started.chunk_bytes){
+            const chunk=blob.slice(offset,Math.min(blob.size,offset+started.chunk_bytes));
+            await call('chunk',chunk,{offset:String(offset)});
+            onProgress?.({loaded:offset+chunk.size,total:blob.size});
+          }
+          return await call('complete');
+        }catch(error){if(id)void call('abort',{}, {},new AbortController().signal).catch(()=>{});throw error;}
+      };
+      runtime.upload=upload;
+      ctx.effect(()=>()=>{if(runtime.upload===upload)runtime.upload=original;});
+    }
     function apply(ctx) {
+      installLargeFileUpload(ctx);
       window.__installGeneLoopBrand?.(ctx, React);
       window.__installGeneLoopWorkspaces?.(ctx, React, primitives);
       const styleChoices = [

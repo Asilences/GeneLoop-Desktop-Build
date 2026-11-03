@@ -1328,6 +1328,83 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 
 新增执行仍是既有只读 Script 沙箱后端，不接管聊天，不宣称插件已去除 Python 或任意 MCP 自动组合已完成。真实效果与限制独立见[Frontier 记录](experiments/capability-frontier-20261103.md)。
 
+
+## 统一邀请码（2026-11-03）
+
+GET `/api/account/shared-invite` 仅所有者读取是否启用、opaque id、创建时间、成功使用次数与最后使用时间；不返回明文或哈希。POST 同路径要求当前密码，`replace:false` 首次创建，已有共享码返回409；明确 `replace:true` 原子撤销旧共享码并生成新码。返回明文仅此一次，服务端只存哈希。共享码永久、无使用次数上限，只创建 member，不改变用户名唯一性、密码、角色、账号隔离或传输检查。注册前及异步 scrypt 后都校验有效性。独立的注册请求频率防滥用检查保留。旧单次码与已注册账号不受换码影响。
+
+服务器运维可通过既有认证管理入口运行 `node scripts/harless_gateway.mjs PRIVATE_CONFIG shared-invite [--replace]`；生产网关运行时走 loopback 管理 API，不直接编辑账号数据库。不要在公共日志或Git中存放邀请码。
+
+## 能力生成语言与显式构造意图（2026-11-03 上午）
+
+Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{steps,output}`，新程序只在 step.use 使用 `$program` 占位；其余步骤由模型明确指定当前可见 alias。`freeze_program_composition` 在学习前将旧 alias 固定成精确版本引用，保存原绑定、task/program/snapshot摘要。`encode_program_composition` 待原生认证及入池后只解析同源码、同库、同mode且仍可见的新材料，再经原 IR 编译和独立发布；不补依赖、算法或参数。
+
+另可提交 `{composition_source}` 或 `{program,composition_source}`。`compile_composition_source` 将唯一 `def build(value)` 中顺序赋值的 `capability.cN(...)` / `program(...)` 及字符串字段绑定静态编码为同一draft；拒绝导入、循环、动态调用/索引和任意求值。新增计算仍在受限的 program.source 中认证执行，编排源代码本身不执行。原 JSON 和完整普通程序入口保留。
+
+### 单源构造接口（2026-11-03，未部署）
+
+`{capability_source}` 将静态 `build(value)`、局部 graph helper 与纯计算 helper 写在同一源码中。宿主只展开模型显式调用和实参，再交原编译、原生认证及发布流程；不执行 graph Python，不生成算法或伪造子能力证书。静态调用至多64步、8层，展开绑定整体至多10000节点。纯计算 helper 在展开图中最多调用一次，其原算法原文保留。
+
+`source_callable_interfaces` 对精确 Script JSON ABI 展示领域对象参数/返回值，宿主恢复原生 `value` 包装，完整原契约和映射保存在审计记录。组合能力自身的业务 `value` 字段不剥离。新研究 `creation_value_v1` 使用同一 `source_primary_v1` 作者视图：模型只见语义接口，完整版本、原生包装和证据仍留在 `authoring-context-audit.json`；旧 JSON、旧作者视图和完整普通程序入口保留。C说明卡只提供信息，只有目录中的alias能调用。
+
+新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](recursive-efficiency-protocol-v2.md)。
+
+### 能力更新后的机会重新评价（2026-11-03，默认关闭）
+
+原`capability_improvement_plan_v1`新增可选`opportunity_discovery`：
+
+```json
+{"context":{"path":"<private context.json>","sha256":"<raw SHA256>"},
+ "directory":"<private .local goal ledger>","max_reconsiderations":1,"max_candidates":3}
+```
+
+context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_effects,needs}`；每项need为`{id,description,status:"open"|"resolved",evidence:[<原字节引用>]}`。正常任务发现器与暂缓重试不变；仅原控制器独立发布成功、可用池增加且存在open need时调用单次`propose_opportunities(request,output)`，同一需求证据/前后snapshot变化不会重复提案。中断认领保留，不自动重发未知付费请求。
+
+模型候选为`{need_id,proposed_goal,expected_dependencies:[{id,sha256}],reason,proposed_interface?}`。`review_opportunity`由固定宿主代码提供，默认pending；accepted必须返回冻结job与独立review证据。job的scope、effects、goal文本和原证据受核验，模型不能选择验收器。通过的job进入原控制器，沿原Runtime/Store/独立验收发布。
+
+单次Harness提案须由研究宿主提供有限预算gate；可通过`opportunity_gate_factory`在该次提案期间持有原账本锁，或在同一研究gate内提供`opportunity_gate`。缺失时不调用模型。原平台null、累计账本与正常任务授权不变；当前不生成节余信用。
+
+私有账本保留`claim/request/response/decisions/result`及每次构造outcome。预期依赖和编译依赖不等于实际调用；只有绑定当前候选的Runtime trace可填actual_dependencies，缺失为null。真实任务证据的零模型重放入口为`examples/capability-scenes/replay-opportunities.py`，固定旧提案/算法不能作为自主目标发现或创造效率收益证据。详细设计及验收见[协议](capability-aware-opportunities-v1.md)。
+
+### 公共构造与原生材料接线（2026-11-03续）
+
+公共`capability_proposal.py`现受理`capability_source`；同一个`rsi:improve`控制器消费构造、获取、入池与原意图续接，不要求导入Paper研究适配器。宿主的`publication_plan`可显式配置`program_learning:{backend:"script_motif",libraries:[<原字节引用>],construction_cases:[<两份训练任务>]}`；每份任务为`{id,split:"training",input,inputs:[{path,source}]}`，路径仍限`/work/inputs/<文件名>`。宿主固定契约、训练材料和独立验收，模型选择新算法、能力与参数。没有该配置或缺少支持的前缀后端时明确暂缓，不能由模型选择执行器或测试集。
+
+共用实现位于`capability_script_learning.py`、`capability_script_execution.py`及`capability_program_training.py`；原Frontier路径保留同模块兼容导出。新算法通过原Script编译/沙箱认证后进入原材料池；下一次构造只将预先固定的`$program`替换成对应认证材料，后续独立发布仍由场景提供。当前公共原生前缀支持Script；没有据此增加任意MCP或混合后端执行支持。
+
+原生值认证另有限制：新helper输入必须能从两份实际输入推导出稳定、非空字段的JSON对象契约；单参数`run`直接绑定标量/数组暂不能认证入池。命名helper的显式参数由现有机械包装形成对象，不改算法。该限制沿用旧原生认证，不为本轮扩写执行器。
+
+宿主执行观测可提供`observed_model_usd`和/或`observed_model_usd_decimal`，发布结果可用`execution_cost`携带同一观测形状；公共反馈将其用于已有同scope执行排序。构造费用不得当执行费用，缺失/未知仍为null，双字段冲突拒绝。后继能力被撤回后，其精确版本不再提供当前正构造排序信用；原始事实不删除，执行归档仍保留构造价值。这里不铸造可支配节余，自动资源再投资仍未接通。
+
+新材料改变别名后，显式意图仍引用原精确版本；编译失败的repair通过SHA验证的 `frozen_composition_intent` 显示当前alias投影及原参数，原始回答保留引用，不把旧alias冒充新回答。缺失参数继续保持缺失，交给模型修复。Frontier 同时消费原 `selection.construction` 排序。
+
+`prepare_D --final-manifest` 可重复，以多个宿主冻结manifest生成项目与独立检查；项目ID安全唯一，0/1/2版本和输入SHA逐项核验，旧无ID清单仍解释为mamba。`--budget-usd` 和 `--research-limit-usd` 显式配置新条件的有限研究预算，默认值与旧条件不变，未知历史请求仍完整预留；平台null额度与原账本不改。复现命令见[研究入口](../scenarios/paper_proofreading/frontier/README.md)，效果边界见[上午实验](experiments/recursive-construction-20261103.md)。
+
+
+### 网页大文件传输（2026-11-03）
+`POST /api/harless/uploads?action=begin|chunk|complete|abort&session=...` 是已登录所属会话的分块传输接口。begin 提交名称/总字节并取得随机上传 ID；chunk 携 ID/offset 顺序提交最多 8 MiB，完全相同的最近块可幂等重放；complete 要求收到声明全部字节并调用原生 fileUploads.uploadStream，返回原生 `{ok:true,value:{receiptId,file}}`；abort 只清理该会话的上传。仍校验来源、会话归属、长度和取消；不接受私有对照子会话。完整容量规则见 [upload-rules](upload-rules.md)。
+## 构造经历与做法重新选择（2026-11-03）
+
+离线`capability_improvement_plan_v1`可选：
+
+```json
+{"construction_feedback":{"max_reconsiderations":1,"history":[]}}
+```
+
+缺省不生成新视图、不增加调用。启用后，原控制器在每次构造前生成同目标历史视图，放入`source_catalog.construction_feedback`，原`prepare_attempt`验证原证据后才呈现给模型。`history`是显式宿主提供的`construction-evidence.json`字节引用数组，须绑定同一job/任务；提交后继失败的记录只能审阅，不能成为自动模型重试输入。
+
+每次完成保存`construction-evidence.json`索引和`construction-history.json`派生视图。原结果、请求journal、材料获取、模型策略声明和独立发布结果分别引用。按ledger/request ID检查请求归属，用十进制累计构造模型费用，分开全程支出与首成功前构造费用；未知请求库存/费用不记零。共享目标发现、未覆盖验证及非模型成本单列未知，`all_stages_model_usd_decimal`不据局部支出填充。该视图不是新的总账或效果评价器。
+
+原修复应暂缓且失败明确可修复时，如宿主`construction_budget(job)`提供有限预算及正的剩余金额，可在同一job/snapshot内增加一次重新选择，且受本轮`max_reconsiderations`总数约束。原修复计数、失败签名、质量契约和预算均不重置；权限、基础设施及已提交后继失败不因该选项重试。新能力进入后的原有重新构造同时消费历史；已有无模型续接不会仅为增加反思而额外调用。
+
+修复期间`catalog_sha256`绑定去除宿主动态`construction_feedback`后的能力目录，任务/版本/别名仍冻结；`catalog_full_sha256`另存完整输入摘要。历史每轮增长必须重核原始引用，不能成为语义目录变更的豁免。
+
+公共场景可提供原有有限研究`gate`：原`construct`直接复用其`register_attempt`及`propose_once`，不再打开竞争累计账本锁的第二个网关。无该gate时保留原子进程路径；平台`null`不限额度不构成新增策略尝试的有限研究授权。
+
+启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
+
+历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+
 ## GeneLoop Desktop 接入（2026-11-03）
 
 0.2.0独立桌面自行实现页面、组件、交互状态与样式，复用现有账号、会话、场景、上传/交付与WebSocket接口，不新增服务器Agent或任务协议。安装包不再包含DSH网页/插件模块，也不获取 `__DSH_BOOT__` 或服务器页面。旧0.1.5另行冻结，不能将两者混称。

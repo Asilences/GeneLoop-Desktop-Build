@@ -42,7 +42,12 @@ def main():
         path=out/(project+'-join-input.json');path.write_text(json.dumps(value,ensure_ascii=False,separators=(',',':')))
         examples.append({'input':value,'expected_output':audit(base/'inputs-v1'/(project+'-v0.zip'))})
         cases.append({'id':project+'-C-native','inputs':[{'path':'/work/inputs/value.json','source':reference(path)}]})
+    construction_cases=[{'id':project+'-C-construction','split':'training',
+        'input':{'project':'/work/inputs/project.zip'},
+        'inputs':[{'path':'/work/inputs/project.zip','source':reference(base/'inputs-v1'/(project+'-v0.zip'))}]}
+        for project in ('atc','lora')]
     template={'libraries':libraries,'native_cases':{'json':cases},'program_examples':examples,
+        'construction_cases':construction_cases,
         'pinned_evidence':[reference(out/'primitive-quality.json')]}
     for label,project in [('validation','atc'),('followup','lora')]:
         template[label]={'id':project+'-C-v1','input':{'project':'/work/inputs/project.zip'},
@@ -55,7 +60,7 @@ def main():
         'observations':[{'task_id':'frontier-C-need','kind':'new_requirement','split':'training',
         'summary':'Two certified parsers do not yet join active bibliographies and citations into consistency facts.',
         'evidence':reference(out/'primitive-quality.json')}]}
-    dependencies=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py']
+    dependencies=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py','program_training.py','execute.py']
     plan={'format':'capability_improvement_plan_v1','id':'frontier-C','owner':owner,'output':str(out/'run'),
         'store':str(a.store.resolve() if a.store else out/'store'),'seed':reference(out/'seed.json'),'seed_catalog':reference(out/'catalog.json'),
         'ledger_root':str(a.ledger_root.resolve()),

@@ -1,3 +1,8 @@
+
+try:
+    from .geneloop_upload_limits import FILE_MAX_BYTES
+except ImportError:
+    from geneloop_upload_limits import FILE_MAX_BYTES
 """Bounded uploaded-file reads shared by scene MCPs; no model or host paths."""
 from pathlib import Path
 import hashlib
@@ -19,7 +24,7 @@ class SessionFiles:
         manifest=self.root.parent/'approved-inputs.json'
         self.approved=json.loads(manifest.read_text())['files'] if manifest.exists() else None
 
-    def read(self, name: str, expected: str | None = None, limit=20 * 1024 * 1024):
+    def read(self, name: str, expected: str | None = None, limit=FILE_MAX_BYTES):
         current = self.root.stat()
         if (current.st_dev, current.st_ino) != (self.identity.st_dev, self.identity.st_ino):
             raise ValueError('session_directory_changed')

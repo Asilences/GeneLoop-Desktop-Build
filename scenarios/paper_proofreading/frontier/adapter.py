@@ -1,16 +1,74 @@
 """Frontier experiment adapter on the existing improvement controller."""
 from __future__ import annotations
-import copy,json,os,subprocess,sys
+import copy,hashlib,json,os,re,subprocess,sys
 from pathlib import Path
 from src.adapters.capability_scene import CapabilityImprovementAdapter,ROOT,reference,run_child
 from src.adapters.capability_improvement import evidence,read,save
 from src.adapters.capability_contract import capability_digest,create_capability_snapshot
+from src.adapters.capability_contract import capability_ref
+from src.adapters.capability_shape_diagnostics import composition_shape_advisories,diagnose_step_argument_shapes
 from src.adapters.capability_proposal import write
 from src.adapters import capability_proposal as pilot
-from src.adapters.capability_authoring import compact_proposal
-from src.adapters.capability_program_encoding import encode_complete_script
+from src.adapters.capability_authoring import compact_proposal,diagnose
+from src.adapters.capability_program_encoding import encode_complete_script,encode_program_composition
 from scenarios.paper_proofreading.frontier.author import propose
 from scenarios.paper_proofreading.frontier.learn import learn
+from scenarios.paper_proofreading.frontier.program_training import prepare_program_cases,TrainingEvidenceUnavailable
+
+
+def runtime_shape_feedback(candidate,trace_path,workspace):
+    """Explain a witnessed data-operation failure; never repair its bindings.
+
+    Only a directly selected Script value call with a matching native witness
+    and an actual extra array layer may request the existing model repair path.
+    Unknown transport/worker failures remain outside this classification.
+    """
+    notes=composition_shape_advisories(candidate)
+    if not notes:return None
+    try:
+        trace_ref=reference(trace_path);trace=json.loads(evidence(trace_ref));root=capability_ref(candidate['capability'])
+        if (trace.get('root')!=root or trace.get('snapshot_sha256')!=candidate['snapshot']['digest']
+                or trace.get('mode')!='validate' or trace.get('status')!='failed'):return None
+        receipts={r['call_id']:r for r in trace.get('receipts',[])}
+        parent=next((r for r in receipts.values() if r.get('capability')==root and r.get('parent_call_id') is None),None)
+        if parent is None:return None
+        steps=candidate['capability']['implementation']['steps'];caps={cap['id']:cap for cap in candidate['snapshot']['capabilities']}
+        for index,call_id in enumerate(parent.get('child_call_ids',[])):
+            if index>=len(steps) or not isinstance(call_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]+',call_id):continue
+            step=steps[index];receipt=receipts.get(call_id,{});cap=caps[step['capability']['id']]
+            schema=cap['contract']['input_schema'];legacy=cap['implementation'].get('legacy_ref',{})
+            selected_notes=[row for row in notes if row['step_id']==step['id']]
+            if (not selected_notes or legacy.get('backend')!='script_motif' or receipt.get('reason')!='script_worker_failed'
+                    or receipt.get('status')!='failed'
+                    or receipt.get('capability')!=step['capability'] or receipt.get('parent_call_id')!=parent['call_id']
+                    or schema.get('required')!=['value'] or set(schema.get('properties',{}))!={'value'}):continue
+            work=Path(workspace)/'calls'/call_id;failure_ref=reference(work/'failure.json')
+            failure=json.loads(evidence(failure_ref));detail=failure.get('diagnostic',{})
+            if (failure.get('format')!='script_capability_call_failure_v1' or failure.get('call_id')!=call_id
+                    or failure.get('capability')!=step['capability'] or failure.get('program_id')!=legacy.get('object_id')
+                    or failure.get('arguments_sha256')!=receipt.get('arguments_sha256')
+                    or detail.get('format')!='script_worker_failure_v1' or detail.get('phase')!='sandbox_execution'
+                    or detail.get('category')!='data_operation_error'
+                    or detail.get('exception_type') not in ('TypeError','KeyError','IndexError')):continue
+            value_ref=reference(work/'inputs/value.json');raw=evidence(value_ref)
+            if (failure.get('input_versions')!=[hashlib.sha256(raw).hexdigest()]
+                    or hashlib.sha256(b'{"value":'+raw+b'}').hexdigest()!=receipt.get('arguments_sha256')):continue
+            arguments={'value':json.loads(raw)};shapes=diagnose_step_argument_shapes(candidate,step['id'],arguments)
+            actual=[]
+            for note in shapes['advisories']:
+                value=arguments
+                try:
+                    for part in note['argument_path']:value=value[part]
+                except (KeyError,TypeError,IndexError):continue
+                if isinstance(value,list):actual.append(note)
+            if not actual:continue
+            return {'checks':[{'id':'native_argument_shape','status':'failed','observation':{
+                'step_id':step['id'],'capability':step['capability'],'exception':detail,
+                'argument_shapes':shapes,'observed_array_layers':actual,
+                'evidence':{'trace':trace_ref,'worker_failure':failure_ref,'value_input':value_ref},
+                'scope':'Observed worker error plus explicit array-binding evidence; no inferred contract violation or automatic argument repair.'}}]}
+    except (OSError,ValueError,KeyError,TypeError,IndexError):return None
+    return None
 
 
 class FrontierAdapter(CapabilityImprovementAdapter):
@@ -22,6 +80,9 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         for cases in template['native_cases'].values():
             for case in cases:
                 for item in case['inputs']:evidence(item['source'])
+        for case in template.get('construction_cases',[]):
+            if case.get('split')!='training':raise ValueError('frontier_program_training_split_required')
+            for item in case['inputs']:evidence(item['source'])
         return template
 
     def library(self):
@@ -35,6 +96,7 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         value['program_input_schemas']=copy.deepcopy(template.get('program_input_schemas',{}))
         value['source_catalog']['presentation']=value['presentation']
         value['source_catalog']['program_input_schemas']=value['program_input_schemas']
+        value['source_catalog']['reference_interfaces']=copy.deepcopy(template.get('reference_interfaces',[]))
         if value['presentation'].get('hide_redundant_JSON_file_variants'):
             snapshot=value['snapshot'];caps={c['id']:c for c in snapshot['capabilities']}
             values={capability_digest(c['implementation']['legacy_ref']) for c in caps.values()
@@ -57,32 +119,76 @@ class FrontierAdapter(CapabilityImprovementAdapter):
             self.expected_initial_snapshot_sha256=None
         template=next(iter(self.templates.values()));pending=getattr(self,'pending_complete',None)
         self.pending_complete=None
-        if pending and template.get('auto_wrap_complete_program'):
-            encoded=encode_complete_script(task,library['snapshot'],pending['library'],pending['observations'])
-            if encoded:
+        reconsider=library.get('source_catalog',{}).get('construction_feedback',{}).get('reconsider') is True
+        if pending and not reconsider and (pending.get('composition_intent_ref') or template.get('auto_wrap_complete_program')):
+            encoded=None;encoding_error=None
+            try:
+                if pending.get('composition_intent_ref'):
+                    encoded=encode_program_composition(task,library['snapshot'],pending['program_ref'],
+                        pending['composition_intent_ref'],pending['library'],pending['observations'])
+                else:
+                    encoded=encode_complete_script(task,library['snapshot'],pending['library'],pending['observations'])
+            except ValueError as error:
+                if not pending.get('composition_intent_ref'):raise
+                encoding_error=error
+            if encoded or encoding_error:
                 self.gate.register_attempt(output,self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
                 effective,_=pilot.prepare_attempt(task=task,catalog=library['source_catalog'],snapshot=library['snapshot'],output=output)
-                effective.update(model_called=False,host_encoding=encoded['encoding_scope']);write(output/'effective.json',effective)
+                scope=encoded['encoding_scope'] if encoded else 'model_explicit_composition_encoding_failed'
+                effective.update(model_called=False,host_encoding=scope);write(output/'effective.json',effective)
+                result={'status':'failed','construction_snapshot_sha256':library['snapshot']['digest'],
+                    'model_called':False,'provider_requests':0,'request_ids':[],
+                    'observed_model_usd':0,'observed_model_usd_decimal':'0','elapsed_seconds':0,
+                    'host_encoding':scope,'originating_program':pending['program'],
+                    'originating_program_ref':pending['program_ref'],'quality':'not_independently_reviewed'}
+                if pending.get('composition_intent_ref'):
+                    result['originating_composition_intent_ref']=pending['composition_intent_ref']
+                if encoding_error:
+                    result['originating_answer_ref']=pending['answer_ref']
+                    repair_context=getattr(encoding_error,'program_composition_repair_context',None)
+                    if repair_context is not None:
+                        write(output/'composition-repair-context.json',repair_context)
+                        result['composition_repair_context_ref']=reference(output/'composition-repair-context.json')
+                    # The original answer names aliases from an older pool.
+                    # Preserve its source reference, never present it as the
+                    # answer authored against this new snapshot.
+                    write(output/'answer.txt',json.dumps({'format':'capability_host_encoding_failure_v1',
+                        'error':str(encoding_error),'originating_answer_ref':pending['answer_ref'],
+                        'originating_composition_intent_ref':pending['composition_intent_ref']}))
+                    result.update(error=str(encoding_error),diagnostics=diagnose(encoding_error))
+                    write(output/'result.json',result);return result
                 write(output/'proposal.json',encoded['proposal']);write(output/'candidate.json',encoded['candidate'])
                 write(output/'answer.txt',json.dumps(compact_proposal(encoded['proposal'],task,library['snapshot'])))
-                result={'status':'compiled_candidate','construction_snapshot_sha256':library['snapshot']['digest'],
-                    'candidate_id':encoded['candidate']['capability']['id'],'model_called':False,'provider_requests':0,
-                    'request_ids':[],'observed_model_usd':0,'observed_model_usd_decimal':'0','elapsed_seconds':0,
-                    'host_encoding':encoded['encoding_scope'],'originating_program':pending['program'],
-                    'originating_program_ref':pending['program_ref'],'quality':'not_independently_reviewed'}
+                result.update(status='compiled_candidate',candidate_id=encoded['candidate']['capability']['id'])
                 write(output/'result.json',result);return result
         result=propose(task=task,library=library,output=output,gate=self.gate,parent=parent,feedback=feedback,
                        owner_id=self.plan['id']+'/'+str(output.relative_to(Path(self.plan['output']))))
         if result.get('program_request'):
             program=read(output/'program.json');template=next(iter(self.templates.values()))
             try:
-                result['native_library']=learn(program,template['native_cases'][program['mode']],output/'native',
+                cases=template['native_cases'][program['mode']]
+                if result.get('program_training_mode')=='bound_prefix_v1':
+                    refs=[reference(output/'answer.txt'),result['capability_source_ref'],result['capability_source_encoding_ref']]
+                    libraries=template['libraries']+[r['library'] for r in self.materials.records() if r['backend']=='script_motif']
+                    training=prepare_program_cases(task,library['snapshot'],reference(output/'program.json'),
+                        result['composition_intent_ref'],template.get('construction_cases'),libraries,output/'program-training',source_refs=refs)
+                    cases=training['cases'];result['program_training_ref']=training['evidence']
+                result['native_library']=learn(program,cases,output/'native',
                     reference(output/'answer.txt'),large_output=True)
                 result['native_observations']=reference(output/'native/observations.json')
                 self.pending_complete={'library':result['native_library'],'observations':result['native_observations'],
-                    'program':program,'program_ref':reference(output/'program.json')}
+                    'program':program,'program_ref':reference(output/'program.json'),
+                    'answer_ref':reference(output/'answer.txt'),
+                    'composition_intent_ref':result.get('composition_intent_ref')}
+            except TrainingEvidenceUnavailable as error:
+                result.update(status='deferred',error='capability_construction_gap',
+                    construction_gap={'reason':'insufficient_evidence','requirement':str(error)},
+                    diagnostics={'kind':'training_evidence','error':str(error)})
             except Exception as error:
                 diagnostics={'native_error':str(error)}
+                if result.get('program_training_mode')=='bound_prefix_v1':diagnostics['training']=diagnose(error)
+                if getattr(error,'program_training_diagnostics',None):diagnostics['prefix']=error.program_training_diagnostics
+                if getattr(error,'program_training_evidence_ref',None):result['program_training_ref']=error.program_training_evidence_ref
                 for p in (output/'native').glob('**/certification.json'):diagnostics['certification']=read(p)
                 for p in (output/'native').glob('**/admission-error.json'):diagnostics['admission']=read(p)
                 for p in (output/'native').glob('**/source-stderr.txt'):
@@ -95,6 +201,9 @@ class FrontierAdapter(CapabilityImprovementAdapter):
     def acquire(self,job,result,attempt):
         if not result.get('native_library'):return {'status':'deferred','reason':'frontier_no_certified_material'}
         refs=[reference(attempt/'answer.txt'),reference(attempt/'native/certification.json'),job['publication_plan']]
+        if result.get('composition_intent_ref'):refs.append(result['composition_intent_ref'])
+        for key in ('capability_source_ref','capability_source_encoding_ref','program_training_ref'):
+            if result.get(key):refs.append(result[key])
         if result.get('native_observations'):refs.append(result['native_observations'])
         material=self.materials.register(backend='script_motif',library=result['native_library'],refs=refs,
             acquisition_key=capability_digest(refs),opportunity=self.opportunity_key(job))
@@ -128,6 +237,8 @@ class FrontierAdapter(CapabilityImprovementAdapter):
             return {'status':'published','publication_sha256':result['publication_sha256'],'evidence_ref':ref}
         feedback={}
         runtime_binding_failure=False
+        shape_binding_failure=False
+        committed=(directory/'publication.json').exists()
         for label in ('validation','followup'):
             p=directory/label/'validation.json'
             if p.exists() and not read(p)['passed']:feedback=read(p);break
@@ -143,9 +254,13 @@ class FrontierAdapter(CapabilityImprovementAdapter):
                         'granted_inputs':plan[label]['manifest']['inputs'],
                         'requirement':'Bind existing file-reading capabilities to current task inputs, not new-program ABI placeholders.'}}]}
                     break
+                if not committed and result.get('error')=='cycle_execution_failed':
+                    shaped=runtime_shape_feedback(candidate,trace_path,Path(plan[label]['workspace']))
+                    if shaped:
+                        shape_binding_failure=True;feedback=shaped;break
         return {'status':'failed','error':result.get('error','frontier_publication_failed'),
-            'committed':(directory/'publication.json').exists(),'evidence_ref':ref,
-            'repairable':result.get('error')=='capability_store_validation_failed' or runtime_binding_failure,'feedback':feedback}
+            'committed':committed,'evidence_ref':ref,
+            'repairable':result.get('error')=='capability_store_validation_failed' or runtime_binding_failure or shape_binding_failure,'feedback':feedback}
 
 
 def create_adapter(plan):return FrontierAdapter(plan)

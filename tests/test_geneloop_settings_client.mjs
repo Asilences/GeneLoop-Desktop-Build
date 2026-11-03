@@ -162,16 +162,16 @@ test('password mismatch does not submit and an explicit successful change return
 test('owner can generate batches, copy individual/all codes, paste passwords and retain previous codes on failure', async () => {
   let post = 0; const copied = [];
   const f = fixture((url) => url.endsWith('/me') ? Response.json({ user: { ...user, role: 'owner' } }) :
-    ++post === 1 ? Response.json({ codes: ['invite-one', 'invite-two', 'invite-three'] }) :
+    url.endsWith('/shared-invite') ? Response.json({ invitation: { exists: false } }) : ++post === 1 ? Response.json({ codes: ['invite-one', 'invite-two', 'invite-three'] }) :
     post === 2 ? Response.json({ error: '当前密码不正确' }, { status: 403 }) : Response.json({ codes: ['invite-four'] }),
     { clipboard: { writeText: async text => copied.push(text) } });
   const page = f.mount('geneloop-account'); await flush(); page.render();
   const input = name => page.all(row => row.type === 'input' && row.props.name === name).at(-1);
-  const submit = async () => { page.all(row => row.type === 'form')[2].props.onSubmit({ preventDefault() {} }); await flush(); page.render(); };
+  const submit = async () => { page.all(row => row.props['aria-label'] === '单次邀请码管理')[0].props.onSubmit({ preventDefault() {} }); await flush(); page.render(); };
   let stopped = false; input('currentPassword').props.onPaste({ stopPropagation() { stopped = true; } }); assert.ok(stopped);
   input('currentPassword').props.onChange({ target: { value: 'current-password' } });
   input('count').props.onChange({ target: { value: '3' } }); page.render(); await submit();
-  assert.deepEqual(JSON.parse(f.requests[1].options.body), { currentPassword: 'current-password', count: 3 });
+  assert.deepEqual(JSON.parse(f.requests.find(row => row.url.endsWith('/invites')).options.body), { currentPassword: 'current-password', count: 3 });
   assert.match(page.text(), /永久有效.*使用后失效/);
   const codes = () => page.all(row => row.type === 'input' && row.props.readOnly);
   assert.deepEqual(codes().map(row => row.props.value), ['invite-one', 'invite-two', 'invite-three']);
@@ -183,9 +183,9 @@ test('owner can generate batches, copy individual/all codes, paste passwords and
 });
 
 test('blocked clipboard keeps invitation selectable with a recoverable copy hint', async () => {
-  const f = fixture(url => Response.json(url.endsWith('/me') ? { user: { ...user, role: 'owner' } } : { codes: ['fixture-invite'] }));
+  const f = fixture(url => Response.json(url.endsWith('/me') ? { user: { ...user, role: 'owner' } } : url.endsWith('/shared-invite') ? { invitation: { exists: false } } : { codes: ['fixture-invite'] }));
   const page = f.mount('geneloop-account'); await flush(); page.render();
-  page.all(row => row.type === 'form')[2].props.onSubmit({ preventDefault() {} }); await flush(); page.render();
+  page.all(row => row.props['aria-label'] === '单次邀请码管理')[0].props.onSubmit({ preventDefault() {} }); await flush(); page.render();
   await page.all(row => row.props['aria-label'] === '复制邀请码 1')[0].props.onClick(); page.render();
   assert.match(page.text(), /Ctrl\+C/);
   const code = page.all(row => row.type === 'input' && row.props.readOnly)[0]; let selected = false;
@@ -214,4 +214,64 @@ test('model catalog errors can be retried and late unmounted responses do not ke
   const page = f.mount('models'); await flush(); page.render(); assert.match(page.text(), /操作未完成/);
   page.all(row => row.type === 'button')[0].props.onClick(); page.render(); assert.equal(reads, 2);
   page.dispose(); assert.equal(f.requests[1].options.signal.aborted, true); resolve(Response.json(catalog)); await flush(); f.dispose();
+});
+
+
+test('shared invitation is the primary flow, reads metadata without writes, and copies the single generated code', async () => {
+  const copied = []; let creates = 0;
+  const f = fixture((url, options) => {
+    if (url.endsWith('/me')) return Response.json({ user: { ...user, role: 'owner' } });
+    if (options.method === 'GET') return Response.json({ invitation: { exists: false } });
+    creates++;
+    return Response.json({ code: 'shared-fixture', invitation: { exists: true, id: 'shared-id-a', createdAt: 100, useCount: 0 } });
+  }, { clipboard: { writeText: async text => copied.push(text) } });
+  const page = f.mount('geneloop-account'); await flush(); page.render(); await flush(); page.render();
+  assert.equal(creates, 0); assert.equal(f.requests.length, 2);
+  assert.equal(f.requests[1].url, '/api/account/shared-invite'); assert.equal(f.requests[1].options.method, 'GET');
+  assert.match(page.text(), /统一邀请码.*同一个邀请码.*多人重复注册/);
+  assert.equal(page.all(row => row.type === 'details')[0].props.open, undefined);
+  page.all(row => row.props.name === 'sharedCurrentPassword')[0].props.onChange({ target: { value: 'owner-current-password' } }); page.render();
+  const form = page.all(row => row.props['aria-label'] === '统一邀请码管理')[0];
+  form.props.onSubmit({ preventDefault() {} }); form.props.onSubmit({ preventDefault() {} }); await flush(); page.render();
+  assert.equal(creates, 1); assert.deepEqual(JSON.parse(f.requests.at(-1).options.body), { currentPassword: 'owner-current-password', replace: false });
+  const code = page.all(row => row.props['aria-label'] === '统一邀请码')[0]; assert.equal(code.props.value, 'shared-fixture'); assert.equal(code.props.readOnly, true);
+  await page.all(row => row.type === 'button' && row.children.includes('复制统一邀请码'))[0].props.onClick(); page.render();
+  assert.deepEqual(copied, ['shared-fixture']); assert.match(page.text(), /邀请码已复制/);
+  assert.equal(page.all(row => row.props['aria-label'] === '统一邀请码管理').length, 0); f.dispose();
+});
+
+test('shared invitation replacement requires an explicit second step and keeps current code when replacement fails', async () => {
+  let posts = 0;
+  const f = fixture((url, options) => {
+    if (url.endsWith('/me')) return Response.json({ user: { ...user, role: 'owner' } });
+    if (options.method === 'GET') return Response.json({ invitation: { exists: false } });
+    posts++;
+    return posts === 1 ? Response.json({ code: 'original-shared-code', invitation: { exists: true, id: 'shared-id-b', createdAt: 100, useCount: 0 } })
+      : Response.json({ error: '当前密码不正确' }, { status: 403 });
+  });
+  const page = f.mount('geneloop-account'); await flush(); page.render(); await flush(); page.render();
+  page.all(row => row.props['aria-label'] === '统一邀请码管理')[0].props.onSubmit({ preventDefault() {} }); await flush(); page.render();
+  page.all(row => row.type === 'button' && row.children.includes('更换统一邀请码'))[0].props.onClick(); page.render();
+  assert.equal(posts, 1); assert.match(page.text(), /旧共享邀请码立即失效.*已注册的账号不受影响/);
+  page.all(row => row.type === 'button' && row.children.includes('取消更换'))[0].props.onClick(); page.render();
+  assert.equal(page.all(row => row.props['aria-label'] === '统一邀请码管理').length, 0); assert.equal(posts, 1);
+  page.all(row => row.type === 'button' && row.children.includes('更换统一邀请码'))[0].props.onClick(); page.render();
+  page.all(row => row.props['aria-label'] === '统一邀请码管理')[0].props.onSubmit({ preventDefault() {} }); await flush(); page.render();
+  assert.equal(JSON.parse(f.requests.at(-1).options.body).replace, true); assert.match(page.text(), /当前密码不正确/);
+  assert.equal(page.all(row => row.props['aria-label'] === '统一邀请码')[0].props.value, 'original-shared-code');
+  await page.all(row => row.type === 'button' && row.children.includes('复制统一邀请码'))[0].props.onClick(); page.render();
+  assert.match(page.text(), /Ctrl\+C/); f.dispose();
+});
+
+test('existing shared invitation never exposes a fabricated code; metadata failure is retried without mutation', async () => {
+  let reads = 0;
+  const f = fixture(url => url.endsWith('/me') ? Response.json({ user: { ...user, role: 'owner' } }) :
+    ++reads === 1 ? Response.json({ error: '暂时不可用' }, { status: 503 }) :
+      Response.json({ invitation: { exists: true, id: 'shared-id-c', createdAt: 200, useCount: 7 } }));
+  const page = f.mount('geneloop-account'); await flush(); page.render(); await flush(); page.render();
+  assert.match(page.text(), /暂时不可用/); assert.equal(page.all(row => row.props['aria-label'] === '统一邀请码管理').length, 0);
+  page.all(row => row.type === 'button' && row.children.includes('重新读取邀请码状态'))[0].props.onClick(); page.render(); await flush(); page.render();
+  assert.match(page.text(), /已成功注册 7 个账号/); assert.match(page.text(), /邀请码只在生成时显示/);
+  assert.equal(page.all(row => row.props['aria-label'] === '统一邀请码').length, 0);
+  assert.equal(f.requests.filter(row => row.options.method === 'POST').length, 0); f.dispose();
 });

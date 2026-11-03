@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bindSceneInputs } from '../src/adapters/harless_task_scope.ts';
 
-test('A full paper source set admits 16 task-owned files while other scenes keep eight', async () => {
+test('Paper and general scenes share native file admission without scene-specific counts', async () => {
   const root = mkdtempSync(join(tmpdir(), 'harless-paper-upload-'));
   const makeWorkspace = name => { const path = join(root, name); mkdirSync(join(path, 'inputs'), { recursive: true }); return path; };
   const data = Array.from({ length: 17 }, (_, index) => Buffer.from(`Section ${index}`));
@@ -23,8 +23,8 @@ test('A full paper source set admits 16 task-owned files while other scenes keep
     assert.equal(admitted.length, 16);
     const approval = JSON.parse(readFileSync(join(root, 'paper', 'approved-inputs.json'), 'utf8'));
     assert.equal(Object.keys(approval.files).length, 16);
-    await assert.rejects(bindSceneInputs(ctx, {}, makeWorkspace('paper-over'), paper, parts, {}, 'Review sources', 'task-2'), /scene_input_limit/);
-    await assert.rejects(bindSceneInputs(ctx, {}, makeWorkspace('general'), { id: 'new-scene', adapter: 'workspace' },
-      parts.slice(0, 9), {}, 'Read files', 'task-3'), /scene_input_limit/);
+    assert.equal((await bindSceneInputs(ctx, {}, makeWorkspace('paper-over'), paper, parts, {}, 'Review sources', 'task-2')).length,17);
+    assert.equal((await bindSceneInputs(ctx, {}, makeWorkspace('general'), { id: 'new-scene', adapter: 'workspace' },
+      parts.slice(0, 9), {}, 'Read files', 'task-3')).length,9);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

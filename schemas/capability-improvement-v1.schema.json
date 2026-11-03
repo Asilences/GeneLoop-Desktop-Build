@@ -243,6 +243,52 @@
         },
         "learning_routes": {
           "$ref": "#/$defs/evidence"
+        },
+        "opportunity_discovery": {
+          "type": "object",
+          "properties": {
+            "context": {
+              "$ref": "#/$defs/evidence"
+            },
+            "directory": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_reconsiderations": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_candidates": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "context",
+            "directory",
+            "max_reconsiderations",
+            "max_candidates"
+          ],
+          "additionalProperties": false
+        },
+        "construction_feedback": {
+          "type": "object",
+          "properties": {
+            "max_reconsiderations": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "history": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          },
+          "required": [
+            "max_reconsiderations"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [

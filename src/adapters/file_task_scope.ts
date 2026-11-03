@@ -1,3 +1,4 @@
+import {FILE_MAX_BYTES} from './geneloop_upload_limits.ts';
 /** Session-local compositions and inputs; no cwd/env mutation or Agent loop. */
 import { randomUUID, createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, unlinkSync } from 'node:fs';
@@ -133,11 +134,10 @@ export async function bindSceneInputs(ctx: any, agent: any, workspace: string, s
     if (part.type !== 'file') continue;
     const ref = ctx.fileUploads.resolve(agent, part.receiptId);
     if (!ref) throw Error('file_receipt_not_owned');
-    const maxInputs = scene.id === 'paper-proofreading' ? 16 : 8;
-    if (inputs.length >= maxInputs || ref.bytes > 20 * 1024 * 1024) throw Error('scene_input_limit');
+    if (ref.bytes > FILE_MAX_BYTES) throw Error('scene_input_limit');
     const chunks: Buffer[] = []; let bytes = 0;
     for await (const chunk of ctx.attachments.readFileStream(ref)) {
-      bytes += chunk.length; if (bytes > 20 * 1024 * 1024) throw Error('scene_input_limit');
+      bytes += chunk.length; if (bytes > FILE_MAX_BYTES) throw Error('scene_input_limit');
       chunks.push(Buffer.from(chunk));
     }
     if (bytes !== ref.bytes) throw Error('file_bytes_changed');
