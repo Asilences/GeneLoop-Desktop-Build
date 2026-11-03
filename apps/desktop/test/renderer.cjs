@@ -105,7 +105,7 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`(()=>{const box=document.querySelector('.check-row input').getBoundingClientRect(),label=document.querySelector('.check-row span').getBoundingClientRect();return box.right<label.left&&Math.abs((box.top+box.bottom-label.top-label.bottom)/2)<2})()`),true);
  await evaluate(`document.querySelector('dialog header button').click()`);
  await until(()=>evaluate('!document.querySelector("dialog")'),'场景选项关闭');
- await evaluate(`document.getElementById('prompt').value='同步失败草稿';document.getElementById('scene-select').click();[...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/paper')).click()`);
+ await evaluate(`document.getElementById('prompt').value='同步失败草稿';document.getElementById('scene-select').click();document.querySelector('#scene-command-menu [data-scene=paper-proofreading]').click()`);
  assert.equal(await evaluate(`!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),true);
  assert.equal(await evaluate(`document.getElementById('send').click();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
  await until(()=>evaluate(`document.getElementById('scene-select').value==='new-scene'&&document.getElementById('toast').textContent.includes('场景同步诊断拒绝')&&!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),'服务器拒绝时恢复原选择和发送箭头');
@@ -113,9 +113,11 @@ app.whenReady().then(async()=>{
  await evaluate(`const input=document.getElementById('prompt');input.value='/pp';input.dispatchEvent(new Event('input'));input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`);
  assert.equal(await evaluate(`document.getElementById('scene-select').value==='ppt'&&document.getElementById('scene-select').hasAttribute('data-pending')&&document.getElementById('prompt').value===''`),true);
  await evaluate(`document.getElementById('scene-select').click()`);
- assert.equal(await evaluate(`document.querySelector('#scene-command-menu [aria-selected=true]').textContent.includes('/ppt')`),true);
+ assert.equal(await evaluate(`document.querySelector('#scene-command-menu [aria-selected=true]').dataset.shortcut==='/ppt'`),true);
  assert.equal(await evaluate(`[...document.querySelectorAll('.scene-command-name')].every(label=>getComputedStyle(label).fontWeight==='400')`),true);
+ assert.equal(await evaluate(`(()=>{const row=document.querySelector('#scene-command-menu [data-scene=ppt]');return !!row.querySelector('.scene-command-symbol svg')&&row.querySelector('.scene-command-label').textContent==='ppt演示文稿'})()`),true);
  await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
+ assert.equal(await evaluate(`(()=>{const attach=document.getElementById('attach');let opened=false;document.getElementById('file-input').addEventListener('click',event=>{event.preventDefault();opened=true;},{once:true});attach.click();return opened&&!!attach.querySelector('svg')&&attach.getAttribute('aria-label')==='上传文件'})()`),true);
  check('复选框与文字同一行，斜杠快捷选择与下拉框同步');
  assert.equal(await evaluate(`document.querySelector('[aria-label="推理强度"].choice-trigger').click();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));document.activeElement.click();const prompt=document.getElementById('prompt');prompt.value='诊断发送';prompt.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));document.getElementById('composer').requestSubmit();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("协议诊断响应完成")'),'合成流式与持久消息');await until(()=>evaluate('document.getElementById("stop").hidden'),'任务终止状态');
@@ -192,10 +194,10 @@ app.whenReady().then(async()=>{
    window.draftLoadingObserver.observe(composer,{attributes:true,attributeFilter:['inert']});
    window.draftLoadingObserver.observe(document.getElementById('history'),{childList:true});
    document.getElementById('scene-select').click();
-   [...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/file')).click()`);
+   document.querySelector('#scene-command-menu [data-scene=files]').click()`);
  await until(()=>evaluate(`document.getElementById('scene-select').value==='files'&&!document.getElementById('scene-select').hasAttribute('data-pending')`),'草稿同步文件管理场景');
  assert.equal(await evaluate(`window.draftLoadingObserver.disconnect();!window.draftLoadingFlash&&document.querySelector('.workspace-draft')!==null&&document.getElementById('prompt').value==='工作区草稿诊断'`),true);
- await evaluate(`document.getElementById('scene-select').click();[...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/chat')).click()`);
+ await evaluate(`document.getElementById('scene-select').click();document.querySelector('#scene-command-menu [data-scene=new-scene]').click()`);
  await evaluate(`document.getElementById('composer').requestSubmit()`);
  await until(()=>evaluate(`!document.querySelector('.workspace-draft')&&!!document.querySelector('${draftGroup} [data-session-id]')`),'草稿转为工作区正式对话');
  await evaluate(`document.querySelector('[data-session-id="history"] button').click()`);

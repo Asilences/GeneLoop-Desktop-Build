@@ -165,3 +165,15 @@ body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
 .result-icon[data-tooltip]{position:relative}
 .result-icon[data-tooltip]::after{content:attr(data-tooltip);position:absolute;z-index:3;bottom:calc(100% + 6px);left:0;padding:4px 8px;border-radius:8px;background:var(--gl-ink);color:var(--gl-canvas);font-size:12px;font-weight:500;line-height:1.5;white-space:nowrap;pointer-events:none;visibility:hidden}
 .result-icon[data-tooltip]:is(:hover,:focus-visible)::after{visibility:visible}
+#attach{border-radius:50%;background:var(--panel);color:var(--muted)}
+#attach:hover,#attach:focus-visible{background:var(--hover);color:var(--gl-ink)}
+#attach svg{width:16px;height:16px;stroke-width:1.6}
+.scene-command-item>.scene-command-symbol{display:grid;place-items:center;flex:none;width:18px;color:var(--scene-accent,var(--muted))}
+.scene-command-symbol svg{width:17px;height:17px}
+.scene-command-item>.scene-command-label{justify-content:flex-start;gap:8px}
+.scene-command-label small{font-size:13px}
+.scene-command-item[data-scene=ppt]{--scene-accent:#ad6a26}
+.scene-command-item[data-scene=paper-proofreading]{--scene-accent:#5578cc}
+.scene-command-item[data-scene=research-data-analysis]{--scene-accent:#238777}
+.scene-command-item[data-scene=video-editing]{--scene-accent:#9359bb}
+body[data-ds-dark-theme] .scene-command-symbol{color:color-mix(in srgb,var(--scene-accent,var(--muted)) 72%,white)}

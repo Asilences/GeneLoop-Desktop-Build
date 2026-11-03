@@ -632,7 +632,8 @@ $('model-select').onchange=()=>{renderEfforts();changeModel().catch(fail);};$('e
 $('attach').onclick=()=>$('file-input').click();$('file-input').onchange=event=>{attach([...event.target.files]).catch(fail);event.target.value='';};$('composer').onsubmit=send;$('prompt').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();send();}};
 $('stop').onclick=async()=>{try{await rpc('session/cancel',{sessionId:state.session});toast('已请求停止，等待服务器确认。');}catch(error){fail(error);}};
 $('deliveries-toggle').onclick=()=>{$('deliveries').hidden=!$('deliveries').hidden;renderDeliveries();};$('deliveries-close').onclick=()=>$('deliveries').hidden=true;
-for(const [id,name]of Object.entries({'sidebar-toggle':'sidebar','rename-session':'edit','deliveries-toggle':'files','refresh-session':'refresh','new-workspace':'plus','attach':'plus','send':'send','deliveries-close':'close'}))$(id).replaceChildren(icon(name));
+for(const [id,name]of Object.entries({'sidebar-toggle':'sidebar','rename-session':'edit','deliveries-toggle':'files','refresh-session':'refresh','new-workspace':'plus','attach':'paperclip','send':'send','deliveries-close':'close'}))$(id).replaceChildren(icon(name));
+$('attach').setAttribute('aria-label','上传文件');
 $('new-session').replaceChildren(icon('plus'),'新会话');
 for(const [id,label] of [['model-select','模型'],['effort-select','推理强度']]){
   const select=$(id),anchor=document.createComment('');

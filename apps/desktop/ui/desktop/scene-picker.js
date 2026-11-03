@@ -1,6 +1,15 @@
 import {sceneCommand,sceneSuggestions,shortcutOf} from './composer.js';
 import {node,button,icon} from './components.js';
 
+const sceneSymbols={
+  ppt:'presentation',
+  'paper-proofreading':'document',
+  'research-data-analysis':'chart-column-increasing',
+  files:'paperclip',
+  'new-scene':'message-circle',
+  'video-editing':'film',
+};
+
 /** 下拉与斜杠菜单选择同一个本轮场景；文本里的已识别命令转换为选择状态。 */
 export function bindScenePicker({input,select,container,getScenes,choose,fail,label}){
   let suggestions=[],active=0;
@@ -11,14 +20,22 @@ export function bindScenePicker({input,select,container,getScenes,choose,fail,la
   select.setAttribute('aria-controls',menu.id);
   const close=()=>{menu.hidden=true;input.setAttribute('aria-expanded','false');select.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
   function render(){
-    menu.replaceChildren(node('div',{class:'scene-command-heading'},'选择场景'));
+    menu.replaceChildren(node('div',{class:'scene-command-heading'},'场景'));
     suggestions.forEach((scene,index)=>{
-      const control=button(node('span',{},node('span',{class:'scene-command-name'},label(scene)),node('small',{},shortcutOf(scene))),()=>pick(scene.id),'scene-command-item'+(index===active?' active':''));
+      const shortcut=shortcutOf(scene);
+      const description=scene.id==='new-scene'?'通用对话':scene.id==='ppt'?'演示文稿':label(scene);
+      const code=scene.id==='files'?'file':shortcut?.slice(1)||scene.id;
+      const control=button([
+        node('span',{class:'scene-command-symbol'},icon(sceneSymbols[scene.id]||'scenes')),
+        node('span',{class:'scene-command-label'},node('span',{class:'scene-command-name'},code),node('small',{},description)),
+      ],()=>pick(scene.id),'scene-command-item'+(index===active?' active':''));
       control.id='scene-command-'+index;
+      control.dataset.scene=scene.id;
+      if(shortcut)control.dataset.shortcut=shortcut;
       control.setAttribute('role','option');
       control.setAttribute('aria-selected',String(scene.id===select.value));
       if(scene.id===select.value)control.append(icon('check'));
-      control.disabled=scene.available===false;control.title=scene.unavailable_reason||'';menu.append(control);
+      control.disabled=scene.available===false;control.title=scene.unavailable_reason||shortcut||'';menu.append(control);
     });
     menu.hidden=false;
     select.setAttribute('aria-expanded',String(openedByButton));
