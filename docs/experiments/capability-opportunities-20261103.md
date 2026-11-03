@@ -45,3 +45,14 @@ node scripts/project.mjs python examples/capability-scenes/replay-opportunities.
 四个PRIOR变量定位私有摘要所引用的原计划/提案，不指向生产服务。输出必须是新目录。有效环境：Linux、Python3.10.21、Node22.23.3；具体系统及SDK包版本见私有摘要。
 
 PR2可消费每轮`request/response/decisions/result`、每次构造`construction_result/acquisition_result`原引用、请求ID/费用，以及独立`verification`和执行trace引用。本PR不把这些事实转换为可支配信用。机制验收支持后续研究接线，不支持自主行为或效率增长的结论。
+
+
+## 最终源码复核：real-evidence-replay-002
+
+应用源码冻结为`62e7121472a1b1f4f82d4528d72c9a32597de179`。相对首轮补充：需求原证据摘要进入稳定目标身份，授权操作范围明确传给提案器；材料获取结果与独立质量验证分别索引。未改变原算法或验证条件。
+
+在独立`code-02`和新输出目录重放，未覆盖001。目标为`goal-c2005910b7fdd5b2750f7ba3`，仍通过4次独立检查，D验证实际调用C2次。摘要SHA256：`a8cb4afc96587e1777ff005385049e672767c6821fedb764a64cd01935191e15`，本地私有证据位于`.local/capability-opportunities-20261103/server-evidence/real-evidence-replay-002/`。目标身份的变化来自协议修正，不计作新增目标或发现范围扩大。
+
+最终回归：本地Python **2176通过/241跳过**；Node源码未变，沿用上述完整 **1543通过/21跳过**。Linux最终源码定向 **109通过/0跳过**，smoke与motif:check通过。一次本地受限沙箱全量因localhost绑定权限失败；在允许本地端口的环境对相同源码重跑全部Python后通过，没有删除检查或放宽守卫。原失败日志保留在私有目录。
+
+本轮两次重放均是固定历史提案的零模型机制诊断；新增真实模型请求0、API费用USD0。尚未验证真实模型自主提出新目标，也没有新增效率收益或节余再投资结论。PR1只交付事件接线与可审计记录，后续范围不自动启动。
