@@ -23,6 +23,7 @@ let activeWorkspaceDraft=null;
 let awaitingHistory=false,historyError='';
 let pinnedWorkspaces=[];
 let directoryRequest=0;
+const sessionChanges=new EventTarget();
 let homeDelivery=null;
 function changeSelection(action){const operation=selectionChange.catch(()=>{}).then(action);selectionChange=operation;return operation;}
 const errorText=error=>error?.message||String(error);
@@ -64,7 +65,7 @@ async function connectWorkspace(){
     if(frame.type==='archived'){
       state.archived=new Set(frame.archivedSessionIds);
       // The server also emits this projection when reversible trash changes.
-      loadSessions({closeDeleted:true}).catch(()=>{});
+      refreshSessionVisibility().catch(()=>{});
     }
     if(frame.type==='order')state.workspaces.sort((a,b)=>frame.workspaceIds.indexOf(a.workspaceId)-frame.workspaceIds.indexOf(b.workspaceId));renderSidebar();if(!state.session)scheduleRender();
   },warning);
@@ -87,6 +88,10 @@ async function loadSessions({closeDeleted=false}={}){
   }
   renderSidebar();
   if(state.session||state.workspace)scheduleRender();
+}
+async function refreshSessionVisibility(){
+  await loadSessions({closeDeleted:true});
+  sessionChanges.dispatchEvent(new Event('change'));
 }
 function visibleSession(row){
   if(!row||state.archived.has(row.sessionId)||[...newWorkspaceDrafts.values()].some(draft=>draft.sessionId===row.sessionId))return false;
@@ -473,7 +478,18 @@ async function handleEvent(frame){if(frame.type==='ready'){state.eventClientId=f
   state.approvals??=new Map();let answered=false;const answer=async value=>{if(answered)return;answered=true;await reply({kind:'result',value});modal.close();state.approvals.delete(frame.eventId);};const modal=dialog('操作需要你的确认',node('div',{},node('p',{},frame.request.reason||'服务器请求执行以下操作：'),node('pre',{},JSON.stringify(frame.request,null,2))),[button('拒绝',()=>answer('rejected').catch(fail),'secondary'),button('仅允许这一次',()=>answer('allowed-once').catch(fail),'primary')]);state.approvals.set(frame.eventId,modal);modal.addEventListener('close',()=>{if(!answered)answer('rejected').catch(fail);},{once:true});
 }
 function askText(title,label,initial,submit){const input=node('input',{value:initial||'',required:true}),form=node('form',{},node('label',{},label,input)),save=node('button',{class:'primary'},'确定');form.append(save);const modal=dialog(title,form);form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await submit(input.value.trim());modal.close();}catch(error){fail(error);save.disabled=false;}};input.focus();}
-function settings(initial='appearance'){return settingsPanel({user:state.user,sessions:state.sessions,archived:state.archived,titleOf,theme,fail,toast,refresh:connectWorkspace,logout:showAuth,changed:()=>{$('account-name').textContent=state.user.displayName;}},initial);}
+function settings(initial='appearance'){
+  return settingsPanel({
+    user:state.user,titleOf,theme,fail,toast,refresh:connectWorkspace,logout:showAuth,sessionChanges,
+    archivedSessions:()=>state.sessions.filter(row=>state.archived.has(row.sessionId)),
+    async restoreSession(action,id){
+      await post('/api/harless/session-trash',{action,session_id:id});
+      state.archived.delete(id);
+      await refreshSessionVisibility();
+    },
+    changed:()=>{$('account-name').textContent=state.user.displayName;},
+  },initial);
+}
 function account(){settings('account');}
 async function mutateSession(action,id){await post('/api/harless/session-trash',{action,session_id:id});if(action==='archive')state.archived.add(id);if(state.session===id)$('new-session').click();if(action==='delete'){state.drafts.delete(id);historyCache.delete(id);}await loadSessions();renderConversation();toast(action==='archive'?'对话已归档，可从设置恢复。':'对话已移入最近删除。');}
 function renameSession(id){askText('重命名对话','对话名称',titleOf(state.sessions.find(row=>row.sessionId===id)),async title=>{await rpc('session/rename',{sessionId:id,title});await loadSessions();renderConversation();});}

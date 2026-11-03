@@ -139,9 +139,16 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('[data-session-id="history"] button').click()`);
  await until(()=>evaluate(`document.getElementById('session-title').textContent==='协议诊断历史'`),'打开跨端删除测试会话');
  const externalTrash=action=>evaluate(`fetch('/api/fixture/external-trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'${action}'})}).then(response=>response.ok)`);
+ await evaluate(`document.getElementById('settings-nav').click();document.querySelector('[data-page="archive"]').click()`);
+ assert.equal(await externalTrash('archive'),true);
+ await until(()=>evaluate(`!document.querySelector('[data-session-id="history"]')&&document.querySelector('.settings-body').textContent.includes('协议诊断历史')`),'另一端归档更新桌面侧栏和已打开的设置');
+ assert.equal(await externalTrash('unarchive'),true);
+ await until(()=>evaluate(`!!document.querySelector('[data-session-id="history"]')&&!document.querySelector('.settings-body').textContent.includes('协议诊断历史')`),'另一端取消归档后恢复');
+ await evaluate(`document.querySelector('[data-page="trash"]').click()`);
  assert.equal(await externalTrash('delete'),true);
- await until(()=>evaluate(`!document.querySelector('[data-session-id="history"]')&&document.getElementById('session-title').textContent==='诊断工作区'`),'另一端删除后侧栏和当前对话同步关闭');
+ await until(()=>evaluate(`!document.querySelector('[data-session-id="history"]')&&document.getElementById('session-title').textContent==='诊断工作区'&&document.querySelector('.settings-body').textContent.includes('协议诊断历史')`),'另一端删除后侧栏、当前对话和已打开的最近删除同步');
  assert.equal(await externalTrash('restore'),true);
- await until(()=>evaluate(`!!document.querySelector('[data-session-id="history"]')`),'另一端恢复后侧栏同步');
+ await until(()=>evaluate(`!!document.querySelector('section[aria-label="诊断工作区"] [data-session-id="history"]')&&!document.querySelector('.settings-body').textContent.includes('协议诊断历史')`),'另一端恢复后回到原工作区并移出最近删除');
+ check('跨端归档、取消归档、删除和恢复即时更新桌面侧栏及打开的设置页');
  report.ok=true;
 }).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');}catch{}console.error(error);}).finally(()=>{writeFileSync(join(fixture.output,'summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));desktop?.permitClose();app.quit();});

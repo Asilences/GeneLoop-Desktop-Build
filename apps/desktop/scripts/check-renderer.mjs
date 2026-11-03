@@ -33,16 +33,13 @@ const server=createServer(async(req,res)=>{
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
   if(path==='/api/harless/tasks')return json(res,{tasks:[]});
-  if(path==='/api/fixture/external-trash'){
-   if(body.action==='delete')deleted.add('history');else deleted.delete('history');
-   push('workspace/follow',{type:'archived',archivedSessionIds:[...archived]});
-   return json(res,{ok:true});
-  }
-  if(path==='/api/harless/session-trash'){
-   const id=body.session_id;
+  if(path==='/api/harless/session-trash'||path==='/api/fixture/external-trash'){
+   const id=path==='/api/fixture/external-trash'?'history':body.session_id;
    if(body.action==='archive')archived.add(id);
    if(body.action==='unarchive')archived.delete(id);
    if(body.action==='delete')deleted.add(id);
+   if(body.action==='restore'){deleted.delete(id);archived.delete(id);}
+   if(body.action)push('workspace/follow',{type:'archived',archivedSessionIds:[...archived]});
    return json(res,{sessions:sessions.filter(row=>deleted.has(row.sessionId)).map(row=>({session_id:row.sessionId,title:row.projections.values.title})),revision:'fixture'});
   }
   if(path==='/api/harless/questions'){if(req.method==='POST')questionPending=false;return json(res,{questions:questionPending?[{id:'question-fixture',questions:[{id:'q1',question:'请选择诊断范围',multiSelect:true,options:[{id:'wrong-id-1',label:'保留来源'},{id:'wrong-id-2',label:'生成副本'}]}]}]:[]});}
