@@ -60,14 +60,37 @@ async function selectSession(id){
   if(generation===state.generation)currentFollow=stop;else stop();await refreshTaskPanels();
 }
 function scheduleRender(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;renderConversation();});}
-function renderConversation(){const history=$('history'),nearBottom=history.scrollHeight-history.scrollTop-history.clientHeight<140;const rows=state.conversation.rows();$('session-title').textContent=titleOf(state.sessions.find(row=>row.sessionId===state.session));$('session-status').textContent=state.conversation.running?'正在执行…':state.session?'工作空间已连接':'开始你的研究';$('stop').hidden=!state.conversation.running;$('chat-tab').classList.toggle('selected',!state.trace);$('trace-tab').classList.toggle('selected',state.trace);
-  history.replaceChildren();if(!rows.length&&!state.conversation.live.size){const welcome=node('div',{class:'welcome'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),node('h2',{},'探索未至之境'),node('p',{},'把资料、想法和下一步，连接起来。'),node('div',{class:'scene-cards'},...(state.settings?.scenes||[]).map(scene=>button(labels[scene.id]||scene.label,()=>chooseScene(scene.id).catch(fail)))));history.append(welcome);}
+function renderConversation(){
+  const history=$('history'),previousTop=history.scrollTop,nearBottom=history.scrollHeight-previousTop-history.clientHeight<140;
+  const rows=state.conversation.rows(),renderedComparisons=new Set();
+  const resultCard=id=>comparisonCard(state.comparisons.get(id),{trace:state.trace,fail,onUpdate:next=>{state.comparisons.set(id,next);scheduleRender();}});
+  $('session-title').textContent=titleOf(state.sessions.find(row=>row.sessionId===state.session));
+  $('session-status').textContent=state.conversation.running?'正在执行…':state.session?'工作空间已连接':'开始你的研究';
+  $('stop').hidden=!state.conversation.running;
+  $('chat-tab').classList.toggle('selected',!state.trace);$('trace-tab').classList.toggle('selected',state.trace);
+  history.replaceChildren();
+  if(!rows.length&&!state.conversation.live.size){
+    history.append(node('div',{class:'welcome'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),node('h2',{},'探索未至之境'),node('p',{},'把资料、想法和下一步，连接起来。'),node('div',{class:'scene-cards'},...(state.settings?.scenes||[]).map(scene=>button(labels[scene.id]||scene.label,()=>chooseScene(scene.id).catch(fail))))));
+  }
   if(state.conversation.hasMore)history.prepend(button('加载更早消息',loadEarlier,'secondary'));
-  for(const row of rows){if(row.role==='tool'||row.role==='tool-result'){if(state.trace)history.append(node('details',{class:'trace-item'},node('summary',{},row.role==='tool'?'调用工具 · '+row.name:'工具返回'),node('pre',{},row.arguments||JSON.stringify(row.data,null,2))));continue;}if(state.trace)continue;const article=node('article',{class:'message '+row.role,'data-seq':row.seq});if(row.role==='assistant')article.append(node('div',{class:'message-label'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),'GeneLoop'));article.append(blocks(row.blocks));if(row.role==='assistant')article.append(node('div',{class:'message-meta'},button('复制',()=>navigator.clipboard.writeText(row.blocks.filter(block=>block.type==='text').map(block=>block.text).join('\n'))),new Date(row.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),row.interrupted?'已中断':null));history.append(article);}
+  for(const row of rows){
+    if(row.role==='tool'||row.role==='tool-result'){
+      if(state.trace)history.append(node('details',{class:'trace-item'},node('summary',{},row.role==='tool'?'调用工具 · '+row.name:'工具返回'),node('pre',{},row.arguments||JSON.stringify(row.data,null,2))));
+      continue;
+    }
+    if(state.trace)continue;
+    const article=node('article',{class:'message '+row.role,'data-seq':row.seq});
+    if(row.role==='assistant')article.append(node('div',{class:'message-label'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),'GeneLoop'));
+    article.append(blocks(row.blocks));
+    if(row.role==='assistant')article.append(node('div',{class:'message-meta'},button('复制',()=>navigator.clipboard.writeText(row.blocks.filter(block=>block.type==='text').map(block=>block.text).join('\n'))),new Date(row.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),row.interrupted?'已中断':null));
+    history.append(article);
+    const reference=state.conversation.events.get(row.seq)?.data?.harless_comparison;
+    if(reference&&state.comparisons.has(reference.id)){history.append(resultCard(reference.id));renderedComparisons.add(reference.id);}
+  }
   if(!state.trace&&state.conversation.live.size)history.append(node('article',{class:'message assistant live'},node('div',{class:'message-label'},'GeneLoop · 正在回复'),blocks([...state.conversation.live.values()])));
-  for(const [id,value]of state.comparisons)history.append(comparisonCard(value,{trace:state.trace,fail,onUpdate:next=>{state.comparisons.set(id,next);scheduleRender();}}));
+  for(const [id]of state.comparisons)if(!renderedComparisons.has(id))history.append(resultCard(id));
   if(state.trace&&state.jobs?.length)history.append(node('div',{class:'trace-item'},'后台任务',node('pre',{},JSON.stringify(state.jobs,null,2))));
-  if(nearBottom)history.scrollTop=history.scrollHeight;
+  history.scrollTop=nearBottom?history.scrollHeight:previousTop;
 }
 async function loadEarlier(){try{const before=Math.min(...state.conversation.events.keys());const value=await rpc('session/page',{address:{kind:'session',sessionId:state.session},throughSeq:state.conversation.cursor,beforeSeq:before,maxMessages:80});state.conversation.prepend(value.records);state.conversation.hasMore=value.hasMore;renderConversation();}catch(error){fail(error);}}
 function renderScenes(){const select=$('scene-select');select.replaceChildren();for(const scene of state.settings?.scenes||[]){const option=node('option',{value:scene.id,disabled:scene.available===false,title:scene.unavailable_reason},labels[scene.id]||scene.label);select.append(option);}select.value=state.composerScene||'new-scene';}

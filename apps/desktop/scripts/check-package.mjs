@@ -89,10 +89,10 @@ try {
   command = await cdp(target.webSocketDebuggerUrl);
   const evaluate = async expression => {
     const value = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-    if (value.exceptionDetails) throw Error(value.exceptionDetails.text);
+    if (value.exceptionDetails) throw Error(value.exceptionDetails.exception?.description || value.exceptionDetails.text);
     return value.result.value;
   };
-  await until(() => evaluate('/登录|Sign in|Log in/.test(document.body.innerText)'), '本地登录界面');
+  await until(() => evaluate('Boolean(document.body && /登录|Sign in|Log in/.test(document.body.innerText))'), '本地登录界面');
   assert.deepEqual(await evaluate('[typeof require,typeof process,typeof window.geneLoopDesktop]'), ['undefined', 'undefined', 'undefined']);
   assert.equal(await evaluate("fetch('/login', {credentials:'omit'}).then(response => response.headers.get('x-geneloop-desktop-resource'))"), 'local');
   report.checks.push('实际打包程序从 ASAR 启动并加载本地登录页，无 Node 或桌面 IPC 暴露');
@@ -109,8 +109,10 @@ finally {
   for (const socket of sockets) socket.close();
   if (child.pid && child.exitCode === null) {
     await Promise.race([once(child, 'exit').catch(() => {}), new Promise(done => setTimeout(done, 2000))]);
-    if (child.exitCode === null) await new Promise(done => execFile('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }, () => done()));
+    if (child.exitCode === null) { report.ok=false;report.error='打包程序正常退出超时，清理本次诊断子进程。';await new Promise(done => execFile('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }, () => done())); }
   }
+  report.process_exit_code=child.exitCode;
+  if(child.exitCode!==0){report.ok=false;report.error??='打包程序未正常退出。';}
   writeFileSync(join(output, 'packaged-summary.json'), JSON.stringify(report, null, 2) + '\n');
   // 只删除本脚本刚创建的临时副本，先核对绝对目标与临时根目录。
   const target = realpathSync(isolatedRoot);

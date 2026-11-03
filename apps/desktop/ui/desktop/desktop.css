@@ -3,3 +3,5 @@
 .settings-layout{display:flex;gap:24px;min-height:360px}.settings-nav{display:flex;flex-direction:column;gap:8px;min-width:130px}.settings-nav button{text-align:left;border-radius:8px;padding:8px}.settings-body{flex:1;min-width:240px;max-height:65vh;overflow:auto}.settings-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:10px 0;border-bottom:1px solid var(--line)}.settings-body form{margin-bottom:24px}.settings-body input{width:100%}.comparison-result .message-meta{flex-wrap:wrap}.comparison-result .selected{background:var(--selection);color:var(--blue)}
 
 .new-session{display:flex;justify-content:center;align-items:center;gap:8px}.sidebar footer>button{display:flex;align-items:center;gap:10px}.comparison-lane{border:1px solid var(--line);border-radius:14px;padding:20px;margin:12px 0}.comparison-lane h4{margin:0 0 3px}.comparison-lane small{color:var(--muted)}svg{flex-shrink:0;vertical-align:middle}
+
+.sidebar footer>button:not(#account-nav){justify-content:flex-start}body[data-auth-active]{--gl-sidebar:#141414;--gl-ink:#f5f5f7}
