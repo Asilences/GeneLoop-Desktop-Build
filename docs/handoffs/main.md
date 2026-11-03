@@ -1,6 +1,6 @@
 ## 2026-11-03：GeneLoop Desktop 首版（独立未合并分支）
 
-桌面工作位于 `codex/geneloop-desktop-remote`，基于GitHub main `2f29d34`，没有修改原PPT分支或生产服务。Windows x64安装包对应应用源码`dc5aa18`，本地打包现有GeneLoop/DSH界面，Agent/工具仍在服务器。六项定向、十项实际Electron和三项打包程序只读检查通过；根回归在本机保留失败，真实账号/模型任务与安装卸载未验收。未推送、合并或部署。接手见[桌面交接](desktop.md)、[使用说明](../desktop.md)及[验收记录](../experiments/geneloop-desktop-20261103.md)。
+桌面工作位于 `codex/geneloop-desktop-remote`，基于GitHub main `2f29d34`，没有修改原PPT分支或生产服务。本地打包现有GeneLoop/DSH界面，Agent/工具仍在服务器。用户安装0.1.1发现cordis运行依赖漏包，旧打包检查因借用源码祖先依赖失效；现0.1.2 / `ca983b4`显式补齐，六项定向、四项源码外隔离启动检查通过，NSIS内exe/asar与独立启动文件一致；历史十项实际Electron检查另列。根回归在本机保留失败，真实账号/模型任务与安装卸载未验收。未推送、合并或部署。接手见[桌面交接](desktop.md)、[使用说明](../desktop.md)及[验收记录](../experiments/geneloop-desktop-20261103.md)。
 
 ## 2026-11-03：Capability Frontier 夜间研究
 

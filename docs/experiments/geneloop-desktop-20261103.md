@@ -1,5 +1,7 @@
 # GeneLoop Desktop 首版工程验收
 
+> 后续安装缺陷与结论更正（同日）：用户安装0.1.1后发生 `ERR_MODULE_NOT_FOUND: @deepseek-ai/cordis`。旧打包启动在源码目录下运行，意外从祖先node_modules补齐了缺失peer；下文原三项打包检查只代表该开发环境中的运行，不能证明独立分发成功。0.1.2 / `ca983b4`显式加入生产依赖，并将检查改为源码外完整副本、祖先无node_modules、清除NODE_PATH/NODE_OPTIONS的实际启动；六项定向与四项隔离检查通过。运行 `packaged-52a8c7f2-9b15-433d-a985-e4bff5cd444b`。从NSIS安装器解出的app.asar与exe均与独立启动文件SHA256一致，cordis4.0.2实际存在、透明图标保留。未执行安装器或改用户注册表，实际安装/卸载仍待验收。安装包125797335字节、SHA256 `bff287a5f9ab386e597bb7278b322dfcd957c4f43fd765c8e2ce4b31b8fcfe9b`；原始负面证据和0.1.0/0.1.1产物保留。当前独立启动结论以本段和[桌面交接](../handoffs/desktop.md)为准。
+
 - 实验 ID：`geneloop-desktop-20261103`，2026-11-03，Codex。
 - 问题：能否用本地打包的 GeneLoop 界面和独立桌面生命周期，连接原服务器完成原生工作区交互；不迁移 Agent，不以模拟回答证明场景效果。
 - 类型：工程诊断。没有质量/费用对照，不支持降本、场景交付质量或生产可用性结论。

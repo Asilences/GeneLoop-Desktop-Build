@@ -33,7 +33,9 @@ npm run desktop:build
 npm --prefix apps/desktop run smoke:packaged
 ```
 
-桌面依赖及锁文件位于 `apps/desktop/`，不改变根运行时依赖。`desktop:build` 生成 Windows x64 NSIS 安装包到 `apps/desktop/release/`，显式禁止自动发布；最终用户运行安装包不需要 Git、Node 或 Python。`smoke:packaged` 在独立用户目录启动实际打包程序，只读检查公开登录页和 ASAR 资源，关闭时仅清理它持有的进程树；不执行安装器或登录账号。
+桌面依赖及锁文件位于 `apps/desktop/`，不改变根运行时依赖。`desktop:build` 生成 Windows x64 NSIS 安装包到 `apps/desktop/release/`，显式禁止自动发布；最终用户运行安装包不需要 Git、Node 或 Python。DSH 两个宿主辅助包依赖的 `@deepseek-ai/cordis` 必须显式列在桌面生产依赖中，不能只靠开发环境中的 peer dependency。
+
+`smoke:packaged` 先检查 ASAR 包含该运行依赖，再把完整应用复制到源码目录外的系统临时目录，确认祖先没有 `node_modules` 后启动；隔离用户目录并清除依赖解析相关环境变量，只读检查公开登录页。结束时只退出自有进程、核对绝对路径后清理本次副本，不执行安装器、写注册表或登录账号。源码目录内直接运行曾掩盖0.1.0/0.1.1漏打依赖的问题，当前验收必须使用此隔离入口。
 
 `GENELOOP_DESKTOP_URL` 可指定 HTTPS 服务器根地址；优先于保存的连接设置，不接受令牌、用户名/密码、路径或查询参数。仅未打包开发模式可用 `GENELOOP_DESKTOP_ALLOW_HTTP_LOOPBACK=1` 连接本机 HTTP fixture；`GENELOOP_DESKTOP_USER_DATA_DIR` 也仅供未打包调试隔离。它们不是本机 Agent 模式。
 

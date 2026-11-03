@@ -1,6 +1,7 @@
 # GeneLoop Desktop 当前交接
 
 - 更新时间与交接人：2026-11-03，Codex。
+- 当前安装启动修复：0.1.2 / `ca983b4`。用户安装0.1.1后主进程找不到 `@deepseek-ai/cordis`；确认其仅通过peer进入开发环境，electron-builder未纳入生产包。现显式添加生产依赖4.0.2并更新锁文件。旧包在新增依赖断言下确实失败；修复后六项桌面检查、构建及四项源码外隔离启动检查通过。隔离运行 `packaged-52a8c7f2-9b15-433d-a985-e4bff5cd444b`，祖先无node_modules，成功打开本地登录页，无模型调用。另从NSIS安装器直接解出app.asar与exe，SHA256均与隔离启动文件一致，确认包含cordis且保留透明图标；未执行NSIS或触碰用户安装/注册表。安装包125797335字节、SHA256 `bff287a5f9ab386e597bb7278b322dfcd957c4f43fd765c8e2ce4b31b8fcfe9b`。此前源码目录内启动借用了祖先开发依赖，旧三项通过不能作为独立分发成功证据，结论已更正。请使用0.1.2，旧安装包保留作失败证据。
 - 本轮图标修正：`5cc241d` / 0.1.1，仅保留现有彩色纽带，PNG与ICO使用透明补边。512px PNG、ICO六个尺寸通过alpha/颜色检查；ASAR内图标与源文件一致，Windows可执行文件中六帧均为相同透明PNG字节。构建exit 0，安装器125753709字节，SHA256 `cdd6bdb4c934352c38a1912b7dfc07e740b3cf611a99e4152425c621e01cdc50`。默认构建曾下载超时，改用 `npm --prefix apps/desktop run dist -- --config.electronDist=node_modules/electron/dist` 复用已安装的45.2.1运行时完成；未改聊天或服务器代码，无模型调用，未重复全量测试。原0.1.0记录保留如下。
 - 目标与本次范围：独立 GeneLoop Desktop，参考 DSH 桌面宿主；界面、场景交互与视觉复用 GeneLoop 网页版。第一阶段 Agent/工具留在服务器，后续逐步增加本机执行。
 - 分支 / commit / 工作区未提交改动：`codex/geneloop-desktop-remote`，基于远程 ls-remote/fetch 核实的 GitHub main `2f29d34`，独立检出 `.local/desktop-worktree-20261103`。F0/F1/F2 已分别提交 `2e72a5d` / `f8afe72` / `33e1e35`；最终应用修复及安装包源码 `dc5aa18`，Windows验收脚本路径修正与交接随后提交。未推送或合并；原 PPT 分支和两份未跟踪实验文档未动。
