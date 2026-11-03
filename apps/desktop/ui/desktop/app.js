@@ -1,6 +1,6 @@
 import {request,post,rpc,upload,RemoteStreams} from './api.js';
 import {Conversation} from './conversation.js';
-import {node,button,blocks,markdown,dialog,icon,popupMenu,choiceControl,refreshChoice} from './components.js';
+import {node,button,blocks,markdown,dialog,icon,popupMenu,choiceControl,refreshChoice,replyAction} from './components.js';
 import {promptContent} from './composer.js';
 import {settingsPanel,conversationPreferences} from './panels.js';
 import {comparisonCard} from './comparison.js';
@@ -435,7 +435,10 @@ function renderConversation(){
     }
     article.append(message);
     for(const deck of decks){article.append(presentationCard(deck));shownNative.add(deck);}
-    if(row.role==='assistant')article.append(node('div',{class:'message-meta'},button('复制',()=>navigator.clipboard.writeText(row.blocks.filter(block=>block.type==='text').map(block=>block.text).join('\n'))),new Date(row.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),row.interrupted?'已中断':null));
+    if(row.role==='assistant'){
+      const copy=replyAction('复制回复','copy',()=>navigator.clipboard.writeText(row.blocks.filter(block=>block.type==='text').map(block=>block.text).join('\n')).catch(fail));
+      article.append(node('div',{class:'message-meta'},copy,new Date(row.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),row.interrupted?'已中断':null));
+    }
     history.append(article);
     const reference=state.conversation.events.get(row.seq)?.data?.harless_comparison;
     if(reference&&state.comparisons.has(reference.id)){history.append(resultCard(reference.id));renderedComparisons.add(reference.id);}

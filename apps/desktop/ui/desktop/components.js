@@ -2,6 +2,9 @@ import {icons} from "./lucide-icons.js";
 /** 服务器/模型内容只进入安全DOM，不执行HTML、脚本或未校验链接。 */
 export const node=(tag,attributes={},...children)=>{const el=document.createElement(tag);for(const[key,value]of Object.entries(attributes)){if(key==='class')el.className=value;else if(key.startsWith('on'))el.addEventListener(key.slice(2),value);else if(value!==undefined&&value!==false)el.setAttribute(key,value===true?'':String(value));}for(const child of children.flat(Infinity))if(child!==null&&child!==undefined)el.append(child instanceof Node?child:document.createTextNode(String(child)));return el;};
 export const button=(label,click,cls='')=>node('button',{type:'button',class:cls,onclick:click},label);
+export const replyAction=(label,symbol,action)=>node('button',{
+  type:'button',class:'result-icon','aria-label':label,'data-tooltip':label,onclick:action,
+},icon(symbol));
 export function icon(name){
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   const attributes={viewBox:'0 0 24 24',width:20,height:20,fill:'none',stroke:'currentColor',

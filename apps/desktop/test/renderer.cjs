@@ -31,6 +31,7 @@ app.whenReady().then(async()=>{
  check('无标题空会话不占历史列表，首页示例只填草稿并保护已有文字');
  await evaluate(`document.querySelector('.session-row').click()`);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'历史双路结果');
+ assert.equal(await evaluate(`(()=>{const copy=document.querySelector('.message-meta button[aria-label="复制回复"]');return !!copy?.querySelector('svg')&&!copy.textContent&&getComputedStyle(copy,'::after').content.includes('复制回复')})()`),true);
  assert.equal(await evaluate(`document.querySelector('.workspace-group .workspace-children [data-session-id="history"]')!==null`),true);
  const toggleGroup=`[...document.querySelectorAll('.workspace-row')].find(row=>row.textContent==='诊断工作区')`;
  await evaluate(`${toggleGroup}.click()`);
