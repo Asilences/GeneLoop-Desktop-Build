@@ -56,10 +56,10 @@ export class DesktopWorkspace {
     ipcMain.handle('geneloop:state', event => { this.requireShell(event); return this.state(); });
     ipcMain.handle('geneloop:menu', (event, name: unknown) => {
       this.requireShell(event);
-      if (name !== 'app' && name !== 'edit' && name !== 'view') return;
+      if (name !== 'file' && name !== 'edit' && name !== 'view' && name !== 'help') return;
       if (this.stateValue.phase === 'connected' && this.stateValue.modalOpen) return;
       if (this.pageReady && this.stateValue.phase === 'connected') this.workspace?.webContents.focus();
-      Menu.getApplicationMenu()?.getMenuItemById('desktop-' + name)?.submenu?.popup({ window: this.window, x: { app: 8, edit: 58, view: 108 }[name], y: TITLE_BAR_HEIGHT });
+      Menu.getApplicationMenu()?.getMenuItemById('desktop-' + name)?.submenu?.popup({ window: this.window, x: { file: 8, edit: 58, view: 108, help: 158 }[name], y: TITLE_BAR_HEIGHT });
     });
     ipcMain.handle('geneloop:settings', event => { this.requireShell(event); this.showSettings(); });
     ipcMain.handle('geneloop:retry', event => { this.requireShell(event); void this.connect(this.stateValue.server); });
@@ -85,6 +85,15 @@ export class DesktopWorkspace {
 
   state(): DesktopState { return { ...this.stateValue }; }
   permitClose(): void { this.allowClose = true; }
+
+  runWorkspaceCommand(command: 'new-session' | 'new-workspace' | 'attach' | 'account-nav'): void {
+    const view = this.workspace?.webContents;
+    if (!view || view.isDestroyed() || !this.stateValue.workspaceVisible ||
+        this.stateValue.phase !== 'connected' || this.stateValue.modalOpen ||
+        !sameServer(view.getURL(), this.stateValue.server)) return;
+    // 附件按钮需要桌面菜单点击提供的用户手势来打开系统文件选择器。
+    void view.executeJavaScript(`document.getElementById(${JSON.stringify(command)})?.click(); void 0`, true).catch(() => {});
+  }
 
   private requireShell(event: IpcMainInvokeEvent): void {
     if (event.sender !== this.window.webContents || event.senderFrame !== this.window.webContents.mainFrame ||

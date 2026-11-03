@@ -13,7 +13,7 @@ export function settingsPanel(context,initial='appearance'){
     if(id==='appearance'){
       const preference=node('select',{},...['system','light','dark'].map(value=>node('option',{value},({system:'跟随系统',light:'浅色',dark:'深色'})[value])));
       preference.value=localStorage.getItem('geneloop.desktop.theme')||'system';preference.onchange=()=>{localStorage.setItem('geneloop.desktop.theme',preference.value);context.theme();};
-      body.append(node('h3',{},'桌面外观'),node('label',{},'主题',preference),node('p',{},'服务器：'+location.origin),node('p',{},'从应用菜单的连接设置修改服务器地址。'),button('刷新服务器状态',guard(async()=>{modal.close();await context.refresh();}),'secondary'));
+      body.append(node('h3',{},'桌面外观'),node('label',{},'主题',preference),node('p',{},'服务器：'+location.origin),node('p',{},'从「文件」菜单的连接设置修改服务器地址。'),button('刷新服务器状态',guard(async()=>{modal.close();await context.refresh();}),'secondary'));
     }else if(id==='archive'){
       body.append(node('h3',{},'已归档对话'));const rows=context.sessions.filter(row=>context.archived.has(row.sessionId));
       if(!rows.length)body.append(node('p',{},'暂无归档对话。'));

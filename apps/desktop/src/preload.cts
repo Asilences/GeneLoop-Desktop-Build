@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld('geneLoopDesktop', Object.freeze({
   state: () => ipcRenderer.invoke('geneloop:state'),
   connect: (server: string) => ipcRenderer.invoke('geneloop:connect', server),
   retry: () => ipcRenderer.invoke('geneloop:retry'),
-  menu: (name: 'app' | 'edit' | 'view') => ipcRenderer.invoke('geneloop:menu', name),
+  menu: (name: 'file' | 'edit' | 'view' | 'help') => ipcRenderer.invoke('geneloop:menu', name),
   settings: () => ipcRenderer.invoke('geneloop:settings'),
   onState: (callback: (value: unknown) => void) => {
     const listener = (_event: unknown, value: unknown) => callback(value);

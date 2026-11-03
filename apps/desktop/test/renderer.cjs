@@ -14,6 +14,13 @@ app.whenReady().then(async()=>{
  assert.equal(await menusHidden(),true);
  await until(()=>evaluate('!document.getElementById("workspace").hidden'),'独立界面');
  await until(async()=>!(await menusHidden()),'工作区左上角菜单');
+ assert.deepEqual(await desktop.window.webContents.executeJavaScript(
+   `[...document.querySelectorAll('#desktop-menus button')].map(button=>button.textContent)`
+ ),['文件','编辑','视图','帮助']);
+ desktop.runWorkspaceCommand('new-workspace');
+ await until(()=>evaluate('document.querySelector("dialog h2")?.textContent==="新建工作区"'),'文件菜单命令打开现有工作区表单');
+ await evaluate('document.querySelector("dialog").close()');
+ await until(async()=>!(await desktop.state().modalOpen),'关闭工作区表单后恢复菜单');
  assert.equal(await evaluate(`['light','dark'].every(theme=>{const body=document.body,dark=body.hasAttribute('data-ds-dark-theme');body.toggleAttribute('data-ds-dark-theme',theme==='dark');const ok=getComputedStyle(document.getElementById('auth')).backgroundColor===getComputedStyle(document.getElementById('workspace')).backgroundColor && getComputedStyle(document.getElementById('loading')).backgroundColor===getComputedStyle(document.querySelector('.auth-art')).backgroundColor;body.toggleAttribute('data-ds-dark-theme',dark);return ok})`),true);
  check('启动等待时隐藏左上角菜单，工作区就绪后显示');
  assert.equal(await evaluate(`document.querySelector('[data-session-id="empty-fixture"]')===null`),true);

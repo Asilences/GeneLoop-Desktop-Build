@@ -29,18 +29,25 @@ else {
       desktop.ready.catch(() => { dialog.showErrorBox('GeneLoop Desktop', '连接页面无法启动，请重新安装应用。'); app.quit(); });
     };
     Menu.setApplicationMenu(Menu.buildFromTemplate([
-      { id: 'desktop-app', label: '应用', submenu: [
+      { id: 'desktop-file', label: '文件', submenu: [
+        { label: '新会话', accelerator: 'CmdOrCtrl+N', click: () => desktop?.runWorkspaceCommand('new-session') },
+        { label: '新建工作区…', click: () => desktop?.runWorkspaceCommand('new-workspace') },
+        { type: 'separator' },
+        { label: '添加附件…', accelerator: 'CmdOrCtrl+O', click: () => desktop?.runWorkspaceCommand('attach') },
+        { label: '打开最近下载的位置', click: () => { void desktop?.openLastDownload(); } },
+        { type: 'separator' },
         { label: '返回工作区', click: () => desktop?.showWorkspace() },
         { label: '重新连接', accelerator: 'CmdOrCtrl+R', click: () => { if (desktop) void desktop.connect(desktop.state().server); } },
         { label: '连接设置', accelerator: 'CmdOrCtrl+,', click: () => desktop?.showSettings() },
         { type: 'separator' },
-        { label: '打开最近下载的位置', click: () => { void desktop?.openLastDownload(); } },
+        { label: '关闭窗口', accelerator: 'CmdOrCtrl+W', click: () => desktop?.window.close() },
+        { label: '账户与安全…', click: () => desktop?.runWorkspaceCommand('account-nav') },
         { type: 'separator' },
-        { label: '退出 GeneLoop Desktop', role: 'quit' },
+        { label: '退出 GeneLoop Desktop', role: 'quit', accelerator: 'CmdOrCtrl+Q' },
       ] },
       { id: 'desktop-edit', label: '编辑', submenu: [ { role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' } ] },
       { id: 'desktop-view', label: '视图', submenu: [ { label: '实际大小', role: 'resetZoom' }, { label: '放大', role: 'zoomIn' }, { label: '缩小', role: 'zoomOut' }, { type: 'separator' }, { label: '切换全屏', role: 'togglefullscreen' } ] },
-      { label: '帮助', submenu: [ { label: '关于 GeneLoop Desktop', click: () => {
+      { id: 'desktop-help', label: '帮助', submenu: [ { label: '关于 GeneLoop Desktop', click: () => {
         if (desktop) void dialog.showMessageBox(desktop.window, { type: 'info', message: 'GeneLoop Desktop ' + app.getVersion(), detail: '当前版本连接 GeneLoop 服务器，Agent 与场景工具在服务器执行。' });
       } } ] },
     ]));

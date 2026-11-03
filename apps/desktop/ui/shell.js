@@ -26,9 +26,10 @@
   }
   bridge.onState(render);
   bridge.state().then(render);
-  byId('app-menu').onclick = () => bridge.menu('app');
+  byId('file-menu').onclick = () => bridge.menu('file');
   byId('edit-menu').onclick = () => bridge.menu('edit');
   byId('view-menu').onclick = () => bridge.menu('view');
+  byId('help-menu').onclick = () => bridge.menu('help');
   byId('retry').onclick = () => bridge.retry();
   byId('configure').onclick = () => render({ ...latest, phase: 'settings', message: '' });
   byId('settings').onsubmit = async event => {
