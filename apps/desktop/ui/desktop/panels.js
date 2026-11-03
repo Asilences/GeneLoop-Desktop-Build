@@ -4,8 +4,11 @@ import {node,button,dialog} from './components.js';
 export function settingsPanel(context,initial='appearance'){
   const body=node('div',{class:'settings-body'}),menu=node('nav',{class:'settings-nav'});
   const modal=dialog('设置',node('div',{class:'settings-layout'},menu,body));
+  modal.classList.add('settings-dialog');
   const guard=fn=>async()=>{try{await fn();}catch(error){context.fail(error);}};
   async function page(id){
+    for(const tab of menu.children)tab.setAttribute('aria-current',String(tab.dataset.page===id));
+    body.scrollTop=0;
     body.replaceChildren();
     if(id==='appearance'){
       const preference=node('select',{},...['system','light','dark'].map(value=>node('option',{value},({system:'跟随系统',light:'浅色',dark:'深色'})[value])));
@@ -34,6 +37,10 @@ export function settingsPanel(context,initial='appearance'){
       body.append(profile,form,button('退出登录',guard(async()=>{await post('/api/account/logout',{});modal.close();context.logout();}),'secondary'));
     }
   }
-  for(const [id,label]of [['appearance','外观'],['archive','已归档对话'],['trash','最近删除'],['account','账户与安全']])menu.append(button(label,guard(()=>page(id))));
+  for(const [id,label]of [['appearance','外观'],['archive','已归档对话'],['trash','最近删除'],['account','账户与安全']]){
+    const tab=button(label,guard(()=>page(id)));
+    tab.dataset.page=id;
+    menu.append(tab);
+  }
   page(initial).catch(context.fail);return modal;
 }

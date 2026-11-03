@@ -29,7 +29,7 @@ app.whenReady().then(async()=>{
  await evaluate(`document.getElementById('new-workspace').click();document.querySelector('dialog input').value='桌面独立诊断';document.querySelector('dialog form').requestSubmit()`);
  await until(()=>evaluate('document.getElementById("workspace-list").textContent.includes("桌面独立诊断")&&!document.querySelector("dialog")'),'原生新建工作区');
  check('独立表单通过原接口建立服务器工作区并订阅目录');
- await evaluate(`document.getElementById('scene-select').value='paper-proofreading';document.getElementById('scene-select').dispatchEvent(new Event('change'))`);
+ await evaluate(`document.getElementById('scene-select').click();[...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/paper')).click()`);
  await until(()=>evaluate(`document.querySelectorAll('.session-row').length>0&&document.getElementById('toast').textContent==='已选择 论文校对'`),'原生空会话与场景选择');
  const selected=await evaluate(`fetch('/api/harless/settings').then(r=>r.json()).then(v=>v.sessions.some(s=>s.selection.scene==='paper-proofreading'))`);assert.equal(selected,true);
  await evaluate(`document.getElementById('rename-session').click();document.querySelector('dialog input').value='独立桌面协议检查';document.querySelector('dialog form').requestSubmit()`);
