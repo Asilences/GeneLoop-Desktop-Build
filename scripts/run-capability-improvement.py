@@ -15,6 +15,8 @@ def main():
     args=parser.parse_args();plan=validate('plan',read(args.plan))
     if not Path(plan['output']).resolve().is_relative_to(ROOT/'.local'):
         parser.error('raw improvement evidence must remain in private .local')
+    if plan.get('opportunity_discovery') and not Path(plan['opportunity_discovery']['directory']).resolve().is_relative_to(ROOT/'.local'):
+        parser.error('opportunity evidence must remain in private .local')
     adapter=load_scene_adapter(plan)
     result=run_improvement(plan,adapter,execute=args.call_model)
     print(json.dumps(result,ensure_ascii=False))

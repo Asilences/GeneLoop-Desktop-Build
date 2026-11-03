@@ -97,6 +97,20 @@ class CapabilityImprovementAdapter:
     def publish(self,job,candidate,attempt,expected_latest):
         raise NotImplementedError('scene_native_publication_required')
 
+    def propose_opportunities(self, request, output):
+        from src.adapters.capability_goal_proposal import propose
+        factory=getattr(self,'opportunity_gate_factory',None)
+        if factory is not None:
+            # Acquire the original ledger lock only for this proposal; normal
+            # construction subprocesses use the same cumulative ledger.
+            with factory(request,output) as gate:return propose(request,output,gate)
+        return propose(request,output,getattr(self,'opportunity_gate',None))
+
+    def review_opportunity(self, proposal, request, output):
+        # Host scene code supplies the independent quality contract. A model
+        # cannot turn its own proposed interface into a publication validator.
+        return {'decision':'pending','reason':'independent_goal_validation_required'}
+
     def acquire(self,job,result,attempt):
         """Opt-in native Script acquisition; publication remains scene-owned."""
         if not result.get('model_requested_program'):
