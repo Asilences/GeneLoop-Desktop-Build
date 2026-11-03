@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.2.30",
+  "version": "0.2.31",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -18,7 +18,7 @@
     "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
     "pack": "npm run build && electron-builder --dir --publish never",
-    "dist": "npm run build && electron-builder --win nsis --x64 --publish never"
+    "dist": "npm run build && node scripts/wrap-installer.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",
@@ -44,7 +44,7 @@
       "oneClick": false,
       "perMachine": false,
       "deleteAppDataOnUninstall": false,
-      "artifactName": "GeneLoop-Desktop-${version}-${arch}-Setup.${ext}"
+      "artifactName": "GeneLoop-Desktop-${version}-${arch}-Engine.${ext}"
     }
   }
 }
