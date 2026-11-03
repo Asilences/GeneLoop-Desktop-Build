@@ -12,14 +12,14 @@ const app = fileURLToPath(new URL('../', import.meta.url));
 const nsis = resolve(process.env.GENELOOP_NSIS_DIR || '');
 const plugins = resolve(process.env.GENELOOP_NSIS_PLUGINS || '');
 assert.ok(process.env.GENELOOP_NSIS_DIR && existsSync(join(nsis, 'makensis.exe')), 'GENELOOP_NSIS_DIR 指向本机构建缓存内的NSIS目录');
-assert.ok(process.env.GENELOOP_NSIS_PLUGINS && existsSync(join(plugins, 'nsProcess.dll')), 'GENELOOP_NSIS_PLUGINS 指向同一构建器的x86-unicode插件目录');
 const token = randomUUID().slice(0, 8);
 const output = join(app, '.local/validation/installer-processes-' + token);
 const install = join(output, 'Installed App'), sibling = install + '-other';
 mkdirSync(install, { recursive: true }); mkdirSync(sibling);
 const name = 'GeneLoop-process-test-' + token + '.exe';
 const executable = join(install, name), unrelated = join(install, 'Uninstall ' + name), prefixSibling = join(sibling, 'Helper.exe');
-for (const path of [executable, unrelated, prefixSibling]) copyFileSync(process.execPath, path);
+const gameNamedFixture = join(sibling, 'DeltaForceClient-Win64-Shipping.exe');
+for (const path of [executable, unrelated, prefixSibling, gameNamedFixture]) copyFileSync(process.execPath, path);
 const probe = join(output, 'probe.exe');
 const script = join(output, 'probe.nsi');
 writeFileSync(script, `Unicode true
@@ -27,7 +27,7 @@ RequestExecutionLevel user
 SilentInstall silent
 OutFile "${probe}"
 !addincludedir "${join(nsis, 'Include')}"
-!addplugindir "${plugins}"
+${process.env.GENELOOP_NSIS_PLUGINS ? `!addplugindir "${plugins}"` : ''}
 !include "LogicLib.nsh"
 !define APP_EXECUTABLE_FILENAME "${name}"
 !define PRODUCT_NAME "GeneLoop Diagnostic"
@@ -63,6 +63,8 @@ try {
   check('同目录卸载器不被误判为应用', 0); assert.equal(uninstall.exitCode, null);
   const helper = await start(prefixSibling);
   check('安装路径前缀相同的其他目录程序不被误判', 0); assert.equal(helper.exitCode, null);
+  const gameFixture = await start(gameNamedFixture);
+  check('游戏同名合成进程不阻止安装检查', 0); assert.equal(gameFixture.exitCode, null);
   const main = await start(executable), renderer = await start(executable);
   check('真实同名应用进程存在时拒绝静默覆盖', 1618);
   assert.equal(main.exitCode, null); assert.equal(renderer.exitCode, null);
