@@ -11,6 +11,7 @@ from src.adapters.capability_authoring import compact_proposal,diagnose
 from src.adapters.capability_program_encoding import encode_complete_script,encode_program_composition
 from scenarios.paper_proofreading.frontier.author import propose
 from scenarios.paper_proofreading.frontier.learn import learn
+from scenarios.paper_proofreading.frontier.program_training import prepare_program_cases,TrainingEvidenceUnavailable
 
 
 class FrontierAdapter(CapabilityImprovementAdapter):
@@ -22,6 +23,9 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         for cases in template['native_cases'].values():
             for case in cases:
                 for item in case['inputs']:evidence(item['source'])
+        for case in template.get('construction_cases',[]):
+            if case.get('split')!='training':raise ValueError('frontier_program_training_split_required')
+            for item in case['inputs']:evidence(item['source'])
         return template
 
     def library(self):
@@ -35,6 +39,7 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         value['program_input_schemas']=copy.deepcopy(template.get('program_input_schemas',{}))
         value['source_catalog']['presentation']=value['presentation']
         value['source_catalog']['program_input_schemas']=value['program_input_schemas']
+        value['source_catalog']['reference_interfaces']=copy.deepcopy(template.get('reference_interfaces',[]))
         if value['presentation'].get('hide_redundant_JSON_file_variants'):
             snapshot=value['snapshot'];caps={c['id']:c for c in snapshot['capabilities']}
             values={capability_digest(c['implementation']['legacy_ref']) for c in caps.values()
@@ -103,15 +108,29 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         if result.get('program_request'):
             program=read(output/'program.json');template=next(iter(self.templates.values()))
             try:
-                result['native_library']=learn(program,template['native_cases'][program['mode']],output/'native',
+                cases=template['native_cases'][program['mode']]
+                if result.get('program_training_mode')=='bound_prefix_v1':
+                    refs=[reference(output/'answer.txt'),result['capability_source_ref'],result['capability_source_encoding_ref']]
+                    libraries=template['libraries']+[r['library'] for r in self.materials.records() if r['backend']=='script_motif']
+                    training=prepare_program_cases(task,library['snapshot'],reference(output/'program.json'),
+                        result['composition_intent_ref'],template.get('construction_cases'),libraries,output/'program-training',source_refs=refs)
+                    cases=training['cases'];result['program_training_ref']=training['evidence']
+                result['native_library']=learn(program,cases,output/'native',
                     reference(output/'answer.txt'),large_output=True)
                 result['native_observations']=reference(output/'native/observations.json')
                 self.pending_complete={'library':result['native_library'],'observations':result['native_observations'],
                     'program':program,'program_ref':reference(output/'program.json'),
                     'answer_ref':reference(output/'answer.txt'),
                     'composition_intent_ref':result.get('composition_intent_ref')}
+            except TrainingEvidenceUnavailable as error:
+                result.update(status='deferred',error='capability_construction_gap',
+                    construction_gap={'reason':'insufficient_evidence','requirement':str(error)},
+                    diagnostics={'kind':'training_evidence','error':str(error)})
             except Exception as error:
                 diagnostics={'native_error':str(error)}
+                if result.get('program_training_mode')=='bound_prefix_v1':diagnostics['training']=diagnose(error)
+                if getattr(error,'program_training_diagnostics',None):diagnostics['prefix']=error.program_training_diagnostics
+                if getattr(error,'program_training_evidence_ref',None):result['program_training_ref']=error.program_training_evidence_ref
                 for p in (output/'native').glob('**/certification.json'):diagnostics['certification']=read(p)
                 for p in (output/'native').glob('**/admission-error.json'):diagnostics['admission']=read(p)
                 for p in (output/'native').glob('**/source-stderr.txt'):
@@ -125,6 +144,8 @@ class FrontierAdapter(CapabilityImprovementAdapter):
         if not result.get('native_library'):return {'status':'deferred','reason':'frontier_no_certified_material'}
         refs=[reference(attempt/'answer.txt'),reference(attempt/'native/certification.json'),job['publication_plan']]
         if result.get('composition_intent_ref'):refs.append(result['composition_intent_ref'])
+        for key in ('capability_source_ref','capability_source_encoding_ref','program_training_ref'):
+            if result.get(key):refs.append(result[key])
         if result.get('native_observations'):refs.append(result['native_observations'])
         material=self.materials.register(backend='script_motif',library=result['native_library'],refs=refs,
             acquisition_key=capability_digest(refs),opportunity=self.opportunity_key(job))

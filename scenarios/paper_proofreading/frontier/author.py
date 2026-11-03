@@ -1,6 +1,7 @@
 """One native Harness proposal; common improvement controller owns all retries."""
 from __future__ import annotations
 import json
+import copy
 import ast
 from pathlib import Path
 import time
@@ -16,6 +17,7 @@ from src.adapters.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 
 SYSTEM='''Construct a reusable capability for the frozen task. Return ONE complete JSON object, no markdown.
+You may write one Python authoring module as {"capability_source":"imports, pure helper definitions, and def build(value): ..."}. In build, use sequential assignments calling capability.cN(...) with named arguments, then call one new helper with explicitly bound arguments and return its result (or assign that helper call once). The host statically encodes build into the existing call graph; build is never executed as Python. Helper computation is independently sandboxed/certified on actual values produced by your selected prefix. Helpers consume JSON values, not file-reading authority: to process project files, explicitly call any visible certified file primitives first or use the existing complete paths program interface. source_callable_interfaces lists the exact semantic return schema: variables of certified script calls refer to their JSON value, without stdout/value transport wrappers; composition variables refer to their declared result directly. Do not add a .value transport field in this syntax. The helper's arguments and all capability choices remain yours. Imports, loops and calculations belong in pure helper functions, not build. A module with only build can compose existing capabilities. Ordinary complete Python programs and the other interfaces below remain allowed equally.
 You may choose an existing-capability composition: {"steps":[{"id":"name","use":"c1","args":...}],"output":...}.
 Use {"$input":["field"]} for current input, {"$step":["earlier_id","field"]} for prior results, ordinary objects/arrays to assemble values, and {"$literal":value} for literal objects. No array-index paths. Select only visible aliases. Host supplies contract/owner/refs.
 Arrays are ordinary JSON lists of bindings. If the task field file is a string and a leaf requires paths as an array, use {"paths":[{"$input":["file"]}]}; {"paths":{"$input":["file"]}} is a string and is invalid. This example illustrates types only; choose actual task fields and operations yourself.
@@ -57,12 +59,25 @@ def expand_source_request(draft):
     return {'program':draft['program'],'composition':composition} if 'program' in draft else composition
 
 
+def expand_capability_source_request(draft,task,snapshot):
+    """Extract the model's helper and static bindings; never run build source."""
+    if set(draft)!={'capability_source'}:raise ValueError('frontier_capability_source_shape_invalid')
+    from src.adapters.capability_source_authoring import compile_capability_source
+    encoded=compile_capability_source(draft['capability_source'],task,snapshot)
+    value=({'program':encoded['program'],'composition':encoded['composition']}
+        if encoded['program'] is not None else encoded['composition'])
+    return value,encoded
+
+
 def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
     output=Path(output).resolve();gate.register_attempt(output,owner_id)
     effective,_=pilot.prepare_attempt(task=task,catalog=library['source_catalog'],snapshot=library['snapshot'],
                                      output=output,repair_from=parent,feedback=feedback)
     context=authoring_context(task,library['snapshot'],{'source_catalog':library['source_catalog'],
         'preferred_roots':library.get('selection',{}).get('construction',[])})
+    from src.adapters.capability_source_authoring import source_callable_interfaces
+    context['source_callable_interfaces']=source_callable_interfaces(library['snapshot'])
+    context['reference_interfaces']=copy.deepcopy(library['source_catalog'].get('reference_interfaces',[]))
     context['program_examples']=library.get('program_examples',[])
     presentation=library.get('presentation',{})
     if presentation.get('hide_composition_definitions'):
@@ -109,6 +124,16 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
         pilot.write(output/'answer.txt',answer);result['finish_reason']=finish
         if finish!='completed':raise ValueError('proposal_incomplete_model_turn')
         draft=pilot.parse_proposal(answer);pilot.write(output/'draft.json',draft)
+        if 'capability_source' in draft:
+            source=draft['capability_source']
+            if isinstance(source,str):pilot.write(output/'capability-source.py',source)
+            draft,encoded=expand_capability_source_request(draft,task,library['snapshot'])
+            pilot.write(output/'capability-source-encoding.json',encoded['provenance'])
+            result.update(capability_source_ref={'path':str(output/'capability-source.py'),'sha256':pilot.sha(source)},
+                capability_source_encoding_ref={'path':str(output/'capability-source-encoding.json'),
+                    'sha256':pilot.sha((output/'capability-source-encoding.json').read_bytes())})
+            if encoded['program'] is not None:
+                result.update(program_training_mode='bound_prefix_v1',new_program_step_id=encoded['new_program_step_id'])
         if 'composition_source' in draft:
             source=draft['composition_source'];draft=expand_source_request(draft)
             pilot.write(output/'composition-source.py',source)

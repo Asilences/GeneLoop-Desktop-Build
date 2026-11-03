@@ -1,4 +1,4 @@
-"""Read-only host execution of an already certified frozen capability."""
+"""Read-only host execution or explicit candidate validation using native grants."""
 import json,subprocess
 from pathlib import Path
 from src.adapters.capability_scene import ROOT,reference
@@ -6,7 +6,10 @@ from src.adapters.capability_improvement import evidence,save
 from src.adapters.capability_contract import capability_digest
 
 
-def execute(snapshot,root,libraries,inputs,args,directory,task_id):
+def execute(snapshot,root,libraries,inputs,args,directory,task_id,*,mode='execute'):
+    # Only trusted host callers select validation; candidate source cannot
+    # manufacture a grant. The native runtime still certifies every dependency.
+    if mode not in ('execute','validate'):raise ValueError('frontier_execution_mode_invalid')
     directory=Path(directory);(directory/'work/inputs').mkdir(parents=True,exist_ok=False,mode=0o700)
     bound=[]
     for item in inputs:
@@ -19,7 +22,7 @@ def execute(snapshot,root,libraries,inputs,args,directory,task_id):
         'workspace':str((directory/'work').resolve()),'registry_path':str((directory/'snapshot.json').resolve()),
         'libraries':libraries,'inputs':bound,'grant':{'id':'frontier-'+task_id,'task_id':task_id,
         'snapshot_sha256':snapshot['digest'],'root':root,'arguments_sha256':capability_digest(args),
-        'mode':'execute','effects':['read'],'revoked':False}}
+        'mode':mode,'effects':['read'],'revoked':False}}
     for name,value in [('snapshot',snapshot),('manifest',manifest),('args',args)]:save(directory/(name+'.json'),value)
     run=subprocess.run(['node','scripts/run-script-capability.mjs','--manifest',str(directory/'manifest.json'),
         '--snapshot',str(directory/'snapshot.json'),'--args',str(directory/'args.json')],cwd=ROOT,capture_output=True,text=True,timeout=90)

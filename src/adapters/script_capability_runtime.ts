@@ -10,6 +10,7 @@ import {capabilityDigest,capabilityRef,createCapability,createCapabilitySnapshot
  type CapabilitySnapshot,type CapabilityRef} from './capability_contract.ts';
 import {createCapabilityRuntime,type CapabilityBackend} from './capability_runtime.ts';
 import {bytesSha256,rsiRecord,type AdmissionHost} from './rsi_protocol.ts';
+import {readScriptWorkerFailure} from './script_worker_failure.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const assert=(value:unknown,reason:string)=>{if(!value)throw Error(reason);};
 const same=(a:unknown,b:unknown)=>capabilityDigest(a)===capabilityDigest(b);
@@ -17,7 +18,7 @@ const read=(path:string)=>JSON.parse(readFileSync(path,'utf8'));
 export const scriptCapabilityFiles=[...scriptCodeLocks,'src/adapters/script_runtime_compatibility.ts',
  'config/script-runtime-compatibility.json','src/adapters/script_capability_runtime.ts',
  'src/adapters/capability_runtime.ts','src/adapters/capability_contract.ts','src/adapters/rsi_protocol.ts',
- 'scripts/script-capability-worker.mjs'];
+ 'scripts/script-capability-worker.mjs','src/adapters/script_worker_failure.mjs'];
 export function scriptExecutorDigest(){return capabilityDigest(scriptCapabilityFiles.map(path=>({path,sha256:bytesSha256(readFileSync(join(root,path)))})));}
 
 export function buildScriptCapabilities(path:string,owner:string,expectedSha256?:string){
@@ -68,17 +69,27 @@ async function invoke(job:unknown,signal?:AbortSignal):Promise<any>{
  return new Promise((done,reject)=>{
   const child=spawn(process.execPath,['--experimental-strip-types',join(root,'scripts/script-capability-worker.mjs')],
    {cwd:root,env,detached:true,stdio:['pipe','pipe','pipe']});
-  let output='',failure:string|null=null,escalation:ReturnType<typeof setTimeout>|undefined;
+  let output='',errorOutput='',failure:string|null=null,escalation:ReturnType<typeof setTimeout>|undefined;
   const kill=(sig:NodeJS.Signals)=>{if(child.pid)try{process.kill(-child.pid,sig);}catch{}};
   const stop=(reason:string)=>{if(failure)return;failure=reason;kill('SIGTERM');escalation=setTimeout(()=>kill('SIGKILL'),1000);};
   const abort=()=>stop('script_worker_cancelled'),timer=setTimeout(()=>stop('script_worker_timeout'),45000);
   signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
-  child.stdout.setEncoding('utf8');child.stderr.resume();child.stdin.on('error',()=>{});
+  child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');child.stdin.on('error',()=>{});
+  child.stderr.on('data',chunk=>{errorOutput+=chunk;if(Buffer.byteLength(errorOutput)>8192){errorOutput='';stop('script_worker_error_output_exceeded');}});
   child.stdout.on('data',chunk=>{output+=chunk;if(Buffer.byteLength(output)>256000)stop('script_worker_output_exceeded');});
   child.on('error',()=>{failure??='script_worker_start_failed';});
   child.on('close',code=>{
    clearTimeout(timer);if(escalation){kill('SIGKILL');clearTimeout(escalation);}signal?.removeEventListener('abort',abort);
-   try{assert(!failure,failure!);assert(code===0,'script_worker_failed');done(JSON.parse(output));}catch(error){reject(error);}
+   try{
+    assert(!failure,failure!);
+    if(code!==0){
+     const error=Error('script_worker_failed');
+     const diagnostic=readScriptWorkerFailure(errorOutput);
+     if(diagnostic)Object.defineProperty(error,'scriptWorkerFailure',{value:diagnostic});
+     throw error;
+    }
+    done(JSON.parse(output));
+   }catch(error){reject(error);}
   });
   child.stdin.end(JSON.stringify(job));
  });
@@ -166,7 +177,17 @@ export async function runScriptCapability(manifestPath:string,snapshotValue:Capa
    for(const name of ['inputs','code','outputs/code','command-tmp'])mkdirSync(join(work,name),{recursive:true,mode:0o700});
    for(const file of files)writeFileSync(join(work,'inputs',basename(file.path)),file.bytes,{mode:0o400,flag:'wx'});
    const nonce=randomUUID(),inputVersions=files.map(f=>f.sha256);
-   const receipt=await invoke({workspace:work,program,paths,versions:inputVersions,nonce},call.signal);
+   let receipt;
+   try{receipt=await invoke({workspace:work,program,paths,versions:inputVersions,nonce},call.signal);}
+   catch(error){
+    const failure=error instanceof Error?(error as Error&{scriptWorkerFailure?:unknown}).scriptWorkerFailure:undefined;
+    if(failure)writeFileSync(join(work,'failure.json'),JSON.stringify({
+     format:'script_capability_call_failure_v1',call_id:call.callId,parent_call_id:call.parentCallId??null,
+     capability:capabilityRef(call.capability),program_id:program.id,
+     arguments_sha256:bytesSha256(JSON.stringify(value)),input_versions:inputVersions,diagnostic:failure,
+     scope:'diagnostic_only_not_a_certificate_or_retry_authorization'}),{mode:0o600,flag:'wx'});
+    throw error;
+   }
    assert(receipt.kind==='script_motif_receipt'&&receipt.nonce===nonce&&receipt.program_id===program.id&&same(receipt.versions,inputVersions)&&
     typeof receipt.output==='string'&&bytesSha256(receipt.output)===receipt.output_sha256&&receipt.network_evidence?.length===0,
     'script_capability_receipt_changed');

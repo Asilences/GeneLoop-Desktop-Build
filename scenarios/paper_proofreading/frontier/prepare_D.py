@@ -109,7 +109,12 @@ def main():
     parser.add_argument('--protocol',type=Path)
     parser.add_argument('--prior-journal',type=Path,action='append',default=[])
     parser.add_argument('--budget-usd');parser.add_argument('--research-limit-usd',default='6.00')
+    parser.add_argument('--profile',choices=['legacy','creation_value_v1'],default='legacy')
+    parser.add_argument('--replicates',type=int)
     a=parser.parse_args();base=a.base.resolve();protocol,settings,deadline=protocol_reference(base,a.protocol)
+    replicates=a.replicates if a.replicates is not None else (6 if a.profile=='creation_value_v1' else 2)
+    if replicates<1:raise ValueError('frontier_replicates_invalid')
+    if a.profile!='legacy' and not a.v2:raise ValueError('frontier_profile_requires_v2')
     budget=finite_budget(a.budget_usd if a.budget_usd is not None else ('0.80' if a.v2 else '1.00'))
     research_limit=finite_budget(a.research_limit_usd)
     final_projects=load_final_projects(a.final_manifest) if a.v2 else None
@@ -169,11 +174,22 @@ def main():
     save(out/'shared-training-examples.json',examples)
     c_task=json.loads(evidence(settings['tasks']['C']))
     task=reference(a.task_file.resolve()) if a.task_file else settings['tasks']['D'];evidence(task)
-    source_files=['adapter.py','author.py','budget.py','learn.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py','freeze.py']
-    common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/capability_composition_source.py','src/adapters/script_capability_runtime.ts',
+    c_description=('Callable project citation audit: accepts a current project ZIP path in project and returns root, files (current byte hashes and tex/bib kind), includes, bibliography, citations, active entries, missing, duplicates, unused and unresolved. It follows reachable literal LaTeX input/include and bibliography edges, joins ONLY active bibliography entries to citations, preserves duplicate records and computes the three key sets. It does not expand macros or judge factual bibliography truth.' if a.v2 else c_task['instruction'])
+    c_description+=' Independently passed ATC and LoRA literal checks; fixed version dependencies; not a general semantic proof.'
+    reference_interfaces={arm:[] for arm in snapshots};profile_order=None
+    if a.profile=='creation_value_v1':
+        from scenarios.paper_proofreading.frontier.study_profiles import creation_value_profile
+        profile=creation_value_profile(hierarchical,c_ref,base_refs,relation,c_description,replicates=replicates)
+        snapshots=profile['snapshots'];reference_interfaces=profile['reference_interfaces'];profile_order=profile['order']
+    source_files=['adapter.py','author.py','budget.py','learn.py','program_training.py','study_profiles.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py','freeze.py']
+    common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/capability_composition_source.py','src/adapters/capability_source_authoring.py','src/adapters/script_capability_runtime.ts',
         'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/adapters/efficiency_rsi_registry.py',
         'src/adapters/efficiency_rsi_measurement.py','config/script-runtime-compatibility.json',
-        'src/adapters/script_motif_compiler.py','src/adapters/capability_program_encoding.py']
+        'src/adapters/script_motif_compiler.py','src/adapters/capability_program_encoding.py','src/adapters/capability_shape_diagnostics.py']
+    native_files=json.loads(subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',
+        "import {scriptCapabilityFiles} from './src/adapters/script_capability_runtime.ts';process.stdout.write(JSON.stringify(scriptCapabilityFiles));"],
+        cwd=ROOT,capture_output=True,text=True,check=True).stdout)
+    common_files=list(dict.fromkeys([*common_files,*native_files]))
     presentation={'schema_only_examples':True,'hide_composition_definitions':True,'hide_redundant_JSON_file_variants':True} if a.v2 else {}
     conditions={'format':'frontier_D_conditions_v1','code_commit':a.code_commit,'protocol':protocol,'task':task,
         'C':published[0],'initial_snapshots':{k:v['digest'] for k,v in snapshots.items()},
@@ -184,21 +200,25 @@ def main():
         'episode_scope':'All construction proposals, failures, repairs, acquired materials and publication in one episode; initial exposure fixed, intermediate snapshots journaled.',
         'final_test_policy':'Execute QLoRA v0-v1 and v1-v2 only after ALL four construction episodes finish. No final feedback in model calls.',
         'C_acquisition_cost':'Separate phase, including all earlier failed conditions and recovery. Not allocated into conditional D cost or claimed amortized.',
-        'Direct_equals_Flat':not a.v2,'force_C':False,'presentation':presentation,'auto_wrap_complete_program':a.v2}
+        'Direct_equals_Flat':not a.v2,'force_C':False,'presentation':presentation,'auto_wrap_complete_program':a.v2,
+        'authoring_profile':a.profile,'replicates':replicates,'reference_interfaces':reference_interfaces}
     required_checks=['heldout_v0_v1','heldout_v1_v2'];baseline='flat_without_C'
     if a.v2:
         conditions.update(format='frontier_D_conditions_v2',J=relation,
             contrasts=[['direct_L0','flat_without_C'],['flat_without_C','hierarchical_with_C'],['direct_L0','hierarchical_with_C']],
             final_projects=final_projects,
-            final_test_policy='All six episodes finish before final project tests; no final feedback in model calls.')
+            final_test_policy=f'All {len(snapshots)*replicates} episodes finish before final project tests; no final feedback in model calls.')
         required_checks=final_project_checks(final_projects);baseline='direct_L0'
-    conditions.update(freeze_research_budget(budget,research_limit,len(snapshots)*2,a.prior_journal))
+    if a.profile=='creation_value_v1':
+        baseline='flat_without_C'
+        conditions['contrasts']=[['flat_without_C','description_only_C'],['description_only_C','hierarchical_with_C'],['flat_without_C','hierarchical_with_C']]
+    conditions.update(freeze_research_budget(budget,research_limit,len(snapshots)*replicates,a.prior_journal))
     save(out/'conditions.json',conditions)
     (out/'evaluator').mkdir();shutil.copyfile(Path(__file__).with_name('oracle.py'),out/'evaluator/oracle.py')
     arms=[{'id':arm,**{prefix+'_snapshot_sha256':snapshot['digest'] for prefix in ('execution','build')},
         **{prefix+'_capabilities':snapshot['roots'] for prefix in ('execution','build')}} for arm,snapshot in snapshots.items()]
     cells=[{'id':arm+'-r'+str(rep),'task_id':'frontier-D','arm_id':arm,'replicate':rep,'phase':'construction',
-        'budget_usd':float(budget),'max_attempts':1} for rep in (0,1) for arm in snapshots]
+        'budget_usd':float(budget),'max_attempts':1} for rep in range(replicates) for arm in snapshots]
     study=validate_study({'format':'efficiency_rsi_study_v1','id':a.study_name or ('frontier-D-study-002' if a.v2 else 'frontier-D-study-001'),'objective':'efficiency_and_capability',
         'conditions_sha256':capability_digest(conditions),'rubric_sha256':capability_digest({'required':required_checks,'oracle':reference(out/'evaluator/oracle.py')['sha256']}),
         'evaluator':{'id':'frontier-heldout-v1','sha256':reference(out/'evaluator/oracle.py')['sha256'],'ref':'evaluator/oracle.py'},
@@ -212,17 +232,20 @@ def main():
     requests=[]
     order=[('hierarchical_with_C',0),('flat_without_C',0),('flat_without_C',1),('hierarchical_with_C',1)]
     if a.v2:order=[('hierarchical_with_C',0),('flat_without_C',0),('direct_L0',0),('direct_L0',1),('flat_without_C',1),('hierarchical_with_C',1)]
+    if profile_order is not None:order=profile_order
+    elif replicates!=2:order=[(arm,rep) for rep in range(replicates) for arm in snapshots]
     for arm,rep in order:
         cell=arm+'-r'+str(rep);directory=out/'cells'/cell;directory.mkdir(parents=True)
         save(directory/'seed.json',snapshots[arm])
         visible={r['id'] for r in snapshots[arm]['roots']}
         catalog=copy.deepcopy([r for r in native_catalog if r['capability']['id'] in visible])
-        c_description=('Callable project citation audit: accepts a current project ZIP path in project and returns root, files (current byte hashes and tex/bib kind), includes, bibliography, citations, active entries, missing, duplicates, unused and unresolved. It follows reachable literal LaTeX input/include and bibliography edges, joins ONLY active bibliography entries to citations, preserves duplicate records and computes the three key sets. It does not expand macros or judge factual bibliography truth.' if a.v2 else c_task['instruction'])
-        if arm=='hierarchical_with_C':catalog.append({'capability':c_ref,'description':c_description+
-            ' Independently passed ATC and LoRA literal checks; fixed version dependencies; not a general semantic proof.',
+        if arm=='hierarchical_with_C':catalog.append({'capability':c_ref,'description':c_description,
             'example_parameters':{'project':'current project ZIP path'}})
         save(directory/'catalog.json',{'catalog':catalog})
         template={'libraries':native_refs,'native_cases':cases,'program_examples':examples,
+            'reference_interfaces':reference_interfaces[arm],
+            'construction_cases':[{**copy.deepcopy(case),'split':'training',
+                'input':{'before':'/work/inputs/before.zip','after':'/work/inputs/after.zip'}} for case in cases['paths']],
             'pinned_evidence':[reference(out/'conditions.json'),reference(out/'shared-training-examples.json')],
             'auto_wrap_complete_program':a.v2,'presentation':presentation,
             'program_input_schemas':{'json':structural_schema(examples[0]['input']),
