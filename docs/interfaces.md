@@ -1349,6 +1349,23 @@ Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{step
 
 新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](recursive-efficiency-protocol-v2.md)。
 
+### 能力更新后的机会重新评价（2026-11-03，默认关闭）
+
+原`capability_improvement_plan_v1`新增可选`opportunity_discovery`：
+
+```json
+{"context":{"path":"<private context.json>","sha256":"<raw SHA256>"},
+ "directory":"<private .local goal ledger>","max_reconsiderations":1,"max_candidates":3}
+```
+
+context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_effects,needs}`；每项need为`{id,description,status:"open"|"resolved",evidence:[<原字节引用>]}`。正常任务发现器与暂缓重试不变；仅原控制器独立发布成功、可用池增加且存在open need时调用单次`propose_opportunities(request,output)`，同一需求证据/前后snapshot变化不会重复提案。中断认领保留，不自动重发未知付费请求。
+
+模型候选为`{need_id,proposed_goal,expected_dependencies:[{id,sha256}],reason,proposed_interface?}`。`review_opportunity`由固定宿主代码提供，默认pending；accepted必须返回冻结job与独立review证据。job的scope、effects、goal文本和原证据受核验，模型不能选择验收器。通过的job进入原控制器，沿原Runtime/Store/独立验收发布。
+
+单次Harness提案须由研究宿主提供有限预算gate；可通过`opportunity_gate_factory`在该次提案期间持有原账本锁，或在同一研究gate内提供`opportunity_gate`。缺失时不调用模型。原平台null、累计账本与正常任务授权不变；当前不生成节余信用。
+
+私有账本保留`claim/request/response/decisions/result`及每次构造outcome。预期依赖和编译依赖不等于实际调用；只有绑定当前候选的Runtime trace可填actual_dependencies，缺失为null。真实任务证据的零模型重放入口为`examples/capability-scenes/replay-opportunities.py`，固定旧提案/算法不能作为自主目标发现或创造效率收益证据。详细设计及验收见[协议](capability-aware-opportunities-v1.md)。
+
 ### 公共构造与原生材料接线（2026-11-03续）
 
 公共`capability_proposal.py`现受理`capability_source`；同一个`rsi:improve`控制器消费构造、获取、入池与原意图续接，不要求导入Paper研究适配器。宿主的`publication_plan`可显式配置`program_learning:{backend:"script_motif",libraries:[<原字节引用>],construction_cases:[<两份训练任务>]}`；每份任务为`{id,split:"training",input,inputs:[{path,source}]}`，路径仍限`/work/inputs/<文件名>`。宿主固定契约、训练材料和独立验收，模型选择新算法、能力与参数。没有该配置或缺少支持的前缀后端时明确暂缓，不能由模型选择执行器或测试集。

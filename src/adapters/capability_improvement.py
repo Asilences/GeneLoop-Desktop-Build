@@ -159,6 +159,7 @@ def run_improvement(plan, adapter, *, execute=False):
     def verify_scene():
         for ref in ([plan['scene_adapter']] if plan.get('scene_adapter') else [])+plan.get('scene_dependencies',[]):evidence(ref)
         if plan.get('learning_routes'):evidence(plan['learning_routes'])
+        if plan.get('opportunity_discovery'):evidence(plan['opportunity_discovery']['context'])
     verify_scene()
     if len({j['id'] for j in plan['jobs']}) != len(plan['jobs']):
         raise ValueError('improvement_duplicate_opportunity')
@@ -175,6 +176,7 @@ def run_improvement(plan, adapter, *, execute=False):
         for name in ('src/adapters/capability_improvement.py','schemas/capability-improvement-v1.schema.json',
                      'src/adapters/capability_store.ts','src/adapters/capability_authoring.py','src/adapters/capability_feedback.py',
                      'src/adapters/capability_discovery.py','src/adapters/capability_scene.py',
+                     'src/adapters/capability_opportunities.py','src/adapters/capability_goal_proposal.py',
                      'src/adapters/capability_cycle.ts','src/adapters/capability_proposal.py',
                      'src/adapters/capability_source_authoring.py','src/adapters/capability_program_encoding.py',
                      'src/adapters/capability_program_training.py','src/adapters/capability_script_learning.py',
@@ -195,6 +197,15 @@ def run_improvement(plan, adapter, *, execute=False):
     def decision(opportunity, action, reason, refs=()):
         journal.emit('decision', dict(opportunity_id=opportunity, action=action, reason=reason,
                      policy_sha256=policy_sha, evidence_refs=list(refs)))
+
+    goals=None
+    if execute and plan.get('opportunity_discovery'):
+        from src.adapters.capability_opportunities import OpportunityDiscovery
+        goals=OpportunityDiscovery(plan['opportunity_discovery'],plan['owner'])
+
+    def record_outcome(job,attempt,result,candidate,outcome):
+        if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
+        if goals is not None:goals.record(job,attempt,result,candidate,outcome)
 
     try:
         if execute and hasattr(adapter, 'freeze'):
@@ -297,7 +308,7 @@ def run_improvement(plan, adapter, *, execute=False):
                     outcome = adapter.publish(job, candidate, attempt, library['head'])
                     publication_ref = outcome.get('evidence_ref')
                     if outcome['status'] == 'published':
-                        if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
+                        record_outcome(job,attempt,result,candidate,outcome)
                         # Read the Store again; no candidate metadata promotion here.
                         refreshed = adapter.library()
                         new_ref = capability_ref(candidate['capability'])
@@ -317,9 +328,14 @@ def run_improvement(plan, adapter, *, execute=False):
                         decision(job['id'], 'continue', 'published_capability_added_to_next_builder', [publication_ref])
                         summary['outcomes'].append(dict(opportunity_id=job['id'], status='published', capability=new_ref,
                                                        publication_sha256=outcome['publication_sha256']))
+                        if goals is not None:
+                            verify_scene()
+                            outstanding=[*jobs,*[row[0] for row in waiting.values()]]
+                            discovered=goals.reconsider(snapshot,refreshed,publication_ref,outstanding,adapter,journal.directory)
+                            jobs.extend(discovered)
                         break
                     if outcome.get('committed'):
-                        if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
+                        record_outcome(job,attempt,result,candidate,outcome)
                         # Publication succeeded but followup/reload failed. Never
                         # replay it as a model repair or silently reuse this result.
                         decision(job['id'], 'stop', 'committed_publication_requires_review', [publication_ref] if publication_ref else [])
@@ -336,7 +352,7 @@ def run_improvement(plan, adapter, *, execute=False):
                     acquisition_ref={'path':str(attempt/'acquisition.json'),
                         'sha256':hashlib.sha256((attempt/'acquisition.json').read_bytes()).hexdigest()}
                     if acquisition.get('status')=='registered':
-                        if hasattr(adapter,'record_outcome'):adapter.record_outcome(job,attempt,result,candidate,outcome)
+                        record_outcome(job,attempt,result,candidate,outcome)
                         recorded=True
                         refreshed=adapter.library()
                         next_snapshot=validate_capability_snapshot(refreshed['snapshot'],plan['owner'])
@@ -361,8 +377,8 @@ def run_improvement(plan, adapter, *, execute=False):
                         outcome={**acquisition,'evidence_ref':acquisition_ref,'committed':False}
                     else:
                         decision(job['id'],'defer',acquisition.get('reason','learning_did_not_change_available_material'),[acquisition_ref])
-                if not recorded and hasattr(adapter,'record_outcome'):
-                    adapter.record_outcome(job,attempt,feedback_result,candidate,outcome)
+                if not recorded:
+                    record_outcome(job,attempt,feedback_result,candidate,outcome)
                 reason = (outcome or feedback_result).get('error', 'construction_failed')
                 signature = repair_signature(feedback_result, outcome, attempt)
                 fingerprint = capability_digest(signature)
