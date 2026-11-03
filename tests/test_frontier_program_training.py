@@ -274,7 +274,7 @@ def test_certified_prefix_native_probe_and_final_candidate_share_the_same_bound_
         cwd=Path(__file__).resolve().parents[1],capture_output=True,text=True,check=True).stdout)
     selected=next(cap for cap in catalog['capabilities'] if cap['contract']['input_schema'].get('required')==['value'])
     snapshot=create_capability_snapshot('owner',[capability_ref(selected)],[selected])
-    number={'type':'number'};record={'type':'object','properties':{'n':number},'required':['n'],'additionalProperties':False}
+    number={'type':'number'};record=copy.deepcopy(selected['contract']['input_schema']['properties']['value'])
     task={'id':'native-source-diagnostic','contract':{'input_schema':{'type':'object','properties':{'first':record},'required':['first'],'additionalProperties':False},
         'output_schema':{'type':'object','properties':{'total':number},'required':['total'],'additionalProperties':False},'effects':['read']}}
     source="def merge(previous, margin):\n    return {'total':previous['n']+margin}\n\ndef build(value):\n    prior = capability.c1(value=value['first'])\n    return merge(prior, 3)\n"

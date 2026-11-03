@@ -57,7 +57,8 @@ def _prefix_failure(error,candidate,case,directory):
         value_call=(schema.get('required')==['value'] and set(schema.get('properties',{}))=={'value'})
         if matched and step is not None and value_call and value_file.is_file():
             raw=value_file.read_bytes();versions=failure.get('input_versions',[])
-            if versions==[hashlib.sha256(raw).hexdigest()]:
+            outer_sha=hashlib.sha256(b'{"value":'+raw+b'}').hexdigest()
+            if versions==[hashlib.sha256(raw).hexdigest()] and outer_sha==receipt.get('arguments_sha256'):
                 try:
                     payload=json.loads(raw);arguments={'value':payload}
                     row.update(arguments_evidence=reference(value_file),

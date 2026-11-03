@@ -1,10 +1,12 @@
 """Frontier experiment adapter on the existing improvement controller."""
 from __future__ import annotations
-import copy,json,os,subprocess,sys
+import copy,hashlib,json,os,re,subprocess,sys
 from pathlib import Path
 from src.adapters.capability_scene import CapabilityImprovementAdapter,ROOT,reference,run_child
 from src.adapters.capability_improvement import evidence,read,save
 from src.adapters.capability_contract import capability_digest,create_capability_snapshot
+from src.adapters.capability_contract import capability_ref
+from src.adapters.capability_shape_diagnostics import composition_shape_advisories,diagnose_step_argument_shapes
 from src.adapters.capability_proposal import write
 from src.adapters import capability_proposal as pilot
 from src.adapters.capability_authoring import compact_proposal,diagnose
@@ -12,6 +14,61 @@ from src.adapters.capability_program_encoding import encode_complete_script,enco
 from scenarios.paper_proofreading.frontier.author import propose
 from scenarios.paper_proofreading.frontier.learn import learn
 from scenarios.paper_proofreading.frontier.program_training import prepare_program_cases,TrainingEvidenceUnavailable
+
+
+def runtime_shape_feedback(candidate,trace_path,workspace):
+    """Explain a witnessed data-operation failure; never repair its bindings.
+
+    Only a directly selected Script value call with a matching native witness
+    and an actual extra array layer may request the existing model repair path.
+    Unknown transport/worker failures remain outside this classification.
+    """
+    notes=composition_shape_advisories(candidate)
+    if not notes:return None
+    try:
+        trace_ref=reference(trace_path);trace=json.loads(evidence(trace_ref));root=capability_ref(candidate['capability'])
+        if (trace.get('root')!=root or trace.get('snapshot_sha256')!=candidate['snapshot']['digest']
+                or trace.get('mode')!='validate' or trace.get('status')!='failed'):return None
+        receipts={r['call_id']:r for r in trace.get('receipts',[])}
+        parent=next((r for r in receipts.values() if r.get('capability')==root and r.get('parent_call_id') is None),None)
+        if parent is None:return None
+        steps=candidate['capability']['implementation']['steps'];caps={cap['id']:cap for cap in candidate['snapshot']['capabilities']}
+        for index,call_id in enumerate(parent.get('child_call_ids',[])):
+            if index>=len(steps) or not isinstance(call_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]+',call_id):continue
+            step=steps[index];receipt=receipts.get(call_id,{});cap=caps[step['capability']['id']]
+            schema=cap['contract']['input_schema'];legacy=cap['implementation'].get('legacy_ref',{})
+            selected_notes=[row for row in notes if row['step_id']==step['id']]
+            if (not selected_notes or legacy.get('backend')!='script_motif' or receipt.get('reason')!='script_worker_failed'
+                    or receipt.get('status')!='failed'
+                    or receipt.get('capability')!=step['capability'] or receipt.get('parent_call_id')!=parent['call_id']
+                    or schema.get('required')!=['value'] or set(schema.get('properties',{}))!={'value'}):continue
+            work=Path(workspace)/'calls'/call_id;failure_ref=reference(work/'failure.json')
+            failure=json.loads(evidence(failure_ref));detail=failure.get('diagnostic',{})
+            if (failure.get('format')!='script_capability_call_failure_v1' or failure.get('call_id')!=call_id
+                    or failure.get('capability')!=step['capability'] or failure.get('program_id')!=legacy.get('object_id')
+                    or failure.get('arguments_sha256')!=receipt.get('arguments_sha256')
+                    or detail.get('format')!='script_worker_failure_v1' or detail.get('phase')!='sandbox_execution'
+                    or detail.get('category')!='data_operation_error'
+                    or detail.get('exception_type') not in ('TypeError','KeyError','IndexError')):continue
+            value_ref=reference(work/'inputs/value.json');raw=evidence(value_ref)
+            if (failure.get('input_versions')!=[hashlib.sha256(raw).hexdigest()]
+                    or hashlib.sha256(b'{"value":'+raw+b'}').hexdigest()!=receipt.get('arguments_sha256')):continue
+            arguments={'value':json.loads(raw)};shapes=diagnose_step_argument_shapes(candidate,step['id'],arguments)
+            actual=[]
+            for note in shapes['advisories']:
+                value=arguments
+                try:
+                    for part in note['argument_path']:value=value[part]
+                except (KeyError,TypeError,IndexError):continue
+                if isinstance(value,list):actual.append(note)
+            if not actual:continue
+            return {'checks':[{'id':'native_argument_shape','status':'failed','observation':{
+                'step_id':step['id'],'capability':step['capability'],'exception':detail,
+                'argument_shapes':shapes,'observed_array_layers':actual,
+                'evidence':{'trace':trace_ref,'worker_failure':failure_ref,'value_input':value_ref},
+                'scope':'Observed worker error plus explicit array-binding evidence; no inferred contract violation or automatic argument repair.'}}]}
+    except (OSError,ValueError,KeyError,TypeError,IndexError):return None
+    return None
 
 
 class FrontierAdapter(CapabilityImprovementAdapter):
@@ -179,6 +236,8 @@ class FrontierAdapter(CapabilityImprovementAdapter):
             return {'status':'published','publication_sha256':result['publication_sha256'],'evidence_ref':ref}
         feedback={}
         runtime_binding_failure=False
+        shape_binding_failure=False
+        committed=(directory/'publication.json').exists()
         for label in ('validation','followup'):
             p=directory/label/'validation.json'
             if p.exists() and not read(p)['passed']:feedback=read(p);break
@@ -194,9 +253,13 @@ class FrontierAdapter(CapabilityImprovementAdapter):
                         'granted_inputs':plan[label]['manifest']['inputs'],
                         'requirement':'Bind existing file-reading capabilities to current task inputs, not new-program ABI placeholders.'}}]}
                     break
+                if not committed and result.get('error')=='cycle_execution_failed':
+                    shaped=runtime_shape_feedback(candidate,trace_path,Path(plan[label]['workspace']))
+                    if shaped:
+                        shape_binding_failure=True;feedback=shaped;break
         return {'status':'failed','error':result.get('error','frontier_publication_failed'),
-            'committed':(directory/'publication.json').exists(),'evidence_ref':ref,
-            'repairable':result.get('error')=='capability_store_validation_failed' or runtime_binding_failure,'feedback':feedback}
+            'committed':committed,'evidence_ref':ref,
+            'repairable':result.get('error')=='capability_store_validation_failed' or runtime_binding_failure or shape_binding_failure,'feedback':feedback}
 
 
 def create_adapter(plan):return FrontierAdapter(plan)

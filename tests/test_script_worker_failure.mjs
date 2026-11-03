@@ -50,13 +50,15 @@ test('a native data operation failure keeps its receipt and writes scoped diagno
  const library=join(dir,'library.json');writeFileSync(library,JSON.stringify({...body,digest:digest(body)}));
  const catalog=buildScriptCapabilities(library,'owner'),leaf=catalog.capabilities.find(c=>c.contract.input_schema.properties.value);
  const args={value:{items:[[{amount:1}]]}},registry=join(dir,'registry.json'),manifest=join(dir,'manifest.json');
+ const witness=JSON.stringify(args.value);writeFileSync(join(work,'inputs/context.json'),witness,{mode:0o400});
  writeFileSync(registry,JSON.stringify(catalog.snapshot));
  writeFileSync(manifest,JSON.stringify({format:'script_capability_task_v1',task_id:'shape-diagnostic',owner:'owner',workspace:work,
-  registry_path:registry,libraries:[{path:library,sha256:sha(readFileSync(library))}],inputs:[],
+  registry_path:registry,libraries:[{path:library,sha256:sha(readFileSync(library))}],
+  inputs:[{path:'/work/inputs/context.json',sha256:sha(witness)}],
   grant:{id:'shape-grant',task_id:'shape-diagnostic',snapshot_sha256:catalog.snapshot.digest,root:capabilityRef(leaf),
    arguments_sha256:capabilityDigest(args),mode:'execute',effects:['read'],revoked:false}}));
  const trace=await runScriptCapability(manifest,catalog.snapshot,args),receipt=trace.receipts.find(r=>r.dispatched);
- assert.equal(trace.status,'failed');assert.equal(receipt.reason,'script_worker_failed');
+ assert.equal(trace.status,'failed',JSON.stringify(trace));assert.equal(receipt.reason,'script_worker_failed');
  const failure=JSON.parse(readFileSync(join(work,'calls',receipt.call_id,'failure.json'),'utf8'));
  assert.equal(failure.call_id,receipt.call_id);assert.deepEqual(failure.capability,capabilityRef(leaf));
  assert.equal(failure.arguments_sha256,sha(JSON.stringify(args)));
