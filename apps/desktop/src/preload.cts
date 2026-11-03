@@ -1,11 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-// 此 preload 只属于安装包内的连接页面，服务器工作区没有 preload。
+// 控制桥只属于安装包内连接页面；工作区仅有不暴露页面API的颜色观察preload。
 contextBridge.exposeInMainWorld('geneLoopDesktop', Object.freeze({
   state: () => ipcRenderer.invoke('geneloop:state'),
   connect: (server: string) => ipcRenderer.invoke('geneloop:connect', server),
   retry: () => ipcRenderer.invoke('geneloop:retry'),
-  menu: () => ipcRenderer.invoke('geneloop:menu'),
+  menu: (name: 'app' | 'edit') => ipcRenderer.invoke('geneloop:menu', name),
   settings: () => ipcRenderer.invoke('geneloop:settings'),
   onState: (callback: (value: unknown) => void) => {
     const listener = (_event: unknown, value: unknown) => callback(value);

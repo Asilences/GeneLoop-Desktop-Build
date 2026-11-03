@@ -29,7 +29,7 @@ else {
       desktop.ready.catch(() => { dialog.showErrorBox('GeneLoop Desktop', '连接页面无法启动，请重新安装应用。'); app.quit(); });
     };
     Menu.setApplicationMenu(Menu.buildFromTemplate([
-      { label: 'GeneLoop', submenu: [
+      { id: 'desktop-app', label: '应用', submenu: [
         { label: '返回工作区', click: () => desktop?.showWorkspace() },
         { label: '重新连接', accelerator: 'CmdOrCtrl+R', click: () => { if (desktop) void desktop.connect(desktop.state().server); } },
         { label: '连接设置', accelerator: 'CmdOrCtrl+,', click: () => desktop?.showSettings() },
@@ -38,7 +38,7 @@ else {
         { type: 'separator' },
         { label: '退出 GeneLoop Desktop', role: 'quit' },
       ] },
-      { label: '编辑', submenu: [ { role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' } ] },
+      { id: 'desktop-edit', label: '编辑', submenu: [ { role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' } ] },
       { label: '视图', submenu: [ { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'togglefullscreen' } ] },
       { label: '帮助', submenu: [ { label: '关于 GeneLoop Desktop', click: () => {
         if (desktop) void dialog.showMessageBox(desktop.window, { type: 'info', message: 'GeneLoop Desktop ' + app.getVersion(), detail: '当前版本连接 GeneLoop 服务器，Agent 与场景工具在服务器执行。' });

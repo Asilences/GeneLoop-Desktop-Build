@@ -6,8 +6,15 @@ import { test } from 'node:test';
 
 const supported = process.versions.node.split('.').map(Number);
 const available = supported[0] > 22 || supported[0] === 22 && supported[1] >= 18;
+const { readAppearance } = available ? await import('../apps/desktop/src/appearance.ts') : {};
 const policy = available ? await import('../apps/desktop/src/policy.ts') : undefined;
 const settingsModule = available ? await import('../apps/desktop/src/settings.ts') : undefined;
+
+test('桌面主题消息只接受颜色值，不接收CSS文本或执行能力', {skip:!available}, () => {
+  assert.deepEqual(readAppearance({background:'#F7F7F8',foreground:'#171719'}), {background:'#f7f7f8',foreground:'#171719',dark:false});
+  assert.equal(readAppearance({background:'#1b1b1b',foreground:'#f1f1f1'}).dark,true);
+  for (const value of [null, {}, {background:'url(https://example.test)',foreground:'#171719'}, {background:'#fff;display:none',foreground:'#171719'}]) assert.equal(readAppearance(value),undefined);
+});
 
 test('桌面连接仅接受不含令牌的 HTTPS 根地址；本地 HTTP 仅用于显式开发诊断', { skip: !available }, () => {
   assert.equal(policy.serverOrigin('https://geneloop.ai'), 'https://geneloop.ai/');

@@ -3,6 +3,12 @@
   const byId = id => document.getElementById(id);
   let latest;
   function render(state) {
+    if (state.appearance) {
+      const root = document.documentElement;
+      root.style.setProperty('--chrome-bg', state.appearance.background);
+      root.style.setProperty('--chrome-ink', state.appearance.foreground);
+      root.dataset.dark = String(state.appearance.dark);
+    }
     latest = state;
     const settings = state.phase === 'settings', error = state.phase === 'error';
     byId('title').textContent = settings ? '连接你的 GeneLoop' : error ? '工作区暂时无法连接' : '正在连接你的工作区';
@@ -16,8 +22,8 @@
   }
   bridge.onState(render);
   bridge.state().then(render);
-  byId('app-menu').onclick = () => bridge.menu();
-  byId('connection-settings').onclick = () => bridge.settings();
+  byId('app-menu').onclick = () => bridge.menu('app');
+  byId('edit-menu').onclick = () => bridge.menu('edit');
   byId('retry').onclick = () => bridge.retry();
   byId('configure').onclick = () => render({ ...latest, phase: 'settings', message: '' });
   byId('settings').onsubmit = async event => {

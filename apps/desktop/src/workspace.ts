@@ -1,4 +1,4 @@
-import { BrowserWindow, WebContentsView, dialog, ipcMain, session, shell, Menu } from 'electron';
+import { BrowserWindow, WebContentsView, dialog, ipcMain, session, shell, Menu, nativeTheme } from 'electron';
 import type { IpcMainInvokeEvent, Session, Event, DownloadItem, WebContents } from 'electron';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
@@ -8,10 +8,12 @@ import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
 import { LocalFrontendHost } from './frontend.ts';
 import { readBootDocument } from './boot-request.ts';
+import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
+import type { Appearance } from './appearance.ts';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 type DownloadListener = (event: Event, item: DownloadItem, contents: WebContents) => void;
-export type DesktopState = { phase: 'connecting' | 'connected' | 'error' | 'settings'; server: string; message: string; version: string };
+export type DesktopState = { phase: 'connecting' | 'connected' | 'error' | 'settings'; server: string; message: string; version: string; appearance: Appearance };
 
 export class DesktopWorkspace {
   readonly window: BrowserWindow;
@@ -29,12 +31,13 @@ export class DesktopWorkspace {
 
   constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean; closeToTray?: boolean }) {
     const { settings } = options;
-    this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version };
+    const appearance = nativeTheme.shouldUseDarkColors ? DARK_APPEARANCE : LIGHT_APPEARANCE;
+    this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version, appearance };
     this.window = new BrowserWindow({
       ...settings.window, minWidth: 800, minHeight: 600, show: false,
-      title: 'GeneLoop Desktop', backgroundColor: '#161618', autoHideMenuBar: true,
+      title: 'GeneLoop Desktop', backgroundColor: appearance.background, autoHideMenuBar: true,
       titleBarStyle: process.platform === 'win32' ? 'hidden' : 'default',
-      ...(process.platform === 'win32' ? { titleBarOverlay: { color: '#161618', symbolColor: '#f5f5f7', height: 40 } } : {}),
+      ...(process.platform === 'win32' ? { titleBarOverlay: { color: appearance.background, symbolColor: appearance.foreground, height: TITLE_BAR_HEIGHT } } : {}),
       icon: join(directory, '../assets/icon.png'),
       webPreferences: { preload: join(directory, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true },
     });
@@ -50,7 +53,12 @@ export class DesktopWorkspace {
     });
     this.window.on('closed', () => this.dispose());
     ipcMain.handle('geneloop:state', event => { this.requireShell(event); return this.state(); });
-    ipcMain.handle('geneloop:menu', event => { this.requireShell(event); Menu.getApplicationMenu()?.popup({ window: this.window }); });
+    ipcMain.handle('geneloop:menu', (event, name: unknown) => {
+      this.requireShell(event);
+      if (name !== 'app' && name !== 'edit') return;
+      if (this.pageReady && this.stateValue.phase === 'connected') this.workspace?.webContents.focus();
+      Menu.getApplicationMenu()?.getMenuItemById('desktop-' + name)?.submenu?.popup({ window: this.window, x: name === 'app' ? 8 : 58, y: TITLE_BAR_HEIGHT });
+    });
     ipcMain.handle('geneloop:settings', event => { this.requireShell(event); this.showSettings(); });
     ipcMain.handle('geneloop:retry', event => { this.requireShell(event); void this.connect(this.stateValue.server); });
     ipcMain.handle('geneloop:connect', async (event, input: unknown) => {
@@ -89,7 +97,7 @@ export class DesktopWorkspace {
   private fit(): void {
     if (this.workspace && !this.window.isDestroyed()) {
       const [width, height] = this.window.getContentSize();
-      this.workspace.setBounds({ x: 0, y: 40, width, height: Math.max(0, height - 40) });
+      this.workspace.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: Math.max(0, height - TITLE_BAR_HEIGHT) });
     }
   }
 
@@ -125,6 +133,7 @@ export class DesktopWorkspace {
     remoteSession.setPermissionCheckHandler(() => false);
     const view = new WebContentsView({ webPreferences: {
       session: remoteSession, nodeIntegration: false, contextIsolation: true, sandbox: true,
+      preload: join(directory, 'appearance-preload.cjs'),
       webviewTag: false, webSecurity: true, navigateOnDragDrop: false,
     } });
     this.workspace = view;
@@ -138,6 +147,16 @@ export class DesktopWorkspace {
     };
     this.frontend = new LocalFrontendHost({ session: remoteSession, server, assets: join(directory, '../assets'), fail, readBoot: request => readBootDocument(remoteSession, request) });
     this.frontend.install();
+    view.webContents.on('ipc-message', (event, channel, value: unknown) => {
+      if (channel !== 'geneloop:appearance' || attempt !== this.generation || event.senderFrame !== view.webContents.mainFrame ||
+          !sameServer(event.senderFrame.url, server)) return;
+      const appearance = readAppearance(value);
+      if (!appearance || this.window.isDestroyed()) return;
+      this.stateValue.appearance = appearance;
+      if (process.platform === 'win32') this.window.setTitleBarOverlay({ color: appearance.background, symbolColor: appearance.foreground, height: TITLE_BAR_HEIGHT });
+      this.window.setBackgroundColor(appearance.background);
+      this.window.webContents.send('geneloop:state', this.state());
+    });
     view.webContents.on('will-navigate', (event, url) => {
       if (!sameServer(url, server)) event.preventDefault();
     });

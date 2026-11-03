@@ -102,6 +102,19 @@ app.whenReady().then(async () => {
   report.local_script_requests = desktop.frontend.served.localScripts;
   assert.deepEqual(await contents.executeJavaScript('[typeof require,typeof process,typeof window.geneLoopDesktop]'), ['undefined', 'undefined', 'undefined']);
   check('本地打包的 DSH 原生聊天/设置/场景组件加载，无本地 Node 权限');
+  const chrome = desktop.window.webContents;
+  assert.equal(desktop.workspace.getBounds().y, 32);
+  assert.deepEqual(await chrome.executeJavaScript(`({height:document.querySelector('header').getBoundingClientRect().height,labels:[...document.querySelectorAll('header button')].map(button=>button.textContent)})`), {height:32,labels:['应用','编辑']});
+  await until(async () => desktop.state().appearance.background === await contents.executeJavaScript(`getComputedStyle(document.body).getPropertyValue('--gl-sidebar').trim()`), '标题栏继承工作区主题');
+  const originalTheme = await contents.executeJavaScript(`({dark:document.body.getAttribute('data-ds-dark-theme'),style:document.body.getAttribute('data-geneloop-style')})`);
+  await contents.executeJavaScript(`document.body.setAttribute('data-geneloop-style','clear');document.body.setAttribute('data-ds-dark-theme','');`);
+  await until(async () => desktop.state().appearance.dark && await chrome.executeJavaScript(`getComputedStyle(document.querySelector('header')).backgroundColor === 'rgb(27, 27, 27)'`), '深色标题栏联动');
+  try { writeFileSync(join(output, 'titlebar-dark.png'), (await desktop.window.capturePage({x:0,y:0,width:1280,height:32})).toPNG()); } catch {}
+  await contents.executeJavaScript(`document.body.removeAttribute('data-ds-dark-theme');`);
+  await until(async () => !desktop.state().appearance.dark && await chrome.executeJavaScript(`getComputedStyle(document.querySelector('header')).backgroundColor === 'rgb(247, 247, 248)'`), '浅色标题栏联动');
+  try { writeFileSync(join(output, 'titlebar-light.png'), (await desktop.window.capturePage({x:0,y:0,width:1280,height:32})).toPNG()); report.titlebar_screenshots=['titlebar-light.png','titlebar-dark.png']; } catch {}
+  await contents.executeJavaScript(`(()=>{const saved=${JSON.stringify(originalTheme)};for(const [name,value] of [['data-ds-dark-theme',saved.dark],['data-geneloop-style',saved.style]]){if(value===null)document.body.removeAttribute(name);else document.body.setAttribute(name,value)}})()`);
+  check('32px 应用/编辑菜单栏随浅深色主题联动，不重复品牌或展示黑色状态条');
   await contents.executeJavaScript(`(() => { const button = [...document.querySelectorAll('button')].find(item => item.textContent.trim() === '新会话'); button?.click(); })()`);
   await until(async () => contents.executeJavaScript('Boolean(document.querySelector(\'[contenteditable="true"]\'))'), '服务器新会话与输入框');
   check('通过原生接口创建服务器空会话并恢复输入框，未发送模型消息');
