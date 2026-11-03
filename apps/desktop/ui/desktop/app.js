@@ -351,7 +351,7 @@ function renderConversation(){
     history.append(node('div',{class:'welcome',role:'status'},node('p',{},historyError||'正在加载对话…'),historyError?button('重试',()=>selectSession(state.session,{force:true}).catch(fail),'secondary'):null));
   }else if(!rows.length&&!state.conversation.live.size){
     const cards=exampleButtons();
-    history.append(node('div',{class:'welcome'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),node('h2',{},'探索未至之境'),node('p',{},'把资料、想法和下一步，连接起来。'),node('div',{class:'scene-cards','aria-label':'写作示例'},cards)));
+    history.append(node('div',{class:'welcome'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),node('h2',{},'让研究，向前一步。'),node('p',{},'把资料、想法和下一步，连接起来。'),node('div',{class:'scene-cards','aria-label':'写作示例'},cards)));
   }
   if(state.conversation.hasMore)history.prepend(button('加载更早消息',loadEarlier,'secondary'));
   const native=state.trace?[]:state.nativePresentations||[],nativeAt=new Map();
