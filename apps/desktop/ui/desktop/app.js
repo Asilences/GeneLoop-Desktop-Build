@@ -65,7 +65,18 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     const more=button(icon('more'),event=>{event.stopPropagation();openSessionMenu(row.sessionId,{anchor:more});},'session-more icon');more.title='管理对话';more.setAttribute('aria-label','管理对话：'+titleOf(row));more.setAttribute('aria-haspopup','menu');
     element.append(label,more);element.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();openSessionMenu(row.sessionId,{x:event.clientX,y:event.clientY,anchor:label});});return element;
   };
-  for(const group of state.workspaces){const rows=group.sessionIds.map(id=>state.sessions.find(row=>row.sessionId===id)).filter(visible);if(query&&!rows.length&&!group.title.toLowerCase().includes(query))continue;const header=node('div',{class:'workspace-row'+(state.workspace===group.workspaceId?' current':'')},icon('folder'),button(group.title,()=>{state.workspace=group.workspaceId;renderSidebar();}));list.append(header,...rows.map(sessionButton));}
+  for(const group of state.workspaces){
+    const rows=group.sessionIds.map(id=>state.sessions.find(row=>row.sessionId===id)).filter(visible);
+    if(query&&!rows.length&&!group.title.toLowerCase().includes(query))continue;
+    const header=button(node('span',{},group.title),()=>{
+      state.workspace=group.workspaceId;
+      list.querySelector('.workspace-row[aria-current=true]')?.removeAttribute('aria-current');
+      header.setAttribute('aria-current','true');
+    },'workspace-row');
+    header.prepend(icon('folder'));
+    if(state.workspace===group.workspaceId)header.setAttribute('aria-current','true');
+    list.append(header,...rows.map(sessionButton));
+  }
   const ungrouped=state.sessions.filter(row=>!grouped.has(row.sessionId)&&visible(row));if(ungrouped.length)list.append(node('div',{class:'workspace-heading'},'其他对话'),...ungrouped.map(sessionButton));
   if(!list.children.length)list.append(node('p',{class:'empty'},query?'没有匹配的对话':'创建工作区，开始第一段研究。'));
 }

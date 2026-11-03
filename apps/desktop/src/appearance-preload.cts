@@ -24,9 +24,12 @@ window.addEventListener('DOMContentLoaded', () => {
   const schedule = () => { if (!pending) { pending = true; requestAnimationFrame(publish); } };
   const observer = new MutationObserver(schedule);
   for (const element of [document.documentElement, document.body]) observer.observe(element, { attributes: true, attributeFilter: ['data-ds-dark-theme', 'data-geneloop-style', 'data-auth-active', 'data-desktop-screen', 'class', 'style'] });
-  document.addEventListener('toggle', event => {
-    if (event.target instanceof HTMLDialogElement) schedule();
-  }, true);
+  // close 处理器会移除弹窗，异步 toggle 此时不一定再冒到 document。
+  const dialogs = new MutationObserver(records => {
+    if (records.some(record => record.target instanceof HTMLDialogElement ||
+        [...record.addedNodes, ...record.removedNodes].some(node => node instanceof HTMLDialogElement))) schedule();
+  });
+  dialogs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
   window.addEventListener('load', schedule);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
   publish();
