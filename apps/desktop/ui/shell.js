@@ -11,6 +11,9 @@
     }
     latest = state;
     byId('desktop-menus').hidden = !state.workspaceVisible || !['connected', 'settings'].includes(state.phase);
+    const modalOpen = state.phase === 'connected' && state.modalOpen;
+    document.documentElement.classList.toggle('workspace-modal', modalOpen);
+    byId('desktop-menus').inert = modalOpen;
     const settings = state.phase === 'settings', error = state.phase === 'error';
     byId('title').textContent = settings ? '连接你的 GeneLoop' : error ? '工作区暂时无法连接' : '正在连接你的工作区';
     byId('message').textContent = state.message || (settings ? '使用与网页版相同的账号和场景。' : '即将打开 GeneLoop。');
@@ -25,6 +28,7 @@
   bridge.state().then(render);
   byId('app-menu').onclick = () => bridge.menu('app');
   byId('edit-menu').onclick = () => bridge.menu('edit');
+  byId('view-menu').onclick = () => bridge.menu('view');
   byId('retry').onclick = () => bridge.retry();
   byId('configure').onclick = () => render({ ...latest, phase: 'settings', message: '' });
   byId('settings').onsubmit = async event => {

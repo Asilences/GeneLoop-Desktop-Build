@@ -39,7 +39,7 @@ else {
         { label: '退出 GeneLoop Desktop', role: 'quit' },
       ] },
       { id: 'desktop-edit', label: '编辑', submenu: [ { role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' } ] },
-      { label: '视图', submenu: [ { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'togglefullscreen' } ] },
+      { id: 'desktop-view', label: '视图', submenu: [ { label: '实际大小', role: 'resetZoom' }, { label: '放大', role: 'zoomIn' }, { label: '缩小', role: 'zoomOut' }, { type: 'separator' }, { label: '切换全屏', role: 'togglefullscreen' } ] },
       { label: '帮助', submenu: [ { label: '关于 GeneLoop Desktop', click: () => {
         if (desktop) void dialog.showMessageBox(desktop.window, { type: 'info', message: 'GeneLoop Desktop ' + app.getVersion(), detail: '当前版本连接 GeneLoop 服务器，Agent 与场景工具在服务器执行。' });
       } } ] },

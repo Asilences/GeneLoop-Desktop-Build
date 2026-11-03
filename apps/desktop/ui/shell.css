@@ -6,6 +6,8 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 32px; padding: 0 14
 header nav { display:flex; gap:2px; align-items:center; }
 header button { -webkit-app-region: no-drag; width:auto; padding:5px 12px; border-radius:5px; color:var(--chrome-ink); background:transparent; font-size:13px; font-weight:400; }
 header button:hover { background:color-mix(in srgb,var(--chrome-ink) 8%,transparent); }
+.workspace-modal header { background:color-mix(in srgb,var(--chrome-bg) 66.667%,black); }
+.workspace-modal header nav { filter:blur(2px); }
 main { width: min(440px, calc(100vw - 64px)); padding: 48px 0; text-align: center; }
 .logo { object-fit: contain; }
 .brand { margin: 22px 0 30px; font-size: 18px; font-weight: 600; letter-spacing: -.02em; }

@@ -12,7 +12,7 @@ import type { Appearance } from './appearance.ts';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 type DownloadListener = (event: Event, item: DownloadItem, contents: WebContents) => void;
-export type DesktopState = { phase: 'connecting' | 'connected' | 'error' | 'settings'; server: string; message: string; version: string; appearance: Appearance; workspaceVisible: boolean };
+export type DesktopState = { phase: 'connecting' | 'connected' | 'error' | 'settings'; server: string; message: string; version: string; appearance: Appearance; workspaceVisible: boolean; modalOpen: boolean };
 
 export class DesktopWorkspace {
   readonly window: BrowserWindow;
@@ -32,7 +32,7 @@ export class DesktopWorkspace {
   constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean; closeToTray?: boolean }) {
     const { settings } = options;
     const appearance = nativeTheme.shouldUseDarkColors ? DARK_APPEARANCE : LIGHT_APPEARANCE;
-    this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version, appearance, workspaceVisible: false };
+    this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version, appearance, workspaceVisible: false, modalOpen: false };
     this.window = new BrowserWindow({
       ...settings.window, minWidth: 800, minHeight: 600, show: false,
       title: 'GeneLoop Desktop', backgroundColor: appearance.background, autoHideMenuBar: true,
@@ -56,9 +56,10 @@ export class DesktopWorkspace {
     ipcMain.handle('geneloop:state', event => { this.requireShell(event); return this.state(); });
     ipcMain.handle('geneloop:menu', (event, name: unknown) => {
       this.requireShell(event);
-      if (name !== 'app' && name !== 'edit') return;
+      if (name !== 'app' && name !== 'edit' && name !== 'view') return;
+      if (this.stateValue.phase === 'connected' && this.stateValue.modalOpen) return;
       if (this.pageReady && this.stateValue.phase === 'connected') this.workspace?.webContents.focus();
-      Menu.getApplicationMenu()?.getMenuItemById('desktop-' + name)?.submenu?.popup({ window: this.window, x: name === 'app' ? 8 : 58, y: TITLE_BAR_HEIGHT });
+      Menu.getApplicationMenu()?.getMenuItemById('desktop-' + name)?.submenu?.popup({ window: this.window, x: { app: 8, edit: 58, view: 108 }[name], y: TITLE_BAR_HEIGHT });
     });
     ipcMain.handle('geneloop:settings', event => { this.requireShell(event); this.showSettings(); });
     ipcMain.handle('geneloop:retry', event => { this.requireShell(event); void this.connect(this.stateValue.server); });
@@ -92,7 +93,17 @@ export class DesktopWorkspace {
 
   private update(phase: DesktopState['phase'], message = ''): void {
     this.stateValue = { ...this.stateValue, phase, message };
+    this.updateTitleBar();
     if (!this.window.isDestroyed()) this.window.webContents.send('geneloop:state', this.state());
+  }
+
+  private updateTitleBar(): void {
+    if (process.platform !== 'win32' || this.window.isDestroyed()) return;
+    const { appearance, phase, modalOpen } = this.stateValue;
+    const color = phase === 'connected' && modalOpen
+      ? appearance.background.replace(/[0-9a-f]{2}/gi, channel => Math.round(parseInt(channel, 16) * 2 / 3).toString(16).padStart(2, '0'))
+      : appearance.background;
+    this.window.setTitleBarOverlay({ color, symbolColor: appearance.foreground, height: TITLE_BAR_HEIGHT });
   }
 
   private fit(): void {
@@ -125,6 +136,7 @@ export class DesktopWorkspace {
     this.removeWorkspace();
     this.pageReady = false;
     this.stateValue.workspaceVisible = false;
+    this.stateValue.modalOpen = false;
     this.stateValue.server = server;
     this.update('connecting');
     // 不同服务器使用不同 Cookie / localStorage，保留原生同源登录和传输。
@@ -155,8 +167,10 @@ export class DesktopWorkspace {
       const appearance = readAppearance(value);
       if (!appearance || this.window.isDestroyed()) return;
       this.stateValue.appearance = appearance;
-      this.stateValue.workspaceVisible = (value as { screen?: unknown }).screen === 'workspace';
-      if (process.platform === 'win32') this.window.setTitleBarOverlay({ color: appearance.background, symbolColor: appearance.foreground, height: TITLE_BAR_HEIGHT });
+      const presentation = value as { screen?: unknown; modalOpen?: unknown };
+      this.stateValue.workspaceVisible = presentation.screen === 'workspace';
+      this.stateValue.modalOpen = presentation.modalOpen === true;
+      this.updateTitleBar();
       this.window.setBackgroundColor(appearance.background);
       this.window.webContents.send('geneloop:state', this.state());
     });

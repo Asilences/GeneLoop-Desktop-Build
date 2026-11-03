@@ -66,8 +66,12 @@ app.whenReady().then(async()=>{
  await until(()=>evaluate(`!!document.querySelector('${row}')`),'恢复归档对话');
  await evaluate(`document.querySelector('dialog header button').click()`);
  await until(()=>evaluate('!document.querySelector("dialog")'),'归档设置关闭');
- await evaluate(`document.querySelector('${row} .session-more').click();document.querySelector('[data-action="trash"]').click();document.querySelector('dialog .primary').click()`);
+ await evaluate(`document.querySelector('${row} .session-more').click();document.querySelector('[data-action="trash"]').click()`);
+ const toolbar=()=>desktop.window.webContents.executeJavaScript(`(()=>{const nav=document.getElementById('desktop-menus');return {inert:nav.inert,filter:getComputedStyle(nav).filter,view:!!document.getElementById('view-menu')}})()`);
+ await until(async()=>{const state=await toolbar();return state.inert&&state.filter==='blur(2px)'&&state.view;},'删除确认时标题栏遮罩');
+ await evaluate(`document.querySelector('dialog .primary').click()`);
  await until(()=>evaluate(`!document.querySelector('dialog')&&!document.querySelector('${row}')`),'确认移入最近删除');
+ await until(async()=>{const state=await toolbar();return !state.inert&&state.filter==='none';},'删除确认关闭后恢复标题栏');
  check('右键和三点菜单操作指定对话，归档可恢复，删除须确认');
  await new Promise(done=>setTimeout(done,300));writeFileSync(join(fixture.output,'independent-conversation.png'),(await desktop.workspace.webContents.capturePage()).toPNG());report.ok=true;
 }).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');}catch{}console.error(error);}).finally(()=>{writeFileSync(join(fixture.output,'summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));desktop?.permitClose();app.quit();});
