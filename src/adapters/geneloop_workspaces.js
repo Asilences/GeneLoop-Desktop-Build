@@ -143,6 +143,8 @@
     const workspaceSource = { subscribe: fn => workspaces.list.subscribe(fn), snapshot: () => workspaces.list.getSnapshot() };
     const sessionSource = { subscribe: fn => sessions.list.subscribe(fn), snapshot: () => sessions.list.getSnapshot() };
     const publicSession = row => row && row.projectionValues?.harlessComparisonLane !== true && row.origin !== 'subagent' && !trash.deleted_session_ids.includes(row.id);
+    const visibleHistory = (ws, list, row) => publicSession(row) && !isArchived(ws, row.id) &&
+      (row.id === list.current || row.blank !== true || row.running || (row.title || row.displayTitle || '新会话') !== '新会话');
     const clearDeletedCurrent = () => {
       if (!trash.deleted_session_ids.includes(sessions.list.getSnapshot().current || addressedCurrent)) return;
       addressedCurrent = undefined; navigating++; sessions.clear(); layout?.selectPanel(null);
@@ -357,7 +359,7 @@
       }, []);
       const error = message => setNotice(message);
       const matches = title => String(title || '').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
-      const visible = row => publicSession(row) && !isArchived(ws, row.id);
+      const visible = row => visibleHistory(ws, list, row);
       const matchesChat = row => visible(row) && matches(row.title || row.displayTitle || '新会话');
       const open = openSession;
       const edit = (kind, id, title) => { setMenu(null); setName(title); setEditing({ kind, id }); setNotice(''); };
@@ -498,7 +500,7 @@
       const workspace = ws.items.find(item => item.workspaceId === selectedId);
       if (!workspace) return h('main', { className: 'geneloop-workspace-home' }, h('h1', null, '选择工作区'),
         h('p', null, '从侧栏选择一个工作区，或开始新的对话。'), h('button', { onClick: () => { layout?.selectPanel(null); } }, '返回对话'));
-      const chats = workspace.sessionIds.map(id => list.byId[id]).filter(item => publicSession(item) && !isArchived(ws, item.id));
+      const chats = workspace.sessionIds.map(id => list.byId[id]).filter(item => visibleHistory(ws, list, item));
       const stamp = value => { if (!value) return ''; const date = new Date(value); return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(date) : ''; };
       return h('main', { className: 'geneloop-workspace-home', 'aria-label': workspace.title + '工作区' },
         h('header', null, icon('folder', 30), h('h1', null, workspace.title),

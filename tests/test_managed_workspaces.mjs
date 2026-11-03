@@ -429,6 +429,21 @@ test('an explicitly named blank conversation keeps its visible name in the sideb
   ui.dispose();
 });
 
+test('inactive unnamed blank conversations stay out of the web sidebar and workspace overview', () => {
+  const ui=interactiveWorkspaceBrowser();
+  const {ids,byId}=ui.sessions.list.value;
+  ids.push('empty','running');
+  byId.empty={id:'empty',blank:true,title:'新会话'};
+  byId.running={id:'running',blank:true,running:true,title:'执行中的对话'};
+  ui.workspaces.list.value.items[0].sessionIds.push('empty','running');
+  const sidebar=ui.nodes(ui.render());
+  assert.ok(!sidebar.some(row=>row.props?.className==='geneloop-chat-name'&&row.children.includes('新会话')));
+  assert.ok(sidebar.some(row=>row.props?.className==='geneloop-chat-name'&&row.children.includes('执行中的对话')));
+  ui.click(sidebar.find(row=>row.props?.className==='geneloop-workspace-name'));
+  assert.ok(!ui.nodes(ui.home()).some(row=>row.type==='span'&&row.children.includes('新会话')));
+  ui.dispose();
+});
+
 test('archive and trash belong to native settings while workspace and first chat retain a visible gap', () => {
   const ui = interactiveWorkspaceBrowser(); ui.workspaces.list.value.archivedSessionIds = ['one'];
   const sidebar = ui.nodes(ui.render());
