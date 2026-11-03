@@ -1,9 +1,10 @@
 import {request,post,rpc,upload,RemoteStreams} from './api.js';
 import {Conversation} from './conversation.js';
-import {node,button,blocks,markdown,dialog,icon} from './components.js';
+import {node,button,blocks,markdown,dialog,icon,popupMenu} from './components.js';
 import {promptContent} from './composer.js';
 import {settingsPanel} from './panels.js';
 import {comparisonCard} from './comparison.js';
+import {bindScenePicker} from './scene-picker.js';
 const $=id=>document.getElementById(id),state={user:null,sessions:[],workspaces:[],archived:new Set(),session:null,workspace:null,settings:null,models:[],conversation:new Conversation(),attachments:[],trace:false,generation:0,submitting:false,drafts:new Map(),comparisons:new Map(),pending:new Map()};
 const labels={'new-scene':'Chat',ppt:'PPT','paper-proofreading':'论文校对','research-data-analysis':'数据分析',files:'文件管理','video-editing':'视频编辑'};
 let toastTimer,pollTimer,renderPending=false,registering=false,currentFollow,workspaceFollow,eventFollow,controlFollow,previewUrl;
@@ -12,7 +13,7 @@ function changeSelection(action){const operation=selectionChange.catch(()=>{}).t
 const errorText=error=>error?.message||String(error);
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5500);}
 const fail=error=>toast(errorText(error));
-function screen(name){for(const id of ['auth','loading','workspace'])$(id).hidden=id!==name;document.body.toggleAttribute('data-auth-active',name==='auth');}
+function screen(name){for(const id of ['auth','loading','workspace'])$(id).hidden=id!==name;document.body.dataset.desktopScreen=name;document.body.toggleAttribute('data-auth-active',name==='auth');}
 function warning(error){$('connection-warning').textContent=errorText(error)+' · 点击重新连接';$('connection-warning').hidden=false;}
 let streams=new RemoteStreams(warning);
 function theme(){const value=localStorage.getItem('geneloop.desktop.theme')||'system';document.body.toggleAttribute('data-ds-dark-theme',value==='dark'||value==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
@@ -44,8 +45,13 @@ async function connectWorkspace(){
 }
 async function loadSessions(){const value=await rpc('session/list',{});if(!Array.isArray(value.items))throw Error('会话目录响应不兼容');state.sessions=value.items.filter(row=>row.origin!=='subagent');renderSidebar();}
 function renderSidebar(){const list=$('workspace-list'),query=$('search').value.trim().toLowerCase();list.replaceChildren();const grouped=new Set(state.workspaces.flatMap(row=>row.sessionIds));
-  const sessionButton=row=>button((row.running?'● ':'')+titleOf(row),()=>selectSession(row.sessionId).catch(fail),'session-row'+(row.sessionId===state.session?' active':''));
-  for(const group of state.workspaces){const rows=group.sessionIds.map(id=>state.sessions.find(row=>row.sessionId===id)).filter(row=>row&&!state.archived.has(row.sessionId)&&(!query||titleOf(row).toLowerCase().includes(query)));if(query&&!rows.length&&!group.title.toLowerCase().includes(query))continue;const header=node('div',{class:'workspace-row'+(state.workspace===group.workspaceId?' current':'')},'▱',button(group.title,()=>{state.workspace=group.workspaceId;renderSidebar();}));list.append(header,...rows.map(sessionButton));}
+  const sessionButton=row=>{
+    const element=node('div',{class:'session-row'+(row.sessionId===state.session?' active':''),'data-session-id':row.sessionId,onclick:()=>selectSession(row.sessionId).catch(fail)});
+    const label=node('button',{class:'session-link',type:'button'},(row.running?'● ':'')+titleOf(row));
+    const more=button(icon('more'),event=>{event.stopPropagation();openSessionMenu(row.sessionId,{anchor:more});},'session-more icon');more.title='管理对话';more.setAttribute('aria-label','管理对话：'+titleOf(row));more.setAttribute('aria-haspopup','menu');
+    element.append(label,more);element.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();openSessionMenu(row.sessionId,{x:event.clientX,y:event.clientY,anchor:label});});return element;
+  };
+  for(const group of state.workspaces){const rows=group.sessionIds.map(id=>state.sessions.find(row=>row.sessionId===id)).filter(row=>row&&!state.archived.has(row.sessionId)&&(!query||titleOf(row).toLowerCase().includes(query)));if(query&&!rows.length&&!group.title.toLowerCase().includes(query))continue;const header=node('div',{class:'workspace-row'+(state.workspace===group.workspaceId?' current':'')},icon('folder'),button(group.title,()=>{state.workspace=group.workspaceId;renderSidebar();}));list.append(header,...rows.map(sessionButton));}
   const ungrouped=state.sessions.filter(row=>!grouped.has(row.sessionId)&&!state.archived.has(row.sessionId)&&(!query||titleOf(row).toLowerCase().includes(query)));if(ungrouped.length)list.append(node('div',{class:'workspace-heading'},'其他对话'),...ungrouped.map(sessionButton));
   if(!list.children.length)list.append(node('p',{class:'empty'},query?'没有匹配的对话':'创建工作区，开始第一段研究。'));
 }
@@ -98,7 +104,7 @@ async function chooseScene(id){return changeSelection(async()=>{const scene=stat
 function renderModels(){const select=$('model-select');select.replaceChildren();for(const model of state.models)select.append(node('option',{value:JSON.stringify([model.provider,model.model]),disabled:model.available===false},model.label||model.model));const selection=state.defaultModel||{};select.value=JSON.stringify([selection.provider,selection.model]);if(select.selectedIndex<0&&select.options.length)select.selectedIndex=0;renderEfforts(selection.reasoning_effort||'off');}
 function renderEfforts(selected='off'){const model=state.models.find(row=>JSON.stringify([row.provider,row.model])===$('model-select').value);const select=$('effort-select');select.replaceChildren();for(const mode of model?.reasoning_modes?.length?model.reasoning_modes:[{id:'off',label:'关闭',available:true}])select.append(node('option',{value:mode.id,disabled:mode.available===false,title:mode.unavailable_reason},mode.label||mode.id));select.value=selected;if(select.selectedIndex<0)select.selectedIndex=0;}
 async function changeModel(){const [provider,model]=JSON.parse($('model-select').value),reasoningEffort=$('effort-select').value;return changeSelection(async()=>{await ensureSession();const selected=await rpc('session/selectModel',{sessionId:state.session,provider,model,reasoningEffort});state.defaultModel={...selected.selected,reasoning_effort:selected.selected.reasoningEffort};renderModels();});}
-function sceneOptions(){const form=node('form');const selection=state.settings?.selection||{};const mode=node('select',{name:'mode'},...['baseline','shadow','execute'].map(id=>node('option',{value:id},({baseline:'标准执行',shadow:'观察候选',execute:'校验后复用'})[id])));mode.value=selection.mode||'baseline';const rsi=node('input',{type:'checkbox',name:'rsi'});rsi.checked=Boolean(selection.rsi);if(!state.settings?.paired_comparison)form.append(node('label',{},'执行模式',mode),node('label',{},rsi,'允许使用已认证 Motif'));
+function sceneOptions(){const form=node('form');const selection=state.settings?.selection||{};const mode=node('select',{name:'mode'},...['baseline','shadow','execute'].map(id=>node('option',{value:id},({baseline:'标准执行',shadow:'观察候选',execute:'校验后复用'})[id])));mode.value=selection.mode||'baseline';const rsi=node('input',{type:'checkbox',name:'rsi'});rsi.checked=Boolean(selection.rsi);if(!state.settings?.paired_comparison)form.append(node('label',{},'执行模式',mode),node('label',{class:'check-row'},rsi,node('span',{},'开启持续学习与改进')));
   const fields=[];for(const field of state.settings?.scene_option_fields||[]){const select=node('select',{name:field.key});for(const choice of field.values||[])select.append(node('option',{value:JSON.stringify(choice.value)},choice.label));select.value=JSON.stringify(state.settings.scene_options?.[field.key]??field.default);fields.push([field,select]);form.append(node('label',{},field.label,select),node('p',{},(field.values||[]).map(row=>row.detail).filter(Boolean).join('；')));}
   if(state.settings?.paired_comparison)form.append(node('p',{},'本场景由服务器生成标准执行与Motif执行的对照结果。'));
   const save=button('保存选项',async()=>{save.disabled=true;try{await ensureSession();if(!state.settings.paired_comparison)await post('/api/harless/settings',{action:'select',session_id:state.session,selection:{mode:mode.value,rsi:rsi.checked}});if(fields.length)await post('/api/harless/settings',{action:'set_scene_options',session_id:state.session,options:Object.fromEntries(fields.map(([field,select])=>[field.key,JSON.parse(select.value)]))});state.settings=await request('/api/harless/settings?session_id='+encodeURIComponent(state.session));modal.close();}catch(error){fail(error);}finally{save.disabled=false;}},'primary');const modal=dialog('场景选项',form,[save]);}
@@ -125,21 +131,35 @@ async function handleEvent(frame){if(frame.type==='ready'){state.eventClientId=f
 function askText(title,label,initial,submit){const input=node('input',{value:initial||'',required:true}),form=node('form',{},node('label',{},label,input)),save=node('button',{class:'primary'},'确定');form.append(save);const modal=dialog(title,form);form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await submit(input.value.trim());modal.close();}catch(error){fail(error);save.disabled=false;}};input.focus();}
 function settings(initial='appearance'){return settingsPanel({user:state.user,sessions:state.sessions,archived:state.archived,titleOf,theme,fail,toast,refresh:connectWorkspace,logout:showAuth,changed:()=>{$('account-name').textContent=state.user.displayName;}},initial);}
 function account(){settings('account');}
-function sessionActions(){if(!state.session)return;const session=state.session,title=titleOf(state.sessions.find(row=>row.sessionId===session));const apply=async action=>{try{await post('/api/harless/session-trash',{action,session_id:session});modal.close();currentFollow?.();state.session=null;state.drafts.delete(session);$('prompt').value='';state.attachments=[];renderAttachments();await connectWorkspace();}catch(error){fail(error);}};const modal=dialog('管理对话',node('div',{},node('h3',{},title),node('p',{},'归档后可在设置中恢复；移入最近删除后可恢复，正在执行的对话需先停止。')),[button('归档',()=>apply('archive'),'secondary'),button('移入最近删除',()=>apply('delete'),'secondary')]);}
+async function mutateSession(action,id){await post('/api/harless/session-trash',{action,session_id:id});if(action==='archive')state.archived.add(id);if(state.session===id)$('new-session').click();if(action==='delete')state.drafts.delete(id);await loadSessions();renderConversation();toast(action==='archive'?'对话已归档，可从设置恢复。':'对话已移入最近删除。');}
+function renameSession(id){askText('重命名对话','对话名称',titleOf(state.sessions.find(row=>row.sessionId===id)),async title=>{await rpc('session/rename',{sessionId:id,title});await loadSessions();renderConversation();});}
+function openSessionMenu(id,position){
+  const row=state.sessions.find(row=>row.sessionId===id);if(!row)return;
+  popupMenu([
+    {id:'rename',label:'重命名',icon:'edit',action:()=>renameSession(id)},
+    {id:'archive',label:'归档对话',icon:'archive',action:()=>mutateSession('archive',id).catch(fail)},
+    {id:'copy-id',label:'复制会话 ID',icon:'copy',action:async()=>{try{await navigator.clipboard.writeText(id);toast('会话 ID 已复制。');}catch{const input=node('input',{value:id,readonly:true});dialog('复制会话 ID',node('div',{},input,node('p',{},'按 Ctrl+C 复制。')));input.focus();input.select();}}},
+    {separator:true},
+    {id:'trash',label:row.running?'执行中，暂不能删除':'移入最近删除',icon:'trash',danger:true,disabled:row.running,action:()=>{const confirm=dialog('移入最近删除',node('div',{},node('h3',{},titleOf(row)),node('p',{},'移入后可从设置的“最近删除”中恢复。')),[button('取消',()=>confirm.close(),'secondary'),button('确认移入',async()=>{try{await mutateSession('delete',id);confirm.close();}catch(error){fail(error);}},'primary')]);}}
+  ],position);
+}
+function sessionActions(event){if(state.session)openSessionMenu(state.session,{anchor:event.currentTarget});}
 $('login-form').onsubmit=async event=>{event.preventDefault();const submit=$('login-submit');submit.disabled=true;$('login-error').textContent='';try{const body=Object.fromEntries(new FormData(event.currentTarget));await post('/api/account/'+(registering?'register':'login'),body);$('login-pass').value='';await initialize();}catch(error){$('login-error').textContent=errorText(error);}finally{submit.disabled=false;}};
 $('auth-toggle').onclick=()=>{registering=!registering;$('display-name').hidden=$('invite-code').hidden=!registering;$('display-name').querySelector('input').required=$('invite-code').querySelector('input').required=registering;$('auth-title').textContent=registering?'加入 GeneLoop':'欢迎回来';$('login-submit').textContent=registering?'创建账号':'登录';$('auth-toggle').textContent=registering?'已有账号，返回登录':'使用邀请码注册';$('login-error').textContent='';};
 $('connect-retry').onclick=()=>initialize();$('refresh-session').onclick=()=>connectWorkspace().catch(fail);$('connection-warning').onclick=()=>connectWorkspace().catch(fail);$('search').oninput=renderSidebar;
 $('new-workspace').onclick=()=>askText('新建工作区','工作区名称','',async name=>{const result=await post('/api/harless/workspaces',{name,request_id:crypto.randomUUID()});state.workspace=result.workspace.workspaceId;renderSidebar();});
 $('new-session').onclick=()=>{if(state.session)state.drafts.set(state.session,{text:$('prompt').value,attachments:state.attachments});currentFollow?.();state.generation++;state.session=null;state.composerScene='new-scene';renderScenes();state.conversation=new Conversation();state.comparisons.clear();state.attachments=[];$('prompt').value='';renderAttachments();renderSidebar();renderConversation();};
-$('rename-session').onclick=()=>{if(!state.session)return;askText('重命名对话','对话名称',titleOf(state.sessions.find(row=>row.sessionId===state.session)),async title=>{await rpc('session/rename',{sessionId:state.session,title});await loadSessions();renderConversation();});};
+$('rename-session').onclick=()=>{if(state.session)renameSession(state.session);};
 $('sidebar-toggle').onclick=()=>$('workspace').classList.toggle('sidebar-hidden');$('chat-tab').onclick=()=>{state.trace=false;renderConversation();};$('trace-tab').onclick=()=>{state.trace=true;renderConversation();};
-$('scene-select').onchange=event=>chooseScene(event.target.value).catch(fail);$('scenes-nav').onclick=()=>dialog('可用场景',node('div',{class:'scene-cards'},...(state.settings?.scenes||[]).map(scene=>button(labels[scene.id]||scene.label,()=>chooseScene(scene.id).catch(fail)))));$('scene-options').onclick=sceneOptions;
+$('scenes-nav').onclick=()=>dialog('可用场景',node('div',{class:'scene-cards'},...(state.settings?.scenes||[]).map(scene=>button(labels[scene.id]||scene.label,()=>chooseScene(scene.id).catch(fail)))));$('scene-options').onclick=sceneOptions;
 $('model-select').onchange=()=>{renderEfforts();changeModel().catch(fail);};$('effort-select').onchange=()=>changeModel().catch(fail);$('settings-nav').onclick=()=>settings();$('account-nav').onclick=account;
 $('attach').onclick=()=>$('file-input').click();$('file-input').onchange=event=>{attach([...event.target.files]).catch(fail);event.target.value='';};$('composer').onsubmit=send;$('prompt').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();send();}};
 $('stop').onclick=async()=>{try{await rpc('session/cancel',{sessionId:state.session});toast('已请求停止，等待服务器确认。');}catch(error){fail(error);}};
 $('deliveries-toggle').onclick=()=>{$('deliveries').hidden=!$('deliveries').hidden;renderDeliveries();};$('deliveries-close').onclick=()=>$('deliveries').hidden=true;
 for(const [id,name]of Object.entries({'sidebar-toggle':'sidebar','rename-session':'edit','deliveries-toggle':'files','refresh-session':'refresh','new-workspace':'plus','attach':'plus','send':'send','deliveries-close':'close'}))$(id).replaceChildren(icon(name));
 $('new-session').replaceChildren(icon('plus'),'新会话');$('scenes-nav').replaceChildren(icon('scenes'),'场景');$('settings-nav').replaceChildren(icon('settings'),'设置');
+$('account-nav').lastElementChild.replaceChildren(icon('chevron-down'));
+bindScenePicker({input:$('prompt'),select:$('scene-select'),container:$('composer'),getScenes:()=>state.settings?.scenes||[],choose:chooseScene,fail,label:scene=>labels[scene.id]||scene.label});
 const actions=button(icon('more'),sessionActions,'icon');actions.title='管理对话';actions.setAttribute('aria-label','管理对话');$('rename-session').after(actions);
 window.addEventListener('beforeunload',()=>{streams.close();clearInterval(pollTimer);if(previewUrl)URL.revokeObjectURL(previewUrl);});
 initialize();

@@ -10,6 +10,7 @@
       root.dataset.dark = String(state.appearance.dark);
     }
     latest = state;
+    byId('desktop-menus').hidden = !state.workspaceVisible || !['connected', 'settings'].includes(state.phase);
     const settings = state.phase === 'settings', error = state.phase === 'error';
     byId('title').textContent = settings ? '连接你的 GeneLoop' : error ? '工作区暂时无法连接' : '正在连接你的工作区';
     byId('message').textContent = state.message || (settings ? '使用与网页版相同的账号和场景。' : '即将打开 GeneLoop。');

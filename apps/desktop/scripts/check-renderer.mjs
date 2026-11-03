@@ -11,12 +11,14 @@ const require=createRequire(import.meta.url),{WebSocketServer}=require('ws');
 const app=fileURLToPath(new URL('../',import.meta.url));
 const output=join(app,'.local/validation/renderer-'+randomUUID());mkdirSync(output,{recursive:true});
 const requests=[],streams=new Map(),sessions=[],selections=new Map(),modelSelections=new Map();let questionPending=false;
+const archived=new Set(),deleted=new Set();
 const scenes=[['new-scene','Chat','chat'],['ppt','PPT','ppt'],['paper-proofreading','论文校对','paper'],['research-data-analysis','数据分析','data'],['files','文件管理','file'],['video-editing','视频编辑','video']].map(([id,label,shortcut])=>({id,label,shortcut,available:true}));
 const catalog={models:[{provider:'diagnostic',model:'fixture',label:'协议诊断模型（无调用）',available:true,reasoning_modes:[{id:'off',label:'关闭',available:true},{id:'high',label:'高',available:true}]}],default:{provider:'diagnostic',model:'fixture',reasoning_effort:'off'}};
 const comparison={id:'comparison-fixture',session_id:'history',presentation:'paired',status:'completed',revision:1,lanes:{baseline:{status:'completed',answer:'标准执行结果',artifacts:[{id:'artifact',name:'diagnostic.txt',bytes:24}],stats:{}},motif:{status:'completed',answer:'Motif执行结果',artifacts:[],stats:{}}}};
 const event=(seq,type,data)=>({type:'event',event:{seq,type,time:Date.now(),data,surfaceOp:'append'}});
 const records=[event(1,'user/message',{source:{kind:'user'},content:[{type:'text',text:'历史协议诊断'}],harless_comparison:{id:comparison.id,value:comparison}}),event(2,'assistant/message',{message:{content:[{type:'text',text:'## 历史记录\n这是**合成诊断**，不代表模型回答。'}]}})];
 sessions.push({sessionId:'history',blank:false,running:false,projections:{asOfSeq:2,values:{title:'协议诊断历史'}}});
+sessions.push({sessionId:'menu-fixture',blank:true,running:false,projections:{asOfSeq:0,values:{title:'菜单诊断'}}});
 const settings=id=>({selection:selections.get(id)||{scene:'new-scene',mode:'baseline',rsi:false},scenes,scene_options:{},scene_option_fields:[],paired_comparison:false});
 const json=(res,value,status=200)=>{res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(value));};
 const push=(endpoint,value,sessionId)=>{for(const [key,row]of streams)if(row.endpoint===endpoint&&(!sessionId||row.sessionId===sessionId))row.socket.send(JSON.stringify({type:'item',streamId:key,value}));};
@@ -24,18 +26,25 @@ const server=createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1'),path=url.pathname;const buffers=[];for await(const chunk of req)buffers.push(chunk);const raw=Buffer.concat(buffers),body=raw.length&&(req.headers['content-type']||'').includes('json')?JSON.parse(raw):{};
   requests.push({path,method:req.method,body});
-  if(path==='/api/account/me')return json(res,{user:{id:'diagnostic',displayName:'协议诊断账号',username:'diagnostic'}});
+  if(path==='/api/account/me'){await new Promise(resolve=>setTimeout(resolve,600));return json(res,{user:{id:'diagnostic',displayName:'协议诊断账号',username:'diagnostic'}});}
   if(path==='/api/workspace/ready')return json(res,{ready:true});
   if(path==='/api/harless/settings'){const id=body.session_id||url.searchParams.get('session_id');if(req.method==='POST')selections.set(id,{...settings(id).selection,...body.selection});return json(res,settings(id));}
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
   if(path==='/api/harless/tasks')return json(res,{tasks:[]});
+  if(path==='/api/harless/session-trash'){
+   const id=body.session_id;
+   if(body.action==='archive')archived.add(id);
+   if(body.action==='unarchive')archived.delete(id);
+   if(body.action==='delete')deleted.add(id);
+   return json(res,{sessions:sessions.filter(row=>deleted.has(row.sessionId)).map(row=>({session_id:row.sessionId,title:row.projections.values.title})),revision:'fixture'});
+  }
   if(path==='/api/harless/questions'){if(req.method==='POST')questionPending=false;return json(res,{questions:questionPending?[{id:'question-fixture',questions:[{id:'q1',question:'请选择诊断范围',multiSelect:true,options:[{id:'wrong-id-1',label:'保留来源'},{id:'wrong-id-2',label:'生成副本'}]}]}]:[]});}
   if(path==='/api/fixture/questions'){questionPending=true;return json(res,{ok:true});}
   if(path==='/api/harless/comparisons'){if(url.searchParams.has('file')){res.writeHead(200,{'content-type':'text/plain','content-disposition':'attachment; filename="diagnostic.txt"'});return res.end('diagnostic file contents');}return json(res,comparison);}
   if(path==='/api/fixture/approval'){push('$events',{type:'waterfall',event:'approval/request',eventId:'approval-fixture',request:{reason:'合成写入确认',tool:'diagnostic-write'}});return json(res,{ok:true});}
   const endpoint=path.replace('/api/',''),args=body.payload?.args||{},request=args.request;let value;
-  if(endpoint==='session/list'){if(!Object.hasOwn(args,'_request'))throw Error('session/list requires _request');value={items:sessions};}
+  if(endpoint==='session/list'){if(!Object.hasOwn(args,'_request'))throw Error('session/list requires _request');value={items:sessions.filter(row=>!deleted.has(row.sessionId))};}
   else if(endpoint==='session/create'){const sessionId=randomUUID();sessions.push({sessionId,blank:true,running:false,projections:{asOfSeq:0,values:{title:'新会话'}}});value={sessionId};}
   else if(endpoint==='session/rename'){const row=sessions.find(row=>row.sessionId===request.sessionId);row.projections.values.title=request.title;value={title:request.title,seq:3};}
   else if(endpoint==='session/selectModel'){modelSelections.set(request.sessionId,{...request,reasoning_effort:request.reasoningEffort});value={selected:request};}
@@ -53,7 +62,7 @@ const server=createServer(async(req,res)=>{
  }catch(error){json(res,{error:{message:error.message}},400);}
 });
 const ws=new WebSocketServer({server,path:'/api/remote.mux'});
-ws.on('connection',socket=>{socket.on('message',data=>{const frame=JSON.parse(data);if(frame.type==='cancel'){streams.delete(frame.streamId);return;}const row={socket,endpoint:frame.endpoint,sessionId:frame.payload.args.request?.address?.sessionId};streams.set(frame.streamId,row);const item=value=>socket.send(JSON.stringify({type:'item',streamId:frame.streamId,value}));if(frame.endpoint==='workspace/follow')item({type:'baseline',value:{items:[{workspaceId:'workspace',title:'诊断工作区',sessionIds:['history']}],archivedSessionIds:[]}});else if(frame.endpoint==='$events')item({type:'ready',clientId:'fixture-client'});else if(frame.endpoint==='session/control')item({type:'baseline',value:{}});else if(frame.endpoint==='session/follow')item({type:'snapshot',header:{id:row.sessionId},cursor:2,records:row.sessionId==='history'?records:[],hasMore:false,projections:{asOfSeq:2,values:{}}});});socket.on('close',()=>{for(const [id,row]of streams)if(row.socket===socket)streams.delete(id);});});
+ws.on('connection',socket=>{socket.on('message',data=>{const frame=JSON.parse(data);if(frame.type==='cancel'){streams.delete(frame.streamId);return;}const row={socket,endpoint:frame.endpoint,sessionId:frame.payload.args.request?.address?.sessionId};streams.set(frame.streamId,row);const item=value=>socket.send(JSON.stringify({type:'item',streamId:frame.streamId,value}));if(frame.endpoint==='workspace/follow')item({type:'baseline',value:{items:[{workspaceId:'workspace',title:'诊断工作区',sessionIds:['history','menu-fixture']}],archivedSessionIds:[...archived]}});else if(frame.endpoint==='$events')item({type:'ready',clientId:'fixture-client'});else if(frame.endpoint==='session/control')item({type:'baseline',value:{}});else if(frame.endpoint==='session/follow')item({type:'snapshot',header:{id:row.sessionId},cursor:2,records:row.sessionId==='history'?records:[],hasMore:false,projections:{asOfSeq:2,values:{}}});});socket.on('close',()=>{for(const [id,row]of streams)if(row.socket===socket)streams.delete(id);});});
 server.listen(0,'127.0.0.1');await once(server,'listening');
 const fixture=join(output,'fixture.json');writeFileSync(fixture,JSON.stringify({diagnostic:true,server:`http://127.0.0.1:${server.address().port}/`,output}));
 const env={...process.env,GENELOOP_RENDERER_FIXTURE:fixture};delete env.ELECTRON_RUN_AS_NODE;

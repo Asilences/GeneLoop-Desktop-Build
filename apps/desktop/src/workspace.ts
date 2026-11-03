@@ -12,7 +12,7 @@ import type { Appearance } from './appearance.ts';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 type DownloadListener = (event: Event, item: DownloadItem, contents: WebContents) => void;
-export type DesktopState = { phase: 'connecting' | 'connected' | 'error' | 'settings'; server: string; message: string; version: string; appearance: Appearance };
+export type DesktopState = { phase: 'connecting' | 'connected' | 'error' | 'settings'; server: string; message: string; version: string; appearance: Appearance; workspaceVisible: boolean };
 
 export class DesktopWorkspace {
   readonly window: BrowserWindow;
@@ -32,7 +32,7 @@ export class DesktopWorkspace {
   constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean; closeToTray?: boolean }) {
     const { settings } = options;
     const appearance = nativeTheme.shouldUseDarkColors ? DARK_APPEARANCE : LIGHT_APPEARANCE;
-    this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version, appearance };
+    this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version, appearance, workspaceVisible: false };
     this.window = new BrowserWindow({
       ...settings.window, minWidth: 800, minHeight: 600, show: false,
       title: 'GeneLoop Desktop', backgroundColor: appearance.background, autoHideMenuBar: true,
@@ -124,6 +124,7 @@ export class DesktopWorkspace {
     const attempt = ++this.generation;
     this.removeWorkspace();
     this.pageReady = false;
+    this.stateValue.workspaceVisible = false;
     this.stateValue.server = server;
     this.update('connecting');
     // 不同服务器使用不同 Cookie / localStorage，保留原生同源登录和传输。
@@ -154,9 +155,23 @@ export class DesktopWorkspace {
       const appearance = readAppearance(value);
       if (!appearance || this.window.isDestroyed()) return;
       this.stateValue.appearance = appearance;
+      this.stateValue.workspaceVisible = (value as { screen?: unknown }).screen === 'workspace';
       if (process.platform === 'win32') this.window.setTitleBarOverlay({ color: appearance.background, symbolColor: appearance.foreground, height: TITLE_BAR_HEIGHT });
       this.window.setBackgroundColor(appearance.background);
       this.window.webContents.send('geneloop:state', this.state());
+    });
+    view.webContents.on('context-menu', (_event, params) => {
+      if (!params.isEditable || attempt !== this.generation || !sameServer(params.frameURL, server)) return;
+      const flags = params.editFlags;
+      Menu.buildFromTemplate([
+        { label: '撤销', role: 'undo', enabled: flags.canUndo },
+        { label: '重做', role: 'redo', enabled: flags.canRedo },
+        { type: 'separator' },
+        { label: '剪切', role: 'cut', enabled: flags.canCut },
+        { label: '复制', role: 'copy', enabled: flags.canCopy },
+        { label: '粘贴', role: 'paste', enabled: flags.canPaste },
+        { label: '全选', role: 'selectAll', enabled: flags.canSelectAll },
+      ]).popup({ window: this.window });
     });
     view.webContents.on('will-navigate', (event, url) => {
       if (!sameServer(url, server)) event.preventDefault();

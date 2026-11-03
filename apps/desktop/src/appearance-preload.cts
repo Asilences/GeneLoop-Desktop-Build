@@ -14,14 +14,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const background = color(style.getPropertyValue('--gl-sidebar').trim()) || color(style.backgroundColor);
     const foreground = color(style.getPropertyValue('--gl-ink').trim()) || color(style.color);
     if (!background || !foreground) return;
-    const signature = background + foreground;
+    const screen = document.body.dataset.desktopScreen;
+    const signature = background + foreground + screen;
     if (signature === previous) return;
     previous = signature;
-    ipcRenderer.send('geneloop:appearance', { background, foreground });
+    ipcRenderer.send('geneloop:appearance', { background, foreground, screen });
   };
   const schedule = () => { if (!pending) { pending = true; requestAnimationFrame(publish); } };
   const observer = new MutationObserver(schedule);
-  for (const element of [document.documentElement, document.body]) observer.observe(element, { attributes: true, attributeFilter: ['data-ds-dark-theme', 'data-geneloop-style', 'data-auth-active', 'class', 'style'] });
+  for (const element of [document.documentElement, document.body]) observer.observe(element, { attributes: true, attributeFilter: ['data-ds-dark-theme', 'data-geneloop-style', 'data-auth-active', 'data-desktop-screen', 'class', 'style'] });
   window.addEventListener('load', schedule);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
   publish();

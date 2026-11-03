@@ -1,5 +1,7 @@
 # GeneLoop Desktop 当前交接
 
+- 0.2.1本地修订：启动及账号页隐藏左上角菜单，进入工作区后显示。侧栏对话支持右键/三点菜单，重命名、归档和移入最近删除走原接口，删除前确认。可编辑字段使用原生右键编辑菜单。工作区及账户使用矢量图标，场景选项复选框同行，斜杠菜单和下拉框共用本轮场景。隔离Electron渲染诊断9项通过，无模型调用。0.1.5和0.2.0安装包上传按用户要求中止，已清理本次未发布草稿，已推送的源码标签保留。
+
 - 更新时间与交接人：2026-11-03，Codex。
 - 目标与本次范围：独立桌面前端0.2.0预览版；参考网页风格/场景，自行实现布局、组件与状态，只复用服务器账号/API和场景Agent。第一阶段不迁移本机执行。
 - 分支 / 工作区：`codex/geneloop-desktop-independent-ui`，`.local/desktop-independent-20261103`，从冻结基线 `15af73e` 分出；最初已核实的GitHub main为 `2f29d34`。开发交付时代理/直连查询失败，交付后按用户要求再次直连，已成功推送至 `https://github.com/jingyio/GeneLoop/tree/codex/geneloop-desktop-independent-ui` 并设置upstream；仓库旧地址DeepSeek-Harless由GitHub重定向至GeneLoop。此时重新核对远端main为 `2b3d0051113c74bcfca384b15b19c3ba892b56f0`，桌面分支尚未合入这个后续main。未合并/部署，未修改全局代理配置。
