@@ -16,7 +16,7 @@ mkdirSync(output, { recursive: true });
 const require = createRequire(import.meta.url);
 const asar = require('@electron/asar');
 const archive = join(app, 'release/win-unpacked/resources/app.asar');
-const files = asar.listPackage(archive);
+const files = asar.listPackage(archive).map(file => file.replaceAll('\\', '/'));
 assert.ok(files.includes('/dist/boot-request.js'));
 assert.deepEqual(files.filter(file => /^\/(?:\.local|test|src)\//.test(file) || /^\/\.env/.test(file)), []);
 const manifest = JSON.parse(asar.extractFile(archive, 'assets/manifest.json'));

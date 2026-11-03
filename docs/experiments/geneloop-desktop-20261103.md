@@ -1,0 +1,62 @@
+# GeneLoop Desktop 首版工程验收
+
+- 实验 ID：`geneloop-desktop-20261103`，2026-11-03，Codex。
+- 问题：能否用本地打包的 GeneLoop 界面和独立桌面生命周期，连接原服务器完成原生工作区交互；不迁移 Agent，不以模拟回答证明场景效果。
+- 类型：工程诊断。没有质量/费用对照，不支持降本、场景交付质量或生产可用性结论。
+
+## 配置与复现
+
+GitHub main 起点 `2f29d34a184a9448f76fc697ef4eda1ebf9d8329`，通过远程 ls-remote/fetch 核实；独立分支 `codex/geneloop-desktop-remote`。安装包对应源码 `dc5aa184ef366bf9d060951e28a31639be5b6e76`，后续验收脚本路径修正和交接不改变打包的应用代码。未推送、合并或部署，原 PPT 工作区未修改。
+
+开发起点的远程核对已成功；交付前再次ls-remote直连遭连接重置，本机代理也不可用，因此不声称交付瞬间重新核实了远端最新tip。没有为此更改系统网络或覆盖工作树。
+
+Windows x64，系统构建 10.0.26300；Node 24.19.0、npm 11.17.0、Python 3.11.7；Electron 45.2.1、electron-builder 26.18.0、DSH 0.1.5-rc.3。安装资源包括56个客户端模块、89个原生前端文件；本轮原生工作区启用图54节点，场景列表仍由服务器账号配置决定。
+
+公共配置：`apps/desktop/package.json`、锁文件及 `config/harless-scenes.json`。锁文件 SHA256 为 `213ea7dcfd3a077960f6ce30066c7d067454aac7ed5f8b30e1f536fb94dc9118`；场景配置 SHA256 为 `253c3b2005a78968ee22fc174feeea6ec87fdde897ccfea882b2599f872917d6`。私有有效配置和原始检查证据留在忽略目录 `apps/desktop/.local/validation/<RUN_ID>/`，不随仓库发布。
+
+```powershell
+npm run desktop:setup
+npm run desktop:check
+npm run desktop:smoke -- --public
+npm run desktop:build
+npm --prefix apps/desktop run smoke:packaged
+```
+
+构建显式 `--publish never`，本次未配置签名。若 Windows 环境的 Electron 图标转换器落入 ESM 缓存目录，可将进程变量 `ELECTRON_BUILDER_CACHE` 指向仓库 `.local/desktop-builder-cache`；本版已直接生成品牌多尺寸 ICO，避免依赖该转换器。公开登录检查使用默认 HTTPS 地址；不读取用户密码或 API Key。
+
+## 结果与失败记录
+
+| 检查 | 结果 | 证据边界 |
+|---|---|---|
+| TypeScript 与桌面定向检查 | 6/6通过，exit 0 | 本地策略、设置与传输协议 |
+| 实际 Electron 原生 UI | 10项通过，exit 0 | 本机 mock Host，只证明 UI/协议；真实模型请求0 |
+| Windows x64 NSIS 构建 | exit 0 | 生成安装器，未执行安装/卸载 |
+| 实际打包程序启动 | 3项通过，exit 0 | ASAR 检查、独立用户目录启动、本地登录页；正式服务仅只读 |
+| 根 `npm test` | Python 1824通过、246跳过、17失败、30错误 | 非全绿；Python失败使该命令未运行Node |
+| 单独Node全量 | 1389通过、46跳过、72失败、1取消 | 非全绿，失败未逐项归因，不宣称均为既有问题 |
+
+实际 UI 检查包含启动303不被误判为登录、显式omit不发送Cookie、取消能结束Promise、预认证Cookie工作区恢复、本地客户端图/无Node权限、空会话输入框、实际下载字节、设置切换、关闭托盘恢复和连接失败后重连。运行 `d94cc2811b24423ab526e4d790b61f34` 的摘要 SHA256 为 `a68ced3bca96c8d2684d81ddda032e84081b5547c130a7abd4ab597c4e7033b3`；打包检查运行 `packaged-feba3bae-06b8-4efc-bca4-edb9e40ee517`。截图与各次失败分开保留。
+
+曾出现：无工作区/空会话前置条件时未进入 GeneLoop 会话作用域；隔离新profile暴露该诊断前置条件缺失，已通过原生API创建本机诊断工作区/空会话解决。启动页面跟随重定向导致共享账户模板误判，已改用保留真实3xx的原生请求。安装器首构建因图标转换的ESM/CJS范围冲突失败，改为构建本地ICO后通过。打包验收脚本首次用Unix分隔符检查Windows ASAR目录而失败，规范化目录名后实际启动通过。沙箱临时目录的设置重命名EPERM在正常Windows环境复核通过。全量失败仍保留私有日志，未为过测试删除有效检查。
+
+一次自动审批曾把本机fixture的POST判为外部写入。补充随机RUN_ID、精确输出路径、127.0.0.1、mock及非打包断言后重审通过；没有执行生产写入或绕过拒绝。
+
+安装包：`GeneLoop-Desktop-0.1.0-x64-Setup.exe`，125678261字节；SHA256 `2ea853e90ec450f41529e382c227a3176ba6b96e88622194b30c2aedca1562c0`。仅本地交付，不自动上传。ASAR目录检查未包含私有目录、环境文件或测试夹具。
+
+## 实施假设与审查
+
+按 `research-implement-feature` 记录假设，`ask=never`，两轮审查预算。影响结果含义的三条决定如下：
+
+- A003（user）：首阶段任务、MCP、学习和模型调用留在服务器；本机执行列为后续阶段。
+- A007（user）：合成诊断仅验证桌面协议、下载/隔离和UI；真实Agent验收必须走真实API，不能用模拟回答代替。
+- A012（sweep）：F1只验证预先认证Cookie后恢复原生工作区；正式账号表单POST、CSRF与冷启动完整路径待用户登录后单独验收，不能算作已完成。
+
+另外14条接口假设覆盖Windows首发、本地打包、复用边界、同源认证、客户端兼容边界、本地交付、真实跳转、独立诊断清理、托盘退出、历史入口、credentials、账户CSP、权限/链接/下载和启动取消；1条来自user、6条default、7条sweep。详细账本与原始审查留私有实施目录。
+
+审查实际使用原生Codex子Agent，配置模型 `gpt-6-astra`、xhigh；实施者为Codex/GPT-6家族，不能视为独立家族认可。技能所述路由辅助脚本在当前安装中缺失，已记录，未声称执行该脚本。第一轮未声明6项、账本过时3项、语义未声明1项；第二轮未声明1项、账本过时1项、语义未声明0项，最终审查原始verdict仍为 `gaps`，状态 `provisional`。最后两项（取消和启动omit）已修复并由实施者通过原生Electron探针验证；两轮预算耗尽后未再审，不报告独立审查通过。
+
+## 结论、成本与接手
+
+F0本地界面、F1原生传输/会话、F2桌面生命周期、F3安装资源构建/启动均通过各自MUST检查。产品路径没有固定模型回答；mock仅用于隔离诊断。F4真实账号和定向场景任务尚未验收，不能把本轮warm-token恢复或公开登录页加载写成完整生产账号验收。
+
+本轮真实模型请求0，无模型API支出；开发时间、人工修订未独立计量，不能做总成本结论。没有自动更新、发布签名或其他平台安装承诺。用户以现有账号登录后，再用服务器真实API核验普通聊天和所需场景的预览/下载；实际安装/卸载与Windows体验继续记录。本机Agent/工具依赖和权限迁移另立阶段，当前服务器服务、账号和累计账本不变。
