@@ -57,3 +57,27 @@ def test_offline_import_requires_authorization_and_redacts_errors(tmp_path):
     rejected = subprocess.run([*args, "--authorized"], capture_output=True, check=False)
     assert rejected.returncode == 1 and not rejected.stdout
     assert rejected.stderr.strip() == b"rsi_learning_trace_rejected"
+
+
+def test_non_default_read_and_unknown_interleaving_do_not_become_safe_witnesses():
+    from src.adapters.rsi_learning_trace import compilation_trace, CONTRACTS, ROOT
+    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.motif_core.offline.edge_compiler import count_safe_edge_witnesses
+
+    contracts = parse_tool_contracts(json.loads(
+        (ROOT / CONTRACTS["paper-proofreading"]).read_text(encoding="utf-8")))
+    events = [call("pin", PIN, {"name": "private", "sha256": "private"}),
+              result("pin", {"source_id": HANDLE}),
+              call("private-call", "private-tool", {"secret": "private"}),
+              call("page-two", READ, {"source_id": HANDLE, "page": 2}), result("page-two", {}),
+              call("page-one", READ, {"source_id": HANDLE}), result("page-one", {})]
+    sample = project(events, "paper-proofreading", "completed")
+    assert sample["nodes"][2]["outcome"] == "invalid_arguments"
+    assert [row["to"] for row in sample["bindings"]] == [3]
+    legacy = {**sample, "format": "geneloop.rsi-learning-trace/v1"}
+    with pytest.raises(ValueError, match="invalid_learning_projection"):
+        compilation_trace(legacy, contracts, scene="paper-proofreading", trace_id="t", fingerprint="t")
+    trace = compilation_trace(sample, contracts, scene="paper-proofreading", trace_id="t", fingerprint="t")
+    edge = {"status": "candidate_only", "from_tool": PIN, "to_tool": READ, "from_field": "source_id", "to_param": "source_id"}
+    assert count_safe_edge_witnesses(edge, trace, contracts) == 0
+    assert "private" not in json.dumps(sample)

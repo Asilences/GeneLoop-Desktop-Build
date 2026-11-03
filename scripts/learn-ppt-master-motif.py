@@ -13,6 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from scenarios.research_ppt.motif_v6 import learn,validate_compilation
 from scenarios.ppt_master.package import read_lock
+from src.adapters.rsi_learning_trace import import_trace, export_projected_identity
 from src.adapters.task_identity import load_trace_identity,require_distinct_decisions
 spec=importlib.util.spec_from_file_location('web_evidence',ROOT/'scripts/learn-web-paper-document-motif.py')
 accounting=importlib.util.module_from_spec(spec);spec.loader.exec_module(accounting)
@@ -46,10 +47,11 @@ def code_paths():
         'src/adapters/deepseek_cost_gate.py','src/adapters/web_task_budget.py','scripts/web_budget_broker.mjs',
         'scripts/serve-web-budget.py','config/pdf-ocr-assets.json')]
     files += [ROOT/p for p in ('src/adapters/harless_ppt_learning.ts','scripts/learn-web-ppt-tasks.py')]
+    files += [ROOT/'src/adapters/rsi_learning_trace.py', ROOT/'docs/schemas/rsi-learning-trace.schema.json']
     return sorted(set(files+[Path(__file__).resolve()]))
 
 
-def main(argv=None, *, private_publish_root=None):
+def main(argv=None, *, private_publish_root=None, privacy_projection=False):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--dataset',type=Path,required=True)
     p.add_argument('--out',type=Path,required=True)
@@ -75,17 +77,25 @@ def main(argv=None, *, private_publish_root=None):
                 raise ValueError('complete actual tool schema/order changed across collection')
             full_schemas=current;schemas=mcp
             dest=out/(split+'-'+str(i+1));dest.mkdir()
-            lines=(task/'events.jsonl').read_bytes().splitlines(keepends=True)
-            start=effective.get('trace_start_index',0)
-            if type(start) is not int or not 0<=start<=len(lines): raise ValueError('invalid event boundary')
-            (dest/'agent-events.jsonl').write_bytes(b''.join(lines[start:]))
-            question='\n'.join(x['text'] for x in req['content'] if x['type']=='text')
-            write(dest/'manifest.json',{'task_id':req['task_id'],'question':question,
-                'effective_sha256':sha(task/'effective-config.json'),'original_events_sha256':sha(task/'events.jsonl'),
-                'trace_start_index':start,'skill_package_sha256':lock['package_sha256'],'stats':totals})
-            write(dest/'task-identity.json',{'schema_version':1,'research_decision_id':row['decision_id'],
-                'manifest_sha256':sha(dest/'manifest.json'),'events_sha256':sha(dest/'agent-events.jsonl')})
-            identity=load_trace_identity(dest/'task-identity.json',dest/'agent-events.jsonl',ROOT/'.local')
+            if privacy_projection:
+                sample = import_trace(private(task/'events.jsonl'), 'ppt', state['status'],
+                                      effective.get('trace_start_index', 0))
+                question = '\n'.join(x['text'] for x in req['content'] if x['type']=='text')
+                identity = export_projected_identity(dest, sample, task_id=req['task_id'],
+                                                     decision_id=row['decision_id'], question=question,
+                                                     local_root=ROOT/'.local', write=write)
+            else:
+                lines=(task/'events.jsonl').read_bytes().splitlines(keepends=True)
+                start=effective.get('trace_start_index',0)
+                if type(start) is not int or not 0<=start<=len(lines): raise ValueError('invalid event boundary')
+                (dest/'agent-events.jsonl').write_bytes(b''.join(lines[start:]))
+                question='\n'.join(x['text'] for x in req['content'] if x['type']=='text')
+                write(dest/'manifest.json',{'task_id':req['task_id'],'question':question,
+                    'effective_sha256':sha(task/'effective-config.json'),'original_events_sha256':sha(task/'events.jsonl'),
+                    'trace_start_index':start,'skill_package_sha256':lock['package_sha256'],'stats':totals})
+                write(dest/'task-identity.json',{'schema_version':1,'research_decision_id':row['decision_id'],
+                    'manifest_sha256':sha(dest/'manifest.json'),'events_sha256':sha(dest/'agent-events.jsonl')})
+                identity=load_trace_identity(dest/'task-identity.json',dest/'agent-events.jsonl',ROOT/'.local')
             evidence[split].append({**identity,**totals,'skill_package_sha256':lock['package_sha256'],
                 'effective_config_sha256':sha(task/'effective-config.json')})
             runs[split].append(str(dest))
@@ -93,7 +103,8 @@ def main(argv=None, *, private_publish_root=None):
     write(out/'dataset.json',runs)
     write(out/'schema.json',{'tools':[{'name':t['name'],'description':t['description'],'inputSchema':t['parameters']} for t in schemas]})
     manifest_path=learn(out/'dataset.json',contracts_path=SCENE/'contracts.json',version_fields_path=SCENE/'version-fields.json',
-        tool_schema_path=out/'schema.json',out_dir=out/'compiled',guard_paths=tuple(code_paths()),mining='witnessed_edges',admit_edges_only=True)
+        tool_schema_path=out/'schema.json',out_dir=out/'compiled',guard_paths=tuple(code_paths()),mining='witnessed_edges',admit_edges_only=True,
+        projected_scene='ppt' if privacy_projection else None)
     validate_compilation(manifest_path);manifest=read(manifest_path);library=read(manifest_path.parent/'library.json')
     if {tuple(a['tools']) for a in manifest['artifacts']}!={tuple(CHAIN[:2]),tuple(CHAIN[1:])}:
         raise ValueError('actual traces did not certify the supported continuation; never invent a graph')

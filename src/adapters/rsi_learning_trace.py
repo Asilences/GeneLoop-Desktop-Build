@@ -1,6 +1,7 @@
 """Project a private native event journal into a bounded RSI structure sample."""
 
 import argparse
+import hashlib
 import json
 import stat
 from pathlib import Path
@@ -8,8 +9,10 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 from .dsh_event_projection import is_original_tool_result
-from .dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+from .dsh_trajectory import DshTrace, ToolRecord, extract_dsh_trace, infer_dsh_provenance
+from src.motif_core.offline.edge_compiler import argument_shape
 from .tool_contract_loader import parse_tool_contracts
+from .task_identity import load_trace_identity
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACTS = {
@@ -28,6 +31,8 @@ def project(events, scene, status):
     calls, results = {}, set()
     ordered = []
     for index, event in enumerate(events):
+        if event.get("ptc_analysis_source"):
+            raise ValueError("derived_tool_event")
         if event.get("type") == "tool/call":
             data = event.get("data")
             if not isinstance(data, dict):
@@ -50,12 +55,19 @@ def project(events, scene, status):
     trace = extract_dsh_trace(ordered, contracts, trace_id="private-input", provenance_by_call_id=provenance)
     nodes, bindings = [], []
     for (call_id, index), record in zip(calls.items(), trace.records, strict=True):
-        nodes.append({"tool": record.name if record.name in contracts else None, "outcome": record.reason})
-        for param in (record.parameter_sources or {}) if record.eligible else ():
-            source = provenance[call_id][param]
-            bindings.append({"from": calls[source["from_call_id"]], "to": index,
-                             "field": source["from_field"], "parameter": param})
-    sample = {"format": "geneloop.rsi-learning-trace/v1", "scene": scene, "status": status,
+        outcome = record.reason
+        sources = provenance.get(call_id, {}) if record.eligible else {}
+        if record.eligible and not argument_shape(record.arguments, contracts[record.name]):
+            outcome = "invalid_arguments"
+        if record.eligible and any(nodes[calls[ref["from_call_id"]]]["outcome"] != "eligible_read"
+                                   for ref in sources.values()):
+            outcome = "invalid_parameter_provenance"
+        nodes.append({"tool": record.name if record.name in contracts else None, "outcome": outcome})
+        if outcome == "eligible_read":
+            for param, ref in sources.items():
+                bindings.append({"from": calls[ref["from_call_id"]], "to": index,
+                                 "field": ref["from_field"], "parameter": param})
+    sample = {"format": "geneloop.rsi-learning-trace/v2", "scene": scene, "status": status,
               "nodes": nodes, "bindings": bindings}
     SCHEMA.validate(sample)
     return sample
@@ -75,6 +87,66 @@ def import_trace(path, scene, status, start):
     if any(not isinstance(event, dict) for event in events):
         raise ValueError("invalid_event")
     return project(events, scene, status)
+
+
+def export_projected_identity(out, sample, *, task_id, decision_id, question, local_root, write):
+    """Freeze a private compilation input and keep raw text outside the round."""
+    normalized = " ".join(question.split()).casefold()
+    if not normalized:
+        raise ValueError("missing_projected_question_evidence")
+    trace = out / "learning-trace.json"
+    manifest = out / "manifest.json"
+    identity = out / "task-identity.json"
+    write(trace, sample)
+    write(manifest, {"task_id": task_id,
+                     "question_sha256": hashlib.sha256(normalized.encode()).hexdigest()})
+    write(identity, {"schema_version": 1, "research_decision_id": decision_id,
+                     "manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+                     "events_sha256": hashlib.sha256(trace.read_bytes()).hexdigest()})
+    return load_trace_identity(identity, trace, local_root, projected=True)
+
+
+def compilation_trace(sample, contracts, *, scene, trace_id, fingerprint):
+    """Adapt a validated projection to the existing witnessed compiler.
+
+    Synthetic values only encode already witnessed bindings. Unbound fields
+    carry no values from the task, and blocked calls stay barriers.
+    """
+    if not SCHEMA.is_valid(sample) or sample["scene"] != scene or sample["status"] != "completed":
+        raise ValueError("invalid_learning_projection")
+    rows = sample["nodes"]
+    args, observations, sources = [], [], []
+    for row in rows:
+        tool = row["tool"]
+        contract = contracts.get(tool)
+        if tool is not None and (contract is None or not contract.read_only or contract.continuation_policy):
+            raise ValueError("invalid_projected_tool")
+        args.append({name: None for name in contract.required_params} if contract else {})
+        observations.append({})
+        sources.append({})
+    for edge in sample["bindings"]:
+        start, end, field, param = (edge[k] for k in ("from", "to", "field", "parameter"))
+        if not 0 <= start < end < len(rows):
+            raise ValueError("invalid_projected_binding")
+        producer, consumer = rows[start]["tool"], rows[end]["tool"]
+        if (any(rows[i]["outcome"] != "eligible_read" for i in (start, end))
+                or producer not in contracts or consumer not in contracts
+                or field not in contracts[producer].output_fields
+                or param not in contracts[consumer].provenance_params or param in sources[end]):
+            raise ValueError("invalid_projected_binding")
+        handle = f"local:{start}:{field}"
+        observations[start][field] = handle
+        args[end][param] = handle
+        sources[end][param] = {"from_tool": producer, "from_field": field}
+    records = []
+    for i, row in enumerate(rows):
+        tool, outcome = row["tool"], row["outcome"]
+        eligible = outcome == "eligible_read"
+        if eligible and (tool not in contracts or set(sources[i]) != set(contracts[tool].provenance_params)):
+            raise ValueError("missing_projected_binding")
+        records.append(ToolRecord(tool or "", args[i] if eligible else None, None, eligible,
+                                  outcome, i, observations[i], sources[i]))
+    return DshTrace(trace_id, tuple(records), (), fingerprint)
 
 
 def main():

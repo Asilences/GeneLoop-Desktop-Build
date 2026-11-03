@@ -1405,6 +1405,6 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
 
-## RSI 学习数据投影（隔离诊断）
+## RSI 学习数据投影
 
-Web 任务结算和离线导入共用同一投影器。入口、版本化契约、授权范围及验收见 [RSI 数据边界盘点](rsi-data-privacy.md)。
+Web 结算诊断、离线导入和 Paper/PPT 账号内学习共用同一投影器。入口、版本化契约、授权范围及验收见 [RSI 数据边界盘点](rsi-data-privacy.md)。

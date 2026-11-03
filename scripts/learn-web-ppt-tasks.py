@@ -287,7 +287,7 @@ def advance(request_path):
         save(folder/'dataset.json',dataset);save(folder/'ledger.json',[row for item in selected for row in read(Path(item['task_dir'])/'learning-accounting.json')['request_receipts']])
         status({'status':'compiling','round':folder.name})
         try:
-            compiler.main(['--dataset',str(folder/'dataset.json'),'--out',str(folder/'compile'),'--publish',str(folder/'release')],private_publish_root=store)
+            compiler.main(['--dataset',str(folder/'dataset.json'),'--out',str(folder/'compile'),'--publish',str(folder/'release')],private_publish_root=store,privacy_projection=True)
             runtime=load_product_bundle(ROOT,folder/'release','ppt',private_root=store)
             admission={'schema_version':1,'user':request['user'],'scope':request['scope'],'runtime':runtime,
                 'evidence_locks':{name:version for item in selected for name,version in item['locks'].items()},

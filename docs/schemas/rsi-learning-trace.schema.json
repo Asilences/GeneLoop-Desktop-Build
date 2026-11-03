@@ -11,7 +11,7 @@
   ],
   "properties": {
     "format": {
-      "const": "geneloop.rsi-learning-trace/v1"
+      "const": "geneloop.rsi-learning-trace/v2"
     },
     "scene": {
       "enum": [

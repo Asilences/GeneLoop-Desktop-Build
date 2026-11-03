@@ -28,7 +28,7 @@ def _value(observation: dict[str, Any] | None, field: str) -> Any:
     return value
 
 
-def _argument_shape(arguments: Any, contract: Any) -> bool:
+def argument_shape(arguments: Any, contract: Any) -> bool:
     if not isinstance(arguments, dict):
         return False
     required = set(contract.required_params)
@@ -68,14 +68,14 @@ def _witnesses(trace: Any, candidate: dict[str, Any], contracts: Mapping[str, An
     pairs = []
     for target_index, target in enumerate(records):
         if (not target.eligible or target.name != target_name
-                or not _argument_shape(target.arguments, contracts[target_name])
+                or not argument_shape(target.arguments, contracts[target_name])
                 or (target.parameter_sources or {}).get(target_param) != {
                     "from_tool": source_name, "from_field": source_field}):
             continue
         possible = []
         for source_index, source in enumerate(records[:target_index]):
             if (not source.eligible or source.name != source_name
-                    or not _argument_shape(source.arguments, contracts[source_name])):
+                    or not argument_shape(source.arguments, contracts[source_name])):
                 continue
             value = _value(source.observation, source_field)
             policies = [contracts[name].continuation_policy for name in (source_name, target_name)]

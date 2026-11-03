@@ -1330,19 +1330,16 @@ test('real Paper product manifest mounts the page-one continuation only on Motif
  const root=fileURLToPath(new URL('../',import.meta.url));
  const sceneRegistry=JSON.parse(readFileSync(join(root,'config/harless-scenes.json'),'utf8'));
  const base=join(root,sceneRegistry.scenes.find(row=>row.id==='paper-proofreading').rsi.runtime_bundle);
- const read=name=>JSON.parse(readFileSync(join(base,name),'utf8'));
- const hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
- const entry=read('entry.json'),cert=read('certification.json'),schemas=read('tool-schemas.json');
+ const python=process.env.SSS_PYTHON??(process.platform==='win32'?'python':'python3');
+ const runtime=JSON.parse(execFileSync(python,['-c',
+  'import json,sys; from pathlib import Path; from src.adapters.harless_rsi_bundle import load_product_bundle; print(json.dumps(load_product_bundle(Path.cwd(), Path(sys.argv[1]), "paper-proofreading")))',
+  base],{cwd:root,encoding:'utf8'}));
+ const schemas=runtime.certified_tool_schemas;
  const common=JSON.parse(readFileSync(join(root,'config/geneloop-capabilities.json'),'utf8')).tools;
  const fixtureSchemas=[...schemas,...common.map(name=>({name,description:'Free shared capability schema diagnostic',
   parameters:{type:'object',properties:{},required:[]}}))].sort((a,b)=>a.name<b.name?-1:1);
- const scene={id:'paper-proofreading',label:'Paper',preset:'sss-paper-release-protocol',adapter:'workspace',mcp_rows:[],
-  runtime_kind:entry.runtime_kind,runtime_mode:entry.mode,runtime_library:join(base,'library.json'),runtime_library_sha256:hash(join(base,'library.json')),
-  manifest:join(base,'online-manifest.json'),task:join(base,'task.json'),allowed_tools:[...schemas.map(row=>row.name),...common],common_tools:common,
-  matching_policy:cert.matching_policy,binding_policy:cert.binding_policy,certification_scope:cert.certification_scope,
-  certification_path:join(base,'certification.json'),certification_sha256:hash(join(base,'certification.json')),
-  certified_code_locks:Object.fromEntries(Object.entries(cert.code_locks).map(([name,sha])=>[join(root,name),sha])),
-  certified_tool_schemas:schemas};
+ const scene={...runtime,id:'paper-proofreading',label:'Paper',preset:'sss-paper-release-protocol',adapter:'workspace',mcp_rows:[],
+  allowed_tools:[...schemas.map(row=>row.name),...common],common_tools:common};
  const f=await fixture({broker:true,scenes:[scene],capability_profile:scene.id,comparison_scenes:[scene.id],fixtureSchemas});
  try{
   const {sessionId}=await f.ctx.sessionController.create({});
