@@ -11,19 +11,23 @@ class SourceImprovementAdapter(CapabilityImprovementAdapter):
     withdrawal_reasons=CapabilityImprovementAdapter.withdrawal_reasons|{'source_capability_leaf_changed'}
     def freeze_publication_inputs(self,job):
         template=json.loads(evidence(job['publication_plan']))
-        return {key:read(template[key]) for key in ('validation_manifest','validation_args','validation_specification',
+        value={key:read(template[key]) for key in ('validation_manifest','validation_args','validation_specification',
             'followup_manifest','followup_args','followup_specification')}
+        if 'program_learning' in template:value['program_learning']=copy.deepcopy(template['program_learning'])
+        return value
 
     def inspect_run(self,entry,owner):
         from scenarios.remotion_edit.structured.capability_observations import inspect_run
         return inspect_run(entry,owner)
 
     def acquire(self,job,result,attempt):
+        if result.get('model_requested_program'):return super().acquire(job,result,attempt)
         from scenarios.remotion_edit.structured.capability_learning import acquire_source
         return acquire_source(self,job,result,attempt)
 
     def publish(self, job, candidate, attempt, expected_latest):
         inputs = copy.deepcopy(self.templates[job['id']])
+        inputs.pop('program_learning',None)
         context = attempt/'publication-inputs'; context.mkdir(mode=0o700)
         plan = dict(owner=self.plan['owner'], store=self.plan['store'],
                     candidate=str(attempt/'candidate.json'), expected_latest=expected_latest,

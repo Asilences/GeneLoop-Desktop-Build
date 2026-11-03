@@ -10,6 +10,7 @@ import json
 import math
 import os
 from contextlib import contextmanager
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from uuid import uuid4
 from .capability_contract import capability_digest, capability_ref, create_capability_snapshot, validate_capability_snapshot
@@ -24,6 +25,49 @@ def verify(ref):
     raw=Path(ref['path']).read_bytes()
     if hashlib.sha256(raw).hexdigest()!=ref['sha256']:raise ValueError('feedback_evidence_changed')
     return raw
+
+
+def execution_cost(observation):
+    """Read only explicit model-API cost fields from a trusted host observation.
+
+    Original evidence must still be supplied to ``observe``; this conversion
+    does not authenticate a claim, infer a baseline, award benefit, or create
+    spendable resources. Missing/unknown cost stays unknown. The decimal field
+    is checked before converting to the existing numeric sorting format.
+    """
+    if observation is None:
+        return None
+    if not isinstance(observation, dict):
+        raise ValueError('feedback_execution_cost_observation_invalid')
+    amounts = []
+    for key in ('observed_model_usd', 'observed_model_usd_decimal'):
+        if key not in observation:
+            continue
+        value = observation[key]
+        if value is None:
+            amounts.append(None)
+            continue
+        if (key == 'observed_model_usd' and type(value) not in (int, float)
+                or key == 'observed_model_usd_decimal' and not isinstance(value, str)):
+            raise ValueError('feedback_execution_cost_invalid')
+        try:
+            amount = Decimal(str(value))
+        except (InvalidOperation, ValueError, OverflowError) as error:
+            raise ValueError('feedback_execution_cost_invalid') from error
+        if not amount.is_finite() or amount < 0:
+            raise ValueError('feedback_execution_cost_invalid')
+        amounts.append(amount)
+    if not amounts:
+        return None
+    if len(amounts) == 2 and amounts[0] != amounts[1]:
+        raise ValueError('feedback_execution_cost_inconsistent')
+    amount = amounts[0]
+    if amount is None:
+        return None
+    value = float(amount)
+    if not math.isfinite(value) or amount != 0 and value == 0:
+        raise ValueError('feedback_execution_cost_not_representable')
+    return 0.0 if amount == 0 else value
 
 
 class CapabilityFeedback:
@@ -138,9 +182,17 @@ class CapabilityFeedback:
 
     def order(self,roots,stage,scope=None,state=None):
         state=self.read() if state is None else state
+        def current_creation_credit(fact):
+            beneficiary=fact.get('beneficiary')
+            blocked=state['blocked'].get(beneficiary.get('id')) if isinstance(beneficiary,dict) else None
+            # Retain historical evidence, but a currently withdrawn exact
+            # successor no longer supplies positive construction credit.
+            # Execution-only archive and other revisions do not remove it.
+            return not blocked or blocked.get('capability')!=beneficiary
         def score(ref):
             facts=[f for f in state['facts'].values() if f['subject']==ref]
-            creation=sum(f['stage']=='construction' and f['status']=='passed' for f in facts)
+            creation=sum(f['stage']=='construction' and f['status']=='passed'
+                         and current_creation_credit(f) for f in facts)
             execution=[f for f in facts if f['stage']=='execution' and (scope is None or f['scope']==scope)]
             passed=sum(f['status']=='passed' for f in execution)
             failed=sum(f['status']=='failed' for f in execution)

@@ -11,7 +11,7 @@ import copy
 import hashlib
 import re
 
-from .capability_authoring import aliases, expand_binding
+from .capability_authoring import aliases, expand_binding, authoring_context, AuthoringError
 from .capability_builder import _check_binding
 from .capability_composition_source import (
     MAX_AST_NODES, MAX_SOURCE_BYTES, CompositionSourceError, _binding, _call,
@@ -110,6 +110,46 @@ def source_callable_interfaces(snapshot):
                        'native_input_schema_ref': {'capability': copy.deepcopy(ref),
                            'schema_path': ['contract', 'input_schema'], 'sha256': capability_digest(native_input)},
                        'output_schema': copy.deepcopy(schema), 'result_path': path})
+    return result
+
+
+def source_authoring_context(task, snapshot, catalog=None):
+    """Public semantic callable view; full native identities remain in audit.
+
+    The legacy JSON interface retains its own transport contracts. Only source
+    calls use these semantic parameters/results; no callable alias is invented.
+    """
+    context = authoring_context(task, snapshot, catalog or {})
+    descriptions = {row['alias']: row for row in context['capabilities']}
+    interfaces = []
+    for row in source_callable_interfaces(snapshot):
+        item = {key: copy.deepcopy(row[key]) for key in ('alias', 'input_schema', 'output_schema')}
+        if descriptions[row['alias']].get('description'):
+            item['description'] = copy.deepcopy(descriptions[row['alias']]['description'])
+        interfaces.append(item)
+    context['source_interfaces'] = interfaces
+    context['source_authoring_format'] = FORMAT
+    return context
+
+
+def prepare_capability_source_request(draft, task, snapshot, catalog=None):
+    """Parse source and freeze a new helper request before native acquisition.
+
+    This performs no execution, learning, certification or publication. The
+    unresolved program slot is explicit and keeps the model's exact bindings.
+    A host adapter must provide actual training evidence and a native learner.
+    """
+    if not isinstance(draft, dict) or set(draft) != {'capability_source'}:
+        raise AuthoringError('draft_shape', [], {'keys': ['capability_source']}, draft)
+    if not isinstance(task.get('contract'), dict):
+        raise AuthoringError('source_contract_required', ['contract'],
+                             'host-frozen capability contract before source construction', task.get('contract'))
+    result = compile_capability_source(draft['capability_source'], task, snapshot, catalog)
+    result['composition_intent'] = None
+    if result['program'] is not None:
+        from .capability_program_encoding import freeze_program_composition
+        result['composition_intent'] = freeze_program_composition(
+            task, snapshot, result['program'], result['composition'])
     return result
 
 
