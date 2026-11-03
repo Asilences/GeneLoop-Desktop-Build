@@ -105,13 +105,13 @@
 .workspace-children .session-link{padding:5px 8px}
 .result-footer{display:grid;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
 .result-tools{display:flex;align-items:center;gap:4px}
-.result-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;color:var(--muted);background:var(--panel)}
-.result-icon svg{width:16px;height:16px}
-.result-icon:hover{color:var(--gl-ink);background:var(--hover)}
+.result-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;color:var(--muted);background:transparent}
+.result-icon svg{width:15px;height:15px;stroke-width:1.5}
+.result-icon:hover,.result-icon:focus-visible{color:var(--gl-ink);background:var(--hover)}
 .result-icon[aria-pressed=true]{color:var(--blue);background:var(--selection)}
 .result-metrics{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
 .result-ratings{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:12px}
-.result-score-scale{display:inline-grid;grid-template-columns:repeat(5,28px);gap:2px;padding:3px;border-radius:9px;background:var(--panel)}
+.result-score-scale{display:inline-grid;grid-template-columns:repeat(5,26px);gap:2px;padding:2px;border:1px solid var(--line);border-radius:9px}
 .result-score-scale button{min-height:26px;padding:0;border-radius:6px;font-variant-numeric:tabular-nums}
 .result-score-scale button:focus-visible{outline-offset:-2px}
 .result-score-scale button[aria-pressed=true]{color:var(--blue);background:var(--selection);font-weight:650}
@@ -162,8 +162,6 @@ body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
 @keyframes send-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.send-spinner{animation:none}}
 .message .message-meta{gap:8px}
-.message-meta .result-icon{width:26px;height:26px;background:transparent}
-.message-meta .result-icon:hover,.message-meta .result-icon:focus-visible{background:var(--hover)}
 .result-icon[data-tooltip]{position:relative}
 .result-icon[data-tooltip]::after{content:attr(data-tooltip);position:absolute;z-index:3;bottom:calc(100% + 6px);left:0;padding:4px 8px;border-radius:8px;background:var(--gl-ink);color:var(--gl-canvas);font-size:12px;font-weight:500;line-height:1.5;white-space:nowrap;pointer-events:none;visibility:hidden}
 .result-icon[data-tooltip]:is(:hover,:focus-visible)::after{visibility:visible}

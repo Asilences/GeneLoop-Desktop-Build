@@ -62,6 +62,8 @@ app.whenReady().then(async()=>{
  assert.equal(await sidebarWidth(),initialWidth);
  assert.equal(await evaluate(`document.querySelector('.result-score-scale [aria-pressed=true]').textContent`),'5');
  assert.equal(await evaluate(`document.querySelector('.result-metrics').textContent`),'161 次模型请求');
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('.comparison-lane .result-tools')][0].querySelectorAll('button').length`),4);
+ assert.equal(await evaluate(`(()=>{const copy=document.querySelector('.message-meta .result-icon'),actions=[...document.querySelector('.result-tools').children];return actions.every(action=>action.dataset.tooltip===action.getAttribute('aria-label')&&getComputedStyle(action).width===getComputedStyle(copy).width)})()`),true);
  await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
  assert.equal(await evaluate(`document.getElementById('history').textContent.includes('Motif执行结果')`),true);
  await evaluate(`document.querySelector('.workspace-entry').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}))`);
