@@ -1,0 +1,29 @@
+:root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; color: #f5f5f7; background: #161618; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; padding-top: 40px; display: grid; place-items: center; }
+header { position: fixed; top: 0; left: 0; right: 0; height: 40px; padding: 0 152px 0 14px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #2c2c30; -webkit-app-region: drag; }
+header button { -webkit-app-region: no-drag; width: auto; padding: 5px 8px; color: #f5f5f7; background: transparent; font-size: 12px; font-weight: 500; }
+header button:hover { background: #303034; }
+.execution { font-size: 11px; color: #b0b0ba; margin-left: auto; }
+main { width: min(440px, calc(100vw - 64px)); padding: 48px 0; text-align: center; }
+.logo { object-fit: contain; }
+.brand { margin: 22px 0 30px; font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+h1 { font-size: 25px; line-height: 1.4; letter-spacing: -.035em; margin: 0 0 12px; }
+p { line-height: 1.65; }
+#message, .hint { color: #b0b0ba; font-size: 14px; }
+.progress { margin: 26px auto; width: 22px; height: 22px; border: 2px solid #44444a; border-top-color: #f5f5f7; border-radius: 50%; animation: spin 1s linear infinite; }
+button { width: 100%; border: 0; border-radius: 12px; padding: 13px 18px; background: #f5f5f7; color: #161618; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+button:hover { background: #dddde2; }
+button:disabled { opacity: .55; cursor: wait; }
+button:focus-visible, input:focus-visible { outline: 2px solid #82b6ff; outline-offset: 4px; }
+.text-button { color: #b0b0ba; background: transparent; margin-top: 10px; font-weight: 400; }
+.text-button:hover { color: white; background: #222225; }
+form { text-align: left; margin-top: 28px; }
+label { display: block; font-size: 13px; margin-bottom: 9px; }
+input { width: 100%; background: #222225; color: #f5f5f7; border: 1px solid #48484e; border-radius: 10px; font: inherit; font-size: 14px; padding: 13px; }
+.hint { font-size: 12px; }
+#error { color: #ffb1ab; font-size: 13px; min-height: 1em; }
+.version { margin: 28px 0 0; color: #777780; font-size: 11px; }
+[hidden] { display: none !important; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .progress { animation: none; } }

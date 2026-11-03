@@ -1,0 +1,47 @@
+{
+  "name": "geneloop-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
+  "author": "GeneLoop contributors",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "dist/main.js",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "build": "tsc && node scripts/prepare-assets.mjs",
+    "dev": "npm run build && electron .",
+    "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs",
+    "smoke": "npm run build && node scripts/check-local-ui.mjs",
+    "pack": "npm run build && electron-builder --dir --publish never",
+    "dist": "npm run build && electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh": "0.1.5-rc.3",
+    "@types/node": "26.6.6",
+    "electron": "45.2.1",
+    "electron-builder": "26.18.0",
+    "sharp": "0.35.5",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-client-modules": "0.1.5-rc.3",
+    "@deepseek-ai/dsh-host-webserver": "0.1.5-rc.3"
+  },
+  "build": {
+    "appId": "ai.geneloop.desktop",
+    "productName": "GeneLoop Desktop",
+    "asar": true,
+    "directories": { "output": "release", "buildResources": "assets" },
+    "files": ["dist/**/*", "ui/**/*", "assets/**/*", "package.json"],
+    "publish": null,
+    "win": { "target": ["nsis"], "icon": "assets/icon.png" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "GeneLoop-Desktop-${version}-${arch}-Setup.${ext}"
+    }
+  }
+}
