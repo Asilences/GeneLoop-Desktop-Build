@@ -138,3 +138,8 @@
 .message-content{font-size:var(--conversation-size,14px)}
 .message-content .reasoning{font-size:.86em}
 .settings-row>div>p{margin:4px 0 0}
+.sidebar footer #account-nav{align-items:center;gap:9px;min-height:42px}
+#account-nav[aria-expanded=true]{background:var(--hover)}
+#account-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-avatar{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:50%;background:var(--selection);color:var(--blue)}
+.account-avatar svg{width:15px;height:15px}

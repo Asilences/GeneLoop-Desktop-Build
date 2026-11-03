@@ -86,7 +86,7 @@ app.whenReady().then(async()=>{
   const webMutation=action=>page(`fetch('/api/harless/session-trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'${action}',session_id:'${id}'})}).then(async response=>{if(!response.ok)throw Error('网页会话操作 HTTP '+response.status);return true;})`);
   const openDeskMenu=action=>desk(`document.querySelector('[data-session-id="${id}"] .session-more').click();document.querySelector('[data-action="${action}"]').click()`);
   const restoreDesk=async tab=>{
-   await desk(`document.getElementById('settings-nav').click();document.querySelector('[data-page="${tab}"]').click()`);
+   await desk(`document.getElementById('account-nav').click();document.querySelector('[data-action=account-settings]').click();document.querySelector('[data-page="${tab}"]').click()`);
    await until(()=>desk(`[...document.querySelectorAll('.settings-row')].some(row=>row.textContent.includes('${title}'))`),'桌面设置找到恢复项');
    await desk(`[...document.querySelectorAll('.settings-row')].find(row=>row.textContent.includes('${title}')).querySelector('button').click()`);
   };

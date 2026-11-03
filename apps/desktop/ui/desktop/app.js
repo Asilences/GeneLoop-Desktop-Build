@@ -493,7 +493,7 @@ function askText(title,label,initial,submit){const input=node('input',{value:ini
 function settings(initial='appearance'){
   return settingsPanel({
     user:state.user,titleOf,theme,fail,toast,refresh:connectWorkspace,logout:showAuth,sessionChanges,
-    applyConversationPreferences,models:()=>state.models,
+    applyConversationPreferences,models:()=>state.models,signOut,
     archivedSessions:()=>state.sessions.filter(row=>state.archived.has(row.sessionId)),
     async restoreSession(action,id){
       await post('/api/harless/session-trash',{action,session_id:id});
@@ -503,7 +503,17 @@ function settings(initial='appearance'){
     changed:()=>{$('account-name').textContent=state.user.displayName;},
   },initial);
 }
-function account(){settings('account');}
+function account(){
+  const anchor=$('account-nav');
+  const items=[
+    {id:'account-settings',label:'设置',icon:'settings',action:()=>settings()},
+    {id:'account-profile',label:'账户与安全',icon:'user',action:()=>settings('account')},
+  ];
+  if(state.user&&!state.user.standalone)items.push({separator:true},
+    {id:'account-logout',label:'退出登录',icon:'logout',action:()=>signOut().catch(fail)});
+  popupMenu(items,{anchor,above:true});
+}
+async function signOut(){await post('/api/account/logout',{});showAuth();}
 async function mutateSession(action,id){await post('/api/harless/session-trash',{action,session_id:id});if(action==='archive')state.archived.add(id);if(state.session===id)$('new-session').click();if(action==='delete'){state.drafts.delete(id);historyCache.delete(id);}await loadSessions();renderConversation();toast(action==='archive'?'对话已归档，可从设置恢复。':'对话已移入最近删除。');}
 function renameSession(id){askText('重命名对话','对话名称',titleOf(state.sessions.find(row=>row.sessionId===id)),async title=>{await rpc('session/rename',{sessionId:id,title});await loadSessions();renderConversation();});}
 function openSessionMenu(id,position){
@@ -545,17 +555,18 @@ $('new-session').onclick=()=>openWorkspace(state.workspace,{focus:true});
 $('rename-session').onclick=()=>{if(state.session)renameSession(state.session);};
 $('sidebar-toggle').onclick=()=>$('workspace').classList.toggle('sidebar-hidden');$('chat-tab').onclick=()=>{state.trace=false;renderConversation();};$('trace-tab').onclick=()=>{state.trace=true;renderConversation();};
 $('scene-options').onclick=sceneOptions;
-$('model-select').onchange=()=>{renderEfforts();changeModel().catch(fail);};$('effort-select').onchange=()=>changeModel().catch(fail);$('settings-nav').onclick=()=>settings();$('account-nav').onclick=account;
+$('model-select').onchange=()=>{renderEfforts();changeModel().catch(fail);};$('effort-select').onchange=()=>changeModel().catch(fail);$('account-nav').onclick=account;
 $('attach').onclick=()=>$('file-input').click();$('file-input').onchange=event=>{attach([...event.target.files]).catch(fail);event.target.value='';};$('composer').onsubmit=send;$('prompt').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();send();}};
 $('stop').onclick=async()=>{try{await rpc('session/cancel',{sessionId:state.session});toast('已请求停止，等待服务器确认。');}catch(error){fail(error);}};
 $('deliveries-toggle').onclick=()=>{$('deliveries').hidden=!$('deliveries').hidden;renderDeliveries();};$('deliveries-close').onclick=()=>$('deliveries').hidden=true;
 for(const [id,name]of Object.entries({'sidebar-toggle':'sidebar','rename-session':'edit','deliveries-toggle':'files','refresh-session':'refresh','new-workspace':'plus','attach':'plus','send':'send','deliveries-close':'close'}))$(id).replaceChildren(icon(name));
-$('new-session').replaceChildren(icon('plus'),'新会话');$('settings-nav').replaceChildren(icon('settings'),'设置');
+$('new-session').replaceChildren(icon('plus'),'新会话');
 for(const [id,label] of [['model-select','模型'],['effort-select','推理强度']]){
   const select=$(id),anchor=document.createComment('');
   select.before(anchor);anchor.replaceWith(choiceControl(select,label,true));
 }
 $('account-nav').lastElementChild.replaceChildren(icon('chevron-down'));
+$('account-nav').prepend(node('span',{class:'account-avatar','aria-hidden':'true'},icon('user')));
 bindScenePicker({input:$('prompt'),select:$('scene-select'),container:$('composer'),getScenes:()=>state.settings?.scenes||[],choose:chooseScene,fail,label:scene=>labels[scene.id]||scene.label});
 const actions=button(icon('more'),sessionActions,'icon');actions.id='session-actions';actions.title='管理对话';actions.setAttribute('aria-label','管理对话');$('rename-session').after(actions);
 window.addEventListener('beforeunload',()=>{streams.close();clearInterval(pollTimer);if(previewUrl)URL.revokeObjectURL(previewUrl);});

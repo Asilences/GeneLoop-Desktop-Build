@@ -92,7 +92,7 @@ export function settingsPanel(context,initial='appearance'){
       const form=node('form'),current=node('input',{type:'password',autocomplete:'current-password',required:true}),next=node('input',{type:'password',autocomplete:'new-password',required:true,minlength:10}),again=node('input',{type:'password',autocomplete:'new-password',required:true,minlength:10});
       form.append(node('h4',{},'修改密码'),node('label',{},'当前密码',current),node('label',{},'新密码',next),node('label',{},'再次输入新密码',again),node('button',{class:'secondary'},'确认修改密码'));
       form.onsubmit=async event=>{event.preventDefault();if(next.value!==again.value){context.toast('两次新密码不一致。');return;}try{await post('/api/account/password',{currentPassword:current.value,newPassword:next.value});form.reset();modal.close();context.logout();context.toast('密码已修改，请重新登录。');}catch(error){context.fail(error);}};
-      body.append(profile,form,button('退出登录',guard(async()=>{await post('/api/account/logout',{});modal.close();context.logout();}),'secondary'));
+      body.append(profile,form,button('退出登录',guard(async()=>{await context.signOut();modal.close();}),'secondary'));
     }
     if(preserveScroll)body.scrollTop=scroll;
   }

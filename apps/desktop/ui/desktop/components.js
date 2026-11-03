@@ -11,6 +11,7 @@ export function icon(name){
     download:'M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4',
     paperclip:'M9 13l6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l8-8m-5 11 7-7',
     user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2',
+    logout:'M10 4H4v16h6m-1-8h12m-4-4 4 4-4 4',
     sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-5v2m0 14v2M3 12h2m14 0h2M6 6l1 1m10 10 1 1m0-12-1 1M7 17l-1 1',
     moon:'M20 15A8 8 0 0 1 9 4a8.5 8.5 0 1 0 11 11Z',
     monitor:'M3 4h18v13H3Zm5 17h8m-4-4v4',
@@ -93,11 +94,13 @@ function inline(parent,text){const pattern=/(\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+
 export function blocks(content){const output=node('div');for(const block of content||[]){if(block.type==='text')output.append(markdown(block.text));else if(block.type==='reasoning')output.append(node('details',{class:'reasoning'},node('summary',{},'思考过程'),node('pre',{},block.text)));else if(block.type==='file'||block.type==='image')output.append(node('div',{class:'attachment'},icon(block.type==='image'?'image':'document'),block.attachment?.name||(block.type==='file'?'文件':'图片')));else if(block.type==='tool-result')output.append(blocks(block.content));else if(block.type==='tool-call')output.append(node('details',{},node('summary',{},block.name),node('pre',{},block.arguments)));}return output;}
 export function dialog(title,body,actions=[]){const close=button(icon('close'),()=>element.close(),'icon');close.setAttribute('aria-label','关闭');const element=node('dialog',{},node('header',{},node('h2',{},title),close),body,node('footer',{},actions));document.body.append(element);element.addEventListener('close',()=>element.remove(),{once:true});element.showModal();return element;}
 let activePopup;
-export function popupMenu(items,{x,y,anchor}={}){
+export function popupMenu(items,{x,y,anchor,above=false}={}){
   activePopup?.();const previous=anchor||document.activeElement,element=node('div',{class:'context-menu',role:'menu'});let closed=false;
   const close=()=>{if(closed)return;closed=true;element.remove();document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',keys,true);anchor?.setAttribute('aria-expanded','false');if(previous?.isConnected)previous.focus();if(activePopup===close)activePopup=null;};
   for(const item of items){if(item.separator){element.append(node('div',{role:'separator',class:'menu-separator'}));continue;}const control=button(node('span',{class:'menu-label'},icon(item.icon),item.label),()=>{close();item.action();},item.danger?'danger':'');control.setAttribute('role','menuitem');control.dataset.action=item.id;control.disabled=Boolean(item.disabled);if(item.shortcut)control.append(node('kbd',{},item.shortcut));element.append(control);}
-  document.body.append(element);const bounds=element.getBoundingClientRect(),at=anchor?.getBoundingClientRect();element.style.left=Math.max(8,Math.min(x??at?.right??8,innerWidth-bounds.width-8))+'px';element.style.top=Math.max(8,Math.min(y??at?.bottom??8,innerHeight-bounds.height-8))+'px';
+  document.body.append(element);const bounds=element.getBoundingClientRect(),at=anchor?.getBoundingClientRect();
+  const left=x??(above?at?.left:at?.right)??8,top=y??(above&&at?at.top-bounds.height-6:at?.bottom)??8;
+  element.style.left=Math.max(8,Math.min(left,innerWidth-bounds.width-8))+'px';element.style.top=Math.max(8,Math.min(top,innerHeight-bounds.height-8))+'px';
   function outside(event){if(!element.contains(event.target))close();}
   function keys(event){if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();close();}else if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const controls=[...element.querySelectorAll('button:not(:disabled)')],at=controls.indexOf(document.activeElement),index=event.key==='Home'?0:event.key==='End'?controls.length-1:(at+(event.key==='ArrowDown'?1:-1)+controls.length)%controls.length;controls[index]?.focus();}}
   document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',keys,true);anchor?.setAttribute('aria-expanded','true');element.querySelector('button:not(:disabled)')?.focus();activePopup=close;return close;

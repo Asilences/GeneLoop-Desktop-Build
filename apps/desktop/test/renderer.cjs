@@ -86,7 +86,10 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate('document.getElementById("scene-select").value'),'new-scene');check('配置确认后发送、实时消息/结束状态与逐轮场景重置');
  await evaluate(`document.getElementById('prompt').value='普通下一轮';document.getElementById('composer').requestSubmit()`);await until(()=>evaluate('document.getElementById("prompt").value===""'),'第二次发送');
  await evaluate(`fetch('/api/fixture/questions')`);await until(()=>evaluate('!document.getElementById("questions").hidden'),'原生人类提问');await evaluate(`document.querySelectorAll('#questions input[type=checkbox]').forEach(input=>input.click());document.querySelector('#questions form').requestSubmit()`);await until(()=>evaluate('document.getElementById("questions").hidden'),'回答提交');check('人类问题支持原协议多选与标签答案，轮询保持未提交输入');
- await evaluate(`document.getElementById('settings-nav').click()`);
+ await evaluate(`document.getElementById('account-nav').click()`);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('.context-menu [role="menuitem"]')].map(row=>row.textContent)`),['设置','账户与安全','退出登录']);
+ assert.equal(await evaluate(`!document.querySelector('dialog')&&document.querySelector('.context-menu').getBoundingClientRect().bottom<document.getElementById('account-nav').getBoundingClientRect().top`),true);
+ await evaluate(`document.querySelector('[data-action=account-settings]').click()`);
  await until(()=>evaluate('document.querySelector("dialog")?.textContent.includes("桌面外观")'),'桌面设置');
  assert.equal(await evaluate(`document.querySelectorAll('.theme-card').length`),3);
  await evaluate(`document.querySelector('[data-theme="dark"]').click()`);
@@ -120,7 +123,7 @@ app.whenReady().then(async()=>{
  await until(()=>evaluate(`!document.querySelector('dialog')&&document.querySelector('${row}').textContent.includes('已重命名')`),'右键重命名');
  await evaluate(`document.querySelector('${row} .session-more').click();document.querySelector('[data-action="archive"]').click()`);
  await until(()=>evaluate(`!document.querySelector('${row}')`),'归档移出列表');
- await evaluate(`document.getElementById('settings-nav').click();[...document.querySelectorAll('dialog nav button')].find(button=>button.textContent==='已归档对话').click();document.querySelector('.settings-row button').click()`);
+ await evaluate(`document.getElementById('account-nav').click();document.querySelector('[data-action=account-settings]').click();[...document.querySelectorAll('dialog nav button')].find(button=>button.textContent==='已归档对话').click();document.querySelector('.settings-row button').click()`);
  await until(()=>evaluate(`!!document.querySelector('${row}')`),'恢复归档对话');
  await evaluate(`document.querySelector('dialog header button').click()`);
  await until(()=>evaluate('!document.querySelector("dialog")'),'归档设置关闭');
@@ -150,7 +153,7 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('[data-session-id="history"] button').click()`);
  await until(()=>evaluate(`document.getElementById('session-title').textContent==='协议诊断历史'`),'打开跨端删除测试会话');
  const externalTrash=action=>evaluate(`fetch('/api/fixture/external-trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'${action}'})}).then(response=>response.ok)`);
- await evaluate(`document.getElementById('settings-nav').click();document.querySelector('[data-page="archive"]').click()`);
+ await evaluate(`document.getElementById('account-nav').click();document.querySelector('[data-action=account-settings]').click();document.querySelector('[data-page="archive"]').click()`);
  assert.equal(await externalTrash('archive'),true);
  await until(()=>evaluate(`!document.querySelector('[data-session-id="history"]')&&document.querySelector('.settings-body').textContent.includes('协议诊断历史')`),'另一端归档更新桌面侧栏和已打开的设置');
  assert.equal(await externalTrash('unarchive'),true);
