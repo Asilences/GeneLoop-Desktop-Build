@@ -48,6 +48,9 @@ export function bindScenePicker({input,trigger,container,getScenes,getSelected,c
       if(selected)control.append(icon('check'));
       control.disabled=scene.available===false;control.title=scene.unavailable_reason||shortcut||'';menu.append(control);
     });
+    if(openedByButton&&getSelected()!=='new-scene'){
+      menu.append(action('composer-clear-scene','close','清除已选场景',null,()=>pick('new-scene',input.value)));
+    }
     if(openedByButton)menu.append(action('composer-options','settings','场景选项',null,options));
     menu.hidden=false;
     trigger.setAttribute('aria-expanded',String(openedByButton));
@@ -95,7 +98,7 @@ export function bindScenePicker({input,trigger,container,getScenes,getSelected,c
   trigger.addEventListener('click',()=>{
     if(!menu.hidden&&openedByButton){close();return;}
     openedByButton=true;
-    suggestions=getScenes();
+    suggestions=getScenes().filter(scene=>scene.id!=='new-scene');
     active=-1;
     render();
   });

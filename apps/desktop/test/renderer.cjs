@@ -119,10 +119,10 @@ app.whenReady().then(async()=>{
  await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
  assert.equal(await evaluate(`(()=>{const attach=document.getElementById('attach');let opened=false;document.getElementById('file-input').addEventListener('click',event=>{event.preventDefault();opened=true;},{once:true});attach.click();return opened&&!!attach.querySelector('svg')&&attach.getAttribute('aria-label')==='上传文件'})()`),true);
  await evaluate(`document.querySelector('.composer-add').click()`);
- assert.deepEqual(await evaluate(`[...document.querySelectorAll('[role=menu][aria-label="添加"] [role=menuitem]')].map(row=>row.textContent)`),['添加照片或文件从电脑上传','场景选项']);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('[role=menu][aria-label="添加"] [role=menuitem]')].map(row=>row.textContent)`),['添加照片或文件从电脑上传','清除已选场景','场景选项']);
  assert.equal(await evaluate(`(()=>{let opened=false;document.getElementById('file-input').addEventListener('click',event=>{event.preventDefault();opened=true;},{once:true});document.querySelector('[data-action=composer-upload]').click();return opened&&document.getElementById('scene-command-menu').hidden})()`),true);
  await evaluate(`document.querySelector('.composer-add').click()`);
- assert.equal(await evaluate(`!document.getElementById('scene-command-menu').hidden&&document.querySelectorAll('#scene-command-menu [role=menuitemradio]').length===6&&document.getElementById('scene-select').tagName==='SPAN'&&!document.getElementById('scene-options')`),true);
+ assert.equal(await evaluate(`!document.getElementById('scene-command-menu').hidden&&document.querySelectorAll('#scene-command-menu [role=menuitemradio]').length===5&&!document.querySelector('#scene-command-menu [data-scene=new-scene]')&&document.getElementById('scene-select').tagName==='SPAN'&&!document.getElementById('scene-options')`),true);
  await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
  check('复选框与文字同一行，斜杠快捷选择与下拉框同步');
  assert.equal(await evaluate(`document.querySelector('[aria-label="推理强度"].choice-trigger').click();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));document.activeElement.click();const prompt=document.getElementById('prompt');prompt.value='诊断发送';prompt.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));document.getElementById('composer').requestSubmit();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
@@ -203,7 +203,7 @@ app.whenReady().then(async()=>{
    document.querySelector('#scene-command-menu [data-scene=files]').click()`);
  await until(()=>evaluate(`document.getElementById('scene-select').dataset.scene==='files'&&!document.getElementById('scene-select').hasAttribute('data-pending')`),'草稿同步文件管理场景');
  assert.equal(await evaluate(`window.draftLoadingObserver.disconnect();!window.draftLoadingFlash&&document.querySelector('.workspace-draft')!==null&&document.getElementById('prompt').value==='工作区草稿诊断'`),true);
- await evaluate(`document.querySelector('.composer-add').click();document.querySelector('#scene-command-menu [data-scene=new-scene]').click()`);
+ await evaluate(`document.querySelector('.composer-add').click();document.querySelector('[data-action=composer-clear-scene]').click()`);
  await evaluate(`document.getElementById('composer').requestSubmit()`);
  await until(()=>evaluate(`!document.querySelector('.workspace-draft')&&!!document.querySelector('${draftGroup} [data-session-id]')`),'草稿转为工作区正式对话');
  await evaluate(`document.querySelector('[data-session-id="history"] button').click()`);
