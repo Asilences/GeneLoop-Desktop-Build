@@ -34,7 +34,7 @@ const sessionChanges=new EventTarget();
 let homeDelivery=null;
 function changeSelection(action){const operation=selectionChange.catch(()=>{}).then(action);selectionChange=operation;return operation;}
 const errorText=error=>error?.message||String(error);
-function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5500);}
+function toast(message,duration=5500){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,duration);}
 const fail=error=>toast(errorText(error));
 function screen(name){for(const id of ['auth','loading','workspace'])$(id).hidden=id!==name;document.body.dataset.desktopScreen=name;document.body.toggleAttribute('data-auth-active',name==='auth');}
 function warning(error){$('connection-warning').textContent=errorText(error)+' · 点击重新连接';$('connection-warning').hidden=false;}
@@ -458,6 +458,7 @@ function renderScenes(){
   trigger.toggleAttribute('data-pending',sceneSelection.pending);
   trigger.setAttribute('aria-busy',String(sceneSelection.pending));
   trigger.textContent=labels[id]||scene?.label||id;
+  renderSendButton();
 }
 async function chooseScene(id){
   if(state.submitting)throw Error('正在发送消息，请稍后切换场景。');
@@ -482,7 +483,7 @@ async function chooseScene(id){
       if(selection!==sceneSelection)return;
       state.settings=next;
       selection.confirmed=id;
-      if(latest())toast('已选择 '+(labels[id]||id));
+      if(latest())toast('已选择 '+(labels[id]||id),1400);
     }catch(error){
       if(!latest())return;
       state.composerScene=selection.confirmed;
@@ -514,19 +515,20 @@ function promoteWorkspaceDraft(sessionId){
   newWorkspaceDrafts.delete(activeWorkspaceDraft.workspaceId);
   activeWorkspaceDraft=null;
 }
-function renderSendButton(label){
+function renderSendButton(){
   const control=$('send');
-  control.disabled=state.submitting;
-  control.setAttribute('aria-busy',String(state.submitting));
+  const busy=sceneSelection.pending||state.submitting;
+  const label=sceneSelection.pending?'正在同步场景':state.submitting?'正在发送':'发送';
+  control.disabled=busy;
+  control.setAttribute('aria-busy',String(busy));
   control.setAttribute('aria-label',label);
   control.title=label;
-  control.replaceChildren(state.submitting?node('span',{class:'send-spinner','aria-hidden':'true'}):icon('send'));
+  control.replaceChildren(busy?node('span',{class:'send-spinner','aria-hidden':'true'}):icon('send'));
 }
-async function send(event){event?.preventDefault();if(state.submitting)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;renderSendButton(sceneSelection.pending?'等待场景同步后发送':'正在发送');try{
+async function send(event){event?.preventDefault();if(state.submitting||sceneSelection.pending)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;renderSendButton();try{
     await selectionChange;
-    renderSendButton('正在发送');
     const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);promoteWorkspaceDraft(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);resetComposerScene();renderScenes();}state.conversation.running=true;scheduleRender();
-  }catch(error){if(error.status>=400&&error.status<500)state.pending.delete(state.session);fail(error);}finally{state.submitting=false;renderSendButton('发送');}}
+  }catch(error){if(error.status>=400&&error.status<500)state.pending.delete(state.session);fail(error);}finally{state.submitting=false;renderSendButton();}}
 async function refreshTaskPanels(){const session=state.session;if(!session)return;const generation=state.generation;const [tasks,questions]=await Promise.allSettled([request('/api/harless/tasks'),request('/api/harless/questions?session_id='+encodeURIComponent(session))]);if(generation!==state.generation)return;
   if(questions.status==='fulfilled')renderQuestions(questions.value.questions||[]);
   const views=[];for(const event of state.conversation.events.values())if(event.type==='user/message'&&event.data.harless_comparison){const reference=event.data.harless_comparison;views.push({id:reference.id});if(reference.value&&!state.comparisons.has(reference.id))state.comparisons.set(reference.id,reference.value);}

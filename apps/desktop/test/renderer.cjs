@@ -106,8 +106,7 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('dialog header button').click()`);
  await until(()=>evaluate('!document.querySelector("dialog")'),'场景选项关闭');
  await evaluate(`document.getElementById('prompt').value='同步失败草稿';document.querySelector('.composer-add').click();document.querySelector('#scene-command-menu [data-scene=paper-proofreading]').click()`);
- assert.equal(await evaluate(`!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),true);
- assert.equal(await evaluate(`document.getElementById('send').click();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
+ assert.equal(await evaluate(`document.getElementById('prompt').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
  await until(()=>evaluate(`document.getElementById('scene-select').dataset.scene==='new-scene'&&document.getElementById('toast').textContent.includes('场景同步诊断拒绝')&&!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),'服务器拒绝时恢复原选择和发送箭头');
  assert.equal(await evaluate(`document.getElementById('prompt').value`),'同步失败草稿');
  await evaluate(`const input=document.getElementById('prompt');input.value='/pp';input.dispatchEvent(new Event('input'));input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`);
@@ -124,7 +123,8 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('.composer-add').click()`);
  assert.equal(await evaluate(`!document.getElementById('scene-command-menu').hidden&&document.querySelectorAll('#scene-command-menu [role=menuitemradio]').length===5&&!document.querySelector('#scene-command-menu [data-scene=new-scene]')&&document.getElementById('scene-select').tagName==='SPAN'&&!document.getElementById('scene-options')`),true);
  await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
- check('复选框与文字同一行，斜杠快捷选择与下拉框同步');
+ await until(()=>evaluate(`document.getElementById('toast').textContent.includes('已选择')&&!!document.querySelector('#send:not(:disabled) svg')`),'场景同步成功后恢复发送箭头');
+ check('场景同步期间显示等待图标，成功或失败后恢复发送');
  assert.equal(await evaluate(`document.querySelector('[aria-label="推理强度"].choice-trigger').click();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));document.activeElement.click();const prompt=document.getElementById('prompt');prompt.value='诊断发送';prompt.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));document.getElementById('composer').requestSubmit();!!document.querySelector('#send[aria-busy="true"]:disabled .send-spinner')`),true);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("协议诊断响应完成")'),'合成流式与持久消息');await until(()=>evaluate('document.getElementById("stop").hidden'),'任务终止状态');
  assert.equal(await evaluate('document.getElementById("scene-select").dataset.scene'),'new-scene');check('配置确认后发送、实时消息/结束状态与逐轮场景重置');
@@ -204,6 +204,7 @@ app.whenReady().then(async()=>{
  await until(()=>evaluate(`document.getElementById('scene-select').dataset.scene==='files'&&!document.getElementById('scene-select').hasAttribute('data-pending')`),'草稿同步文件管理场景');
  assert.equal(await evaluate(`window.draftLoadingObserver.disconnect();!window.draftLoadingFlash&&document.querySelector('.workspace-draft')!==null&&document.getElementById('prompt').value==='工作区草稿诊断'`),true);
  await evaluate(`document.querySelector('.composer-add').click();document.querySelector('[data-action=composer-clear-scene]').click()`);
+ await until(()=>evaluate(`!!document.querySelector('#send:not(:disabled) svg')`),'清除场景后恢复发送');
  await evaluate(`document.getElementById('composer').requestSubmit()`);
  await until(()=>evaluate(`!document.querySelector('.workspace-draft')&&!!document.querySelector('${draftGroup} [data-session-id]')`),'草稿转为工作区正式对话');
  await evaluate(`document.querySelector('[data-session-id="history"] button').click()`);
