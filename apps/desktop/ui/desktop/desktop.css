@@ -112,3 +112,26 @@
 .result-score-scale button{min-height:26px;padding:0;border-radius:6px;font-variant-numeric:tabular-nums}
 .result-score-scale button:focus-visible{outline-offset:-2px}
 .result-score-scale button[aria-pressed=true]{color:var(--blue);background:var(--selection);font-weight:650}
+
+.workspace-resume,.presentation-card{display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--gl-sidebar)}
+.workspace-resume{margin:0 0 24px}
+.workspace-resume-mark{display:grid;place-items:center;width:44px;height:44px;flex:none;border:1px solid var(--line);border-radius:12px;background:var(--gl-canvas)}
+.workspace-resume-mark img{width:16px;height:29px}
+.workspace-resume-copy,.presentation-details{flex:1;min-width:min(160px,100%);overflow-wrap:anywhere}
+.delivery-kicker{color:var(--muted);font-size:11px;font-weight:650;letter-spacing:.05em}
+.workspace-resume h3,.presentation-card h4{margin:2px 0;font-size:15px;line-height:1.45}
+.workspace-resume p,.presentation-card p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.presentation-card{margin:12px 0;align-items:stretch}
+.presentation-cover{width:140px;aspect-ratio:16/9;display:grid;place-items:center;align-self:center;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--muted)}
+.presentation-cover img,.slide-stage img{display:block;width:100%;height:100%;object-fit:contain}
+.presentation-cover svg{width:26px;height:26px}
+.delivery-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.presentation-details .delivery-actions{margin-top:9px}
+.delivery-actions .secondary,.delivery-download{padding:5px 10px;background:var(--gl-canvas);font-size:12px}
+.delivery-download{display:inline-flex;align-items:center;gap:5px;color:var(--gl-ink)}
+.delivery-download:hover,.delivery-actions button:hover{background:var(--hover);text-decoration:none}
+.presentation-dialog{width:min(960px,calc(100vw - 32px));max-width:none}
+.presentation-dialog footer{align-items:center;flex-wrap:wrap}
+.slide-stage{display:grid;place-items:center;height:min(56vh,510px);background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.slide-stage img{min-height:0}
+.slide-unavailable{padding:6px;text-align:center;color:var(--muted);font-size:12px}

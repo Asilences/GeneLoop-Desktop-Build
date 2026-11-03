@@ -1,5 +1,6 @@
 import {request,post} from './api.js';
 import {node,button,markdown,dialog,icon} from './components.js';
+import {deliveryPath,deliveryFiles,presentation,presentationCard} from './deliveries.js';
 
 function iconAction(label,symbol,action){
   const control=button(icon(symbol),action,'result-icon');
@@ -15,6 +16,8 @@ export function comparisonCard(view,{trace,onUpdate,fail}){
   for(const [lane,result]of Object.entries(view.lanes||{})){
     const content=node('div',{class:'comparison-lane'},node('h4',{},view.presentation==='single'?'GeneLoop':lane==='motif'?'Motif执行':'标准执行'),node('small',{},({completed:'已完成',failed:'执行失败',cancelled:'已停止',running:'正在执行',queued:'等待执行',preparing:'正在准备'})[result.status]||'正在处理'));
     content.append(trace?node('pre',{},JSON.stringify(result.stats||{},null,2)):markdown(result.answer_display||result.answer||result.failure||'等待服务器返回结果…'));
+    const deck=!trace&&presentation(deliveryFiles(deliveryPath(view.session_id,view.id),lane,result));
+    if(deck)content.append(presentationCard(deck));
     const actions=node('div',{class:'result-tools',role:'group','aria-label':'结果操作'});
     const footer=node('div',{class:'result-footer'},actions);
     if(result.answer)actions.append(iconAction('复制结果','copy',async()=>{

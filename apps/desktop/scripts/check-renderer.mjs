@@ -14,7 +14,7 @@ const requests=[],streams=new Map(),sessions=[],selections=new Map(),modelSelect
 const archived=new Set(),deleted=new Set();
 const scenes=[['new-scene','Chat','chat'],['ppt','PPT','ppt'],['paper-proofreading','论文校对','paper'],['research-data-analysis','数据分析','data'],['files','文件管理','file'],['video-editing','视频编辑','video']].map(([id,label,shortcut])=>({id,label,shortcut,available:true}));
 const catalog={models:[{provider:'diagnostic',model:'fixture',label:'协议诊断模型（无调用）',available:true,reasoning_modes:[{id:'off',label:'关闭',available:true},{id:'high',label:'高',available:true}]}],default:{provider:'diagnostic',model:'fixture',reasoning_effort:'off'}};
-const comparison={id:'comparison-fixture',session_id:'history',presentation:'paired',status:'completed',revision:1,scoring_available:true,scores:{baseline:5},lanes:{baseline:{status:'completed',answer:'标准执行结果',output_sha256:'fixture-output',artifacts:[{id:'artifact',name:'diagnostic.txt',bytes:24}],stats:{model_requests:161}},motif:{status:'completed',answer:'Motif执行结果',artifacts:[],stats:{}}}};
+const comparison={id:'comparison-fixture',session_id:'history',presentation:'paired',status:'completed',revision:1,scoring_available:true,scores:{baseline:5},lanes:{baseline:{status:'completed',answer:'标准执行结果',output_sha256:'fixture-output',artifacts:[{id:'artifact',name:'diagnostic.txt',bytes:24},{id:'deck',name:'研究汇报.pptx'},{id:'slide-10',name:'slide_10.png'},{id:'slide-2',name:'slide_02.png'}],stats:{model_requests:161}},motif:{status:'completed',answer:'Motif执行结果',artifacts:[],stats:{}}}};
 const event=(seq,type,data)=>({type:'event',event:{seq,type,time:Date.now(),data,surfaceOp:'append'}});
 const records=[event(1,'user/message',{source:{kind:'user'},content:[{type:'text',text:'历史协议诊断'}],harless_comparison:{id:comparison.id,value:comparison}}),event(2,'assistant/message',{message:{content:[{type:'text',text:'## 历史记录\n这是**合成诊断**，不代表模型回答。'}]}})];
 sessions.push({sessionId:'history',blank:false,running:false,projections:{asOfSeq:2,values:{title:'协议诊断历史'}}});
@@ -42,7 +42,15 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/api/harless/questions'){if(req.method==='POST')questionPending=false;return json(res,{questions:questionPending?[{id:'question-fixture',questions:[{id:'q1',question:'请选择诊断范围',multiSelect:true,options:[{id:'wrong-id-1',label:'保留来源'},{id:'wrong-id-2',label:'生成副本'}]}]}]:[]});}
   if(path==='/api/fixture/questions'){questionPending=true;return json(res,{ok:true});}
-  if(path==='/api/harless/comparisons'){if(url.searchParams.has('file')){res.writeHead(200,{'content-type':'text/plain','content-disposition':'attachment; filename="diagnostic.txt"'});return res.end('diagnostic file contents');}return json(res,comparison);}
+  if(path==='/api/harless/comparisons'){
+   const file=url.searchParams.get('file');
+   if(file?.startsWith('slide-')){
+    res.writeHead(200,{'content-type':'application/octet-stream','content-disposition':'attachment','x-content-type-options':'nosniff'});
+    return res.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jH1sAAAAASUVORK5CYII=','base64'));
+   }
+   if(file){res.writeHead(200,{'content-type':'text/plain','content-disposition':'attachment; filename="diagnostic.txt"'});return res.end('diagnostic file contents');}
+   return json(res,comparison);
+  }
   if(path==='/api/fixture/approval'){push('$events',{type:'waterfall',event:'approval/request',eventId:'approval-fixture',request:{reason:'合成写入确认',tool:'diagnostic-write'}});return json(res,{ok:true});}
   const endpoint=path.replace('/api/',''),args=body.payload?.args||{},request=args.request;let value;
   if(endpoint==='session/list'){if(!Object.hasOwn(args,'_request'))throw Error('session/list requires _request');value={items:sessions.filter(row=>!deleted.has(row.sessionId))};}

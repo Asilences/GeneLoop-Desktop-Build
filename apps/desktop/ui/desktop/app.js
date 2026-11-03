@@ -5,6 +5,7 @@ import {promptContent} from './composer.js';
 import {settingsPanel} from './panels.js';
 import {comparisonCard} from './comparison.js';
 import {bindScenePicker} from './scene-picker.js';
+import {deliveryPath,deliveryFiles,deliveryName,presentation,presentationCard,previewPresentation} from './deliveries.js';
 const $=id=>document.getElementById(id),state={user:null,sessions:[],workspaces:[],archived:new Set(),session:null,workspace:null,settings:null,models:[],conversation:new Conversation(),attachments:[],trace:false,generation:0,submitting:false,drafts:new Map(),comparisons:new Map(),pending:new Map()};
 const labels={'new-scene':'Chat',ppt:'PPT','paper-proofreading':'论文校对','research-data-analysis':'数据分析',files:'文件管理','video-editing':'视频编辑'};
 const examples=[
@@ -21,6 +22,7 @@ const newWorkspaceDrafts=new Map();
 let activeWorkspaceDraft=null;
 let awaitingHistory=false,historyError='';
 let pinnedWorkspaces=[];
+let homeDelivery=null;
 function changeSelection(action){const operation=selectionChange.catch(()=>{}).then(action);selectionChange=operation;return operation;}
 const errorText=error=>error?.message||String(error);
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5500);}
@@ -122,7 +124,7 @@ function workspaceMenu(group,position){
   ],position);
 }
 function clearSessionPanels(){
-  state.deliveries=[];renderDeliveries();renderQuestions([]);$('preview').replaceChildren();
+  state.deliveries=[];state.nativePresentations=[];homeDelivery=null;renderDeliveries();renderQuestions([]);$('preview').replaceChildren();
   if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
 }
 function saveComposer(){
@@ -139,7 +141,7 @@ function saveComposer(){
 async function beginWorkspaceDraft(id){
   if(creatingSession||state.submitting)return;
   if(activeWorkspaceDraft?.workspaceId===id){$('prompt').focus();return;}
-  openWorkspace(id);
+  openWorkspace(id,{focus:true});
   const draft=newWorkspaceDrafts.get(id)||{workspaceId:id,sessionId:null,text:'',attachments:[]};
   newWorkspaceDrafts.set(id,draft);
   activeWorkspaceDraft=draft;
@@ -164,6 +166,7 @@ function openWorkspace(id,{focus=false}={}){
   state.composerScene='new-scene';state.attachments=[];$('prompt').value=scratchText;
   clearSessionPanels();renderScenes();renderAttachments();renderSidebar();renderConversation();
   $('history').scrollTop=0;
+  if(id&&!focus)refreshHomeDelivery(id).catch(()=>{});
   if(focus)$('prompt').focus();
 }
 async function ensureSession(){
@@ -240,10 +243,65 @@ function exampleButtons(){
   return examples.filter(([id])=>state.settings?.scenes?.some(scene=>scene.id===id&&scene.available!==false))
     .map(([,title,text])=>button(title,()=>fillExample(text),'prompt-example'));
 }
-function workspaceHome(group){
+function workspaceSessions(group){
   const ids=new Set(group.sessionIds);
-  const rows=state.sessions.filter(row=>ids.has(row.sessionId)&&visibleSession(row))
-    .sort((a,b)=>(b.updatedAt??0)-(a.updatedAt??0));
+  return state.sessions.filter(row=>ids.has(row.sessionId)&&visibleSession(row))
+    .sort((a,b)=>(new Date(b.updatedAt).getTime()||0)-(new Date(a.updatedAt).getTime()||0));
+}
+function recentSessionEvents(id){
+  return new Promise((resolve,reject)=>{
+    let stop,finished=false;
+    const finish=(callback,value)=>{if(finished)return;finished=true;clearTimeout(timer);stop?.();callback(value);};
+    const timer=setTimeout(()=>finish(resolve,[]),5000);
+    streams.follow('session/follow',{address:{kind:'session',sessionId:id},maxMessages:20,assistantStream:false},
+      frame=>{if(frame.type==='snapshot')finish(resolve,frame.records||[]);},error=>finish(reject,error))
+      .then(cancel=>{stop=cancel;if(finished)stop();},error=>finish(reject,error));
+  });
+}
+async function refreshHomeDelivery(workspaceId){
+  const group=state.workspaces.find(row=>row.workspaceId===workspaceId);
+  if(!group)return;
+  const row=workspaceSessions(group)[0];
+  if(!row||row.running)return;
+  const {sessionId}=row,generation=state.generation;
+  const current=()=>generation===state.generation&&!state.session&&!activeWorkspaceDraft&&state.workspace===workspaceId;
+  const [records,tasks]=await Promise.all([
+    recentSessionEvents(sessionId).catch(()=>[]),
+    request('/api/harless/tasks').catch(()=>({tasks:[]})),
+  ]);
+  if(!current())return;
+  const refs=records.map(row=>row.event?.data?.harless_comparison).filter(Boolean).reverse();
+  const native=(tasks.tasks||[]).filter(task=>task.session_id===sessionId&&task.scene==='ppt'&&task.status==='completed')
+    .sort((a,b)=>(b.native_turn||0)-(a.native_turn||0));
+  const candidates=[...refs.map(ref=>({id:ref.id,turn:ref.turn})),
+    ...native.map(task=>({id:'native-'+task.task_id,turn:task.native_turn}))]
+    .sort((a,b)=>(b.turn||0)-(a.turn||0)).slice(0,4);
+  for(const candidate of candidates){
+    const path=deliveryPath(sessionId,candidate.id);
+    const value=await request(path).catch(()=>null);
+    if(!current())return;
+    const decks=Object.entries(value?.lanes||{}).map(([lane,result])=>({
+      label:lane==='motif'?'Motif 执行':'标准执行',
+      deck:presentation(deliveryFiles(path,lane,result)),
+    })).filter(row=>row.deck);
+    if(decks.length){homeDelivery={sessionId,decks};scheduleRender();return;}
+  }
+}
+function workspaceHome(group){
+  const rows=workspaceSessions(group);
+  const next=rows.find(row=>row.running)||rows[0];
+  const decks=!next?.running&&homeDelivery?.sessionId===next?.sessionId?homeDelivery?.decks:null;
+  const resume=next?node('section',{class:'workspace-resume','aria-label':'继续工作'},
+    node('div',{class:'workspace-resume-mark'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''})),
+    node('div',{class:'workspace-resume-copy'},node('div',{class:'delivery-kicker'},'继续工作'),
+      node('h3',{},titleOf(next)),node('p',{},next.running?'正在执行':decks?'演示文稿交付已就绪':'最近更新的研究对话')),
+    node('div',{class:'delivery-actions'},
+      button('打开对话',()=>selectSession(next.sessionId).catch(fail),'secondary'),
+      decks?button('查看交付',()=>{
+        if(decks.length===1&&decks[0].deck.slides.length)previewPresentation(decks[0].deck);
+        else dialog('演示文稿交付',node('div',{class:'workspace-delivery-options'},decks.map(({label,deck})=>
+          node('div',{},decks.length>1?node('p',{},label):null,presentationCard(deck)))));
+      },'secondary'):null)):null;
   const create=button(node('span',{},icon('plus'),'新会话'),()=>beginWorkspaceDraft(group.workspaceId).catch(fail),'secondary workspace-start');
   const summary=node('div',{class:'workspace-home-heading'},
     node('div',{class:'workspace-home-name'},node('span',{class:'workspace-home-icon'},icon('folder')),
@@ -267,7 +325,7 @@ function workspaceHome(group){
     }
     section.append(list);
   }
-  return node('div',{class:'workspace-home'},summary,section);
+  return node('div',{class:'workspace-home'},summary,resume,section);
 }
 function renderConversation(){
   const history=$('history'),previousTop=history.scrollTop,nearBottom=history.scrollHeight-previousTop-history.clientHeight<140;
@@ -296,6 +354,17 @@ function renderConversation(){
     history.append(node('div',{class:'welcome'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),node('h2',{},'探索未至之境'),node('p',{},'把资料、想法和下一步，连接起来。'),node('div',{class:'scene-cards','aria-label':'写作示例'},cards)));
   }
   if(state.conversation.hasMore)history.prepend(button('加载更早消息',loadEarlier,'secondary'));
+  const native=state.trace?[]:state.nativePresentations||[],nativeAt=new Map();
+  let turn,lastAssistant;
+  for(const event of [...state.conversation.events.values()].sort((a,b)=>a.seq-b.seq)){
+    if(event.type==='turn/start'){turn=event.data?.turn;lastAssistant=null;}
+    if(event.type==='assistant/message'&&turn!=null)lastAssistant=event.seq;
+    if(event.type==='turn/end'&&event.data?.turn===turn&&lastAssistant!=null){
+      const decks=native.filter(item=>item.turn===turn);
+      if(decks.length)nativeAt.set(lastAssistant,decks);
+    }
+  }
+  const shownNative=new Set();
   for(const row of rows){
     if(row.role==='tool'||row.role==='tool-result'){
       if(state.trace)history.append(node('details',{class:'trace-item'},node('summary',{},row.role==='tool'?'调用工具 · '+row.name:'工具返回'),node('pre',{},row.arguments||JSON.stringify(row.data,null,2))));
@@ -304,7 +373,10 @@ function renderConversation(){
     if(state.trace)continue;
     const article=node('article',{class:'message '+row.role,'data-seq':row.seq});
     if(row.role==='assistant')article.append(node('div',{class:'message-label'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''}),'GeneLoop'));
-    article.append(blocks(row.blocks));
+    const decks=nativeAt.get(row.seq)||[];
+    const groupedNames=new Set(decks.flatMap(({deck,slides})=>(deck?[deck,...slides]:slides).map(deliveryName)));
+    article.append(blocks(row.blocks.filter(block=>!groupedNames.has(block.attachment?.name))));
+    for(const deck of decks){article.append(presentationCard(deck));shownNative.add(deck);}
     if(row.role==='assistant')article.append(node('div',{class:'message-meta'},button('复制',()=>navigator.clipboard.writeText(row.blocks.filter(block=>block.type==='text').map(block=>block.text).join('\n'))),new Date(row.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),row.interrupted?'已中断':null));
     history.append(article);
     const reference=state.conversation.events.get(row.seq)?.data?.harless_comparison;
@@ -312,6 +384,7 @@ function renderConversation(){
   }
   if(!state.trace&&state.conversation.live.size)history.append(node('article',{class:'message assistant live'},node('div',{class:'message-label'},'GeneLoop · 正在回复'),blocks([...state.conversation.live.values()])));
   for(const [id]of state.comparisons)if(!renderedComparisons.has(id))history.append(resultCard(id));
+  for(const deck of native)if(!shownNative.has(deck))history.append(node('div',{class:'native-delivery'},presentationCard(deck)));
   if(state.trace&&state.jobs?.length)history.append(node('div',{class:'trace-item'},'后台任务',node('pre',{},JSON.stringify(state.jobs,null,2))));
   history.scrollTop=nearBottom?history.scrollHeight:previousTop;
 }
@@ -352,8 +425,26 @@ async function refreshTaskPanels(){const session=state.session;if(!session)retur
   if(questions.status==='fulfilled')renderQuestions(questions.value.questions||[]);
   const views=[];for(const event of state.conversation.events.values())if(event.type==='user/message'&&event.data.harless_comparison){const reference=event.data.harless_comparison;views.push({id:reference.id});if(reference.value&&!state.comparisons.has(reference.id))state.comparisons.set(reference.id,reference.value);}
   if(tasks.status==='fulfilled')for(const task of tasks.value.tasks||[])if(task.session_id===session&&task.task_id)views.push({id:'native-'+task.task_id,session_id:session,native:true});
-  const files=[];for(const view of views){if(!view?.id)continue;const native=view.native||String(view.id).startsWith('native-');try{const path='/api/harless/'+(native?'deliveries':'comparisons')+'?'+new URLSearchParams({session_id:session,id:view.id});const value=await request(path);if(generation!==state.generation)return;if(!native)state.comparisons.set(view.id,value);for(const [lane,result]of Object.entries(value.lanes||{}))for(const file of result.artifacts||[])files.push({...file,href:path+'&'+new URLSearchParams({lane,file:file.id})});}catch{}}
-  state.deliveries=files;renderDeliveries();if(state.comparisons.size)scheduleRender();
+  const files=[],presentations=[];
+  for(const view of views){
+    if(!view?.id)continue;
+    const native=view.id.startsWith('native-');
+    try{
+      const path=deliveryPath(session,view.id),value=await request(path);
+      if(generation!==state.generation)return;
+      if(!native)state.comparisons.set(view.id,value);
+      for(const [lane,result]of Object.entries(value.lanes||{})){
+        const laneFiles=deliveryFiles(path,lane,result);
+        files.push(...laneFiles);
+        const deck=native&&presentation(laneFiles);
+        if(deck)presentations.push({...deck,turn:value.turn});
+      }
+    }catch{}
+  }
+  if(generation!==state.generation)return;
+  const hadPresentations=state.nativePresentations?.length;
+  state.nativePresentations=presentations;
+  state.deliveries=files;renderDeliveries();if(state.comparisons.size||presentations.length||hadPresentations)scheduleRender();
 }
 function renderDeliveries(){const target=$('delivery-list');target.replaceChildren();for(const file of state.deliveries||[])target.append(node('div',{class:'file-row'},button([icon('document'),node('span',{},file.name)],()=>preview(file)),node('a',{href:file.href,download:file.name,title:'下载','aria-label':'下载 '+file.name},icon('download'))));if(!target.children.length)target.append(node('p',{class:'empty'},'本对话的已验证交付文件会显示在这里。'));}
 async function preview(file){try{const response=await fetch(file.href,{credentials:'same-origin'});if(!response.ok)throw Error('文件暂时不可用');const blob=await response.blob();if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(blob);const target=$('preview');target.replaceChildren(node('h3',{},file.name));const extension=file.name.split('.').pop().toLowerCase();if(['png','jpg','jpeg','gif','webp'].includes(extension))target.append(node('img',{src:previewUrl,alt:file.name}));else if(['mp4','webm'].includes(extension))target.append(node('video',{src:previewUrl,controls:true}));else if(extension==='pdf')target.append(node('iframe',{src:previewUrl,sandbox:'',title:file.name}));else if(['md','txt','json','csv','tsv','py','js','ts','tex','bib','log'].includes(extension)&&blob.size<2_000_000)target.append(node('pre',{},await blob.text()));else target.append(node('p',{},'此格式请下载后用本机应用打开。'));}catch(error){fail(error);}}
