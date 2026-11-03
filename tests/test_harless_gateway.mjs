@@ -8,7 +8,8 @@ import { createHash, createHmac } from 'node:crypto';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createGateway, createOwnerClaim, createInvites, memberWatcherEnvironment } from '../scripts/harless_gateway.mjs';
+import { fileURLToPath } from 'node:url';
+import { createGateway, createOwnerClaim, createInvites, createSharedInvite, sharedInviteMetadata, memberWatcherEnvironment } from '../scripts/harless_gateway.mjs';
 import { memberSceneDeployment } from '../scripts/harless_member_scenes.mjs';
 import WebSocket, { WebSocketServer } from 'ws';
 
@@ -708,4 +709,148 @@ test('scoped budget rejects cross-account control and model traffic', async t =>
     delegated(alice, 'control'))).status, 200);
   assert.equal((await scoped('/v1/chat/completions', { model: 'test' }, delegated(alice, 'model'), true)).status, 403);
   assert.equal((await scoped(visionPath,{model:'deepseek-flash'},delegated(alice,'model'),true)).status,403);
+});
+
+
+test('shared invitation supports concurrent distinct members and persists without storing plaintext', async t => {
+  const f = await fixture(t);
+  const { code } = createSharedInvite(f.gateway);
+  const row = f.gateway.db.invites.find(item => item.reusable);
+  row.createdAt = '2000-01-01T00:00:00.000Z'; f.gateway.save(); await f.restart();
+  const results = await Promise.all(['alice', 'bob', 'carol'].map(username =>
+    f.request('/api/account/register', {method:'POST',body:{inviteCode:`  ${code}  `,
+      username,displayName:username,password:'SharedTestPassword123!',role:'owner'}})));
+  assert.deepEqual(results.map(result => result.status), [200, 200, 200]);
+  const users = await Promise.all(results.map(result => result.json()));
+  assert.equal(new Set(users.map(result => result.user.id)).size, 3);
+  assert.ok(users.every(result => result.user.role === 'member' && result.user.id !== 'owner'));
+  const cookies = results.map(result => result.headers.get('set-cookie').split(';')[0]);
+  assert.equal(new Set(cookies).size, 3);
+  assert.equal(sharedInviteMetadata(f.gateway).useCount, 3);
+  assert.ok(sharedInviteMetadata(f.gateway).lastUsedAt);
+  await f.restart();
+  for (let index = 0; index < cookies.length; index++) {
+    const me = await f.request('/api/account/me', {cookie:cookies[index]}).then(r=>r.json());
+    assert.equal(me.user.id, users[index].user.id);
+  }
+  const fourth = await f.request('/api/account/register', {method:'POST',body:{inviteCode:code,
+    username:'dave',displayName:'Dave',password:'SharedTestPassword123!'}});
+  assert.equal(fourth.status, 200);
+  const metadata = sharedInviteMetadata(f.gateway);
+  assert.equal(metadata.useCount, 4); assert.equal(metadata.expiresAt, null); assert.equal(metadata.maxUses, null);
+  const saved = readFileSync(join(f.config.dataDir,'accounts.json'),'utf8');
+  assert.ok(!saved.includes(code)); assert.ok(!saved.includes('SharedTestPassword123!'));
+  assert.equal(JSON.parse(saved).invites.filter(item=>item.reusable && !item.revokedAt).length, 1);
+});
+
+test('shared invitation rotation is explicit and invalidates old codes without changing accounts or single-use codes', async t => {
+  const f=await fixture(t), original=createSharedInvite(f.gateway), [single]=createInvites(f.gateway);
+  const register=(code,username)=>f.request('/api/account/register',{method:'POST',body:{inviteCode:code,
+    username,displayName:username,password:'SharedTestPassword123!'}});
+  const existing=await register(original.code,'existing');assert.equal(existing.status,200);
+  const cookie=existing.headers.get('set-cookie').split(';')[0];
+  assert.throws(()=>createSharedInvite(f.gateway),error=>error.code==='SHARED_INVITE_EXISTS');
+  assert.equal(f.gateway.db.invites.filter(item=>item.reusable&&!item.revokedAt).length,1);
+  const replacement=createSharedInvite(f.gateway,{replace:true});
+  assert.notEqual(replacement.code,original.code);
+  const previous=f.gateway.db.invites.find(item=>item.reusable&&item.revokedAt);
+  assert.equal(previous.useCount,1);assert.ok(previous.lastUsedAt);
+  assert.equal((await register(original.code,'rejected')).status,400);
+  assert.equal((await register(replacement.code,'new_member')).status,200);
+  assert.equal((await register(single,'one_time')).status,200);
+  assert.equal((await register(single,'second_time')).status,400);
+  assert.equal((await f.request('/api/account/me',{cookie}).then(r=>r.json())).user.username,'existing');
+  assert.equal(sharedInviteMetadata(f.gateway).useCount,1);
+  await f.restart();assert.equal((await register(original.code,'still_rejected')).status,400);
+  assert.equal((await register(replacement.code,'after_restart')).status,200);
+});
+
+test('concurrent same-username registration consumes only one shared invitation use', async t => {
+  const f=await fixture(t), {code}=createSharedInvite(f.gateway);
+  const request=()=>f.request('/api/account/register',{method:'POST',body:{inviteCode:code,
+    username:'collision',displayName:'Collision',password:'SharedTestPassword123!'}});
+  const results=await Promise.all([request(),request()]);
+  assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+  assert.equal(f.gateway.db.users.filter(u=>u.username==='collision').length,1);
+  assert.equal(sharedInviteMetadata(f.gateway).useCount,1);
+});
+
+test('shared invitation is rechecked if rotated while password hashing is in flight', async t => {
+  const f=await fixture(t), {code}=createSharedInvite(f.gateway);
+  let rotated=false;
+  const invitations=f.gateway.db.invites;
+  // Rotate after the first lookup returns but before the asynchronous scrypt
+  // callback can run. No production test hook or timing-dependent sleep is used.
+  Object.defineProperty(invitations,'find',{configurable:true,value:function(...args){
+    const found=Array.prototype.find.apply(this,args);delete this.find;
+    queueMicrotask(()=>{createSharedInvite(f.gateway,{replace:true});rotated=true;});
+    return found;
+  }});
+  const result=await f.request('/api/account/register',{method:'POST',body:{inviteCode:code,
+    username:'in_flight',displayName:'In flight',password:'SharedTestPassword123!'}});
+  assert.equal(rotated,true);assert.equal(result.status,409);
+  assert.equal(f.gateway.db.users.length,0);assert.equal(sharedInviteMetadata(f.gateway).useCount,0);
+});
+
+test('shared invitation owner API requires current password and exposes metadata without credentials', async t => {
+  const f=await fixture(t);
+  assert.equal((await f.request('/api/account/shared-invite')).status,401);
+  const claim=createOwnerClaim(f.gateway);
+  const claimed=await f.request('/api/account/claim',{method:'POST',body:{claimCode:claim,
+    username:'owner',displayName:'Owner',password:'OwnerPassword123!'}});
+  const cookie=claimed.headers.get('set-cookie').split(';')[0];
+  assert.deepEqual(await f.request('/api/account/shared-invite',{cookie}).then(r=>r.json()),{invitation:{exists:false}});
+  const post=body=>f.request('/api/account/shared-invite',{method:'POST',cookie,body});
+  assert.equal((await post({currentPassword:'WrongPassword123!'})).status,403);
+  assert.equal((await f.request('/api/account/shared-invite',{method:'POST',cookie,
+    requestOrigin:'https://evil.test',body:{currentPassword:'OwnerPassword123!'}})).status,403);
+  assert.equal((await post({currentPassword:'OwnerPassword123!',replace:'true'})).status,400);
+  const created=await post({currentPassword:'OwnerPassword123!',replace:false});
+  assert.equal(created.status,200);const first=await created.json();assert.ok(first.code.length>=20);
+  const conflict=await post({currentPassword:'OwnerPassword123!'});assert.equal(conflict.status,409);
+  const metadata=await f.request('/api/account/shared-invite',{cookie}).then(r=>r.json());
+  assert.deepEqual(metadata,{invitation:first.invitation});
+  assert.ok(!JSON.stringify(metadata).includes(first.code));assert.equal(metadata.invitation.hash,undefined);
+  const member=await f.request('/api/account/register',{method:'POST',body:{inviteCode:first.code,
+    username:'member',displayName:'Member',password:'MemberPassword123!'}});
+  const memberCookie=member.headers.get('set-cookie').split(';')[0];
+  assert.equal((await f.request('/api/account/shared-invite',{cookie:memberCookie})).status,403);
+  assert.equal((await f.request('/api/account/shared-invite',{method:'POST',cookie:memberCookie,
+    body:{currentPassword:'MemberPassword123!',replace:true}})).status,403);
+  const rotated=await post({currentPassword:'OwnerPassword123!',replace:true});
+  assert.equal(rotated.status,200);assert.notEqual((await rotated.json()).code,first.code);
+});
+
+test('loopback shared invitation admin and CLI use the authenticated live gateway without plaintext persistence', {timeout:15000}, async t => {
+  const f=await fixture(t);f.config.adminToken='shared-invite-test-admin';await f.restart();
+  const admin=(body,token)=>fetch(f.base()+'/api/internal/admin',{method:'POST',headers:{
+    'content-type':'application/json',...(token?{'x-harless-admin':token}:{})},body:JSON.stringify(body)});
+  assert.equal((await admin({action:'shared-invite'})).status,403);
+  assert.equal((await admin({action:'shared-invite'},'wrong-admin')).status,403);
+  const created=await admin({action:'shared-invite'},f.config.adminToken);
+  assert.equal(created.status,200);const first=await created.json();
+  assert.equal((await admin({action:'shared-invite'},f.config.adminToken)).status,409);
+  assert.equal((await admin({action:'shared-invite',replace:'true'},f.config.adminToken)).status,400);
+  const config=join(f.dir,'cli-config.json');writeFileSync(config,JSON.stringify({...f.config,port:Number(new URL(f.base()).port)}));
+  const child=spawn(process.execPath,[fileURLToPath(new URL('../scripts/harless_gateway.mjs',import.meta.url)),
+    config,'shared-invite','--replace'],{stdio:['ignore','pipe','pipe']});
+  t.after(()=>{if(child.exitCode===null&&child.signalCode===null)child.kill();});
+  let stdout='',stderr='';child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);
+  const [exitCode]=await once(child,'close');assert.equal(exitCode,0,stderr);
+  const code=stdout.trim();assert.match(code,/^[A-Za-z0-9_-]{24}$/);assert.notEqual(code,first.code);
+  assert.equal(f.gateway.db.invites.filter(item=>item.reusable&&!item.revokedAt).length,1);
+  const member=await f.request('/api/account/register',{method:'POST',body:{inviteCode:code,
+    username:'cli_member',displayName:'CLI Member',password:'CliMemberPassword123!'}});
+  assert.equal(member.status,200,'the running gateway observes the CLI-created code');
+  assert.ok(!readFileSync(join(f.config.dataDir,'accounts.json'),'utf8').includes(code));
+});
+
+test('legacy single-use invitation still permits only one concurrent registration', async t => {
+  const f=await fixture(t), [code]=createInvites(f.gateway);
+  const results=await Promise.all(['one','two'].map(username=>f.request('/api/account/register',{
+    method:'POST',body:{inviteCode:code,username,displayName:username,password:'LegacyPassword123!'}})));
+  assert.equal(results.filter(result=>result.status===200).length,1);
+  assert.ok(results.some(result=>result.status===400||result.status===409));
+  assert.equal(f.gateway.db.users.length,1);
+  assert.equal(f.gateway.db.invites[0].usedBy,f.gateway.db.users[0].id);
 });

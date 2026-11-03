@@ -21,6 +21,9 @@
       const [password, setPassword] = React.useState({ currentPassword: '', newPassword: '', repeatPassword: '' });
       const [invitePassword, setInvitePassword] = React.useState(''), [invites, setInvites] = React.useState([]);
       const [inviteCount, setInviteCount] = React.useState('5');
+      const [sharedInvite, setSharedInvite] = React.useState(null), [sharedError, setSharedError] = React.useState('');
+      const [sharedRevision, setSharedRevision] = React.useState(0), [sharedPassword, setSharedPassword] = React.useState('');
+      const [sharedCode, setSharedCode] = React.useState(null), [replacingShared, setReplacingShared] = React.useState(false);
       const [busy, setBusy] = React.useState(''), [notice, setNotice] = React.useState(null);
       const active = React.useRef(false), pending = React.useRef(false);
       React.useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
@@ -35,6 +38,15 @@
           .finally(() => { if (current) setLoading(false); });
         return () => { current = false; abort.abort(); };
       }, [revision]);
+      React.useEffect(() => {
+        if (user?.role !== 'owner') return;
+        const abort = new AbortController(); let current = true;
+        setSharedInvite(null); setSharedError(''); setReplacingShared(false);
+        request('/api/account/shared-invite', undefined, abort.signal).then(value => {
+          if (current) setSharedInvite(value.invitation);
+        }).catch(error => { if (current) setSharedError(errorText(error)); });
+        return () => { current = false; abort.abort(); };
+      }, [user?.role, sharedRevision]);
       const save = async (event, scope, body, done) => {
         event.preventDefault(); if (pending.current) return;
         pending.current = true; setBusy(scope); setNotice(null);
@@ -47,12 +59,12 @@
       // Keep normal input paste inside settings instead of the chat's global handlers.
       const field = (label, props) => h('label', null, label, h('input', { required: true, disabled: !!busy,
         onPaste: event => event.stopPropagation(), ...props }));
-      const copyInvites = async codes => {
+      const copyInvites = async (codes, scope = 'invites') => {
         try {
           await window.navigator.clipboard.writeText(codes.join('\n'));
-          if (active.current) setNotice({ scope: 'invites', text: codes.length === 1 ? '邀请码已复制。' : `已复制 ${codes.length} 个邀请码，每行一个。` });
+          if (active.current) setNotice({ scope, text: codes.length === 1 ? '邀请码已复制。' : `已复制 ${codes.length} 个邀请码，每行一个。` });
         } catch {
-          if (active.current) setNotice({ scope: 'invites', error: true, text: '浏览器未允许自动复制，请点击邀请码后按 Ctrl+C（Mac：⌘C）复制。' });
+          if (active.current) setNotice({ scope, error: true, text: '浏览器未允许自动复制，请点击邀请码后按 Ctrl+C（Mac：⌘C）复制。' });
         }
       };
       if (loading) return h('section', { className: 'geneloop-settings-page', 'aria-label': '账户与安全' }, h('h2', null, '账户与安全'), h('p', { role: 'status' }, '正在加载账户…'));
@@ -76,8 +88,35 @@
             key: name, name, type: 'password', value: password[name], minLength: name === 'currentPassword' ? undefined : 10,
             autoComplete: name === 'currentPassword' ? 'current-password' : 'new-password', onChange: event => setPassword({ ...password, [name]: event.target.value }),
           })), h('button', { type: 'submit', disabled: !!busy }, busy === 'password' ? '修改中…' : '修改密码')), status('password')),
-        user.role === 'owner' && h('section', { className: 'geneloop-settings-section' }, h('h3', null, '邀请同学'), h('p', null, '邀请码永久有效，每个码可注册一个账号，使用后失效。'),
-          h('form', { onSubmit: event => { void save(event, 'invites', { currentPassword: invitePassword, count: Number(inviteCount) }, value => {
+        user.role === 'owner' && h('section', { className: 'geneloop-settings-section' }, h('h3', null, '邀请同学'),
+          h('h4', null, '统一邀请码'), h('p', null, '把同一个邀请码发给大家。永久有效，可供多人重复注册；每个人设置自己的用户名和密码，对话与文件相互独立。'),
+          sharedError ? h('div', null, h('p', { role: 'alert' }, sharedError),
+            h('button', { type: 'button', disabled: !!busy, onClick: () => setSharedRevision(value => value + 1) }, '重新读取邀请码状态'))
+            : !sharedInvite ? h('p', { role: 'status' }, '正在读取邀请码状态…')
+            : h('div', null,
+              sharedInvite.exists && h('p', null, `统一邀请码已启用，已成功注册 ${sharedInvite.useCount || 0} 个账号。`),
+              sharedCode && sharedCode.id === sharedInvite.id && h('div', { className: 'geneloop-invite-results' },
+                h('input', { 'aria-label': '统一邀请码', value: sharedCode.code, readOnly: true, spellCheck: false,
+                  style: { userSelect: 'text', fontFamily: 'monospace' }, onFocus: event => event.target.select() }),
+                h('button', { type: 'button', onClick: () => copyInvites([sharedCode.code], 'shared-invite') }, '复制统一邀请码')),
+              sharedInvite.exists && h('p', null, '邀请码只在生成时显示，请保存后分享。关闭页面不会使它失效；遗失后可更换。'),
+              sharedInvite.exists && !replacingShared && h('button', { type: 'button', disabled: !!busy, onClick: () => setReplacingShared(true) }, '更换统一邀请码'),
+              (!sharedInvite.exists || replacingShared) && h('form', { 'aria-label': '统一邀请码管理', onSubmit: event => {
+                if (!sharedInvite || (sharedInvite.exists && !replacingShared)) { event.preventDefault(); return; }
+                void save(event, 'shared-invite', { currentPassword: sharedPassword, replace: sharedInvite.exists && replacingShared }, value => {
+                  setSharedInvite(value.invitation); setSharedCode({ code: value.code, id: value.invitation.id });
+                  setSharedPassword(''); setReplacingShared(false);
+                  setNotice({ scope: 'shared-invite', text: '统一邀请码已生成。请复制保存，再把同一个码分享给需要注册的人。' });
+                });
+              } }, replacingShared && h('p', { role: 'note' }, '更换后，旧共享邀请码立即失效。已注册的账号不受影响。'),
+                field('确认当前密码', { name: 'sharedCurrentPassword', type: 'password', autoComplete: 'current-password', value: sharedPassword,
+                  onChange: event => setSharedPassword(event.target.value) }),
+                h('button', { type: 'submit', disabled: !!busy }, busy === 'shared-invite' ? '生成中…' : replacingShared ? '确认更换统一邀请码' : '生成统一邀请码'),
+                replacingShared && h('button', { type: 'button', disabled: !!busy, onClick: () => { setReplacingShared(false); setSharedPassword(''); } }, '取消更换'))),
+          status('shared-invite'),
+          h('details', { className: 'geneloop-single-use-invites' }, h('summary', null, '单次邀请码（可选）'),
+          h('p', null, '仅在需要单独邀请时使用。单次邀请码永久有效，每个码可注册一个账号，使用后失效。'),
+          h('form', { 'aria-label': '单次邀请码管理', onSubmit: event => { void save(event, 'invites', { currentPassword: invitePassword, count: Number(inviteCount) }, value => {
             setInvites(previous => [...previous, ...(value.codes || [])]); setInvitePassword('');
             setNotice({ scope: 'invites', text: `已生成 ${value.codes.length} 个永久邀请码。离开页面前请复制保存；关闭页面不会使邀请码失效。` });
           }); } }, field('确认当前密码', { name: 'currentPassword', type: 'password', autoComplete: 'current-password', value: invitePassword,
@@ -90,7 +129,7 @@
             ...invites.map((code, index) => h('div', { key: code, style: { display: 'flex', gap: 8, marginTop: 8 } },
               h('input', { 'aria-label': '邀请码 ' + (index + 1), value: code, readOnly: true, spellCheck: false,
                 style: { minWidth: 0, flex: 1, userSelect: 'text', fontFamily: 'monospace' }, onFocus: event => event.target.select() }),
-              h('button', { type: 'button', 'aria-label': '复制邀请码 ' + (index + 1), onClick: () => copyInvites([code]) }, '复制'))))),
+              h('button', { type: 'button', 'aria-label': '复制邀请码 ' + (index + 1), onClick: () => copyInvites([code]) }, '复制')))))) ,
         h('section', { className: 'geneloop-settings-section' }, h('h3', null, '登录状态'), h('p', null, user.role === 'owner' ? '所有者账号' : '成员账号'),
           h('button', { type: 'button', disabled: !!busy, onClick: event => save(event, 'logout', {}, () => { window.location.replace('/login'); }) }, '退出登录'), status('logout')));
     }
