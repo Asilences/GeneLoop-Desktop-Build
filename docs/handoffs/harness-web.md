@@ -103,3 +103,5 @@
 
 ## 2026-11-03 上传容量与历史附件
 服务器分支 `fix/native-upload-context-20261103` 对齐原生图片准入、统一普通文件 200 MiB、分块上传和多轮/跨场景来源保留。规则见 [upload-rules](../upload-rules.md)，回归与发布证据见 [upload-capacity-context-20261103](../experiments/upload-capacity-context-20261103.md)。保持原用户数据、权限和 Motif 算法；Paper/PPT 仅兼容重导出。发布状态以实验记录为准。
+
+最终服务器发布为 `70f86583`（上传容量修复第二版），2 个测试成员的原对话真实多轮验收通过；20 MiB 图片、约 31 MiB PPT 双栏读取、公网 120 MiB 原生回执均已验证。当前规则与负面网络证据详见上述实验记录。
