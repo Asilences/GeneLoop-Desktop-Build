@@ -47,6 +47,15 @@ test('unknown sandbox versions, changed program identity and invalid certificate
   const f=fixture(t);mutate(f);assert.throws(f.saveLibrary,/(script_runtime_changed|uncertified_script)/);
  }
 });
+test('reviewed upload-limit transition preserves old Script material without admitting other versions',t=>{
+ const f=fixture(t),transition=JSON.parse(readFileSync('config/script-runtime-compatibility.json')).transitions.find(r=>r.path==='src/adapters/reuse_mediation.ts');
+ assert.ok(transition);assert.equal(sha(readFileSync(transition.path)),transition.to_sha256);
+ const certificate=JSON.stringify(f.body.programs[0].certification);
+ f.body.code_locks[transition.path]=transition.from_sha256;
+ assert.equal(f.saveLibrary().capabilities.length,1);
+ assert.equal(JSON.stringify(f.body.programs[0].certification),certificate);
+ f.body.code_locks[transition.path]='f'.repeat(64);assert.throws(f.saveLibrary,/script_runtime_changed/);
+});
 test('catalog preserves native certificate and material registration makes Script available to Builder',t=>{
  const f=fixture(t),cap=f.catalog.capabilities[0];
  assert.equal(cap.implementation.legacy_ref.certificate_sha256,digest(f.body.programs[0].certification));

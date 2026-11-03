@@ -189,6 +189,11 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
         effective['authoring_context_audit']={'path':str(output/'authoring-context-audit.json'),
             'sha256':pilot.sha((output/'authoring-context-audit.json').read_bytes())}
         context=source_primary_context(context);system=SOURCE_PRIMARY_SYSTEM;authoring_view='source_primary_v1'
+    from src.adapters.capability_construction_history import model_context,unwrap_strategy
+    construction=model_context(library['source_catalog'],task,library['snapshot'])
+    if construction is not None:
+        context['construction_feedback']=construction
+        system+=pilot.STRATEGY_SYSTEM
     prompt=system+'\nFROZEN CONSTRUCTION CONTEXT:\n'+json.dumps(context,ensure_ascii=False)
     pilot.write(output/'prompt.md',prompt)
     session='frontier-'+uuid4().hex;effective.update(prompt_sha256=pilot.sha(prompt),session_id=session,
@@ -217,7 +222,9 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
         except pilot.TaskTurnEnded:answer,finish=final_response(guard.events),finish_reason(guard.events)
         pilot.write(output/'answer.txt',answer);result['finish_reason']=finish
         if finish!='completed':raise ValueError('proposal_incomplete_model_turn')
-        draft=pilot.parse_proposal(answer);pilot.write(output/'draft.json',draft)
+        draft=pilot.parse_proposal(answer);pilot.write(output/'model-draft.json',draft)
+        draft=unwrap_strategy(draft,output,library['snapshot'],construction is not None)
+        pilot.write(output/'draft.json',draft)
         if 'capability_source' in draft:
             source=draft['capability_source']
             if isinstance(source,str):pilot.write(output/'capability-source.py',source)

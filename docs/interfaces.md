@@ -1383,3 +1383,24 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 ### 网页大文件传输（2026-11-03）
 `POST /api/harless/uploads?action=begin|chunk|complete|abort&session=...` 是已登录所属会话的分块传输接口。begin 提交名称/总字节并取得随机上传 ID；chunk 携 ID/offset 顺序提交最多 8 MiB，完全相同的最近块可幂等重放；complete 要求收到声明全部字节并调用原生 fileUploads.uploadStream，返回原生 `{ok:true,value:{receiptId,file}}`；abort 只清理该会话的上传。仍校验来源、会话归属、长度和取消；不接受私有对照子会话。完整容量规则见 [upload-rules](upload-rules.md)。
+## 构造经历与做法重新选择（2026-11-03）
+
+离线`capability_improvement_plan_v1`可选：
+
+```json
+{"construction_feedback":{"max_reconsiderations":1,"history":[]}}
+```
+
+缺省不生成新视图、不增加调用。启用后，原控制器在每次构造前生成同目标历史视图，放入`source_catalog.construction_feedback`，原`prepare_attempt`验证原证据后才呈现给模型。`history`是显式宿主提供的`construction-evidence.json`字节引用数组，须绑定同一job/任务；提交后继失败的记录只能审阅，不能成为自动模型重试输入。
+
+每次完成保存`construction-evidence.json`索引和`construction-history.json`派生视图。原结果、请求journal、材料获取、模型策略声明和独立发布结果分别引用。按ledger/request ID检查请求归属，用十进制累计构造模型费用，分开全程支出与首成功前构造费用；未知请求库存/费用不记零。共享目标发现、未覆盖验证及非模型成本单列未知，`all_stages_model_usd_decimal`不据局部支出填充。该视图不是新的总账或效果评价器。
+
+原修复应暂缓且失败明确可修复时，如宿主`construction_budget(job)`提供有限预算及正的剩余金额，可在同一job/snapshot内增加一次重新选择，且受本轮`max_reconsiderations`总数约束。原修复计数、失败签名、质量契约和预算均不重置；权限、基础设施及已提交后继失败不因该选项重试。新能力进入后的原有重新构造同时消费历史；已有无模型续接不会仅为增加反思而额外调用。
+
+修复期间`catalog_sha256`绑定去除宿主动态`construction_feedback`后的能力目录，任务/版本/别名仍冻结；`catalog_full_sha256`另存完整输入摘要。历史每轮增长必须重核原始引用，不能成为语义目录变更的豁免。
+
+公共场景可提供原有有限研究`gate`：原`construct`直接复用其`register_attempt`及`propose_once`，不再打开竞争累计账本锁的第二个网关。无该gate时保留原子进程路径；平台`null`不限额度不构成新增策略尝试的有限研究授权。
+
+启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
+
+历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。

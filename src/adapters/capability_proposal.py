@@ -89,6 +89,22 @@ training evidence or an admitted learning route, construction remains deferred.
 build and graph helpers are never executed as Python by the parser.'''
 
 
+STRATEGY_SYSTEM = """
+The host supplied construction_feedback with verified historical results and observed costs.
+Reconsider how to solve the SAME frozen goal. You may keep or replace the previous
+approach, compose visible capabilities, write supported new pure helpers, or defer.
+No capability is mandatory. Historical failures are not proofs of impossibility;
+unknown cost is not zero, and past acquisition spend is not a future calling fee.
+When reconsider is true this is a fresh implementation choice, not a request to
+patch only the last draft. Quality, permissions and the research budget are fixed.
+In this mode return {"strategy":{"approach":"brief chosen approach",
+"reason":"why, considering the supplied evidence","uses":["visible alias such as c1"]},
+"proposal":<one of the existing supported drafts or defer objects>}.
+The strategy is a hypothesis; only execution and independent checks establish results.
+Do not invent cost, success evidence, validators, permissions or unused dependencies.
+"""
+
+
 def sha(raw):
     return hashlib.sha256(raw if isinstance(raw, bytes) else raw.encode()).hexdigest()
 
@@ -243,7 +259,9 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
         raise ValueError('proposal_task_id_and_instruction_required')
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=False)
-    hashes = {'task_sha256': capability_digest(task), 'catalog_sha256': capability_digest(catalog),
+    stable_catalog=copy.deepcopy(catalog)
+    stable_catalog.get('source_catalog',stable_catalog).pop('construction_feedback',None)
+    hashes = {'task_sha256': capability_digest(task), 'catalog_sha256': capability_digest(stable_catalog),
               'construction_snapshot_sha256': snapshot['digest'],
               'authoring_format': AUTHORING_FORMAT, 'aliases_sha256': capability_digest(aliases(snapshot))}
     repair = None
@@ -263,18 +281,24 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
         raise ValueError('proposal_feedback_requires_parent')
     context = source_authoring_context(task, snapshot, catalog)
     context['repair'] = repair
-    prompt = SYSTEM+'\nFrozen task and construction evidence:\n'+json.dumps(context, ensure_ascii=False, allow_nan=False)
+    from src.adapters.capability_construction_history import model_context
+    construction=model_context(catalog,task,snapshot)
+    if construction is not None:context['construction_feedback']=construction
+    strategy_instruction = '' if construction is None else STRATEGY_SYSTEM
+    prompt = SYSTEM+strategy_instruction+'\nFrozen task and construction evidence:\n'+json.dumps(context, ensure_ascii=False, allow_nan=False)
     if len(prompt.encode()) > 4_000_000:
         raise ValueError('proposal_prompt_too_large')
     effective = {'format': 'capability_proposal_attempt_v1', 'attempt_id': output.name,
         'parent_attempt_id': repair['parent_attempt_id'] if repair else None,
-        **hashes, 'prompt_sha256': sha(prompt), 'system_sha256':sha(SYSTEM), 'model': MODEL, 'provider': 'deepseek-official',
+        **hashes, 'catalog_full_sha256':capability_digest(catalog),
+        'prompt_sha256': sha(prompt), 'system_sha256':sha(SYSTEM+strategy_instruction), 'model': MODEL, 'provider': 'deepseek-official',
         'reasoning_effort': 'off',
         'max_tokens': MAX_TOKENS, 'cap_usd': None, 'max_requests': None,
         'budget_policy': 'uncapped_user_authorized', 'reset_history': False,
         'request_timeout_seconds': 1800, 'tool_order': [], 'patch_sha256': sha(PATCH.read_bytes()),
         'code_sha256': sha(Path(__file__).read_bytes()),
         'code_versions': {name: sha((ROOT/name).read_bytes()) for name in (
+            'src/adapters/capability_construction_history.py',
             'src/adapters/capability_builder.py', 'src/adapters/capability_authoring.py', 'src/adapters/capability_contract.py',
             'src/adapters/capability_source_authoring.py', 'src/adapters/capability_program_encoding.py',
             'src/adapters/capability_contract.ts', 'schemas/capability-v1.schema.json',
@@ -313,6 +337,10 @@ def propose_once(*, task, catalog, snapshot, output, gate=None, repair_from=None
     gate.current = output
     session = 'capability-proposal-'+uuid4().hex
     effective.update(session_id=session, ledger_root=str(gate.root))
+    if getattr(gate,'budget',None) is not None:
+        effective['research_budget']={'limit_usd':str(gate.budget.limit),'spent_usd':str(gate.budget.spent),
+            'pending_usd':str(sum(gate.budget.pending.values()))}
+
     write(output/'effective.json', effective)
     guard = NativeBudgetGuard(max_model_requests=None, max_observed_input_tokens=None)
     started = time.monotonic()
@@ -341,6 +369,10 @@ def propose_once(*, task, catalog, snapshot, output, gate=None, repair_from=None
         if finish != 'completed':
             raise ValueError('proposal_incomplete_model_turn')
         draft = parse_proposal(answer)
+        from src.adapters.capability_construction_history import model_context,unwrap_strategy
+        enabled=model_context(catalog,task,snapshot) is not None
+        write(output/'model-draft.json',draft)
+        draft=unwrap_strategy(draft,output,snapshot,enabled)
         write(output/'draft.json', draft)
         if 'capability_source' in draft:
             source = draft['capability_source']
