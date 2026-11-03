@@ -16,6 +16,7 @@ import {symbols as cordisSymbols} from '@deepseek-ai/cordis';
 import { createOnlineInterceptor, loopbackSimilarity } from './dsh_online_motif.mjs';
 import {createPaperLearning} from './harless_paper_learning.ts';
 import {createPptLearning} from './harless_ppt_learning.ts';
+import {capturePrivateLearningTrace} from './harless_learning_trace.ts';
 import { createPaperFlowShadowObserver } from './harless_paper_flow_shadow.ts';
 import { digest, offeredSchemaMatches } from '../motif_core/online_skill_runtime.mjs';
 import { normalizeWebTaskRequest, WebTaskRequestError } from './web_task_request.ts';
@@ -816,6 +817,7 @@ export function apply(ctx: any) {
         json(join(task.output,'learning-accounting.json'),{task_id:task.request.task_id,session_id:task.budget_session_id,request_receipts:final.request_receipts});
         pptLearning.schedule();
       }
+      await capturePrivateLearningTrace(config, task.output, task.scene.id, task.status, task.trace_start_index);
       active.delete(task.request.task_id);
     })().catch((error) => { task.failure = 'budget_close_failed: ' + String(error); record(task); });
   }

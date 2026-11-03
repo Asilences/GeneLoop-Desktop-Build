@@ -1404,3 +1404,7 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+
+## RSI 学习数据投影（隔离诊断）
+
+Web 任务结算和离线导入共用同一投影器。入口、版本化契约、授权范围及验收见 [RSI 数据边界盘点](rsi-data-privacy.md)。

@@ -2987,3 +2987,60 @@ test('large native images pass paired task preview without base64 or scene quota
   }
  }finally{await f.close();}
 });
+
+for (const [scene, tools] of [
+  ['paper-proofreading', ['mcp__paper_checks__pin_document', 'mcp__paper_checks__read_pinned_document']],
+  ['ppt', ['mcp__ppt_master__pin_source', 'mcp__ppt_master__convert_source', 'mcp__ppt_master__read_converted_source']],
+]) test(`RSI privacy: ${scene} Web settlement and offline import agree`, options, async () => {
+  const python = process.env.SSS_PYTHON ?? 'python';
+  const previous = process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;
+  process.env.SSS_RSI_PRIVACY_DIAGNOSTIC = '1';
+  const schemas = tools.map(name => ({...toolSchemas[0], name}));
+  const f = await fixture({scenes: [{id: scene, label: scene, preset: 'sss-task', adapter: 'workspace',
+    mcp_rows: [], allowed_tools: tools}], capability_profile: scene, fixtureSchemas: schemas, learning_python: python});
+  try {
+    const secret = '私有标题_MARKER_person@example.invalid';
+    const task = await f.preview({instruction: secret});
+    assert.equal((await f.submit(task)).status, 200);
+    const session = f.agents.get(task.session_id).session;
+    const source = 'source-' + 'a'.repeat(32), converted = 'result-' + 'b'.repeat(32);
+    for (const [index, name] of tools.entries()) {
+      const callId = secret + index;
+      const args = index === 0 ? {name: secret, sha256: 'c'.repeat(64)} :
+        index === 1 ? {source_id: source} : {converted_id: converted};
+      session.append('tool/call', {callId, name, arguments: JSON.stringify(args)});
+      session.append('tool/result', {message: {source: {kind: 'tool', callId}, content: [
+        {type: 'tool-result', toolCallId: callId, isError: false, content: [
+          {type: 'text', text: JSON.stringify(index === 0 ? {source_id: source, name: secret} :
+            {converted_id: converted, content: {text: secret, path: '/private/secret'}})},
+        ]},
+      ]}});
+    }
+    session.append('tool/call', {callId: 'unknown', name: secret, arguments: JSON.stringify({secret})});
+    await f.complete(task);
+    const output = join(f.directory, 'tasks', task.task_id);
+    const samplePath = join(output, 'rsi-learning-trace.json');
+    const web = readFileSync(samplePath, 'utf8');
+    const eventsPath = join(output, 'events.jsonl');
+    const start = JSON.parse(readFileSync(join(output, 'effective-config.json'), 'utf8')).trace_start_index;
+    const args = ['-m', 'src.adapters.rsi_learning_trace', '--input', eventsPath, '--scene', scene,
+      '--status', 'completed', '--start', String(start)];
+    const offline = execFileSync(python, [...args, '--authorized'], {encoding: 'utf8'});
+    assert.deepEqual(JSON.parse(web), JSON.parse(offline));
+    assert.ok(readFileSync(eventsPath, 'utf8').includes(secret));
+    for (const value of [secret, source, converted, '/private/secret', task.task_id]) {
+      assert.ok(!web.includes(value));
+    }
+    const sample = JSON.parse(web);
+    assert.deepEqual(sample.nodes.map(node => node.tool), [...tools, null]);
+    assert.deepEqual(sample.bindings, tools.slice(1).map((_, index) => ({
+      from: index, to: index + 1, field: index === 0 ? 'source_id' : 'converted_id',
+      parameter: index === 0 ? 'source_id' : 'converted_id',
+    })));
+    assert.equal(sample.nodes.at(-1).outcome, 'unapproved_tool');
+  } finally {
+    await f.close();
+    if (previous === undefined) delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;
+    else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC = previous;
+  }
+});
