@@ -2,10 +2,11 @@
 import assert from 'node:assert/strict';
 import { spawn, execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 
@@ -18,6 +19,7 @@ const asar = require('@electron/asar');
 const archive = join(app, 'release/win-unpacked/resources/app.asar');
 const files = asar.listPackage(archive).map(file => file.replaceAll('\\', '/'));
 assert.ok(files.includes('/dist/boot-request.js'));
+assert.ok(files.includes('/node_modules/@deepseek-ai/cordis/lib/index.js'), '安装包必须包含 DSH 的运行时 peer dependency @deepseek-ai/cordis');
 assert.deepEqual(files.filter(file => /^\/(?:\.local|test|src)\//.test(file) || /^\/\.env/.test(file)), []);
 const manifest = JSON.parse(asar.extractFile(archive, 'assets/manifest.json'));
 const report = { kind: 'desktop-packaged-readonly-diagnostic', model_requests: 0, source_commit: manifest.sourceCommit, clients: Object.keys(manifest.clients).length, frontend_files: manifest.staticFiles.length, checks: ['ASAR 含启动修复与本地资源，不含私有目录或源测试夹具'] };
@@ -25,10 +27,25 @@ const listener = createServer().listen(0, '127.0.0.1');
 await once(listener, 'listening');
 const port = listener.address().port;
 await new Promise(done => listener.close(done));
-const executable = join(app, 'release/win-unpacked/GeneLoop Desktop.exe');
+// 源码目录中的祖先 node_modules 会掩盖安装包缺失依赖。使用系统临时目录的
+// 完整独立副本，模拟安装后的目录布局；不执行NSIS，不改用户的安装或注册表。
+const temporary = realpathSync(tmpdir());
+const isolatedRoot = mkdtempSync(join(temporary, 'geneloop-desktop-'));
+for (let ancestor = isolatedRoot; ; ancestor = dirname(ancestor)) {
+  assert.equal(existsSync(join(ancestor, 'node_modules')), false, '隔离目录祖先不能提供开发依赖：' + ancestor);
+  if (ancestor === dirname(ancestor)) break;
+}
+const isolatedApp = join(isolatedRoot, 'GeneLoop Desktop');
+cpSync(join(app, 'release/win-unpacked'), isolatedApp, { recursive: true, dereference: true });
+report.checks.push('独立目录包含完整安装布局，祖先无 node_modules，不借用源码依赖');
+const executable = join(isolatedApp, 'GeneLoop Desktop.exe');
+const environment = { ...process.env, GENELOOP_DESKTOP_URL: 'https://geneloop.ai/' };
+delete environment.NODE_PATH;
+delete environment.NODE_OPTIONS;
+delete environment.ELECTRON_RUN_AS_NODE;
 const child = spawn(executable, [`--remote-debugging-port=${port}`, `--user-data-dir=${join(output, 'profile')}`], {
   cwd: dirname(executable), windowsHide: true, stdio: 'ignore',
-  env: { ...process.env, GENELOOP_DESKTOP_URL: 'https://geneloop.ai/' },
+  env: environment,
 });
 let launchError;
 child.once('error', error => { launchError = error; });
@@ -93,6 +110,11 @@ finally {
     if (child.exitCode === null) await new Promise(done => execFile('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }, () => done()));
   }
   writeFileSync(join(output, 'packaged-summary.json'), JSON.stringify(report, null, 2) + '\n');
+  // 只删除本脚本刚创建的临时副本，先核对绝对目标与临时根目录。
+  const target = realpathSync(isolatedRoot);
+  assert.equal(dirname(target).toLowerCase(), resolve(temporary).toLowerCase());
+  assert.ok(basename(target).startsWith('geneloop-desktop-'));
+  rmSync(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 300 });
   console.log(JSON.stringify({ ...report, artifact_directory: output }, null, 2));
   process.exitCode = report.ok ? 0 : 1;
 }
