@@ -1,6 +1,6 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-GeneLoop Desktop 新增本地打包界面与 Windows 桌面宿主，复用现有聊天、场景和视觉；首阶段仍由服务器执行 Agent/工具。源码启动、安装包构建与验收边界见 [桌面说明](docs/desktop.md)，当前进度见 [桌面交接](docs/handoffs/desktop.md)。
+GeneLoop Desktop 0.2.0新增独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
 
 2026-11-03，[Capability Frontier 研究入口](scenarios/paper_proofreading/frontier/README.md)已接通真实程序学习、C 发布与跨版本 D 独立验收。C 在新留出项目通过；模型自主生成的 D 尚未调用 C，零模型强制组合可以执行并通过检查。三种条件及全部失败、79 次真实请求的 USD0.340150572 代理估费见[实验记录](docs/experiments/capability-frontier-20261103.md)。自主递归收益仍 pending，生产服务未切换。
 

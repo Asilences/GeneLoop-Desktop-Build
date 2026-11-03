@@ -1330,7 +1330,11 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 
 ## GeneLoop Desktop 接入（2026-11-03）
 
-桌面客户端复用现有账号、会话、场景、上传/交付与 WebSocket 接口，不新增服务器 Agent 或任务协议。安装包内提供固定 DSH 前端和 GeneLoop 客户端资源，`LocalFrontendHost` 读取结构化 `__DSH_BOOT__` / `__DSH_CONNECTION_RECOVERY__` 并使用原生 boot renderer，不执行下载的整站 HTML。
+0.2.0独立桌面自行实现页面、组件、交互状态与样式，复用现有账号、会话、场景、上传/交付与WebSocket接口，不新增服务器Agent或任务协议。安装包不再包含DSH网页/插件模块，也不获取 `__DSH_BOOT__` 或服务器页面。旧0.1.5另行冻结，不能将两者混称。
+
+`LocalFrontendHost` 在原服务器origin提供白名单 `/desktop/*` 与自有HTML；网络仅转发 `/api/`，未知UI返回404，外域拒绝。JSON RPC使用原生envelope；`session/list` 的字段为 `payload.args._request`，其他已用会话请求为 `payload.args.request`。WebSocket `/api/remote.mux` 订阅 `workspace/follow`、`session/control`、`session/follow` 和 `$events`。桌面按持久事件/surfaceOp投影历史、恢复紧凑流；对照通过 `user/message.data.harless_comparison` 元数据和原对照API读取。
+
+桌面逐轮把所选场景序列化为服务器的 `/ppt`、`/paper`、`/data`、`/file`、`/video` 命令，明确输入的命令优先，成功后恢复Chat。模型配置保存成功后才发送；同一未确认发送复用requestId，重连不自动提交。附件使用原生上传回执；人类问答按label和multiSelect提交；写权限只在明确确认后回复 `allowed-once`。设置复用账号与session-trash API，清空携带待核对列表的revision。
 
 桌面标题栏与连接页面的 IPC 仅对安装包内页面及其主 frame 开放；工作区无 Node 或该 IPC 桥接。服务器地址只接受 HTTPS 根 origin，Cookie 按服务器分区；开发本机 HTTP fixture 需显式启用且不适用于打包应用。已有认证、文件归属、版本守卫、预算/取消仍由原服务负责。
 

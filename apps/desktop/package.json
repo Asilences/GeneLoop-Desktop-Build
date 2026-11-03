@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -15,6 +15,7 @@
     "smoke": "npm run build && node scripts/check-local-ui.mjs",
     "smoke:packaged": "node scripts/check-package.mjs",
     "smoke:account": "npm run build && node scripts/check-account-login.mjs",
+    "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
     "pack": "npm run build && electron-builder --dir --publish never",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never"
@@ -27,11 +28,7 @@
     "sharp": "0.35.5",
     "typescript": "7.0.2"
   },
-  "dependencies": {
-    "@deepseek-ai/cordis": "4.0.2",
-    "@deepseek-ai/dsh-client-modules": "0.1.5-rc.3",
-    "@deepseek-ai/dsh-host-webserver": "0.1.5-rc.3"
-  },
+  "dependencies": {},
   "build": {
     "appId": "ai.geneloop.desktop",
     "productName": "GeneLoop Desktop",

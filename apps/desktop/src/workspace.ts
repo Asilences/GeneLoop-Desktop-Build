@@ -7,7 +7,6 @@ import { downloadName, externalWebUrl, ownedDownload, sameServer, serverOrigin }
 import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
 import { LocalFrontendHost } from './frontend.ts';
-import { readBootDocument } from './boot-request.ts';
 import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
 import type { Appearance } from './appearance.ts';
 
@@ -27,6 +26,7 @@ export class DesktopWorkspace {
   private generation = 0;
   private lastDownloaded?: string;
   private allowClose = false;
+  private disposed = false;
   private readonly page = join(directory, '../ui/index.html');
 
   constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean; closeToTray?: boolean }) {
@@ -50,6 +50,7 @@ export class DesktopWorkspace {
       options.settings.window = { width, height, maximized: this.window.isMaximized() };
       try { saveSettings(options.settingsFile, options.settings); } catch { /* 退出不因偏好保存失败而挂住。 */ }
       if (options.closeToTray && !this.allowClose) { event.preventDefault(); this.window.hide(); }
+      else this.dispose();
     });
     this.window.on('closed', () => this.dispose());
     ipcMain.handle('geneloop:state', event => { this.requireShell(event); return this.state(); });
@@ -145,7 +146,7 @@ export class DesktopWorkspace {
       view.setVisible(false);
       this.update('error', message);
     };
-    this.frontend = new LocalFrontendHost({ session: remoteSession, server, assets: join(directory, '../assets'), fail, readBoot: request => readBootDocument(remoteSession, request) });
+    this.frontend = new LocalFrontendHost({ session: remoteSession, server, assets: join(directory, '../assets'), ui: join(directory, '../ui/desktop'), fail });
     this.frontend.install();
     view.webContents.on('ipc-message', (event, channel, value: unknown) => {
       if (channel !== 'geneloop:appearance' || attempt !== this.generation || event.senderFrame !== view.webContents.mainFrame ||
@@ -220,6 +221,8 @@ export class DesktopWorkspace {
   }
 
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     ++this.generation;
     this.removeWorkspace();
     for (const channel of ['geneloop:state', 'geneloop:retry', 'geneloop:connect', 'geneloop:menu', 'geneloop:settings']) ipcMain.removeHandler(channel);

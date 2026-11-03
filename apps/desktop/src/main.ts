@@ -65,6 +65,6 @@ else {
       else desktop.window.show();
     });
   }).catch(() => { dialog.showErrorBox('GeneLoop Desktop', '启动失败。请检查服务器地址配置，或从默认安装入口重新打开。'); app.quit(); });
-  app.on('before-quit', () => { desktop?.permitClose(); tray?.destroy(); });
+  app.on('before-quit', () => { desktop?.permitClose(); desktop?.dispose(); tray?.destroy(); });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 }

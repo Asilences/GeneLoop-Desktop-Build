@@ -1,0 +1,25 @@
+const {app}=require('electron'),assert=require('node:assert/strict');
+const {readFileSync,writeFileSync}=require('node:fs'),{join,resolve}=require('node:path'),{pathToFileURL}=require('node:url');
+const fixture=JSON.parse(readFileSync(process.env.GENELOOP_RENDERER_FIXTURE,'utf8'));assert.equal(fixture.diagnostic,true);assert.equal(new URL(fixture.server).hostname,'127.0.0.1');
+app.setPath('userData',join(fixture.output,'profile'));app.disableHardwareAcceleration();let desktop;
+const report={kind:'synthetic-renderer-protocol-diagnostic',real_model_requests:0,checks:[],console_errors:[]};
+app.on('web-contents-created',(_,contents)=>contents.on('console-message',details=>{if(details.level==='error')report.console_errors.push(details.message);}));
+const check=name=>{report.checks.push(name);console.log('通过：'+name);};
+async function until(fn,label){const deadline=Date.now()+15_000;while(Date.now()<deadline){if(await fn())return;await new Promise(done=>setTimeout(done,50));}throw Error('等待超时：'+label);}
+app.whenReady().then(async()=>{
+ const {DesktopWorkspace}=await import(pathToFileURL(resolve(__dirname,'../dist/workspace.js')).href);
+ desktop=new DesktopWorkspace({settings:{version:1,server:fixture.server,window:{width:1280,height:860,maximized:false}},settingsFile:join(fixture.output,'settings.json'),version:'diagnostic',downloadsDirectory:fixture.output,allowLoopback:true});await desktop.ready;desktop.workspace.webContents.setBackgroundThrottling(false);
+ const evaluate=code=>desktop.workspace.webContents.executeJavaScript(code);
+ await until(()=>evaluate('!document.getElementById("workspace").hidden'),'独立界面');await evaluate(`document.querySelector('.session-row').click()`);
+ await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'历史双路结果');
+ assert.equal(await evaluate('document.querySelectorAll(".comparison-result").length'),1);check('原生日志元数据恢复历史、Markdown与标准/Motif双路结果');
+ await evaluate(`document.getElementById('deliveries-toggle').click()`);await until(()=>evaluate('document.getElementById("delivery-list").textContent.includes("diagnostic.txt")'),'交付卡片');await evaluate(`document.querySelector('#delivery-list button').click()`);await until(()=>evaluate('document.getElementById("preview").textContent.includes("diagnostic file contents")'),'交付预览');check('任务文件卡片和安全文本预览读取服务器实际字节');
+ await evaluate(`fetch('/api/fixture/approval')`);await until(()=>evaluate('Boolean(document.querySelector("dialog"))'),'权限确认');await evaluate(`document.querySelector('dialog .primary').click()`);await until(()=>evaluate('!document.querySelector("dialog")'),'显式确认回复');check('有副作用的请求显示桌面确认，仅点击后回复单次允许');
+ await evaluate(`document.getElementById('scene-select').value='ppt';document.getElementById('scene-select').dispatchEvent(new Event('change'));document.getElementById('effort-select').value='high';document.getElementById('effort-select').dispatchEvent(new Event('change'));document.getElementById('prompt').value='诊断发送';document.getElementById('composer').requestSubmit()`);
+ await until(()=>evaluate('document.getElementById("history").textContent.includes("协议诊断响应完成")'),'合成流式与持久消息');await until(()=>evaluate('document.getElementById("stop").hidden'),'任务终止状态');
+ assert.equal(await evaluate('document.getElementById("scene-select").value'),'new-scene');check('配置确认后发送、实时消息/结束状态与逐轮场景重置');
+ await evaluate(`document.getElementById('prompt').value='普通下一轮';document.getElementById('composer').requestSubmit()`);await until(()=>evaluate('document.getElementById("prompt").value===""'),'第二次发送');
+ await evaluate(`fetch('/api/fixture/questions')`);await until(()=>evaluate('!document.getElementById("questions").hidden'),'原生人类提问');await evaluate(`document.querySelectorAll('#questions input[type=checkbox]').forEach(input=>input.click());document.querySelector('#questions form').requestSubmit()`);await until(()=>evaluate('document.getElementById("questions").hidden'),'回答提交');check('人类问题支持原协议多选与标签答案，轮询保持未提交输入');
+ await evaluate(`document.getElementById('settings-nav').click()`);await until(()=>evaluate('document.querySelector("dialog")?.textContent.includes("桌面外观")'),'桌面设置');await evaluate(`[...document.querySelectorAll('dialog nav button')].find(button=>button.textContent==='账户与安全').click()`);await until(()=>evaluate('document.querySelector("dialog").textContent.includes("修改密码")'),'独立账户与安全页面');await evaluate(`document.querySelector('dialog header button').click()`);check('独立设置导航、外观与账户安全表单正常打开');
+ await until(()=>evaluate('!document.querySelector("dialog")'),'设置关闭');await new Promise(done=>setTimeout(done,300));writeFileSync(join(fixture.output,'independent-conversation.png'),(await desktop.workspace.webContents.capturePage()).toPNG());report.ok=true;
+}).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');}catch{}console.error(error);}).finally(()=>{writeFileSync(join(fixture.output,'summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));desktop?.permitClose();app.quit();});
