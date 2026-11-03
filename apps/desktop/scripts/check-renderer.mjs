@@ -31,6 +31,7 @@ const server=createServer(async(req,res)=>{
   if(path==='/api/workspace/ready')return json(res,{ready:true});
   if(path==='/api/harless/settings'){
    const id=body.session_id||url.searchParams.get('session_id');
+   if(req.method==='GET'&&id&&id!=='history')await new Promise(resolve=>setTimeout(resolve,450));
    if(req.method==='POST'){
     if(body.selection?.scene==='ppt')await new Promise(resolve=>setTimeout(resolve,750));
     if(body.selection?.scene==='paper-proofreading')return json(res,{error:{message:'场景同步诊断拒绝'}},409);

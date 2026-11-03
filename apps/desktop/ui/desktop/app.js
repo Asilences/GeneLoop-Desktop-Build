@@ -221,8 +221,8 @@ function openWorkspace(id,{focus=false}={}){
   if(focus)$('prompt').focus();
 }
 async function ensureSession(){
-  if(state.session)return state.session;
   if(creatingSession)return creatingSession;
+  if(state.session)return state.session;
   creatingSession=(async()=>{
     const workspaceDraft=activeWorkspaceDraft;
     if(!state.workspace&&state.workspaces.length)state.workspace=state.workspaces[0].workspaceId;
@@ -250,7 +250,9 @@ async function selectSession(id,{fromScratch=false,force=false,workspaceDraft=nu
   state.session=id;clearSessionPanels();if(!fromScratch)resetComposerScene();state.trace=false;state.jobs=[];
   const cached=historyCache.get(id);
   state.conversation=cached?.conversation||new Conversation();state.comparisons=cached?.comparisons||new Map();
-  awaitingHistory=true;historyError='';$('composer').inert=true;
+  // The newly allocated session has no history to display. Its subscription
+  // and settings still initialize in the background before the action proceeds.
+  awaitingHistory=!fromScratch;historyError='';$('composer').inert=!fromScratch;
   const draft=workspaceDraft||activeWorkspaceDraft||state.drafts.get(id)||{text:'',attachments:[]};
   $('prompt').value=draft.text;state.attachments=draft.attachments;renderAttachments();
   state.workspace=state.workspaces.find(row=>row.sessionIds.includes(id))?.workspaceId||state.workspace;
@@ -389,7 +391,7 @@ function renderConversation(){
   for(const id of ['rename-session','session-actions','deliveries-toggle'])$(id).hidden=!formal;
   $('prompt').placeholder=group&&(home||activeWorkspaceDraft)?'在「'+group.title+'」中开始新会话':'发送消息或创建任务';
   $('session-title').textContent=activeWorkspaceDraft?'新会话 · 草稿':state.session?titleOf(state.sessions.find(row=>row.sessionId===state.session)):group?.title||'新会话';
-  $('session-status').textContent=historyError?'会话加载失败':awaitingHistory?'正在加载对话…':state.conversation.running?'正在执行…':state.session?'工作空间已连接':home?'工作区首页':'开始你的研究';
+  $('session-status').textContent=historyError?'会话加载失败':formal&&awaitingHistory?'正在加载对话…':state.conversation.running?'正在执行…':activeWorkspaceDraft?'开始你的研究':state.session?'工作空间已连接':home?'工作区首页':'开始你的研究';
   $('stop').hidden=!state.conversation.running;
   $('chat-tab').classList.toggle('selected',!state.trace);$('trace-tab').classList.toggle('selected',state.trace);
   history.replaceChildren();
@@ -398,7 +400,7 @@ function renderConversation(){
     history.scrollTop=previousTop;
     return;
   }
-  if(!rows.length&&state.session&&(awaitingHistory||historyError)){
+  if(!rows.length&&state.session&&(historyError||formal&&awaitingHistory)){
     history.append(node('div',{class:'welcome',role:'status'},node('p',{},historyError||'正在加载对话…'),historyError?button('重试',()=>selectSession(state.session,{force:true}).catch(fail),'secondary'):null));
   }else if(!rows.length&&!state.conversation.live.size){
     const cards=exampleButtons();

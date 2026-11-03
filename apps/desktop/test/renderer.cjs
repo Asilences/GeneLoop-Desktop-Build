@@ -178,6 +178,17 @@ app.whenReady().then(async()=>{
  await leaveDraft();
  await evaluate(`document.querySelector('${draftGroup} .workspace-draft button').click()`);
  assert.equal(await evaluate(`document.getElementById('prompt').value`),'工作区草稿诊断');
+ await evaluate(`window.draftLoadingFlash=false;
+   const composer=document.getElementById('composer');
+   const observe=()=>{window.draftLoadingFlash||=composer.inert||document.getElementById('history').textContent.includes('正在加载对话');};
+   window.draftLoadingObserver=new MutationObserver(observe);
+   window.draftLoadingObserver.observe(composer,{attributes:true,attributeFilter:['inert']});
+   window.draftLoadingObserver.observe(document.getElementById('history'),{childList:true});
+   document.getElementById('scene-select').click();
+   [...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/file')).click()`);
+ await until(()=>evaluate(`document.getElementById('scene-select').value==='files'&&!document.getElementById('scene-select').hasAttribute('data-pending')`),'草稿同步文件管理场景');
+ assert.equal(await evaluate(`window.draftLoadingObserver.disconnect();!window.draftLoadingFlash&&document.querySelector('.workspace-draft')!==null&&document.getElementById('prompt').value==='工作区草稿诊断'`),true);
+ await evaluate(`document.getElementById('scene-select').click();[...document.querySelectorAll('#scene-command-menu button')].find(button=>button.textContent.includes('/chat')).click()`);
  await evaluate(`document.getElementById('composer').requestSubmit()`);
  await until(()=>evaluate(`!document.querySelector('.workspace-draft')&&!!document.querySelector('${draftGroup} [data-session-id]')`),'草稿转为工作区正式对话');
  await evaluate(`document.querySelector('[data-session-id="history"] button').click()`);
