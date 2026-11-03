@@ -1,5 +1,23 @@
 import {request,post} from './api.js';
-import {node,button,dialog} from './components.js';
+import {node,button,dialog,icon} from './components.js';
+
+function themeCards(apply){
+  const cards=node('div',{class:'theme-cards',role:'group','aria-label':'主题'});
+  const preview=kind=>node('span',{class:'theme-sample '+kind,'aria-hidden':'true'},
+    node('i',{}),node('span',{},node('i',{}),node('i',{}),node('i',{}),node('b',{})));
+  for(const [value,label,symbol] of [['light','浅色','sun'],['dark','深色','moon'],['system','跟随系统','monitor']]){
+    const thumbnail=node('span',{class:'theme-preview '+value},value==='system'?[preview('light'),preview('dark')]:preview(value));
+    const card=button([thumbnail,node('span',{class:'theme-caption'},icon(symbol),label),node('span',{class:'theme-check'},icon('check'))],()=>{
+      localStorage.setItem('geneloop.desktop.theme',value);
+      for(const item of cards.children)item.setAttribute('aria-pressed',String(item===card));
+      apply();
+    },'theme-card');
+    card.dataset.theme=value;
+    card.setAttribute('aria-pressed',String((localStorage.getItem('geneloop.desktop.theme')||'system')===value));
+    cards.append(card);
+  }
+  return cards;
+}
 
 export function settingsPanel(context,initial='appearance'){
   const body=node('div',{class:'settings-body'}),menu=node('nav',{class:'settings-nav'});
@@ -11,9 +29,9 @@ export function settingsPanel(context,initial='appearance'){
     body.scrollTop=0;
     body.replaceChildren();
     if(id==='appearance'){
-      const preference=node('select',{},...['system','light','dark'].map(value=>node('option',{value},({system:'跟随系统',light:'浅色',dark:'深色'})[value])));
-      preference.value=localStorage.getItem('geneloop.desktop.theme')||'system';preference.onchange=()=>{localStorage.setItem('geneloop.desktop.theme',preference.value);context.theme();};
-      body.append(node('h3',{},'桌面外观'),node('label',{},'主题',preference),node('p',{},'服务器：'+location.origin),node('p',{},'从「文件」菜单的连接设置修改服务器地址。'),button('刷新服务器状态',guard(async()=>{modal.close();await context.refresh();}),'secondary'));
+      body.append(node('h3',{},'桌面外观'),node('p',{},'选择桌面主题，点击后立即应用。'),themeCards(context.theme),
+        node('section',{class:'settings-connection'},node('h4',{},'服务器连接'),node('p',{},location.origin),
+          node('p',{},'可在「文件」菜单中修改连接设置。'),button('刷新服务器状态',guard(async()=>{modal.close();await context.refresh();}),'secondary')));
     }else if(id==='archive'){
       body.append(node('h3',{},'已归档对话'));const rows=context.sessions.filter(row=>context.archived.has(row.sessionId));
       if(!rows.length)body.append(node('p',{},'暂无归档对话。'));
@@ -37,8 +55,8 @@ export function settingsPanel(context,initial='appearance'){
       body.append(profile,form,button('退出登录',guard(async()=>{await post('/api/account/logout',{});modal.close();context.logout();}),'secondary'));
     }
   }
-  for(const [id,label]of [['appearance','外观'],['archive','已归档对话'],['trash','最近删除'],['account','账户与安全']]){
-    const tab=button(label,guard(()=>page(id)));
+  for(const [id,label,symbol]of [['appearance','外观','sun'],['archive','已归档对话','archive'],['trash','最近删除','trash'],['account','账户与安全','user']]){
+    const tab=button([icon(symbol),label],guard(()=>page(id)));
     tab.dataset.page=id;
     menu.append(tab);
   }
