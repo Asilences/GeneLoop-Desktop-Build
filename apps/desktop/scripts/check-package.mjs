@@ -93,6 +93,7 @@ try {
     return value.result.value;
   };
   await until(() => evaluate('Boolean(document.body && /登录|Sign in|Log in/.test(document.body.innerText))'), '本地登录界面');
+  assert.equal(await evaluate("document.getElementById('auth-server').hidden"), true);
   assert.deepEqual(await evaluate('[typeof require,typeof process,typeof window.geneLoopDesktop]'), ['undefined', 'undefined', 'undefined']);
   assert.equal(await evaluate("fetch('/login', {credentials:'omit'}).then(response => response.headers.get('x-geneloop-desktop-resource'))"), 'local');
   report.checks.push('实际打包程序从 ASAR 启动并加载本地登录页，无 Node 或桌面 IPC 暴露');

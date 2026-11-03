@@ -29,7 +29,12 @@ let streams=new RemoteStreams(warning);
 function theme(){const value=localStorage.getItem('geneloop.desktop.theme')||'system';document.body.toggleAttribute('data-ds-dark-theme',value==='dark'||value==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
 theme();matchMedia('(prefers-color-scheme:dark)').addEventListener('change',theme);
 function titleOf(row){const value=row?.projections?.values?.title;return typeof value==='string'?value:value?.title||value?.text||row?.title||'新会话';}
-function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();pinnedWorkspaces=[];scratchText='';$('prompt').value='';screen('auth');$('login-pass').value='';$('auth-server').textContent=new URL(location.href).origin;}
+function renderLoginServer(){
+  const label=$('auth-server');
+  label.hidden=location.origin==='https://geneloop.ai';
+  label.textContent=label.hidden?'':'连接到 '+location.origin;
+}
+function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();screen('auth');$('login-pass').value='';}
 async function initialize(){screen('loading');$('connect-retry').hidden=true;$('loading-message').textContent='正在读取账号与工作空间…';try{
     let account;
     try{account=await request('/api/account/me');}catch(error){if(error.status===404||error.code==='http/200'){await rpc('session/list',{});account={user:{id:'standalone-host',displayName:'工作空间',standalone:true}};}else throw error;}

@@ -24,6 +24,7 @@ app.whenReady().then(async()=>{
   await window.loadURL(fixture.server+'/login?next=%2Faccount');
   const evaluate=code=>window.webContents.executeJavaScript(code);
   await until(()=>evaluate('!document.getElementById("auth").hidden'),'独立桌面登录表单');
+  assert.equal(await evaluate("document.getElementById('auth-server').textContent === '连接到 ' + location.origin && !document.getElementById('auth-server').hidden"),true);
   const submit=async password=>evaluate(`document.getElementById('login-user').value=${JSON.stringify(fixture.username)};document.getElementById('login-pass').value=${JSON.stringify(password)};document.getElementById('login-form').requestSubmit();`);
   await submit('diagnostic-wrong-password');
   await until(()=>evaluate('document.getElementById("login-error").textContent.includes("用户名或密码不正确")'),'真实网关完成密码校验');
