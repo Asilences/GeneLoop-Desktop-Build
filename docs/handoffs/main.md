@@ -1,4 +1,19 @@
-## 2026-11-03：Creation Efficiency 构造反馈与重新选择（当前）
+# 主线当前交接
+
+## 2026-11-04：Recursive Abstraction Evolution
+
+- 更新时间与交接人：2026-11-04，Codex；本轮为核心研究机制，生产路径未改。
+- 目标与范围：按[用户规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md)实现 Separation→Abstraction→Recomposition→Evolution；[设计与文件清单](../rae-implementation.md)。基于实查远程main `5d73a4b90e4121e94c9e7240bc8823e8b6bb3bff`，分支`codex/recursive-abstraction-evolution-20261104`；机制提交`b6d89955`/`96f87413`/`6cfa31e1`/`94f19c24`。原研究分支与私有`reference/`保留。
+- 已完成：真实Capability调用进入原Motif学习器，C→G1→D→G2→E使用同一学习/认证路径；原Runtime有界义务消解；真实反馈驱动新边界；Builder实际解析/冻结绑定轨迹同路径学习并回用；默认关闭的语义接口视图与公共学习/原控制器发布入口。
+- 已验证：2256 Python通过/241跳过，1587 Node通过/21跳过；专项60 Python+35 Node、smoke、Motif、RSI43与效率RSI95项通过。Node最终限制测试文件并发2；无放宽有效检查。原始失败和复测见[执行记录](../experiments/rae-mechanism-20261104.md)。
+- 实验结论：`wiring_passed`；实际Runtime/miner/compiler/Store数据流，确定性宿主任务与原语授权；非真实模型自主创造。T8可选本轮未做，同质量全成本创造效率与长期RSI仍pending。未重新解释或抹去历史复用收益。
+- 配置与数据：`npm run rsi:rae:check`一键复现并保留`.local/rae-check-<UTC>/`，内部effective记录代码与配置；`rsi:rae:learn`默认预览，输出candidate_ref给原`rsi:improve --execute`。全部schema可选，不新增IR/Registry/账本。
+- 未完成与阻塞：更广泛类型/任意MCP/副作用任务不在当前只读闭包范围。旧HTTP并发测试瞬时fetch失败单项不复现，未宣称根因修复。PR推送与远程CI状态以最终交付链接为准，本地通过不等于远程已通过。
+- 接手下一步：审阅独立PR及远程Linux/Windows检查；选自然产生构造机会的真实任务流进行T8；再决定是否做同质量全成本对照，不强制D引用C。
+- 权限与预算：本轮0模型请求、0模型费用，总CPU/人工/维护成本未知；原账本未改。已授权创建PR，未授权本轮部署/合并，未做外部应用操作。
+- 回退与风险：不启用recursive_abstraction、不注入BuilderConstructionSession即可沿旧路径；旧库及版本未覆盖。不部署、不重启服务；独立验证、权限和预算不能由候选改变。
+
+## 2026-11-03：Creation Efficiency 构造反馈与重新选择
 
 - 用户已授权按[开发计划](../creation-efficiency-development-plan.md)直接实现和验收。基于实时远程main `2b3d0051`，当前分支`codex/creation-efficiency-20261103`，机制及兼容修复源码`8e0a454f`，后续提交仅补证据文档；已推送并创建[草稿PR128](https://github.com/jingyio/GeneLoop/pull/128)，未合并/部署，远程CI按最新head核对。私人`reference/`保留。
 - 已实现：`capability_construction_history.py`从原请求/结果/原生获取/验收证据生成只读视图；原Builder接收同目标历史、失败和费用，并可声明做法；原修复暂缓后可在有限研究预算内重新选择一次，不重置计数或预算。默认关闭，不新建Agent循环或总账。历史导入、原目录/版本冻结、未知费用、重复归属及提交后继失败均有守卫。接口见[说明](../interfaces.md#构造经历与做法重新选择2026-11-03)。

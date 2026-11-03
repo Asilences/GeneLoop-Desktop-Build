@@ -10,6 +10,8 @@
     "rsi:efficiency:check": "node scripts/project.mjs python scripts/check-efficiency-rsi.py",
     "rsi:select:source": "node scripts/project.mjs python scripts/select-capability-execution.py",
     "rsi:improve": "node scripts/project.mjs python scripts/run-capability-improvement.py",
+    "rsi:rae:learn": "node scripts/project.mjs python scripts/learn-recursive-capabilities.py",
+    "rsi:rae:check": "node scripts/project.mjs python scripts/check-recursive-abstraction.py",
     "rsi:improve:source": "node scripts/project.mjs python scenarios/remotion_edit/structured/run_capability_improvement.py",
     "setup": "node scripts/project.mjs setup",
     "test": "node scripts/project.mjs test",

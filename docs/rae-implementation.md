@@ -28,19 +28,70 @@
 
 前三项由独立子智能体实现专属文件；主智能体负责共享入口、自应用和验收集成。所有生成源码、真实日志、私有任务留在`.local/`，公共测试只含可分享诊断数据。
 
-## T0–T8验收矩阵（执行后更新）
+## T0–T8验收矩阵
 
 | 项 | 目标 | 状态/证据 |
 | --- | --- | --- |
 | T0 | 最新main/实际模块/兼容边界审计 | 已完成，见上表 |
-| T1 | 宿主可信有界义务消解及失效回退 | 待实现/运行 |
-| T2 | 原Runtime实际调用与受限摘要 | 待实现/运行 |
-| T3 | C→真实G1→原miner/compiler产生D→发布→G2 | 待实现/运行；最高优先级 |
-| T4 | 反馈驱动新边界候选及新版本 | 待实现/运行 |
-| T5 | 双价值/证据关系/费用未知 | 待实现/运行 |
-| T6 | Builder真实轨迹进入同学习流程并回用 | 待实现/运行 |
-| T7 | Python/Node/Motif/RSI回归 | 待最终合流后运行 |
-| T8 | 小规模真实模型 | 可选，另行记录实际模型/本批额度/输出上限；不以mock替代 |
+| T1 | 宿主可信有界义务消解及失效回退 | `test_capability_discharge.mjs`：适用/权限/版本/证据/取消/组合新检查，未处理项保留 frontier |
+| T2 | 原Runtime实际调用与受限摘要 | 同上，实际 Python 原生操作与完整回执；`test_capability_abstraction_view.py` 验证模型只见语义接口、内部审计保留 |
+| T3 | C→真实G1→原miner/compiler产生D→发布→G2 | `test_capability_motif_learning.py`：实际发布 C、执行 G1，原 learner 学出 D、原 Store 发布，执行含 D 的 G2、继续学出并发布 E；原 DAG 拒绝前向/自引用 |
+| T4 | 反馈驱动新边界候选及新版本 | `test_capability_evolution_runtime.py`：三节点旧边界实际验证失败；反馈参与两节点候选生成，同一学习器编译、独立发布新版本；完整任务另执行剩余节点 |
+| T5 | 双价值/证据关系/费用未知 | `test_capability_evolution.py` 及原 feedback/efficiency 回归；材料阅读、编译引用、实际调用和独立测量分开；未知不产生额度 |
+| T6 | Builder真实轨迹进入同学习流程并回用 | `test_capability_builder_application.py`：真实解析/冻结绑定→相同 learner→原 Store→后继 Builder 调用学出的组合；禁用恢复原行为 |
+| T7 | Python/Node/Motif/RSI回归 | 见[本轮执行记录](experiments/rae-mechanism-20261104.md)，包含公共学习与原 improvement 发布入口 |
+| T8 | 小规模真实模型 | 本轮未运行，属于规格可选项；未模拟模型行为验收，未声称自主创造/收益 |
+
+## 实际闭包与最小复现
+
+```text
+原 Store 发布 C
+    ↓ 原 Runtime 真正执行（外部 binding + 可展开内部 receipt）
+G1 = [CapabilityCall(C), 原语]
+    ↓ 原 Motif miner / compile_read_motif / certify_read_motif
+原 Capability proposal → 原 compile_proposal → candidate D
+    ↓ 宿主冻结的新输入与检查器 → 原 Store → published D
+G2 = [CapabilityCall(D), 原语]
+    ↓ 同一个学习与认证算子
+published E
+```
+
+```sh
+npm run rsi:rae:check
+npm run rsi:rae:learn -- --manifest .local/MANIFEST.json --output .local/NEW_PREVIEW
+npm run rsi:rae:learn -- --manifest .local/MANIFEST.json --output .local/NEW_LEARNING --execute
+npm run rsi:improve -- --plan .local/PLAN.json --execute
+```
+
+第一个命令直接复现 T1–T6 并在新的 `.local/rae-check-<UTC>/` 保留完整 Runtime/Store/学习证据，不需私有论文或模型密钥。后三个入口用于宿主自己的固定输入，格式见[接口](interfaces.md#recursive-abstraction-evolution2026-11-04)。学习输出的 `candidate_ref` 放进原 plan 的 job.learned_candidate；必须配置 `recursive_abstraction.enabled=true`，独立发布计划仍由场景提供。新入口不认证自己、不创建第二个 Registry/Controller。
+
+T3 诊断中的初始 C 由宿主指定并独立发布；后代 D/E 的完整 proposal 是原学习器从实际调用轨迹生成，未手写。T4 使用确定性宿主提案器根据真实失败反馈选择边界，不能当成模型自主抽象。T6 输入为不同的真实 Builder 源码构造，运行的解析/绑定是原代码；初始叶权限属于明确标记的诊断宿主，后代组合必须完成原 Store 验收。全部仅为 `wiring_passed`。
+
+## 修改文件与权限边界
+
+| 文件/组 | 实际职责 |
+| --- | --- |
+| `capability_motif_learning.py` | 将真实 Capability 调用接到原 Motif discovery/compiler，保留跨代节点与来源 |
+| `capability_discharge.ts` | 原 Runtime 前后宿主义务、独立验收、有限摘要及剩余检查 |
+| `capability_evolution.py`、`capability_feedback.py` | 有来源的双价值关系、边界提案/新图、原计量复用 |
+| `capability_builder_application.py`、`capability_source_authoring.py` | 原解析/冻结操作的可选真实轨迹会话及已认证组合复用 |
+| `capability_proposal.py` | 语义摘要视图、固定契约、repair模式守卫、原 Builder 可选会话 |
+| `capability_scene.py`、`capability_improvement.py`、`capability_construction_history.py` | 冻结学习产物进入原构造/发布链，记录来源，不自行晋级认证 |
+| `capability-improvement-v1.schema.json` | 仅添加可选开关与 job 候选引用，旧 plan 保持兼容 |
+| `learn-recursive-capabilities.py`、`run-capability-improvement.py`、`check-recursive-abstraction.py`、`package.json` | 默认预览/显式执行/可复现验收 |
+| `tests/test_capability_*`、`test_recursive_learning_cli.py`、`tests/fixtures/rae_*` | 原进程实际执行、负面守卫及独立验证，不接真实模型 |
+
+## 已实现与仍待研究
+
+**Implemented / Mechanism Verified：** 同一个学习算子能够反复消费含已学能力的后代轨迹；反馈能改变下一候选可执行边界；Builder 结构操作能参与同一流程。认证/版本/权限仍由原宿主控制，旧生产路径、能力版本与费用账本保留。
+
+**Research Pending：** 在真实任务流上自主发现有用边界、模型自然采用后代抽象、同质量全成本 Creation Efficiency、持续跨代正反馈和一般性。没有本轮收益测量，不能抹去过去已观察的复用收益，也不能把过去收益归给本轮新机制。
+
+实现范围是只读、封闭必需字段对象、标量/简单数组参数与原编译器支持的连续区域。嵌套可选参数、任意 MCP、副作用任务、原编译器不支持的同名重复节点不偷偷降级，而是记录 unsupported/rejected。独立验收器与场景输入需要宿主提供；本轮未让正常聊天自动启用演化。
+
+Builder 自应用先针对解析与冻结绑定阶段。后继 Builder 实际改用学出的组合入口，但保留原编码器一致性复算；这可能增加执行成本，因此尚不自动替换原构造策略，也不宣称构造效率提升。需要后续独立效果证据再决定推广。
+
+关闭开关或不注入 construction_session 即回原路径；研究产物留在私有独立目录，不删除旧版本。整个分支可直接弃用而不影响正式服务。未修改上游 Harness、共享账本或原 Capability 身份协议。
 
 ## 权限与交付
 

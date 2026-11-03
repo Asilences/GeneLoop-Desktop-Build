@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-04，新增默认关闭的 [Recursive Abstraction Evolution 研究机制](docs/rae-implementation.md)：真实 Capability 调用可进入原 Motif 学习器，学出的后代仍经原 Store 独立验收；反馈可改变下一轮抽象边界，Builder 的实际解析/绑定轨迹可走同一流程。`npm run rsi:rae:check` 保留机制执行证据，`npm run rsi:rae:learn -- --help` 查看离线入口。当前验收为确定性任务上的实际执行闭环，不等于真实模型自主创造或持续收益；生产路径不变。
+
 离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
 
 新增默认关闭的[能力变化后机会重新评价](docs/capability-aware-opportunities-v1.md)：独立发布成功后，结合仍未满足的真实需求提出候选，宿主提供冻结验收条件，再交原Builder。保留全部候选、筛选和结果，区分预期、编译与执行依赖。当前仅机制诊断，不包含节余再投资，不自动开启生产或付费探索。
