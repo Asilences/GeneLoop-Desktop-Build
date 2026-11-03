@@ -3,7 +3,7 @@
 ## 2026-11-03 上午：自主递归构造与组会交付（当前）
 
 - 更新时间与交接人：2026-11-03上午，Codex；用户要求一小时内推进并准备组会，长期目标继续是完整效率反馈，未标完成。
-- 起点/代码：PR123已合并到远程main `2f29d34a`。当前工作区分支`codex/recursive-construction-20261103`，新接口源码`4af5c56f`；私人`reference/`未动。本轮尚未推送、合并、部署，文档/平台测试小修在工作区。
+- 起点/代码：PR123已合并到远程main `2f29d34a`。当前工作区分支`codex/recursive-construction-20261103`，新接口源码`4af5c56f`；私人`reference/`未动。本轮已推送[草稿PR #124](https://github.com/jingyio/GeneLoop/pull/124)，尚未合并或部署；后续提交仅文档与平台测试兼容小修，当前CI见PR。
 - 已实现：同答`{program,composition}`、受限`composition_source`静态前端；认证前锁定模型选择/绑定，认证后只解析`$program`；编译失败repair按当前alias显示精确意图。多项目最终清单与显式有限研究预算；公共运行/权限/原库不改。
 - 已观察：`continuation-study-001`四对真实检查点消融，on四格全合格、两格模型完整C→D，off两格合格、无完整C。on/off模型估费0.005062164/0.068178516，局部低92.6%，不是无C对照或新盲测。
 - 从初始池结果：`generative-primitives-001`三组各两格；WithC1模型自主新写3273字符比较程序和C调用，DoRA/BitFit四项最终检查全过、每项2次C回执。D为`cap_c962563a382f4c1d2e1f598c`。实际用JSON意图，不是Python拼写。WithC0完整重写2/4；Flat1完整重写4/4且费用更低；另三格最终未评审。完整理论反馈未闭合。
