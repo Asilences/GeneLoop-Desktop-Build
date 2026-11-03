@@ -8,7 +8,7 @@ const sha=(value:string|Uint8Array)=>createHash('sha256').update(value).digest('
 const bindingIntent=(value:string)=>value.replace(/[\x00-\x20]+/g,' ').trim().slice(0,500)||'Process the approved task sources';
 
 export function bindUploadedPptTask(workspace:string,inputs:any[],request:any,manifest:any,sourceTaskId=request.task_id){
-  if(!inputs.length || inputs.length>8)throw Error('ppt_rsi_requires_approved_sources');
+  if(!inputs.length)throw Error('ppt_rsi_requires_approved_sources');
   const job=JSON.parse(readFileSync(join(workspace,'job.json'),'utf8'));
   if(job.job_id!==sourceTaskId || !Array.isArray(job.inputs) || job.inputs.length!==inputs.length)
     throw Error('ppt_rsi_job_scope_mismatch');
@@ -43,7 +43,7 @@ export function bindApprovedUploadedReadTask(workspace:string,inputs:any[],reque
     'research-data-analysis':['mcp__data_analysis__pin_dataset','mcp__data_analysis__read_pinned_dataset_summary'],
   };
   const pair=pairs[sceneId];
-  if(!pair || !inputs.length || inputs.length>(sceneId==='paper-proofreading'?16:8))
+  if(!pair || !inputs.length)
     throw Error('uploaded_rsi_requires_approved_sources');
   const citationEdge:[string,string,string]=[
     'mcp__paper_checks__pin_paper_citations','mcp__paper_checks__read_pinned_paper_citations','source_id'];
@@ -143,7 +143,7 @@ function closedUploadedFirstPage(row:any,manifest:any,pair:string[]):boolean{
 
 /** A model must choose and pin the source; certified reuse may only dereference that same handle. */
 export function bindUploadedSourceTask(workspace:string,inputs:any[],request:any,manifest:any){
-  if (!inputs.length || inputs.length > 8) throw Error('rsi_requires_approved_sources');
+  if (!inputs.length) throw Error('rsi_requires_approved_sources');
   const root = realpathSync(join(workspace,'inputs'));
   const approved = JSON.parse(readFileSync(join(workspace,'approved-inputs.json'),'utf8')).files;
   for (const row of inputs) {
