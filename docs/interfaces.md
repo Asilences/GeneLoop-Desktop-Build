@@ -1327,3 +1327,31 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 - Frontier 新freeze显式给定实验ID与带时区未来截止，C/D准备器读取冻结协议及任务引用，支持`--protocol`与旧重定位文件，不继承本轮日期。`run`在owner/费用登记前核对精确研究预算、截止、任务、种子与实际初始能力池，首构造再次核对；不一致不调用模型，后续原生学习按回合协议更新池。研究截止须有限有效，平台null配额策略和原累计账本不改。
 
 新增执行仍是既有只读 Script 沙箱后端，不接管聊天，不宣称插件已去除 Python 或任意 MCP 自动组合已完成。真实效果与限制独立见[Frontier 记录](experiments/capability-frontier-20261103.md)。
+
+## 能力生成语言与显式构造意图（2026-11-03 上午）
+
+Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{steps,output}`，新程序只在 step.use 使用 `$program` 占位；其余步骤由模型明确指定当前可见 alias。`freeze_program_composition` 在学习前将旧 alias 固定成精确版本引用，保存原绑定、task/program/snapshot摘要。`encode_program_composition` 待原生认证及入池后只解析同源码、同库、同mode且仍可见的新材料，再经原 IR 编译和独立发布；不补依赖、算法或参数。
+
+另可提交 `{composition_source}` 或 `{program,composition_source}`。`compile_composition_source` 将唯一 `def build(value)` 中顺序赋值的 `capability.cN(...)` / `program(...)` 及字符串字段绑定静态编码为同一draft；拒绝导入、循环、动态调用/索引和任意求值。新增计算仍在受限的 program.source 中认证执行，编排源代码本身不执行。原 JSON 和完整普通程序入口保留。
+
+### 单源构造接口（2026-11-03，未部署）
+
+`{capability_source}` 将静态 `build(value)`、局部 graph helper 与纯计算 helper 写在同一源码中。宿主只展开模型显式调用和实参，再交原编译、原生认证及发布流程；不执行 graph Python，不生成算法或伪造子能力证书。静态调用至多64步、8层，展开绑定整体至多10000节点。纯计算 helper 在展开图中最多调用一次，其原算法原文保留。
+
+`source_callable_interfaces` 对精确 Script JSON ABI 展示领域对象参数/返回值，宿主恢复原生 `value` 包装，完整原契约和映射保存在审计记录。组合能力自身的业务 `value` 字段不剥离。新研究 `creation_value_v1` 使用同一 `source_primary_v1` 作者视图：模型只见语义接口，完整版本、原生包装和证据仍留在 `authoring-context-audit.json`；旧 JSON、旧作者视图和完整普通程序入口保留。C说明卡只提供信息，只有目录中的alias能调用。
+
+新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](recursive-efficiency-protocol-v2.md)。
+
+### 公共构造与原生材料接线（2026-11-03续）
+
+公共`capability_proposal.py`现受理`capability_source`；同一个`rsi:improve`控制器消费构造、获取、入池与原意图续接，不要求导入Paper研究适配器。宿主的`publication_plan`可显式配置`program_learning:{backend:"script_motif",libraries:[<原字节引用>],construction_cases:[<两份训练任务>]}`；每份任务为`{id,split:"training",input,inputs:[{path,source}]}`，路径仍限`/work/inputs/<文件名>`。宿主固定契约、训练材料和独立验收，模型选择新算法、能力与参数。没有该配置或缺少支持的前缀后端时明确暂缓，不能由模型选择执行器或测试集。
+
+共用实现位于`capability_script_learning.py`、`capability_script_execution.py`及`capability_program_training.py`；原Frontier路径保留同模块兼容导出。新算法通过原Script编译/沙箱认证后进入原材料池；下一次构造只将预先固定的`$program`替换成对应认证材料，后续独立发布仍由场景提供。当前公共原生前缀支持Script；没有据此增加任意MCP或混合后端执行支持。
+
+原生值认证另有限制：新helper输入必须能从两份实际输入推导出稳定、非空字段的JSON对象契约；单参数`run`直接绑定标量/数组暂不能认证入池。命名helper的显式参数由现有机械包装形成对象，不改算法。该限制沿用旧原生认证，不为本轮扩写执行器。
+
+宿主执行观测可提供`observed_model_usd`和/或`observed_model_usd_decimal`，发布结果可用`execution_cost`携带同一观测形状；公共反馈将其用于已有同scope执行排序。构造费用不得当执行费用，缺失/未知仍为null，双字段冲突拒绝。后继能力被撤回后，其精确版本不再提供当前正构造排序信用；原始事实不删除，执行归档仍保留构造价值。这里不铸造可支配节余，自动资源再投资仍未接通。
+
+新材料改变别名后，显式意图仍引用原精确版本；编译失败的repair通过SHA验证的 `frozen_composition_intent` 显示当前alias投影及原参数，原始回答保留引用，不把旧alias冒充新回答。缺失参数继续保持缺失，交给模型修复。Frontier 同时消费原 `selection.construction` 排序。
+
+`prepare_D --final-manifest` 可重复，以多个宿主冻结manifest生成项目与独立检查；项目ID安全唯一，0/1/2版本和输入SHA逐项核验，旧无ID清单仍解释为mamba。`--budget-usd` 和 `--research-limit-usd` 显式配置新条件的有限研究预算，默认值与旧条件不变，未知历史请求仍完整预留；平台null额度与原账本不改。复现命令见[研究入口](../scenarios/paper_proofreading/frontier/README.md)，效果边界见[上午实验](experiments/recursive-construction-20261103.md)。

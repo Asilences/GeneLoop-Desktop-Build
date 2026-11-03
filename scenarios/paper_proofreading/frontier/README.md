@@ -2,6 +2,8 @@
 
 本目录验证已有材料是否帮助模型构造新增跨文件/版本关系。它是离线研究适配器：复用公共控制器、Script 编译/沙箱、TS Capability Runtime、Store 与独立计量器，不接管聊天或正式服务。
 
+2026-11-03 上午续：真实检查点的信息消融已首次观察到模型自主使用完整 C 构造 D；四对条件费用与质量独立保留，不称新盲测或完整效率反馈已闭合。新增显式构造意图与受限调用语法，从初始池的新项目对照另行报告，见[上午记录](../../../docs/experiments/recursive-construction-20261103.md)。下段79请求为此前夜间条件。
+
 当前观察：C 可在新 Mamba 留出复用；最后条件的 D 自主构造未选 C/J，完整 Python 也能得到合格 D。第一条件有 J 复用，但仍未调用完整 C。宿主强制 C→D 组合诊断通过，但不计自主研究成功或效率收益。三种冻结条件分别保留，79 次真实请求估费 USD0.340150572。
 
 当前目标、冻结条件与原始失败见 [推进协议](../../../docs/capability-frontier-protocol-v1.md)、[实验记录](../../../docs/experiments/capability-frontier-20261103.md)。输入及运行结果只放忽略的 `.local/`；私有论文、原始轨迹和凭证不得提交。
@@ -39,7 +41,11 @@ node scripts/project.mjs python -m scenarios.paper_proofreading.frontier.freeze 
 
 原始回答、元数据补全、忽略的入口位置和实际执行源码分别保存。`source_equivalent` 证明的是实际生成执行模块与参数化模块在两份输入上的源等价性；不是任意输入的语义证明。
 
-材料学习后，公共控制器另外保留 `material_continuation`：上一缺口、程序用途/源码摘要、获取证据与新增根，并在新池中重建别名；不能用旧 snapshot 的 repair 或旧别名继续执行。它帮助后继构造知道“刚补齐了什么”，不强制选择 C，不含最终留出反馈。当前只做了零模型续接检查，模型行为改善待新实验验证。
+材料学习后，公共控制器另外保留 `material_continuation`：上一缺口、程序用途/源码摘要、获取证据与新增根，并在新池中重建别名；不能用旧 snapshot 的 repair 或旧别名继续执行。它帮助后继构造知道“刚补齐了什么”，不强制选择 C，不含最终留出反馈。此前只有零模型检查，上午的四对真实检查点消融已观察到行为与费用差异；范围和反例见[上午记录](../../../docs/experiments/recursive-construction-20261103.md)。
+
+上午新增同答接口：`{program,composition:{steps,output}}` 中模型自行组织全部调用与数据流，新材料只用 `use:"$program"` 占位；已有 alias 在学习前解析为精确版本。也可用 `composition_source` 写静态 `def build(value)`，以 `capability.cN(...)` 调用已有能力、`program(...)` 调用新材料，再返回字段/对象/数组。该语法只编译为现有 IR，不执行编排 Python；新增计算放在原 program.source 中认证。只有明确给出组合意图，宿主才机械解析新程序引用；未给意图仍保留原完整程序包装。失败repair保留精确选择并按当前目录显示，不能复用旧alias。
+
+新多项目条件可重复传入 `--final-manifest <manifest>`，清单含唯一 `id` 与三条 `{version,file,sha256}`；旧无id清单仍为mamba。`--budget-usd <有限金额>` 覆盖本次各格研究预算，`--research-limit-usd <有限金额>` 冻结含既往用量的研究估费上界，缺省保留旧值，不改变平台额度或旧结果。
 
 ## 费用与结论
 

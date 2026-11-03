@@ -10,6 +10,7 @@ import {capabilityDigest,capabilityRef,createCapability,createCapabilitySnapshot
  type CapabilitySnapshot,type CapabilityRef} from './capability_contract.ts';
 import {createCapabilityRuntime,type CapabilityBackend} from './capability_runtime.ts';
 import {bytesSha256,rsiRecord,type AdmissionHost} from './rsi_protocol.ts';
+import {readScriptWorkerFailure} from './script_worker_failure.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const assert=(value:unknown,reason:string)=>{if(!value)throw Error(reason);};
 const same=(a:unknown,b:unknown)=>capabilityDigest(a)===capabilityDigest(b);
@@ -17,10 +18,10 @@ const read=(path:string)=>JSON.parse(readFileSync(path,'utf8'));
 export const scriptCapabilityFiles=[...scriptCodeLocks,'src/adapters/script_runtime_compatibility.ts',
  'config/script-runtime-compatibility.json','src/adapters/script_capability_runtime.ts',
  'src/adapters/capability_runtime.ts','src/adapters/capability_contract.ts','src/adapters/rsi_protocol.ts',
- 'scripts/script-capability-worker.mjs'];
+ 'scripts/script-capability-worker.mjs','src/adapters/script_worker_failure.mjs'];
 export function scriptExecutorDigest(){return capabilityDigest(scriptCapabilityFiles.map(path=>({path,sha256:bytesSha256(readFileSync(join(root,path)))})));}
 
-export function buildScriptCapabilities(path:string,owner:string,expectedSha256?:string){
+function readScriptMaterial(path:string,owner:string,expectedSha256?:string){
  const bytes=readFileSync(path),library_sha256=bytesSha256(bytes);
  assert(!expectedSha256||expectedSha256===library_sha256,'script_material_library_changed');
  const library=loadScriptLibrary(path);
@@ -53,8 +54,12 @@ export function buildScriptCapabilities(path:string,owner:string,expectedSha256?
  const roots=capabilities.map(capabilityRef);
  // A supported native catalog must have at least one root; report unsupported
  // programs without pretending they have migrated.
- return {format:'script_capability_catalog_v1',owner,library_sha256,library_digest:library.digest,
-  capabilities,roots,catalog,excluded,snapshot:capabilities.length?createCapabilitySnapshot(owner,roots,capabilities):null};
+ return {library,catalog:{format:'script_capability_catalog_v1',owner,library_sha256,library_digest:library.digest,
+  capabilities,roots,catalog,excluded,snapshot:capabilities.length?createCapabilitySnapshot(owner,roots,capabilities):null}};
+}
+
+export function buildScriptCapabilities(path:string,owner:string,expectedSha256?:string){
+ return readScriptMaterial(path,owner,expectedSha256).catalog;
 }
 
 export type ScriptTaskManifest={format:'script_capability_task_v1';task_id:string;owner:string;workspace:string;
@@ -68,17 +73,27 @@ async function invoke(job:unknown,signal?:AbortSignal):Promise<any>{
  return new Promise((done,reject)=>{
   const child=spawn(process.execPath,['--experimental-strip-types',join(root,'scripts/script-capability-worker.mjs')],
    {cwd:root,env,detached:true,stdio:['pipe','pipe','pipe']});
-  let output='',failure:string|null=null,escalation:ReturnType<typeof setTimeout>|undefined;
+  let output='',errorOutput='',failure:string|null=null,escalation:ReturnType<typeof setTimeout>|undefined;
   const kill=(sig:NodeJS.Signals)=>{if(child.pid)try{process.kill(-child.pid,sig);}catch{}};
   const stop=(reason:string)=>{if(failure)return;failure=reason;kill('SIGTERM');escalation=setTimeout(()=>kill('SIGKILL'),1000);};
   const abort=()=>stop('script_worker_cancelled'),timer=setTimeout(()=>stop('script_worker_timeout'),45000);
   signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
-  child.stdout.setEncoding('utf8');child.stderr.resume();child.stdin.on('error',()=>{});
+  child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');child.stdin.on('error',()=>{});
+  child.stderr.on('data',chunk=>{errorOutput+=chunk;if(Buffer.byteLength(errorOutput)>8192){errorOutput='';stop('script_worker_error_output_exceeded');}});
   child.stdout.on('data',chunk=>{output+=chunk;if(Buffer.byteLength(output)>256000)stop('script_worker_output_exceeded');});
   child.on('error',()=>{failure??='script_worker_start_failed';});
   child.on('close',code=>{
    clearTimeout(timer);if(escalation){kill('SIGKILL');clearTimeout(escalation);}signal?.removeEventListener('abort',abort);
-   try{assert(!failure,failure!);assert(code===0,'script_worker_failed');done(JSON.parse(output));}catch(error){reject(error);}
+   try{
+    assert(!failure,failure!);
+    if(code!==0){
+     const error=Error('script_worker_failed');
+     const diagnostic=readScriptWorkerFailure(errorOutput);
+     if(diagnostic)Object.defineProperty(error,'scriptWorkerFailure',{value:diagnostic});
+     throw error;
+    }
+    done(JSON.parse(output));
+   }catch(error){reject(error);}
   });
   child.stdin.end(JSON.stringify(job));
  });
@@ -101,15 +116,34 @@ export async function runScriptCapability(manifestPath:string,snapshotValue:Capa
   assert(bytesSha256(fixedInput(workspace,scriptVirtualHost(workspace,input.path)))===input.sha256,'script_task_input_changed');
   inputMap.set(input.path,input);
  }
- const native=new Map();
+ const native=new Map(),materials=new Map<string,ReturnType<typeof readScriptMaterial>>();
+ // Caches belong to this invocation only. Every live check still reads the
+ // actual bytes; unchanged identities avoid repeated parsing/schema work.
+ const executor=scriptExecutorDigest();
  function loadNative(){
+  assert(scriptExecutorDigest()===executor,'script_capability_executor_changed');
   native.clear();
   for(const ref of manifest.libraries){
-   const catalog=buildScriptCapabilities(ref.path,manifest.owner,ref.sha256),library=loadScriptLibrary(ref.path);
+   const hash=bytesSha256(readFileSync(ref.path));
+   assert(hash===ref.sha256,'script_material_library_changed');
+   let material=materials.get(ref.path);
+   if(!material||material.catalog.library_sha256!==hash){
+    material=readScriptMaterial(ref.path,manifest.owner,ref.sha256);materials.set(ref.path,material);
+   }
+   const {catalog,library}=material;
    for(const cap of catalog.capabilities)native.set(cap.id,{cap,program:library.programs.find((p:any)=>p.id===(cap.implementation as any).legacy_ref.object_id)});
   }
  }
- loadNative();const executor=scriptExecutorDigest();
+ loadNative();
+ let registryCache:{sha256:string;snapshot:CapabilitySnapshot}|undefined;
+ function readRegistry(){
+  const bytes=readFileSync(manifest.registry_path),hash=bytesSha256(bytes);
+  if(!registryCache||registryCache.sha256!==hash){
+   const value=validateCapabilitySnapshot(JSON.parse(bytes.toString('utf8')),manifest.owner);
+   registryCache={sha256:hash,snapshot:value};
+  }
+  return registryCache.snapshot;
+ }
  const identity=(m:ScriptTaskManifest)=>capabilityDigest({...m,grant:{...m.grant,revoked:false}}),frozenIdentity=identity(manifest);
  function current(){const m=read(manifestPath);assert(typeof m.grant?.revoked==='boolean'&&identity(m)===frozenIdentity,'script_task_manifest_changed');return m;}
  const versions={motif:{id:'capability-snapshot',sha256:snapshot.digest},matcher:{id:'native-script-runtime',sha256:executor}};
@@ -129,7 +163,8 @@ export async function runScriptCapability(manifestPath:string,snapshotValue:Capa
  }
  function readHost(){
   host.grant.revoked=current().grant.revoked;
-  const code=scriptExecutorDigest();for(const id of host.currentCodeSha256.keys())host.currentCodeSha256.set(id,code);
+  const code=scriptExecutorDigest();assert(code===executor,'script_capability_executor_changed');
+  for(const id of host.currentCodeSha256.keys())host.currentCodeSha256.set(id,code);
   host.currentEvidence=new Map(evidence.map(r=>[r.payload.id,structuredClone(r)]));
   manifest.inputs.forEach((input,i)=>{let valid=false;try{valid=bytesSha256(fixedInput(workspace,scriptVirtualHost(workspace,input.path)))===input.sha256;}catch{}
    if(!valid)host.currentEvidence.get('input-'+i)!.payload.status='invalidated';});return host;
@@ -166,7 +201,19 @@ export async function runScriptCapability(manifestPath:string,snapshotValue:Capa
    for(const name of ['inputs','code','outputs/code','command-tmp'])mkdirSync(join(work,name),{recursive:true,mode:0o700});
    for(const file of files)writeFileSync(join(work,'inputs',basename(file.path)),file.bytes,{mode:0o400,flag:'wx'});
    const nonce=randomUUID(),inputVersions=files.map(f=>f.sha256);
-   const receipt=await invoke({workspace:work,program,paths,versions:inputVersions,nonce},call.signal);
+   let receipt;
+   try{receipt=await invoke({workspace:work,program,paths,versions:inputVersions,nonce},call.signal);}
+   catch(error){
+    const failure=error instanceof Error?(error as Error&{scriptWorkerFailure?:unknown}).scriptWorkerFailure:undefined;
+    if(failure)try{
+     writeFileSync(join(work,'failure.json'),JSON.stringify({
+      format:'script_capability_call_failure_v1',call_id:call.callId,parent_call_id:call.parentCallId??null,
+      capability:capabilityRef(call.capability),program_id:program.id,
+      arguments_sha256:bytesSha256(JSON.stringify(value)),input_versions:inputVersions,diagnostic:failure,
+      scope:'diagnostic_only_not_a_certificate_or_retry_authorization'}),{mode:0o600,flag:'wx'});
+    }catch{/* Optional diagnostic IO must never replace the native failure. */}
+    throw error;
+   }
    assert(receipt.kind==='script_motif_receipt'&&receipt.nonce===nonce&&receipt.program_id===program.id&&same(receipt.versions,inputVersions)&&
     typeof receipt.output==='string'&&bytesSha256(receipt.output)===receipt.output_sha256&&receipt.network_evidence?.length===0,
     'script_capability_receipt_changed');
@@ -176,7 +223,7 @@ export async function runScriptCapability(manifestPath:string,snapshotValue:Capa
   },
  };
  const runtime=createCapabilityRuntime({taskId:manifest.task_id,owner:manifest.owner,snapshot,readHost,
-  readCapability:ref=>{const registry=validateCapabilitySnapshot(read(manifest.registry_path),manifest.owner);
+  readCapability:ref=>{const registry=readRegistry();
    const cap=registry.capabilities.find(c=>c.id===ref.id);assert(cap,'script_capability_registry_missing');return cap;},
   backends:{script_motif:backend},...(grant.mode==='validate'?{readValidationGrant:()=>({id:grant.id,taskId:manifest.task_id,
    owner:manifest.owner,snapshotDigest:snapshot.digest,root:grant.root,revoked:current().grant.revoked})}:{})});

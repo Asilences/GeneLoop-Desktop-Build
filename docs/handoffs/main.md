@@ -1,4 +1,26 @@
-## 2026-11-03：Capability Frontier 夜间研究（最新）
+## 2026-11-03：推进顺序纠正（当前优先）
+
+用户明确要求快刀斩乱麻，停止围绕Paper场景反复优化细节。不得继续把新场景对照或小样本效果作为公共机制完善的前置门槛。预定`generative-primitives-002`的18格对照未启动，新增模型请求0；已创建的冻结资料仅保留，不自动续跑。既有自主C→D证据与未证明创造效率收益的边界保持不变。
+
+本轮起点为本地`9473647e`，修复已推送至PR124的`57da12bc`，后续仅交接文档收尾，未合并/部署；最新CI按PR当前head核对。此前单源构造、前缀训练、诊断与缓存已有本地2077 Python/1530 Node、Linux232 Python/43 Node通过；相同D工程重放12对结果一致，root中位22.958→6.150秒，见[工程记录](../experiments/recursive-runtime-cache-20261103.md)，不能称创造价值。
+
+PR124的`922d4227`随后在Windows push/PR检查各出现同样三项失败（PR job `125695503676`）：路径断言写死`/`、源码文本写入被CRLF转换后摘要不匹配、诊断视图按宿主OS识别路径导致POSIX证据路径未过滤。本轮改为原样UTF-8写入、用纯路径同时识别两种平台格式、按Path.parts核对回执路径；不改认证/执行规则或原证据。新增跨平台字节/路径回归，相关61项通过/1 Linux原生skip；最终远程结果以PR修复head的四项CI为准，未合并/部署、模型调用0。
+
+纠偏后公共接线源码为`984c1ca7`，原生测试夹具修正为`57da12bc`：
+
+1. 公共proposal与scene已消费单源构造、新算法学习/认证/入池、固定意图续接。三个实现模块移到公共adapters，旧Frontier路径兼容导出；Source/Paper新算法请求委托公共acquire，原JSON/历史学习路由保留。宿主显式配置两份训练输入，场景仍提供独立发布验收；当前原生前缀支持Script，未宣称任意MCP/混合后端。
+2. 明确源码/绑定失败返回已有repair循环，未知环境仍defer；原模型结果和获取结果不改写、每次attempt费用不重复。公共执行观测的明确模型费用进入同scope选择，unknown保留null；已精确撤回的后继不再提供当前正构造排序信用，历史事实保留。
+3. 本地完整2142 Python/1530 Node通过（241/21 skip），smoke/motif:check通过；source原生输入范围说明后另84项定向通过。Linux code25原检查320 Python/43 Node通过，但新整链夹具带空格JSON被旧认证器拒绝；只修夹具后，code26公共整链及相关37项全部通过且0skip。两轮有重复，不相加。真实前缀→新算法认证→注册→新库→公共续接→独立输入执行确已发生；模型提案是诊断输入，不称本轮真实模型效果。原失败/认证理由、JUnit/命令/源码清单在私有`server-evidence/code-25-validation/`与`code-26-validation/`。
+
+接手下一步仅两项：审阅公共改动与现有PR最新CI；把可信实际净节余接成探索资源准入/结算及下一轮调度。后者仍未实现，不能把排序接线写成完整效率反馈。本轮新增模型请求0，原账本不改；效果pending不触发继续场景调优，不提前接管产品聊天。
+
+已有失败、原账本、私有`reference/`和研究快照全部保留。生产服务不动。以下各节为此前阶段状态。
+
+## 2026-11-03 上午：自主递归构造
+
+main `2f29d34a`已合并PR123；当前同工作区分支`codex/recursive-construction-20261103`，源码`4af5c56f`，已推送[草稿PR124](https://github.com/jingyio/GeneLoop/pull/124)，未合并/部署。四对检查点信息消融已封账：on4/4合格、2格完整C；off2/4合格、0格完整C；费用USD0.005062164/0.068178516，为局部信息作用，不是C对无C增益。新增同答program+显式组合意图/静态Python拼写，精确版本在认证前固定，错误repair显示当前alias，不替模型补绑定。从初始池六格另行封账：一格模型新写3273字符比较程序+完整C，在DoRA/BitFit四项检查全过、每项2次C回执；成功实际用JSON意图，Python拼写尚无真实模型使用证据。另一个WithC重写仅过2/4；Flat1完整重写过4/4且更便宜。完整效率RSI仍未达标。38请求/USD0.139684764含失败，原账本3315→3353，无unknown；本地1979Python/1516Node、Linux129、smoke/motif通过。协议、全量结果/失败、组会一分钟讲稿见[上午报告](../experiments/recursive-construction-20261103.md)、[推进协议](../recursive-construction-protocol-20261103.md)；当前接手见[论文交接](paper-proofreading.md)。
+
+## 2026-11-03：Capability Frontier 夜间研究
 
 起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D可发布/复用；H0第一份材料已够用但入池后丢构造意图，已补新snapshot续接，模型效果未重跑。独立反例已回到原撤回机制，三份错误D退出后续选择。79次DeepSeek请求估费USD0.340150572，旧账本不变；源码`e6d46f6`还修复日期写死与付费前条件核对，原16格匹配。全量1879 Python/1516 Node、Linux原生/公共95项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)的`a92f278`（含最后源码）Ubuntu/Windows push/PR四项CI全部通过；后续仅文档收尾，最新head见PR，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
 
