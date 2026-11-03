@@ -1334,4 +1334,6 @@ Paper 从原 manifest 提供版本，允许上传路径相同而内容变化，�
 
 桌面标题栏与连接页面的 IPC 仅对安装包内页面及其主 frame 开放；工作区无 Node 或该 IPC 桥接。服务器地址只接受 HTTPS 根 origin，Cookie 按服务器分区；开发本机 HTTP fixture 需显式启用且不适用于打包应用。已有认证、文件归属、版本守卫、预算/取消仍由原服务负责。
 
+0.1.3桌面协议转发按Electron/Chromium提供的可信 `initiatorOrigin` 核对服务器同源，再恢复转发中的 `Origin`；不从页面可控的referrer推断、不允许跨源或不透明源冒用服务器来源。未携带任何来源的有副作用请求同样拒绝，显式 `credentials:omit` 仍被尊重。原服务器网关的Origin检查不修改；网页登录与桌面登录使用同一账号API和服务器配置，Cookie各自保存。`npm --prefix apps/desktop run smoke:account` 用本机临时合成账号验证表单登录、密码拒绝、刷新与退出，不代替正式账号验收。
+
 当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](desktop.md)。
