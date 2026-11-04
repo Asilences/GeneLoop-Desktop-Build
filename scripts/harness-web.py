@@ -85,7 +85,9 @@ def prepare_preset_directory(args,output):
     if any(path.is_symlink() for path in (preset.parent,preset)):
         raise ValueError('preset directory is redirected')
     preset.mkdir(parents=True,mode=0o700,exist_ok=bool(getattr(args,'resume',False)))
-    if preset.absolute()!=preset.resolve(strict=True):
+    try:
+        preset.resolve(strict=True).relative_to(output.resolve(strict=True))
+    except ValueError:
         raise ValueError('preset directory is redirected')
     for name in ('agent.cordis.yml','preset.yml'):
         path=preset/name

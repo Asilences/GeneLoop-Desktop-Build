@@ -105,7 +105,7 @@ def test_mcp_read_keeps_long_unicode_text_and_bounded_structured_receipt(source,
     receipt = converted['converted_id']
     source_id, version, name, directory, _ = api.receipts[receipt]
     text = ('科研原文 αβ — ![](image.png)\n' * 6000)
-    (directory/'source.md').write_text(text, encoding='utf-8')
+    (directory/'source.md').write_text(text, encoding='utf-8', newline='\n')
     api.receipts[receipt] = (source_id, version, name, directory, api._files(directory))
     monkeypatch.setattr(server, 'SkillReader', lambda: api.skill)
     monkeypatch.setattr(server, 'ConvertedSources', lambda *args: api)
