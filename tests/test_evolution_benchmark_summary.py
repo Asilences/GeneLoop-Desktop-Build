@@ -1,6 +1,7 @@
 """Synthetic read-only accounting diagnostics, with no model/provider calls."""
 import importlib.util
 import json
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -50,9 +51,48 @@ def trial(root, ledger, *, name='one', task='task-a', source='source-a', ids=(1,
         'source_files': {'instruction.md': 'same-input', 'tests/test.sh': 'fixed-verifier'},
         'effective_verifier_environment': {}})
     put(output / 'result.json', {'task_id': task, 'split': 'test', 'label': 'final',
+        'score': str(reward) if status == 'evaluated' else None,
         'status': status, 'elapsed_seconds': 5, 'evaluation': {'status': 'evaluated', 'reward': reward,
         'passed': reward > 0}, 'model': {'directory': str(session), 'status': 'completed'}})
     return output, session
+
+
+@pytest.mark.parametrize('model_status', ['failed', 'incomplete', 'timeout'])
+def test_full_verifier_reward_does_not_override_unscoreable_model(model_status):
+    value = {'score': None, 'model_scoreable': False,
+             'model': {'status': model_status, 'provider_requests': 0},
+             'evaluation': {'status': 'evaluated', 'reward': 1}}
+    quality = summary._quality(value, Decimal('1'))
+    assert quality['raw_reward'] == 1 and quality['verifier_status'] == 'evaluated'
+    assert quality['trial_scoreable'] is False
+    assert quality['full_quality'] is None and quality['paper_positive_reward_pass'] is None
+
+
+def test_timeout_quality_requires_original_host_cancellation_evidence(tmp_path):
+    value = {'score': '1', 'model_scoreable': True,
+             'model': {'status': 'timeout', 'timed_out': True, 'provider_requests': 1},
+             'evaluation': {'status': 'evaluated', 'reward': 1}}
+    assert summary._quality(value, Decimal('1'))['full_quality'] is None
+    evidence = put(tmp_path / 'cancel.json', {'runtime_closed': True})
+    value['model']['cancel_evidence'] = file_ref(evidence)
+    assert summary._quality(value, Decimal('1'))['full_quality'] is True
+    evidence.write_text('{"runtime_closed":false}')
+    assert summary._quality(value, Decimal('1'))['full_quality'] is None
+
+
+def test_failed_model_cannot_make_matching_group_comparable(tmp_path):
+    ledger = lines(tmp_path / 'ledger.jsonl', [])
+    left = root(tmp_path, name='left', mode='geneloop')
+    right = root(tmp_path, name='right', mode='skill-infinity')
+    left_output, left_session = trial(left, ledger)
+    _right_output, right_session = trial(right, ledger, ids=(2,))
+    result = json.loads((left_output / 'result.json').read_text())
+    result.update(score=None, model_scoreable=False)
+    result['model']['status'] = 'failed'
+    put(left_output / 'result.json', result)
+    lines(ledger, [settled(left_session, 1), settled(right_session, 2)])
+    value = summary.summarize([left, right], ledger)
+    assert value['matching_groups'][0]['full_quality_comparable'] is False
 
 
 def settled(session, request_id, cost='0.10000001'):
@@ -64,7 +104,7 @@ def settled(session, request_id, cost='0.10000001'):
 
 def root(tmp_path, name='run', mode='trial'):
     directory = tmp_path / name
-    put(directory / 'effective.json', {'mode': mode})
+    put(directory / 'effective.json', {'mode': mode, 'prewarm_dependencies': False})
     return directory
 
 
@@ -157,6 +197,44 @@ def test_same_full_quality_inputs_are_marked_comparable_without_inventing_delta(
     assert len(value['matching_groups']) == 1
     assert value['matching_groups'][0]['full_quality_comparable'] is True
     assert value['savings_estimates'] == []
+
+
+@pytest.mark.parametrize('left_flag,right_flag,left_profile,right_profile,comparable', [
+    (False, False, None, None, True),
+    (True, True, 'same', 'same', True),
+    (True, True, 'one', 'two', False),
+    (False, True, None, 'profile', False),
+    (None, None, None, None, False),
+    (True, True, None, None, False),
+])
+def test_dependency_preparation_is_part_of_matching_conditions(
+        tmp_path, left_flag, right_flag, left_profile, right_profile, comparable):
+    ledger = tmp_path / 'ledger.jsonl'
+    sessions = []
+    roots = []
+    for index, (flag, profile_id) in enumerate(((left_flag, left_profile), (right_flag, right_profile))):
+        run = root(tmp_path, str(index), 'geneloop' if index else 'trial')
+        roots.append(run)
+        config = json.loads((run / 'effective.json').read_text())
+        if flag is None:
+            config.pop('prewarm_dependencies')
+        else:
+            config['prewarm_dependencies'] = flag
+        put(run / 'effective.json', config)
+        output, session = trial(run, ledger, ids=(index + 1,))
+        sessions.append(session)
+        if profile_id is not None:
+            profile_path = put(run / 'public-profile.json', {'id': profile_id})
+            prep_path = put(output / 'dependency-preparation.json', {
+                'status': 'prepared', 'profile': {'id': 'fixed-selection', 'profile': file_ref(profile_path)}})
+            result = json.loads((output / 'result.json').read_text())
+            result['dependency_preparation'] = file_ref(prep_path)
+            put(output / 'result.json', result)
+    lines(ledger, [settled(session, index + 1) for index, session in enumerate(sessions)])
+    value = summary.summarize(roots, ledger)
+    assert any(group['full_quality_comparable'] for group in value['matching_groups']) is comparable
+    if left_flag is None or left_flag is True and left_profile is None:
+        assert all(group['missing_matching_conditions'] for group in value['matching_groups'])
 
 
 def test_partial_reward_in_one_arm_is_not_a_full_quality_pair(tmp_path):

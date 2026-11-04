@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.capability_feedback import file_ref, verify
 from src.adapters.efficiency_rsi_measurement import _cost
+from src.adapters.evolution_benchmark import _model_scoreable
 
 
 IGNORED_DIRECTORIES = {'artifacts', 'environment', 'verifier', 'node_modules', '.git',
@@ -80,6 +81,27 @@ def _reference(value, warnings):
         return None
 
 
+def _dependency_conditions(enabled, result, warnings):
+    if enabled is False:
+        return {'status': 'disabled'} if result.get('dependency_preparation') is None else None
+    if enabled is not True:
+        return None
+    preparation = _reference(result.get('dependency_preparation'), warnings)
+    if not isinstance(preparation, dict):
+        return None
+    profile = preparation.get('profile')
+    if preparation.get('status') == 'not_applicable' and profile is None:
+        return {'status': 'not_applicable'}
+    if preparation.get('status') != 'prepared' or not isinstance(profile, dict):
+        return None
+    reference = profile.get('profile')
+    if not isinstance(_reference(reference, warnings), dict):
+        return None
+    selected = {name: profile.get(name) for name in ('id', 'versions', 'steps', 'environment_keys')}
+    return {'status': 'prepared', 'profile_sha256': reference['sha256'],
+            'selection_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest()}
+
+
 def _method(effective, result):
     if isinstance(result.get('method'), str):
         return result['method']
@@ -139,10 +161,13 @@ def _quality(result, threshold):
     evaluation = result.get('evaluation', {})
     reward = _number(evaluation.get('reward'), allow_negative=True)
     verified = evaluation.get('status') == 'evaluated'
+    scoreable = (result.get('score') is not None and result.get('model_scoreable') is not False
+                 and _model_scoreable(result.get('model', {})))
     return {'raw_reward': evaluation.get('reward'), 'quality_threshold': str(threshold),
             'verifier_status': evaluation.get('status'),
-            'full_quality': reward >= threshold if verified and reward is not None else None,
-            'paper_positive_reward_pass': reward > 0 if verified and reward is not None else None}
+            'trial_scoreable': scoreable,
+            'full_quality': reward >= threshold if verified and reward is not None and scoreable else None,
+            'paper_positive_reward_pass': reward > 0 if verified and reward is not None and scoreable else None}
 
 
 def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold='1'):
@@ -238,6 +263,10 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
                     Path(model_directory) / 'effective.json').is_file() else {}
                 common = {'source_files': source_hashes, 'source_version': manifest.get('source_version'),
                           'verifier_environment': manifest.get('effective_verifier_environment'),
+                          'prewarm_dependencies': effective.get('prewarm_dependencies')
+                              if type(effective.get('prewarm_dependencies')) is bool else None,
+                          'dependency_preparation': _dependency_conditions(
+                              effective.get('prewarm_dependencies'), local_result, warnings),
                           'model': config.get('model'), 'reasoning_effort': config.get('reasoning_effort'),
                           'max_tokens': config.get('max_tokens'),
                           'harness_code_sha256': _code_digest(config.get('code'))}
@@ -361,7 +390,8 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
     for signature, rows in matching.items():
         missing = any(row['matching_conditions'][name] is None for row in rows
                       for name in ('source_files', 'source_version', 'verifier_environment',
-                                   'model', 'reasoning_effort', 'max_tokens', 'harness_code_sha256'))
+                                   'model', 'reasoning_effort', 'max_tokens', 'harness_code_sha256',
+                                   'prewarm_dependencies', 'dependency_preparation'))
         matched.append({'signature': signature, 'task_id': rows[0]['task_id'], 'split': rows[0]['split'],
             'comparison_scope': 'canonical_test' if rows[0]['split'] == 'test' else 'training_replay',
             'methods': sorted({row['method'] for row in rows}), 'trials': [row['directory'] for row in rows],

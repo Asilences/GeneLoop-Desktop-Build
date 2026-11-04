@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from src.adapters.capability_feedback import file_ref
 from src.adapters.skill_infinity_baseline import (
     SkillInfinityRun, create_seed_meta_skill, create_seed_task_skill,
     optimize_task_skill, refine_meta_skill,
@@ -220,3 +221,87 @@ def test_folded_skill_description_is_discoverable(tmp_path, skills):
     assert result['status'] == 'completed'
     request = json.loads((tmp_path / 'run/request-000.json').read_text())
     assert request['available_skill_cards'][0]['description'] == 'Optimize task skills and this optimization skill.'
+
+
+def test_host_evidence_is_readable_in_pages_with_original_hash(tmp_path, skills):
+    record = tmp_path / 'verifier.stdout.txt'
+    record.write_text('Original failure\n' + 'x' * 40)
+    reference = file_ref(record)
+    run = make_run(tmp_path, skills)
+    run.evaluate = lambda request: {**evaluate(request), 'evidence_refs': [reference]}
+    result = run._evaluate('seed', 'validation')
+    assert result['evidence_refs'] == [reference]
+    assert 'read_evidence' in [tool['name'] for tool in run.tools()]
+    page = run.dispatch('read_evidence', {'evidence_id': reference['sha256'], 'limit': 16})
+    assert page['content'] == 'Original failure'
+    assert page['evidence'] == reference
+    assert page['next_offset'] == 16
+    remainder = run.dispatch('read_evidence', {'evidence_id': reference['sha256'], 'offset': 16})
+    assert page['content'] + remainder['content'] == record.read_text()
+    assert remainder['next_offset'] is None
+
+
+def test_only_trusted_host_index_can_authorize_nested_records(tmp_path, skills):
+    calls = tmp_path / 'tool-calls.jsonl'
+    calls.write_text('{"command":"inspect inputs","stdout":"real tool result"}\n')
+    verifier = tmp_path / 'verifier.stdout.txt'
+    verifier.write_text('1 failed, 3 passed')
+    nested = tmp_path / 'trajectory-index.json'
+    nested.write_text(json.dumps({'evidence_refs': [file_ref(calls), file_ref(verifier)]}))
+    index = tmp_path / 'host-index.json'
+    index.write_text(json.dumps({'evidence_indexes': [file_ref(nested)]}))
+    run = make_run(tmp_path, skills)
+    run.evaluate = lambda request: {**evaluate(request), 'evidence_indexes': [file_ref(index)]}
+    run._evaluate('seed', 'validation')
+    assert run.dispatch('read_evidence', {'evidence_id': file_ref(calls)['sha256']})['status'] == 'error'
+    first = run.dispatch('read_evidence', {'evidence_id': file_ref(index)['sha256']})
+    assert first['discovered_evidence_refs'] == [file_ref(nested)]
+    run.dispatch('read_evidence', {'evidence_id': file_ref(nested)['sha256']})
+    assert run.dispatch('read_evidence', {'evidence_id': file_ref(calls)['sha256']})['content'] == calls.read_text()
+    assert run.dispatch('read_evidence', {'evidence_id': file_ref(verifier)['sha256']})['content'] == verifier.read_text()
+
+
+def test_model_authored_reference_cannot_authorize_oracle_or_arbitrary_path(tmp_path, skills):
+    oracle = tmp_path / 'reference-solution.txt'
+    oracle.write_text('private reference answer')
+    model = tmp_path / 'model-result.json'
+    model.write_text(json.dumps({'text': 'model claims access', 'evidence_refs': [file_ref(oracle)]}))
+    run = make_run(tmp_path, skills)
+    run.evaluate = lambda request: {**evaluate(request), 'evidence_refs': [file_ref(model)]}
+    run._evaluate('seed', 'validation')
+    run.dispatch('read_evidence', {'evidence_id': file_ref(model)['sha256']})
+    denied = run.dispatch('read_evidence', {'evidence_id': file_ref(oracle)['sha256']})
+    assert 'skill_evidence_not_authorized' in denied['error']
+    assert run.dispatch('read_evidence', {'evidence_id': str(oracle)})['status'] == 'error'
+
+
+def test_evidence_mutation_and_invalid_page_are_retained_failures(tmp_path, skills):
+    record = tmp_path / 'record.txt'
+    record.write_text('original')
+    reference = file_ref(record)
+    run = make_run(tmp_path, skills)
+    run.evaluate = lambda request: {**evaluate(request), 'evidence_refs': [reference]}
+    run._evaluate('seed', 'validation')
+    for arguments in [{'offset': -1}, {'limit': 24001}, {'offset': True}, {'limit': 0}]:
+        result = run.dispatch('read_evidence', {'evidence_id': reference['sha256'], **arguments})
+        assert 'skill_evidence_page_invalid' in result['error']
+    record.write_text('modified')
+    result = run.dispatch('read_evidence', {'evidence_id': reference['sha256']})
+    assert 'feedback_evidence_changed' in result['error']
+    receipts = [json.loads(path.read_text()) for path in (tmp_path / 'run/tool-calls').glob('*.json')]
+    assert all(receipt['status'] == 'failed' for receipt in receipts)
+
+
+def test_meta_evaluation_inherits_original_inner_host_evidence(tmp_path, skills):
+    task, meta = skills
+    original = tmp_path / 'original-verifier.txt'
+    original.write_text('original independent verifier diagnostics')
+    reference = file_ref(original)
+    result = refine_meta_skill(meta, [{'id': 'q', 'seed_skill': task}], tmp_path / 'outer',
+        call_agent=actor,
+        evaluate=lambda request: {**evaluate(request), 'evidence_refs': [reference]},
+        review=review, outer_candidate_budget=0, inner_candidate_budget=0)
+    assert result['status'] == 'completed'
+    assert reference in result['archive']['nodes'][0]['evaluation']['evidence_refs']
+    assert reference in result['archive']['evidence_refs']
+    assert any(item['path'].endswith('inner-0/result.json') for item in result['archive']['evidence_refs'])

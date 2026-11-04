@@ -66,10 +66,26 @@ def _skill(strategy, directory):
     return directory
 
 
+def _native_helper_proposal(proposal):
+    if not isinstance(proposal, dict):
+        raise ValueError('gene_benchmark_capability_proposal_invalid: expected an object')
+    if set(proposal) == {'source', 'description', 'example_evidence_ids'}:
+        return {'program': {'source': proposal['source'], 'description': proposal['description'],
+                            'mode': 'json', 'interface': 'function_v1'},
+                'example_evidence_ids': proposal['example_evidence_ids']}
+    if set(proposal) == {'program', 'example_evidence_ids'} and isinstance(proposal['program'], dict):
+        program = {**proposal['program']}
+        program.setdefault('mode', 'json')
+        program.setdefault('interface', 'function_v1')
+        return {**proposal, 'program': program}
+    raise ValueError('gene_benchmark_capability_proposal_invalid: expected proposal fields '
+                     'source, description, example_evidence_ids; mode=json and '
+                     'interface=function_v1 are supplied by the host. Received fields=' + str(sorted(proposal)))
+
+
 def _example_files(candidate, context, investigation):
-    proposal = candidate['proposal']
-    if (set(proposal) != {'program', 'example_evidence_ids'}
-            or not isinstance(proposal['example_evidence_ids'], list)
+    proposal = _native_helper_proposal(candidate['proposal'])
+    if (not isinstance(proposal['example_evidence_ids'], list)
             or len(proposal['example_evidence_ids']) < 2
             or any(not isinstance(value, str) for value in proposal['example_evidence_ids'])
             or len(set(proposal['example_evidence_ids'])) != len(proposal['example_evidence_ids'])):
@@ -105,31 +121,114 @@ def _example_files(candidate, context, investigation):
     return selected
 
 
-def _recursive_learning(runs, directory, *, materials=None, publish=None):
-    from .capability_motif_learning import learn_capability_motifs
+def _recursive_learning(runs, directory, *, materials=None, publish=None, prior_observations=()):
+    from .capability_motif_learning import _checked
     groups = {}
-    for trial in runs:
+    invalid_sources = []
+    duplicates = []
+    combined = []
+    for reference in prior_observations:
+        try:
+            row = inspect_benchmark(reference, OWNER)
+            trajectory = row.get('capability_trajectory')
+            if trajectory is None:
+                continue
+            if trajectory not in row['evidence']:
+                raise ValueError('recursive_prior_trajectory_not_indexed')
+            state = row.get('decision_context', {}).get('state', {})
+            if state.get('split') not in ('training', 'test'):
+                raise ValueError('recursive_prior_original_split_required')
+            projection = row.get('capability_input_projection')
+            if projection is None:
+                projection = next((ref for ref in row['evidence']
+                    if Path(ref['path']).name == 'capability-input-projection.json'), None)
+            if projection is None or projection not in row['evidence']:
+                raise ValueError('recursive_prior_input_projection_not_indexed')
+            combined.append({'split': state['split'], 'capability_trajectory': trajectory,
+                             'capability_input_projection': projection,
+                             'source_identity': row['source_identity'], 'observation': reference, 'historical': True})
+        except Exception as error:
+            invalid_sources.append({'evidence': reference, 'reason': type(error).__name__ + ':' + str(error)})
+    combined.extend(runs)
+    # Preserve original heldout identity when training variants share a source.
+    # Those training observations remain evidence, but cannot add independence.
+    combined.sort(key=lambda trial: trial.get('split') != 'test')
+    for trial in combined:
         reference = trial.get('capability_trajectory')
         if reference is None:
             continue
-        trace = json.loads(verify(reference))
-        group = groups.setdefault(trace['snapshot']['digest'], {'training': [], 'heldout': [], 'evidence': []})
-        split = 'heldout' if trial['split'] == 'test' else 'training'
-        if not any(row['task_fingerprint'] == trace['task_fingerprint'] for row in group[split]):
+        try:
+            trace = json.loads(verify(reference))
+            trace = _checked(trace, trace['snapshot']['owner'])
+            if trial.get('split') not in ('training', 'test'):
+                raise ValueError('recursive_original_split_required')
+            projection = trial.get('capability_input_projection')
+            if projection is not None:
+                value = json.loads(verify(projection))
+                if (value.get('snapshot') != trace['snapshot'] or value.get('task_id') != trace['task_id']
+                        or value.get('task_fingerprint') != trace['task_fingerprint']
+                        or value.get('trace_inputs') != trace['task_input'] or value.get('calls') != trace['calls']):
+                    raise ValueError('recursive_original_projection_changed')
+            source = trial.get('source_identity', trace['task_fingerprint'])
+            if trial.get('observation') is not None:
+                row = inspect_benchmark(trial['observation'], OWNER)
+                source = row['source_identity']
+                if trace['owner'] != row['owner']:
+                    raise ValueError('recursive_original_owner_changed')
+                if row.get('capability_trajectory') != reference:
+                    raise ValueError('recursive_observation_trajectory_changed')
+            group = groups.setdefault(trace['snapshot']['digest'], {
+                'training': [], 'heldout': [], 'evidence': [], 'sources': set(), 'fingerprints': set(), 'refs': {}, 'historical': [], 'historical_heldout': []})
+            split = 'heldout' if trial['split'] == 'test' else 'training'
+            if source in group['sources'] or trace['task_fingerprint'] in group['fingerprints']:
+                duplicates.append({'evidence': reference, 'source_identity': source, 'split': trial['split'],
+                                   'reason': 'original_source_or_fingerprint_already_counted'})
+                continue
+            group['sources'].add(source)
+            group['fingerprints'].add(trace['task_fingerprint'])
             group[split].append(trace)
-            group['evidence'].append(reference)
+            group['refs'][trace['digest']] = reference
+            if trial.get('historical'):
+                group['historical'].append(reference)
+                if split == 'heldout':
+                    group['historical_heldout'].append(reference)
+        except Exception as error:
+            invalid_sources.append({'evidence': reference, 'reason': type(error).__name__ + ':' + str(error)})
+    for group in groups.values():
+        group['evidence'] = [group['refs'][trace['digest']] for trace in [*group['training'], *group['heldout']]]
     eligible = [group for group in groups.values() if len(group['training']) >= 2 and group['heldout']]
     if not eligible:
         return {'status': 'pending', 'reason': 'two_training_and_one_heldout_native_call_traces_required',
+                'invalid_sources': invalid_sources, 'duplicates': duplicates,
                 'groups': [{'snapshot_sha256': digest, 'training': len(group['training']),
                             'heldout': len(group['heldout'])} for digest, group in groups.items()]}
-    group = sorted(eligible, key=lambda item: (-len(item['training']), item['training'][0]['snapshot']['digest']))[0]
+    outcomes = []
+    for group in sorted(eligible, key=lambda item: item['training'][0]['snapshot']['digest']):
+        folder = Path(directory) if len(eligible) == 1 else Path(directory) / (
+            'recursive-group-' + group['training'][0]['snapshot']['digest'])
+        folder.mkdir(parents=True, exist_ok=True)
+        outcomes.append(_learn_recursive_group(group, folder, materials=materials, publish=publish))
+    if len(outcomes) == 1:
+        return {**outcomes[0], 'invalid_sources': invalid_sources, 'duplicates': duplicates}
+    status = next(status for status in ('published', 'candidates', 'pending', 'failed', 'no_candidates')
+                  if any(outcome['status'] == status for outcome in outcomes))
+    return {'status': status, 'groups': outcomes, 'invalid_sources': invalid_sources, 'duplicates': duplicates,
+            'evidence': [reference for group in eligible for reference in group['evidence']]}
+
+
+def _learn_recursive_group(group, directory, *, materials, publish):
+    from .capability_motif_learning import learn_capability_motifs
     try:
         learned = learn_capability_motifs(group['training'], group['heldout'], group['training'][0]['snapshot'])
         save(directory / 'recursive-learning.json', learned)
         result = {'status': 'candidates' if learned['candidates'] else 'no_candidates',
                 'result': file_ref(directory / 'recursive-learning.json'), 'evidence': group['evidence'],
-                'publication': 'pending_independent_original_store_publication'}
+                'publication': 'pending_independent_original_store_publication',
+                'snapshot_sha256': group['training'][0]['snapshot']['digest'],
+                'certification_scope': 'historical_source_equivalence' if group['historical'] else 'source_equivalence',
+                'independent_quality': 'pending_fresh_semantic_task_evaluation',
+                'historical_evidence': group['historical'],
+                'previously_disclosed_heldout': group['historical_heldout']}
         if materials is not None and learned['candidates']:
             if publish is None:
                 from .benchmark_capability_publication import publish_recursive_candidate
@@ -162,7 +261,8 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
     canonical task IDs after seeing their outcomes must be reported as adaptive
     replay by that caller rather than independent final-test evidence.
     """
-    development = _tasks(development_tasks, minimum=2)
+    prior_observations = list(prior_observations)
+    development = _tasks(development_tasks, minimum=0 if prior_observations else 2)
     validation = _tasks(validation_tasks)
     tests = _tasks(test_tasks)
     if isinstance(quality_threshold, bool):
@@ -229,7 +329,9 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
             sources['investigation'].append(file_ref(path))
         for path in sorted(directory.glob('validation-*/result.json')):
             sources['validation'].append(file_ref(path))
-        for pattern in ('recursive-learning.json', 'recursive-publication-*/result.json'):
+        for pattern in ('recursive-learning.json', 'recursive-learning-status.json',
+                        'recursive-publication-*/result.json', 'recursive-group-*/recursive-learning.json',
+                        'recursive-group-*/recursive-publication-*/result.json'):
             sources['recursive'].extend(file_ref(path) for path in sorted(directory.glob(pattern)))
         inquiry = result.get('investigation', {})
         agent = inquiry.get('agent_result', {})
@@ -332,7 +434,7 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                 acquisition_root = materials.directory / 'acquisitions' if hasattr(materials, 'directory') else None
                 prior_native = set(acquisition_root.iterdir()) if acquisition_root is not None and acquisition_root.exists() else set()
                 try:
-                    acquired = materials.acquire(candidate['proposal']['program'],
+                    acquired = materials.acquire(_native_helper_proposal(candidate['proposal'])['program'],
                         [item['reference'] for item in selected_files],
                         file_ref(candidate_directory / 'candidate.json'), context['scope'])
                 finally:
@@ -352,9 +454,9 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
         def call_agent(request, dispatch):
             if materials is not None:
                 request = {**request, 'prompt': request['prompt'] + '\nA native Python helper backend is available. '
-                    'For kind capability, proposal is exactly {program:{source:Python_source, '
-                    'description:text, mode:"json", interface:"function_v1"}, '
-                    'example_evidence_ids:[indexed_evidence_id,...]}. Implement def run(value). '
+                    'For kind capability, proposal is exactly {source:Python_source, '
+                    'description:text, example_evidence_ids:[indexed_file_evidence_id,...]}. '
+                    'The host supplies the fixed JSON/function_v1 protocol. Implement def run(value). '
                     'Select at least two actual pre-verification artifact input files from independent '
                     'inspected experiences. Files are mechanically wrapped as {data:parsed_JSON} or '
                     '{text:UTF8_text}. The original Script compiler and sandbox independently check '
@@ -390,7 +492,8 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
         observations.extend(trial['observation'] for evaluation in validations for trial in evaluation['runs'])
         result['recursive_learning'] = _recursive_learning(
             [*result['development'], *[trial for evaluation in validations for trial in evaluation['runs']],
-             *result['test']], directory, materials=materials)
+             *result['test']], directory, materials=materials, prior_observations=prior_observations)
+        save(directory / 'recursive-learning-status.json', result['recursive_learning'])
         next_snapshot = materials.catalog()['snapshot'] if materials is not None else snapshot
         result['snapshot_after'] = next_snapshot
         prior_history.append(construction_history())

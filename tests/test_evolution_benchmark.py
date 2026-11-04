@@ -250,8 +250,11 @@ def test_artifacts_are_frozen_before_verifier_can_create_gold(fixture, monkeypat
     def evaluate(trial):
         order.append('evaluate')
         gold_created.append(True)
-        (trial.output / 'verifier-only-gold.json').write_text('{"expected":"private verifier output"}')
-        return original_evaluate(trial)
+        gold = trial.output / 'verifier-only-gold.json'
+        gold.write_text('{"expected":"private verifier output"}')
+        outcome = original_evaluate(trial)
+        outcome['post_verification_artifact'] = file_ref(gold)
+        return outcome
     monkeypatch.setattr(SkillsBenchTrial, 'collect_artifacts', collect)
     monkeypatch.setattr(SkillsBenchTrial, 'evaluate', evaluate)
     result = fixture.host.trial('task-one')
@@ -333,6 +336,7 @@ def test_host_exposes_native_task_tools_and_original_capture(fixture):
     observation = benchmark.inspect_benchmark(result['observation'], 'overnight-research')
     assert observation['steps'][0]['status'] == 'succeeded'
     assert observation['capabilities'] == [captured['steps'][0]['capability']]
+    assert observation['capability_input_projection'] == result['capability_input_projection']
 
 
 def test_empty_capability_pool_adds_only_a_zero_count(fixture):
@@ -496,3 +500,68 @@ def test_timeout_scoring_requires_effective_cancel_content(tmp_path, evidence, e
     path.write_text(json.dumps(evidence))
     assert _model_scoreable({'status': 'timeout', 'timed_out': True, 'provider_requests': 1,
                              'cancel_evidence': file_ref(path)}) is expected
+
+
+def test_verifier_diagnostics_are_explicitly_readable_without_post_verification_files(fixture):
+    from src.adapters.capability_contract import create_capability_snapshot
+    from src.adapters.capability_investigation import Investigation
+    result = fixture.host.trial('task-one')
+    row = benchmark.inspect_benchmark(result['observation'], 'overnight-research')
+    evaluation = result['evaluation']
+    operation = json.loads(verify(evaluation['verification']))
+    required = [evaluation['record'], evaluation['evidence'], evaluation['verification'],
+                operation['stdout_ref'], operation['stderr_ref']]
+    assert all(reference in row['evidence'] for reference in required)
+    outcome = row['decision_context']['outcome']
+    assert outcome['verifier_status'] == 'evaluated'
+    assert outcome['diagnostic_evidence_ids'][Path(operation['stderr_ref']['path']).name] == (
+        'evidence_' + operation['stderr_ref']['sha256'])
+    inquiry = Investigation(create_capability_snapshot('overnight-research', [], []),
+        [{'split': 'training', 'scope': 'skillsbench', 'evidence': result['observation']}],
+        'skillsbench', fixture.root / 'diagnostic-inquiry', inspector=benchmark.inspect_benchmark)
+    assert inquiry.read('evidence', 'evidence_' + operation['stdout_ref']['sha256'])['content'] == 'diagnostic stdout'
+    assert inquiry.read('evidence', 'evidence_' + evaluation['evidence']['sha256'])['content'] == '1'
+    assert not any('ground_truth' in reference['path'] or '/solution/' in reference['path']
+                   for reference in row['evidence'])
+
+
+def test_r3_original_observation_gets_derived_diagnostics_without_rewriting(fixture):
+    result = fixture.host.trial('task-one')
+    operation = json.loads(verify(result['evaluation']['verification']))
+    omitted = [result['evaluation']['record'], result['evaluation']['evidence'],
+               result['evaluation']['verification'], operation['stdout_ref'], operation['stderr_ref']]
+    path = Path(result['observation']['path'])
+    original = json.loads(path.read_text())
+    original['evidence'] = [reference for reference in original['evidence'] if reference not in omitted]
+    path.write_text(json.dumps(original))
+    legacy = file_ref(path)
+    before = path.read_bytes()
+    restored = benchmark.inspect_benchmark(legacy, 'overnight-research')
+    assert all(reference in restored['evidence'] for reference in omitted)
+    assert restored['derived_verifier_evidence']['source_record'] == result['record']
+    assert restored['derived_verifier_evidence']['origin'] == 'host_fixed_evaluation_fields'
+    assert path.read_bytes() == before
+    assert all(reference not in json.loads(path.read_text())['evidence'] for reference in omitted)
+
+
+def test_diagnostic_recovery_verifies_original_stream_hashes(fixture):
+    result = fixture.host.trial('task-one')
+    operation = json.loads(verify(result['evaluation']['verification']))
+    Path(operation['stdout_ref']['path']).write_text('changed verifier diagnostic')
+    with pytest.raises(ValueError, match='evidence_changed'):
+        benchmark.inspect_benchmark(result['observation'], 'overnight-research')
+
+
+def test_diagnostic_recovery_rejects_foreign_verifier_scope(fixture):
+    first = fixture.host.trial('task-one')
+    second = fixture.host.trial('task-one', split='test')
+    path = Path(first['record']['path'])
+    original = json.loads(path.read_text())
+    original['evaluation'] = second['evaluation']
+    path.write_text(json.dumps(original))
+    row = json.loads(verify(first['observation']))
+    row['evidence'] = [file_ref(path) if reference == first['record'] else reference for reference in row['evidence']]
+    observed = Path(first['observation']['path'])
+    observed.write_text(json.dumps(row))
+    with pytest.raises(ValueError, match='verifier_scope_changed'):
+        benchmark.inspect_benchmark(file_ref(observed), 'overnight-research')

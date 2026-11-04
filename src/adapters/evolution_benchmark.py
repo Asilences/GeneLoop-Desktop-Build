@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -34,6 +35,50 @@ def _model_scoreable(model):
         return False
     return (isinstance(evidence, dict)
             and (evidence.get('accepted') is True or evidence.get('runtime_closed') is True))
+
+
+def _verification_evidence(evaluation, *, task_id, split, source_identity):
+    """Index fixed host verifier outputs, never the post-verifier workspace."""
+    if not any(evaluation.get(key) for key in ('record', 'verification', 'evidence')):
+        return []
+    record = evaluation.get('record')
+    if not isinstance(record, dict) or set(record) != {'path', 'sha256'}:
+        raise ValueError('benchmark_verifier_record_required')
+    stored = json.loads(verify(record))
+    if (Path(record['path']).name != 'evaluation.json' or stored.get('task_id') != task_id
+            or stored.get('split') != split or stored.get('source_identity') != source_identity):
+        raise ValueError('benchmark_verifier_scope_changed')
+    root = Path(record['path']).resolve().parent
+    references = [record]
+    for key in ('evidence', 'verification'):
+        reference = evaluation.get(key)
+        if reference != stored.get(key):
+            raise ValueError('benchmark_verifier_reference_changed')
+        if reference is None:
+            continue
+        if not isinstance(reference, dict) or set(reference) != {'path', 'sha256'}:
+            raise ValueError('benchmark_verifier_reference_invalid')
+        path = Path(reference['path']).resolve()
+        if key == 'evidence':
+            if path not in (root / 'verifier/reward.txt', root / 'verifier/reward.json'):
+                raise ValueError('benchmark_verifier_reward_path_changed')
+            verify(reference)
+            references.append(reference)
+            continue
+        if path.parent != root or not re.fullmatch(r'operation-[0-9]+\.json', path.name):
+            raise ValueError('benchmark_verifier_operation_path_changed')
+        operation = json.loads(verify(reference))
+        if not isinstance(operation.get('argv'), list) or operation['argv'][-1:] != ['/tests/test.sh']:
+            raise ValueError('benchmark_verifier_operation_changed')
+        references.append(reference)
+        for stream in ('stdout', 'stderr'):
+            output = operation.get(stream + '_ref')
+            if (not isinstance(output, dict) or set(output) != {'path', 'sha256'}
+                    or Path(output['path']).resolve() != root / (path.stem + '.' + stream + '.txt')):
+                raise ValueError('benchmark_verifier_output_path_changed')
+            verify(output)
+            references.append(output)
+    return references
 
 
 class BenchmarkHost:
@@ -186,6 +231,9 @@ class BenchmarkHost:
         model = result.get('model', {})
         evaluation = result.get('evaluation', {})
         evidence = [file_ref(directory / 'result.json'), manifest['instruction']]
+        diagnostics = _verification_evidence(evaluation, task_id=trial.task_id, split=trial.split,
+                                             source_identity=manifest['source_identity'])
+        evidence.extend(diagnostics)
         if (directory / 'manifest.json').is_file():
             evidence.append(file_ref(directory / 'manifest.json'))
         events = Path(model.get('directory', directory)) / 'events.jsonl'
@@ -209,7 +257,10 @@ class BenchmarkHost:
                'decision_context': {'objective': verify(manifest['instruction']).decode('utf-8'),
                     'state': {'task_id': trial.task_id, 'split': trial.split, 'label': result['label']},
                     'outcome': {'reward': evaluation.get('reward'), 'error': result.get('error'),
-                                'model_finish': model.get('finish_reason')}},
+                                'model_finish': model.get('finish_reason'),
+                                'verifier_status': evaluation.get('status'),
+                                'diagnostic_evidence_ids': {Path(ref['path']).name: 'evidence_' + ref['sha256']
+                                                            for ref in diagnostics}}},
                'evidence': evidence, 'interaction_evidence': []}
         actions = []
         for index, action in enumerate(model.get('tools', [])):
@@ -253,6 +304,8 @@ class BenchmarkHost:
                                        for step in captured['steps']}.values())
             row['steps'] = captured['steps']
             row['capability_trajectory'] = result['capability_trajectory']
+            if result.get('capability_input_projection'):
+                row['capability_input_projection'] = result['capability_input_projection']
             row['observation_level'] = 'actual_runtime_calls_with_host_argument_projection'
         path = directory / 'experience.json'
         save(path, row)
@@ -266,8 +319,13 @@ class BenchmarkHost:
                             label=request['split'])
         if result.get('score') is None:
             raise ValueError('benchmark_trial_unscored:' + result.get('error', result['status']))
+        observation = inspect_benchmark(result['observation'], 'overnight-research')
+        evidence_path = Path(result['record']['path']).parent / 'evaluation-evidence-index.json'
+        save(evidence_path, {'evidence_refs': [result['record'], result['observation'], *observation['evidence']],
+                             'evidence_indexes': [], 'scope': 'original_task_and_verifier_diagnostics_no_oracle'})
         return {'score': result['score'], 'skill_activated': result['skill_activated'],
                 'record': result['record'], 'observation': result['observation'],
+                'evidence_indexes': [file_ref(evidence_path)],
                 'validation_scope': 'fresh_run_of_training_variant',
                 'observed_model_usd_decimal': str(result['model']['observed_model_usd'])
                     if result['model'].get('observed_model_usd') is not None else None}
@@ -353,4 +411,28 @@ def inspect_benchmark(reference, owner):
             if (isinstance(candidate, dict) and candidate.get('format') == 'skillsbench_artifact_index_v1'
                     and candidate.get('phase') != 'pre_verification'):
                 raise ValueError('benchmark_artifact_pre_verification_required')
+    # R3 stored the original trial result but omitted its verifier diagnostics
+    # from the evidence index. Derive this view without changing that record.
+    for evidence in value['evidence'][:]:
+        path = Path(evidence['path']).resolve()
+        if path.name != 'result.json' or path.parent != Path(reference['path']).resolve().parent:
+            continue
+        original = json.loads(verify(evidence))
+        state = value.get('decision_context', {}).get('state', {})
+        if original.get('task_id') != state.get('task_id') or original.get('split') != state.get('split'):
+            raise ValueError('benchmark_original_trial_scope_changed')
+        diagnostics = _verification_evidence(original.get('evaluation', {}), task_id=original['task_id'],
+            split=original['split'], source_identity=value['source_identity'])
+        outcome = value.get('decision_context', {}).get('outcome')
+        if isinstance(outcome, dict):
+            outcome['verifier_status'] = original.get('evaluation', {}).get('status')
+            outcome['diagnostic_evidence_ids'] = {Path(ref['path']).name: 'evidence_' + ref['sha256']
+                                                  for ref in diagnostics}
+        added = [item for item in diagnostics if item not in value['evidence']]
+        if added:
+            value['evidence'].extend(added)
+            value['derived_verifier_evidence'] = {'origin': 'host_fixed_evaluation_fields',
+                'source_record': evidence, 'references': added,
+                'scope': 'original_quality_diagnostics_only_no_post_verification_artifacts'}
+        break
     return value

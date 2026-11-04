@@ -12,6 +12,34 @@ from src.adapters.evolution_benchmark_gene import OWNER, run_gene_benchmark
 from tests.test_capability_motif_learning import corpus
 
 
+def test_native_helper_draft_only_requires_model_decisions():
+    from src.adapters.evolution_benchmark_gene import _native_helper_proposal
+    draft = {'source': 'def run(value):\n    return value\n',
+             'description': 'Synthetic identity diagnostic', 'example_evidence_ids': ['file-a', 'file-b']}
+    result = _native_helper_proposal(draft)
+    assert result['program'] == {'source': draft['source'], 'description': draft['description'],
+                                 'mode': 'json', 'interface': 'function_v1'}
+    assert result['example_evidence_ids'] == draft['example_evidence_ids']
+    assert 'mode' not in draft and 'program' not in draft
+
+
+def test_native_helper_old_protocol_is_preserved_without_overwriting_decisions():
+    from src.adapters.evolution_benchmark_gene import _native_helper_proposal
+    program = {'source': 'def run(value): return value', 'description': 'Diagnostic'}
+    old = {'program': program, 'example_evidence_ids': ['file-a', 'file-b']}
+    result = _native_helper_proposal(old)
+    assert result['program']['interface'] == 'function_v1'
+    assert 'interface' not in program
+    explicit = {'program': {**program, 'mode': 'invalid-explicit-mode'}, 'example_evidence_ids': []}
+    assert _native_helper_proposal(explicit)['program']['mode'] == 'invalid-explicit-mode'
+
+
+def test_native_helper_shape_error_describes_required_model_fields():
+    from src.adapters.evolution_benchmark_gene import _native_helper_proposal
+    with pytest.raises(ValueError, match='source, description, example_evidence_ids'):
+        _native_helper_proposal({'program': {}, 'unrelated': True})
+
+
 def put(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value), encoding='utf-8')
@@ -481,3 +509,206 @@ def test_native_failure_original_evidence_reaches_next_generation(tmp_path):
     inquiry = Investigation(continuation['snapshot'], continuation['entries'], 'skillsbench',
         tmp_path / 'later-native-inquiry', inspector=inspect_benchmark, history=continuation['history'])
     assert 'actual_native_diagnostic_failure' in inquiry.read('evidence', 'evidence_' + reference['sha256'])['content']
+
+
+def prior_runtime_observation(tmp_path, trace, split, *, source=None, name=None):
+    directory = tmp_path / (name or trace['task_id'])
+    reference = put(directory / 'capability-trajectory.json', trace)
+    projection = put(directory / 'capability-input-projection.json', {
+        'snapshot': trace['snapshot'], 'task_id': trace['task_id'],
+        'task_fingerprint': trace['task_fingerprint'], 'trace_inputs': trace['task_input'],
+        'calls': trace['calls']})
+    observation = put(directory / 'experience.json', {
+        'owner': trace['owner'], 'task_id': trace['task_id'],
+        'source_identity': source or trace['task_fingerprint'],
+        'decision_context': {'state': {'split': split, 'task_id': trace['task_id']}},
+        'capability_trajectory': reference, 'capability_input_projection': projection,
+        'evidence': [reference, projection]})
+    return observation
+
+
+def test_recursive_learning_accumulates_original_traces_across_generations(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    prior = [prior_runtime_observation(tmp_path / 'past', traces[0], 'training'),
+             prior_runtime_observation(tmp_path / 'past', traces[2], 'test')]
+    current = [{'split': 'training', 'capability_trajectory': put(tmp_path / 'current.json', traces[1])}]
+    result = gene._recursive_learning(current, tmp_path, prior_observations=prior)
+    assert result['status'] == 'candidates'
+    learned = json.loads(verify(result['result']))
+    assert learned['candidates'][0]['provenance']['training'] == [traces[0]['digest'], traces[1]['digest']]
+    assert learned['candidates'][0]['provenance']['heldout'] == [traces[2]['digest']]
+    assert result['invalid_sources'] == []
+    assert result['certification_scope'] == 'historical_source_equivalence'
+    assert result['independent_quality'] == 'pending_fresh_semantic_task_evaluation'
+    assert len(result['previously_disclosed_heldout']) == 1
+
+
+def test_repeated_history_does_not_increase_independent_training_count(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    one = prior_runtime_observation(tmp_path / 'past', traces[0], 'training')
+    heldout = prior_runtime_observation(tmp_path / 'past', traces[2], 'test')
+    result = gene._recursive_learning([], tmp_path, prior_observations=[one, one, heldout])
+    assert result['status'] == 'pending'
+    assert result['groups'][0]['training'] == 1 and result['groups'][0]['heldout'] == 1
+    assert len(result['duplicates']) == 1
+
+
+def test_canonical_source_is_heldout_and_never_also_training(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    from tests.test_capability_motif_learning import call_trace
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    extra = call_trace(tmp_path / 'fourth', snapshot, [step['capability'] for step in traces[0]['steps']],
+                       'independent-fourth', 15)
+    prior = [prior_runtime_observation(tmp_path / 'past', traces[0], 'training', source='canonical-source'),
+             prior_runtime_observation(tmp_path / 'past', traces[1], 'training', source='other-source')]
+    heldout = prior_runtime_observation(tmp_path / 'past', traces[2], 'test', source='canonical-source')
+    current = [{'split': 'training', 'capability_trajectory': put(tmp_path / 'extra.json', extra)}]
+    pending = gene._recursive_learning([], tmp_path / 'pending', prior_observations=[*prior, heldout])
+    assert pending['status'] == 'pending'
+    assert pending['groups'][0]['training'] == 1 and pending['groups'][0]['heldout'] == 1
+    result = gene._recursive_learning(current, tmp_path, prior_observations=[*prior, heldout])
+    assert result['status'] == 'candidates'
+    learned = json.loads(verify(result['result']))
+    assert traces[0]['digest'] not in learned['candidates'][0]['provenance']['training']
+    assert learned['candidates'][0]['provenance']['heldout'] == [traces[2]['digest']]
+    assert result['duplicates']
+
+
+def test_changed_original_history_reference_is_retained_as_failure(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    original = prior_runtime_observation(tmp_path / 'past', traces[0], 'training')
+    row = json.loads(verify(original))
+    Path(row['capability_trajectory']['path']).write_text('{}')
+    result = gene._recursive_learning([], tmp_path, prior_observations=[original])
+    assert result['status'] == 'pending'
+    assert 'evidence_changed' in result['invalid_sources'][0]['reason']
+    assert result['invalid_sources'][0]['evidence'] == original
+
+
+def test_changed_history_projection_cannot_replace_runtime_arguments(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    original = prior_runtime_observation(tmp_path / 'past', traces[0], 'training')
+    row = json.loads(verify(original))
+    projected = json.loads(verify(row['capability_input_projection']))
+    projected['trace_inputs'] = {'value': 'rewritten'}
+    replacement = put(Path(row['capability_input_projection']['path']), projected)
+    row['evidence'] = [row['capability_trajectory'], replacement]
+    row['capability_input_projection'] = replacement
+    original = put(Path(original['path']), row)
+    result = gene._recursive_learning([], tmp_path, prior_observations=[original])
+    assert result['status'] == 'pending'
+    assert 'original_projection_changed' in result['invalid_sources'][0]['reason']
+
+
+def test_new_snapshot_does_not_rebind_or_starve_original_snapshot_group(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    from tests.test_capability_motif_learning import call_trace
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    refs = [step['capability'] for step in traces[0]['steps']]
+    by_id = {cap['id']: cap for cap in snapshot['capabilities']}
+    needed = set()
+    pending = list(refs)
+    while pending:
+        ref = pending.pop()
+        if ref['id'] not in needed:
+            needed.add(ref['id'])
+            pending.extend(by_id[ref['id']]['dependencies'])
+    next_snapshot = create_capability_snapshot(snapshot['owner'], refs, [by_id[id] for id in sorted(needed)])
+    assert next_snapshot['digest'] != snapshot['digest']
+    newer = [call_trace(tmp_path / 'new-snapshot', next_snapshot, refs, 'new-task-' + str(i), 20 + i)
+             for i in range(3)]
+    prior = [prior_runtime_observation(tmp_path / 'past', trace, 'training' if i < 2 else 'test')
+             for i, trace in enumerate(traces)]
+    current = [{'split': 'training' if i < 2 else 'test',
+                'capability_trajectory': put(tmp_path / ('new-' + str(i) + '.json'), trace)}
+               for i, trace in enumerate(newer)]
+    incomplete = gene._recursive_learning(current[:1], tmp_path / 'incomplete', prior_observations=prior[:1] + prior[2:])
+    assert incomplete['status'] == 'pending'
+    assert len(incomplete['groups']) == 2
+    result = gene._recursive_learning(current, tmp_path / 'complete', prior_observations=prior)
+    assert result['status'] == 'candidates'
+    assert len(result['groups']) == 2
+    assert {group['snapshot_sha256'] for group in result['groups']} == {snapshot['digest'], next_snapshot['digest']}
+    assert all(group['status'] == 'candidates' for group in result['groups'])
+    calls = []
+    def publish(candidate, references, *, materials, output):
+        calls.append(candidate)
+        return {'status': 'failed' if traces[0]['digest'] in candidate['provenance']['training'] else 'pending'}
+    outcomes = gene._recursive_learning(current, tmp_path / 'publication', prior_observations=prior,
+                                        materials=object(), publish=publish)
+    assert len(calls) == 2
+    assert {group['status'] for group in outcomes['groups']} == {'failed', 'pending'}
+    assert outcomes['status'] == 'pending'
+
+
+def test_r3_history_recovers_only_already_indexed_original_projection(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    prior = []
+    for i, trace in enumerate(traces):
+        reference = prior_runtime_observation(tmp_path / 'past', trace, 'training' if i < 2 else 'test')
+        row = json.loads(verify(reference))
+        row.pop('capability_input_projection')
+        prior.append(put(Path(reference['path']), row))
+    result = gene._recursive_learning([], tmp_path, prior_observations=prior)
+    assert result['status'] == 'candidates'
+    assert result['invalid_sources'] == []
+
+
+def test_later_generation_passes_original_history_to_recursive_learning_without_rerunning(tmp_path, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    first = run(tmp_path, Host(tmp_path / 'trials', action='no_change'))
+    continuation = json.loads(verify(first['continuation']))
+    prior = [entry['evidence'] for entry in continuation['entries']]
+    original = gene._recursive_learning
+    observed = []
+    def learn(runs, directory, **kwargs):
+        observed.append(kwargs['prior_observations'])
+        return original(runs, directory, **kwargs)
+    monkeypatch.setattr(gene, '_recursive_learning', learn)
+    host = Host(tmp_path / 'later-trials', action='no_change')
+    later = gene.run_gene_benchmark(host, development_tasks=['later-a', 'later-b'],
+        validation_tasks=['later-validation'], test_tasks=['later-test'], output=tmp_path / 'later',
+        prior_observations=prior, history=continuation['history'])
+    assert observed == [prior]
+    assert len(host.trials) == 3
+    assert all(trial['task_id'].startswith('later-') for trial in host.trials)
+    status = json.loads(verify(json.loads(verify(later['continuation']))['history'][-1]))
+    assert any(Path(ref['path']).name == 'recursive-learning-status.json' for ref in status['sources']['recursive'])
+
+
+def test_existing_independent_experiences_allow_investigation_without_repeating_development(tmp_path):
+    original = Host(tmp_path / 'original')
+    prior = [original.trial(task, split='training')['observation'] for task in ('original-a', 'original-b')]
+    host = Host(tmp_path / 'later-trials', action='no_change')
+    result = run_gene_benchmark(host, development_tasks=[], validation_tasks=['fresh-validation'],
+        test_tasks=['fresh-test'], prior_observations=iter(prior), output=tmp_path / 'later')
+    assert result['development'] == []
+    assert result['investigation']['status'] == 'no_change'
+    assert len(host.agent_calls) == 1
+    assert host.agent_calls[0]['initial_context']['experiences']['independent_sources'] == 2
+    assert [row['task_id'] for row in host.trials] == ['fresh-test']
+    effective = json.loads((tmp_path / 'later/effective.json').read_text())
+    assert effective['development_tasks'] == [] and effective['prior_observations'] == prior
+
+
+@pytest.mark.parametrize('count', [0, 1, 2])
+def test_skipping_development_still_requires_two_independent_original_sources(tmp_path, count):
+    original = Host(tmp_path / 'original')
+    one = original.trial('same-source', split='training')['observation']
+    host = Host(tmp_path / 'later-trials', action='no_change')
+    with pytest.raises(ValueError, match='task_partition_invalid' if count == 0 else 'independent_development_required'):
+        run_gene_benchmark(host, development_tasks=[], validation_tasks=['fresh-validation'],
+            test_tasks=['fresh-test'], prior_observations=[one] * count, output=tmp_path / 'later')
+    assert host.trials == [] and host.agent_calls == []

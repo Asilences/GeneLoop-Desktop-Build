@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 import shutil
 
-from .capability_feedback import file_ref
+from .capability_feedback import file_ref, verify
 from .capability_improvement import save
 
 
@@ -26,6 +26,10 @@ Inspect the supplied optimization workspace and its archive. Diagnose the
 parent from relevant training rollouts and earlier unsuccessful revisions.
 Use the available rollout and archive tools to investigate concrete actions,
 results, and recovery. Check the underlying evidence when a summary is unclear.
+Use read_evidence with an evidence_id from the host's evidence_refs to inspect
+original task trajectories, tool results and verifier diagnostics in pages.
+Host evidence indexes can reveal further authorized records. Reference answers
+and oracle solutions are unavailable in this shared comparison protocol.
 
 Create one or two complete skill revisions in an iteration when a useful
 change is supported by evidence. Describe the observation, the change, the
@@ -90,7 +94,10 @@ def create_seed_meta_skill(directory):
           'rewards. Meta scores are mean improvements of the task skills produced '
           'by inner optimizations over their initial validation scores. Original '
           'verifier outcomes, activation evidence, failures, and costs remain '
-          'available in the returned records.\n')
+          'available through read_evidence using the sha256 evidence_id in '
+          'host-provided evidence_refs. Read long records in pages. Only trusted '
+          'host evidence indexes authorize additional records. Oracle and '
+          'reference solutions are unavailable.\n')
     _text(directory / 'references/reviewer-policy.md',
           '# Independent review\n\nReview the parent, candidate, proposal, '
           'evaluation, and supporting rollout without optimizer deliberations. '
@@ -195,6 +202,8 @@ class SkillInfinityRun:
         self.iteration_created = 0
         self.controller_reads = []
         self.controller_observations = []
+        self.evidence_refs = {}
+        self.evidence_indexes = set()
         self._install('seed', seed_skill, None)
         save(self.directory / 'context.json', {'format': REPRODUCTION,
              'paper': PAPER, 'optimization_target': self.target,
@@ -224,6 +233,10 @@ class SkillInfinityRun:
             _tool('inspect_archive', 'Read optimization history, scores and remaining candidates.'),
             _tool('read_skill', 'Read a skill resource. controller reads the installed meta-skill.',
                   {'node_id': identity, 'resource': identity}, ('node_id', 'resource')),
+            _tool('read_evidence', 'Read a page of original host-authorized evidence by sha256. '
+                  'Trusted evidence indexes reveal further authorized references. No arbitrary paths.',
+                  {'evidence_id': identity, 'offset': {'type': 'integer', 'minimum': 0},
+                   'limit': {'type': 'integer', 'minimum': 1, 'maximum': 24000}}, ('evidence_id',)),
             _tool('rollout', 'Execute training trials and obtain their original evidence.',
                   {'node_id': identity}, ('node_id',)),
             _tool('create_candidate', 'Copy an eligible skill parent and apply complete resource replacements.',
@@ -245,7 +258,41 @@ class SkillInfinityRun:
                 'parent': self.parent, 'iteration': self.iteration,
                 'remaining_candidates': self.budget - self.created,
                 'nodes': copy.deepcopy(list(self.nodes.values())),
-                'decisions': copy.deepcopy(self.decisions)}
+                'decisions': copy.deepcopy(self.decisions),
+                'evidence_refs': copy.deepcopy(list(self.evidence_refs.values()))}
+
+    def _register_evidence(self, result):
+        # Only explicit host fields authorize reads. Raw trajectories may contain
+        # model-authored path/hash pairs and never extend this allowlist.
+        for field in ('evidence_refs', 'evidence_indexes'):
+            for reference in result.get(field, []):
+                if not isinstance(reference, dict) or set(reference) != {'path', 'sha256'}:
+                    raise ValueError('skill_host_evidence_reference_invalid')
+                verify(reference)
+                self.evidence_refs[reference['sha256']] = copy.deepcopy(reference)
+                if field == 'evidence_indexes':
+                    self.evidence_indexes.add(reference['sha256'])
+
+    def _read_evidence(self, evidence_id, offset=0, limit=12000):
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 24000:
+            raise ValueError('skill_evidence_page_invalid')
+        if evidence_id not in self.evidence_refs:
+            raise ValueError('skill_evidence_not_authorized')
+        reference = self.evidence_refs[evidence_id]
+        content = verify(reference).decode('utf-8')
+        discovered = []
+        if evidence_id in self.evidence_indexes:
+            index = json.loads(content)
+            if not isinstance(index, dict):
+                raise ValueError('skill_host_evidence_index_invalid')
+            self._register_evidence(index)
+            discovered = [copy.deepcopy(reference) for field in ('evidence_refs', 'evidence_indexes')
+                          for reference in index.get(field, [])]
+        end = min(len(content), offset + limit)
+        return {'evidence': copy.deepcopy(reference), 'content': content[offset:end],
+                'offset': offset, 'total_characters': len(content),
+                'next_offset': end if end < len(content) else None,
+                'discovered_evidence_refs': discovered}
 
     def _read_skill(self, node_id, resource):
         if node_id == 'controller':
@@ -278,6 +325,7 @@ class SkillInfinityRun:
             if before != _package(node['skill_directory'])['digest']:
                 raise ValueError('skill_evaluation_modified_package')
             _score(result)
+            self._register_evidence(result)
             node[field] = result
             node['evaluated_digest'] = before
             if split == 'validation':
@@ -371,6 +419,7 @@ class SkillInfinityRun:
     def dispatch(self, name, arguments):
         """Expose host tools to the original model session; retain errors too."""
         operations = {'inspect_archive': self.archive, 'read_skill': self._read_skill,
+                      'read_evidence': self._read_evidence,
                       'rollout': lambda node_id: self._evaluate(node_id, 'training'),
                       'create_candidate': self._create,
                       'evaluate_candidate': lambda node_id: self._evaluate(node_id, 'validation'),
@@ -470,6 +519,8 @@ def refine_meta_skill(seed_meta_skill, optimization_tasks, workspace, *, call_ag
 
     def evaluate_meta(request):
         rows = []
+        evidence_refs = []
+        evidence_indexes = []
         for index, task in enumerate(optimization_tasks):
             output = Path(request['output_directory']) / ('inner-' + str(index))
             inner = optimize_task_skill(task['seed_skill'], output, call_agent=call_agent,
@@ -477,6 +528,13 @@ def refine_meta_skill(seed_meta_skill, optimization_tasks, workspace, *, call_ag
                 meta_skill=request['skill_directory'], candidate_budget=inner_candidate_budget)
             if inner['status'] != 'completed':
                 raise ValueError('skill_meta_inner_optimization_failed:' + task['id'])
+            evidence_refs.append(file_ref(output / 'result.json'))
+            for pattern in ('tool-calls/*.json', 'request-*.json', 'response-*.json'):
+                evidence_refs.extend(file_ref(path) for path in sorted(output.glob(pattern)))
+            for node in inner['archive']['nodes']:
+                for field in ('rollout', 'evaluation'):
+                    evidence_refs.extend(node.get(field, {}).get('evidence_refs', []))
+                    evidence_indexes.extend(node.get(field, {}).get('evidence_indexes', []))
             initial = _score(inner['archive']['nodes'][0]['evaluation'])
             gain = Decimal(inner['score']) - initial
             rows.append({'task_id': task['id'], 'initial_score': str(initial),
@@ -494,6 +552,7 @@ def refine_meta_skill(seed_meta_skill, optimization_tasks, workspace, *, call_ag
             activated = False
         return {'score': str(sum((Decimal(row['gain']) for row in rows), Decimal(0)) / len(rows)),
                 'skill_activated': activated, 'optimization_results': rows,
+                'evidence_refs': evidence_refs, 'evidence_indexes': evidence_indexes,
                 'activation_basis': 'inner_controller_observations',
                 'observed_model_usd_decimal': None, 'cost_accounting': 'original_caller_ledger'}
 

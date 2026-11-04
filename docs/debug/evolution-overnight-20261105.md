@@ -35,3 +35,19 @@ SkillEvolver数据版本为`16f3cc6392a5bb296231fc352ed0654312caab4e`，SkillsBe
 任务原始reward、论文positive-reward指标及完整质量门槛分别报告。调查、生成、学习、验证、review、失败和最终测试费用完整保留，一次性投入与后继运行分开。
 
 主结果需要真实模型与独立评分。演化成果可见、读取、实际采用、执行节省及后继构造收益分别记录。失败、未激活、`no_change`及未知费用同样进入后续分析。
+
+## R3真实调查与R4修复
+
+R3源码为`7d5a811b8796b04670dc8acb48830b6bd506c89a`，完整归档SHA256为`a323aa8e912472b5785767c8153e7bfcf174c0455a7a5323d05960ea0f6dba79`，Linux252项专项通过。
+
+`gene-manufacturing-family-001`两个development任务均完成原评分。Codebook为14/16项通过，未通过语义支持比例及station_scope，119请求/USD0.16313097。Equipment为3/4项通过，TAL计算未过，13请求/USD0.01637601。原二值reward均为0，未更改原评分标准。
+
+随后Evolution自主调查40请求，53次工具操作，11次提交全部因证据ID或候选格式拒绝，未产生新能力或策略准入。调查代理精确计量USD0.06947338，142.35秒。首个输入1905 tokens，单次最大112677、中位54625.5；累计输入2314072 tokens为40请求之和，包含缓存命中2221696。初始概要984 UTF8字节，主要膨胀发生在后续证据读取和工具历史。
+
+定位与修复集中在通用接缝。宿主补齐已选观察对应的scope/evidence_ids，模型只生成实际改进决策；原生helper固定协议由宿主补齐；提交回执不重复回显源程序，完整原件按需读取。原评分操作和stdout/stderr明确进入可读取证据，Skill∞优化器新增同范围read_evidence，双方保留无oracle约定。新源码继续复用原两条真实经历，原始失败和费用保留。
+
+R3最终canonical FJSP在基础镜像下载阶段失败，模型请求0、质量未知。已按原Dockerfile补齐python:3.12-slim并完成353.01秒环境预热，见[环境记录](skillsbench-adapter-20261105.md)。`baseline-manufacturing-family-002`在公共依赖安装120秒准备时限失败，模型请求0。R4将该准备阶段的apt时限设为600秒，原agent600秒与verifier300秒保持。
+
+跨代学习现累计原真实调用并保留split/source/snapshot，逐组交原learner；历史canonical重放只作历史source-equivalence，新的语义质量继续等待新任务。汇总修复了失败模型reward可能被误计full-quality的问题，并将实际依赖预热配置纳入配对条件。
+
+独立草稿[PR156](https://github.com/jingyio/GeneLoop/pull/156)已创建。四个GitHub job在启动前因账号付款或Actions消费额度阻挡，steps均为空，未执行远程测试。需要账号管理员处理Billing后重跑，不能把该状态解释为测试失败或通过。服务器与本地验证继续保留独立证据。

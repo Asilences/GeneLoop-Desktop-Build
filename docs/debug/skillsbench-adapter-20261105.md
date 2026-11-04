@@ -51,6 +51,14 @@ SkillEvolver固定提交为`16f3cc6392a5bb296231fc352ed0654312caab4e`，其准�
 
 V100另完成真实Docker诊断。独立容器内命令先写部分文件再等待，宿主命令达到1秒限时后停止容器，在stopped状态复制原文件，重新启动后核对旧进程未继续写后续文件，检查通过。唯一诊断容器已清理，无模型调用或服务改动。私有结果为`.local/debug/skillsbench-timeout-20261105/v100-docker-diagnostic.json`。
 
+## canonical FJSP环境补齐
+
+R3正式GeneLoop终测的首次构建在0.72秒内失败。原日志显示失败发生于`FROM python:3.12-slim`，DockerHub连接被拒绝。训练变体使用`python:3.11-slim`，因此此前训练镜像缓存没有覆盖canonical基础镜像。构建尚未进入COPY步骤，没有模型请求。
+
+通过既有公共`docker.m.daocloud.io`镜像源缓存原`python:3.12-slim`同名tag，未覆盖已有tag。基础镜像RepoDigest为`sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30`，实际Python3.12.16。随后在独立预检目录以原Dockerfile和600秒构建限时构建，353.01秒成功，成品镜像为`sha256:7366f509bda5bf955d36679011b15683fd4593a7ae7e0e2508f7a62f0b98e624`，实际pandas2.2.3、pytest8.4.1。两侧正式终测可使用同一缓存层。
+
+原Dockerfile SHA为`de08dbad0830afbc282ba0783e11d4e3c88a4fa6ce46d2e5729839c4a8313623`。R3代码、原题面、tests和首次失败记录均保留。本次环境诊断没有运行模型或oracle。服务器证据目录为`threejs-preflight/runs/canonical-fjsp-environment-dcc304a3118e46db90afa18959be2f5f`，本地构建证据为`.local/debug/canonical-fjsp-environment-20261105/`。
+
 评分同时保留数值与状态。原dialogue评分可产生部分reward，论文avg成功条件为reward大于零，完整通过情况应单列。缺失、非法或评分运行失败保留未知。
 
 ## 验证状态

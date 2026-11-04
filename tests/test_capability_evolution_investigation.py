@@ -5,6 +5,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from src.adapters.capability_evolution_investigation import run_investigation
+from src.adapters.capability_feedback import verify
 from tests.test_capability_investigation import data, make
 
 
@@ -123,6 +124,21 @@ def test_missing_handler_remains_pending(tmp_path, data):
     assert result['submissions'][0]['reason'] == 'existing_host_admission_unavailable'
 
 
+def test_submission_reply_avoids_echoing_model_source_and_retains_original(tmp_path, data):
+    def agent(request, dispatch):
+        identifiers = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        proposed = candidate(identifiers)
+        reply = dispatch('evolution_submit', {'candidate': proposed, 'observation_ids': identifiers})
+        assert 'candidate' not in reply and 'validated_candidate' not in reply
+        full = dispatch('evolution_read', {'kind': 'evidence', 'id': reply['evidence_id'], 'limit': 100})
+        assert json.loads(full['content'])['candidate'] == proposed
+        assert json.loads(verify(reply['record']))['candidate'] == proposed
+        dispatch('evolution_finish', {'reason': 'Original proposal remains available on demand'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'run')
+    assert result['submissions'][0]['status'] == 'pending'
+
+
 def test_tool_error_can_be_corrected_in_same_session(tmp_path, data):
     def agent(request, dispatch):
         error = dispatch('evolution_read', {'kind': 'experience', 'id': 'unknown'})
@@ -162,3 +178,86 @@ def test_model_transport_failure_keeps_existing_tool_records(tmp_path, data):
     assert record['status'] == 'failed'
     assert len(record['tool_calls']) == 1
     assert record['submissions'] == []
+
+
+@pytest.mark.parametrize('omitted', [('scope',), ('evidence_ids',), ('scope', 'evidence_ids')])
+def test_host_binds_omitted_redundant_candidate_fields(tmp_path, data, omitted):
+    received = []
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        proposal = candidate(ids)
+        for key in omitted:
+            proposal.pop(key)
+        tool = next(tool for tool in request['tools'] if tool['name'] == 'evolution_submit')
+        arguments = {'candidate': proposal, 'observation_ids': ids}
+        Draft202012Validator(tool['parameters']).validate(arguments)
+        result = dispatch('evolution_submit', arguments)
+        assert result['status'] == 'submitted'
+        recorded = json.loads(verify(result['record']))
+        assert recorded['candidate'] == proposal
+        assert recorded['validated_candidate']['scope'] == 'study'
+        assert recorded['validated_candidate']['evidence_ids'] == ids
+        assert all(key not in proposal for key in omitted)
+        dispatch('evolution_finish', {'reason': 'Host bound only omitted context fields'})
+        return {}
+    def handler(proposal, context, directory):
+        received.append((proposal, context))
+        return {'status': 'pending'}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(received) == 1
+    assert result['submissions'][0]['validated_candidate']['scope'] == 'study'
+
+
+@pytest.mark.parametrize('field,value,error', [
+    ('scope', 'foreign-scope', 'scope_conflict'),
+    ('evidence_ids', ['evidence_file_sha'], 'cross_task_support_required'),
+    ('evidence_ids', None, 'cross_task_support_required')])
+def test_explicit_conflicts_are_rejected_with_usable_observation_ids(tmp_path, data, field, value, error):
+    received = []
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        proposal = candidate(ids)
+        proposal[field] = value
+        result = dispatch('evolution_submit', {'candidate': proposal, 'observation_ids': ids})
+        assert result['status'] == 'rejected' and error in result['reason']
+        assert json.loads(verify(result['record']))['candidate'][field] == value
+        assert set(ids) <= set(result['diagnostic']['available_observation_ids'])
+        assert result['diagnostic']['expected_scope'] == 'study'
+        assert 'evidence_*' in result['diagnostic']['message']
+        dispatch('evolution_finish', {'reason': 'Preserve the explicit invalid value'})
+        return {}
+    run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': lambda *args: received.append(args)}, output=tmp_path / 'run')
+    assert received == []
+
+
+def test_file_ids_in_observation_selection_return_recoverable_feedback(tmp_path, data):
+    def agent(request, dispatch):
+        error = dispatch('evolution_submit', {'candidate': candidate([]), 'observation_ids': ['evidence_raw_file']})
+        assert error['status'] == 'rejected'
+        assert error['diagnostic']['available_observation_ids']
+        ids = error['diagnostic']['available_observation_ids'][:2]
+        proposal = candidate(ids)
+        proposal.pop('scope')
+        proposal.pop('evidence_ids')
+        corrected = dispatch('evolution_submit', {'candidate': proposal, 'observation_ids': ids})
+        assert corrected['status'] == 'pending'
+        dispatch('evolution_finish', {'reason': 'Corrected IDs in the same original session'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'run')
+    assert [row['status'] for row in result['submissions']] == ['rejected', 'pending']
+
+
+def test_host_binding_preserves_cross_task_independence_check(tmp_path, data):
+    def agent(request, dispatch):
+        ids = [dispatch('evolution_search', {'kind': 'experience'})['items'][0]['id']]
+        proposal = candidate(ids)
+        proposal.pop('scope')
+        proposal.pop('evidence_ids')
+        result = dispatch('evolution_submit', {'candidate': proposal, 'observation_ids': ids})
+        assert result['status'] == 'rejected'
+        assert 'cross_task_support_required' in result['reason']
+        dispatch('evolution_finish', {'reason': 'One experience is insufficient for generalization'})
+        return {}
+    run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'run')

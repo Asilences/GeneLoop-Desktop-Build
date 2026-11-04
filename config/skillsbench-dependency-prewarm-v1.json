@@ -11,7 +11,9 @@
     "pytest-json-ctrf": "0.3.5",
     "apt": "original_signed_repository_versions_recorded_after_installation"
   },
-  "environment_keys": ["UV_DOWNLOAD_URL"],
+  "environment_keys": [
+    "UV_DOWNLOAD_URL"
+  ],
   "verifier_variants": {
     "ca8535246a4cab5170bb3147d4e38ecd8af3b2d1962cfa647bf3069daacd05c0": {
       "id": "apt-curl-uv097-pytest841-ctrf035-pandas",
@@ -31,12 +33,12 @@
     {
       "id": "apt-lists",
       "command": "apt-get update",
-      "timeout_seconds": 340
+      "timeout_seconds": 600
     },
     {
       "id": "apt-packages",
       "command": "apt-get install -y --no-install-recommends curl ca-certificates",
-      "timeout_seconds": 120
+      "timeout_seconds": 600
     },
     {
       "id": "uv",
