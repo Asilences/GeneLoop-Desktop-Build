@@ -63,6 +63,9 @@ def test_program_from_tasks_certifies_then_future_actual_executions_require_lowe
     selected=prepare(owned,singles=singles,source_mode='execute' if source_kind=='single_execute' else 'baseline')
     assert selected['phase']=='probation'
     out,store,req=owned
+    public=worker.read(store/'capability/status.json')
+    assert public['status']=='material_registered' and public['native_materials']==1
+    assert public['model_construction_enabled'] is False and public['published_roots']==0
     library=store/selected['library'];program=worker.read(library)['programs'][0]
     assert program['certification']['distinct_inputs']==2 and program['certification']['semantic_quality_accepted'] is False
     if singles:
