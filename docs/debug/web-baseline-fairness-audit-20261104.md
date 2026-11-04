@@ -225,4 +225,6 @@ Video 的额外四工具是已发布的学习程序接口，属于现有方法�
 - 本轮交付为 PR。生产服务与远端 Web 未重启或切换版本。当前验证覆盖本地原生插件、服务和浏览器组件，尚未进行部署后的真实浏览器与模型成品验收。
 - 私有成功及失败日志包括 `pr-full-regression.log`、`pr-regression-fixes-native.log`、`pr-node-final-canonical.log`、`pr-smoke.log`、`pr-motif-check.log` 和 `library-export-final.json`，均集中保存并保持忽略。
 
-首次向仓库旧地址推送收到 GitHub `failure in commit_refs`，已确认远端没有形成分支或PR，改用当前仓库地址重试。原错误保留在本轮操作记录中。
+首次向仓库旧地址推送收到 GitHub `failure in commit_refs`，已确认远端没有形成分支或PR，核对当前仓库标识后重试成功。原错误保留在本轮操作记录中。
+
+源码提交为 `1f416a87`，已推送并创建[PR #134](https://github.com/jingyio/GeneLoop/pull/134)。本次文档补记后以PR最新head为准，尚未合并或部署。观察时Linux/Windows的push与PR四项CI正在运行，未宣称远程通过。
