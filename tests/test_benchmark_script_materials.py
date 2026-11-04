@@ -328,3 +328,24 @@ def test_original_certifier_input_dependence_rejection_is_reported_without_fake_
     assert 'line' not in card and 'column' not in card
     assert any(Path(ref['path']).name == 'certification.json' for ref in caught.value.evolution_evidence_refs)
     assert service.materials.records() == []
+
+
+@pytest.mark.parametrize('literal', ['InstancedMesh', 'x' * 200])
+def test_native_literal_feedback_retains_bounded_original_value_without_inventing_location(tmp_path, data, literal):
+    service, program, examples, source, _ = data
+    def reject(program, cases, directory, source_evidence, **options):
+        put(directory / 'certification.json', {'published': 0, 'rejected': [
+            {'id': 'diagnostic-program', 'reason': 'task_specific_literal_requires_binding',
+             'diagnostic': {'literal': literal, 'source_task': 'source', 'heldout_task': 'heldout'}}]})
+        raise ValueError('frontier_native_no_certified_program')
+    service._learn = reject
+    with pytest.raises(ValueError, match='no_certified_program') as caught:
+        service.acquire(program, examples, source, 'literal-feedback')
+    card = caught.value.evolution_diagnostic['native_diagnostics'][0]
+    assert card['literal'] == literal[:160]
+    assert card['error'] == 'task_specific_literal_requires_binding'
+    assert 'line' not in card and 'column' not in card
+    ref = next(ref for ref in caught.value.evolution_evidence_refs if Path(ref['path']).name == 'certification.json')
+    assert json.loads(verify(ref))['rejected'][0]['diagnostic']['literal'] == literal
+    resumed = service.acquire(program, examples, source, 'literal-feedback')
+    assert resumed['diagnostic']['native_diagnostics'][0]['literal'] == literal[:160]

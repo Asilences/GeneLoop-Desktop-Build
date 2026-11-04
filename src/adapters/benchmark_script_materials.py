@@ -118,6 +118,8 @@ def _native_failure_feedback(directory, error):
     for value, reference in diagnostics[:4]:
         card = {key: value[key] for key in ('kind', 'error', 'source_space', 'line', 'column') if key in value}
         source_line = value.get('source_line')
+        if isinstance(value.get('literal'), str):
+            card['literal'] = value['literal'][:160]
         if isinstance(source_line, str):
             card.update(source_line=source_line[:240], source_line_characters=len(source_line))
         if reference is not None:

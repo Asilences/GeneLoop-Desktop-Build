@@ -1580,6 +1580,8 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 原生材料后端提供`evolution_example_files`分页查询可用于认证的执行前文件，返回合法文件ID、相对路径和来源观察，不默认发送文件正文。候选的格式、来源与权限预检通过后才计入实际候选构造次数。原始证据继续通过`evolution_read`按需读取。
 
+`evolution_submit`可用`repair_of`指向此前真实构造失败的提交，保留原scope及观察集合。单轮最多两个独立候选，每个候选累计最多两次真实修订，分叉引用不重置次数。格式或来源预检失败保留诊断，实际构造及每次修订均沿原认证和费用归属记录。
+
 任务工具`capability_call.input_binding`沿用原Binding，将前次真实调用结果传入后继能力。可选`export_result={path:[结果字段],container_path:绝对容器路径}`把结果直接交付当前任务文件并返回摘要，普通调用继续返回结果。文件交接失败单独记录，保留原Runtime执行状态与参数流。见[交接记录](debug/benchmark-capability-result-export-20261105.md)。
 
 跨代学习逐条按原快照检查真实轨迹，再以实际执行的能力和递归依赖版本形成学习输入。无关能力新增不会拆散同版本图，发布前仍按当前catalog独立重核。原快照和回执完整保留。原生认证拒绝的行列、短片段及诊断FileRef会返回同轮调查，原文件可按需读取，见[闭包诊断](debug/recursive-snapshot-closure-20261105.md)。

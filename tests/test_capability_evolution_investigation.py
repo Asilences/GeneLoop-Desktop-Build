@@ -414,3 +414,129 @@ def test_changed_native_exception_evidence_is_reported_without_hiding_original_r
     result = run_investigation(make(tmp_path, data), call_agent=agent,
         handlers={'construction_strategy': handler}, output=tmp_path / 'run')
     assert result['submissions'][0]['evidence_refs'] == [reference]
+
+
+def test_failed_root_can_be_repaired_twice_without_consuming_other_root(tmp_path, data):
+    calls = []
+    def handler(*args):
+        calls.append(args)
+        if len(calls) == 1:
+            raise ValueError('native_source_rejection')
+        return {'status': 'rejected', 'reason': 'independent_check_failed'}
+    def agent(request, dispatch):
+        assert request['initial_context']['candidate_repair_limit_per_root'] == 2
+        assert 'Never encode or concatenate rejected literals' in request['prompt']
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        first = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        assert first['root_index'] == 0 and first['repair_attempt'] == 0
+        for expected in (1, 0):
+            revised = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': 0})
+            assert revised['remaining_candidate_evaluations'] == 1
+            assert revised['remaining_candidate_repairs'] == {'0': expected}
+        # Referencing a different failed revision cannot reset the root allowance.
+        failed = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': 1})
+        assert 'repair_limit_reached' in failed['reason']
+        second = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        assert second['remaining_candidate_evaluations'] == 0
+        repaired = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': second['index']})
+        assert repaired['remaining_candidate_evaluations'] == 0
+        assert repaired['remaining_candidate_repairs'] == {'0': 0, '4': 1}
+        dispatch('evolution_finish', {'reason': 'Root and repair allowances are separate'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(calls) == 5
+    assert [row.get('repair_attempt') for row in result['submissions']] == [0, 1, 2, None, 0, 1]
+    assert result['submissions'][1]['repair_of'] == 0
+    assert result['submissions'][0]['reason'] == 'ValueError:native_source_rejection'
+
+
+@pytest.mark.parametrize('prior_status', ['evaluated', 'deferred'])
+def test_repair_requires_failed_actual_evaluation(tmp_path, data, prior_status):
+    calls = []
+    def handler(*args):
+        calls.append(args)
+        return {'status': prior_status}
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        original = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        failed = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': original['index']})
+        assert 'requires_failed_host_evaluation' in failed['reason']
+        assert failed['remaining_candidate_repairs'] == {'0': 2}
+        dispatch('evolution_finish', {'reason': 'No repair for accepted or deferred host results'})
+        return {}
+    run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize('repair_of', [-1, True, None, 1, '0'])
+def test_invalid_repair_reference_retains_original_allowance(tmp_path, data, repair_of):
+    calls = []
+    def handler(*args):
+        calls.append(args)
+        return {'status': 'failed'}
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        failed = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': repair_of})
+        assert 'repair_reference_invalid' in failed['reason']
+        assert failed['remaining_candidate_repairs'] == {'0': 2}
+        dispatch('evolution_finish', {'reason': 'Invalid references do not allocate actual evaluations'})
+        return {}
+    run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(calls) == 1
+
+
+def test_format_failure_cannot_be_relabelled_as_actual_repair(tmp_path, data):
+    calls = []
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        invalid = candidate(ids)
+        invalid.pop('verification')
+        dispatch('evolution_submit', {'candidate': invalid, 'observation_ids': ids})
+        failed = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': 0})
+        assert 'requires_failed_host_evaluation' in failed['reason']
+        assert failed['remaining_candidate_evaluations'] == 2
+        dispatch('evolution_finish', {'reason': 'Format correction can be resubmitted without repair_of'})
+        return {}
+    run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': lambda *args: calls.append(args)}, output=tmp_path / 'run')
+    assert calls == []
+
+
+@pytest.mark.parametrize('change', ['observations', 'scope', 'preflight'])
+def test_repair_keeps_context_and_preflight_failures_do_not_spend_revision(tmp_path, data, change):
+    calls = []
+    def handler(*args):
+        calls.append(args)
+        return {'status': 'failed'}
+    def preflight(proposal, context):
+        if proposal['burden'] == 'invalid native shape':
+            raise ValueError('original_native_preflight_rejected')
+    handler.preflight = preflight
+    def agent(request, dispatch):
+        all_ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items']]
+        ids = all_ids[:2]
+        dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        selected = all_ids[1:] if change == 'observations' else ids
+        proposed = candidate(selected)
+        if change == 'scope':
+            proposed['scope'] = 'another-scope'
+        if change == 'preflight':
+            proposed['burden'] = 'invalid native shape'
+        reply = dispatch('evolution_submit', {'candidate': proposed, 'observation_ids': selected, 'repair_of': 0})
+        assert reply['status'] == 'rejected'
+        expected = {'observations': 'evolution_repair_context_changed', 'scope': 'scope_conflict',
+                    'preflight': 'original_native_preflight_rejected'}[change]
+        assert expected in reply['reason']
+        assert reply['remaining_candidate_evaluations'] == 1
+        assert reply['remaining_candidate_repairs'] == {'0': 2}
+        repaired = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': 0})
+        assert repaired['remaining_candidate_repairs'] == {'0': 1}
+        dispatch('evolution_finish', {'reason': 'Original context and host preflight remain authoritative'})
+        return {}
+    run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(calls) == 2
