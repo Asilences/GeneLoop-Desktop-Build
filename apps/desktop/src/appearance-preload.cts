@@ -38,6 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
 contextBridge.exposeInMainWorld('desktopWorkspaces', Object.freeze({
   available: process.platform === 'win32',
   list: (accountId: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'list', accountId),
+  openTask: () => ipcRenderer.invoke('geneloop:local-workspaces', 'open-task'),
   pick: () => ipcRenderer.invoke('geneloop:local-workspaces', 'pick'),
   save: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'save', value),
   run: (id: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'run', id),

@@ -71,10 +71,18 @@ function restoreLoginPreference(){
   $('remember-login').checked=localStorage.getItem('geneloop.desktop.remember-login')!=='off';
 }
 function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;localWorkspaceId=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();newWorkspaceDrafts.clear();activeWorkspaceDraft=null;pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();restoreLoginPreference();screen('auth');$('login-pass').value='';}
-async function initialize(){screen('loading');$('connect-retry').hidden=true;$('loading-message').textContent='正在读取账号与工作空间…';try{
+$('open-local-task').onclick=async event=>{
+  const button=event.currentTarget;
+  button.disabled=true;
+  try{await localBridge?.openTask();}
+  catch(error){fail(error);}
+  finally{button.disabled=false;}
+};
+async function initialize(){screen('loading');$('connect-retry').hidden=true;$('open-local-task').hidden=true;$('loading-message').textContent='正在读取账号与工作空间…';try{
     let account;
     try{account=await request('/api/account/me');}catch(error){if(error.status===404||error.code==='http/200'){await rpc('session/list',{});account={user:{id:'standalone-host',displayName:'工作空间',standalone:true}};}else throw error;}
     if(!account.user){showAuth();return;}state.user=account.user;$('account-name').textContent=account.user.displayName;
+    $('open-local-task').hidden=!localBridge||account.user.standalone===true;
     if(!account.user.standalone){for(let attempt=0;attempt<90;attempt++){const ready=await request('/api/workspace/ready');if(ready.ready)break;if(attempt===89)throw Error('工作空间启动尚未完成，请稍后重连。');$('loading-message').textContent='服务器正在准备你的工作空间…';await new Promise(resolve=>setTimeout(resolve,1000));}}
     await connectWorkspace();
   }catch(error){$('loading-message').textContent=errorText(error);$('connect-retry').hidden=false;}}

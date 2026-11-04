@@ -7,6 +7,7 @@ import { downloadName, externalWebUrl, ownedDownload, sameServer, serverOrigin }
 import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
 import { authorizedDirectory, LocalWorkspaceStore, reopenDirectory } from './local-workspaces.ts';
+import type { LocalWorkspace } from './local-workspaces.ts';
 import { LocalWorkspacePanel } from './local-workspace.ts';
 import { LocalFrontendHost } from './frontend.ts';
 import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
@@ -110,7 +111,7 @@ export class DesktopWorkspace {
     void view.executeJavaScript(`document.getElementById(${JSON.stringify(command)})?.click(); void 0`, true).catch(() => {});
   }
 
-  async openLocalWorkspace(): Promise<void> {
+  async openLocalWorkspace(runTask = false): Promise<void> {
     if (this.stateValue.phase !== 'connected' || this.stateValue.modalOpen || this.localWorkspace?.isOpen) return;
     const generation = this.generation;
     try {
@@ -118,7 +119,8 @@ export class DesktopWorkspace {
       const view = this.workspace?.webContents;
       if (picked && generation === this.generation && view && !view.isDestroyed()) {
         const row = this.localWorkspaces.open(picked);
-        view.send('geneloop:workspace-selected', row.id);
+        if (runTask) await this.showLocalTask(row);
+        else view.send('geneloop:workspace-selected', row.id);
       }
     } catch { if (!this.window.isDestroyed()) dialog.showErrorBox('本机工作区', '无法打开这个本机文件夹。'); }
   }
@@ -131,6 +133,7 @@ export class DesktopWorkspace {
 
   private async localWorkspaceAction(command: unknown, value: unknown) {
     if (process.platform !== 'win32' || this.disposed) throw Error('本机工作区仅支持 Windows。');
+    if (command === 'open-task') return this.openLocalWorkspace(true);
     if (command === 'list') return this.localWorkspaces.list(this.stateValue.server, value);
     if (command === 'pick') {
       const generation = this.generation;
@@ -180,24 +183,26 @@ export class DesktopWorkspace {
       if (result) throw Error('无法在资源管理器中打开这个文件夹。');
       return;
     }
-    if (command === 'run' && this.currentSession) {
-      this.localWorkspace ??= new LocalWorkspacePanel({
-        parent: this.window, server: this.stateValue.server, session: this.currentSession,
-        onClose: () => {
-          if (this.stateValue.phase === 'connected') {
-            this.workspace?.setVisible(true);
-            this.workspace?.webContents.focus();
-          }
-        },
-      });
-      const panel = this.localWorkspace;
-      await panel.open(row);
-      if (panel !== this.localWorkspace || !panel.isOpen) return;
-      this.workspace?.setVisible(false);
-      panel.setVisible(this.stateValue.phase === 'connected');
-      return;
-    }
+    if (command === 'run') return this.showLocalTask(row);
     throw Error('无效的本机工作区操作。');
+  }
+
+  private async showLocalTask(row: LocalWorkspace): Promise<void> {
+    if (!this.currentSession) throw Error('请先连接 GeneLoop 模型服务。');
+    this.localWorkspace ??= new LocalWorkspacePanel({
+      parent: this.window, server: this.stateValue.server, session: this.currentSession,
+      onClose: () => {
+        if (this.stateValue.phase === 'connected') {
+          this.workspace?.setVisible(true);
+          this.workspace?.webContents.focus();
+        }
+      },
+    });
+    const panel = this.localWorkspace;
+    await panel.open(row);
+    if (panel !== this.localWorkspace || !panel.isOpen) return;
+    this.workspace?.setVisible(false);
+    panel.setVisible(this.stateValue.phase === 'connected');
   }
 
   private requireShell(event: IpcMainInvokeEvent): void {
