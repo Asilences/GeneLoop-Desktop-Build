@@ -335,7 +335,8 @@ def propose_once(*, task, catalog, snapshot, output, gate=None, repair_from=None
     if gate.current is not None:
         raise ValueError('proposal_serial_attempt_required')
     gate.current = output
-    session = 'capability-proposal-'+uuid4().hex
+    session_factory = getattr(gate, 'session_id', None)
+    session = session_factory(output) if callable(session_factory) else 'capability-proposal-'+uuid4().hex
     effective.update(session_id=session, ledger_root=str(gate.root))
     if getattr(gate,'budget',None) is not None:
         effective['research_budget']={'limit_usd':str(gate.budget.limit),'spent_usd':str(gate.budget.spent),

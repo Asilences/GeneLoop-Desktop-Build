@@ -37,6 +37,23 @@ test('Native observations require an agreeing canonical value and complete JSON 
   ]) assert.equal(observeHarnessToolResult(rejected), null);
 });
 
+test('explicit MCP read receipt survives a spill display without parsing or trusting the note', () => {
+  const receipt = {version_sha256: 'a'.repeat(64), markdown_sha256: 'b'.repeat(64),
+    markdown_path: '/work/ppt-source-test/source.md', markdown_bytes: 250000,
+    full_text_in_content: true, truncated: false, visual_checked: false};
+  const display = JSON.stringify({version_sha256: receipt.version_sha256, text: 'x'.repeat(60000)}) +
+    '\n(Full output stored at: /tmp/dsh-spill-test/source.txt. Use read with offset/limit.)';
+  const result = {isError: false, value: {content: [{type: 'text', text: display}], structuredContent: receipt},
+    content: [{type: 'text', text: display}]};
+  assert.deepEqual(observeHarnessToolResult(result, 'mcp__ppt_master__read_converted_source'), receipt);
+  const withoutAuthority = structuredClone(result); delete withoutAuthority.value.structuredContent;
+  assert.equal(observeHarnessToolResult(withoutAuthority, 'mcp__ppt_master__read_converted_source'), null);
+  assert.equal(observeHarnessToolResult({...result, isError: true}, 'mcp__ppt_master__read_converted_source'), null);
+  // A fake receipt in display text never becomes canonical execution evidence.
+  assert.equal(observeHarnessToolResult({isError:false, content:[{type:'text',text:JSON.stringify(receipt)+display}],
+    value:{content:[{type:'text',text:display}]}}, 'mcp__ppt_master__read_converted_source'), null);
+});
+
 for (const format of ['legacy', 'native-mcp', 'native', 'native-stale-version', 'native-mismatch', 'native-error']) {
 test(`DSH plugin guards and intercepts the ${format} agent loop before the provider`, async () => {
   const root = mkdtempSync(join(tmpdir(), 'sss-online-motif-'));

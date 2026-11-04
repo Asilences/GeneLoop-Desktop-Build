@@ -2,6 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import hashlib
 import json
+import asyncio
 import pytest
 from scenarios.ppt_master.server import SourceReader
 from scenarios.ppt_master.converted_source import ConvertedSources
@@ -94,3 +95,35 @@ def test_new_derivative_hardlink_is_rejected(source):
     directory=api.receipts[converted['converted_id']][3]
     os.link(directory/'source.md',directory/'alias.md')
     with pytest.raises(ValueError,match='hardlink'):api.read(converted['converted_id'])
+
+
+@pytest.mark.parametrize('newline', ['\n', '\r\n'])
+def test_mcp_read_keeps_long_unicode_text_and_bounded_structured_receipt(source, monkeypatch, newline):
+    from mcp.server.mcpserver.exceptions import ToolError
+    from scenarios.ppt_master import server
+    root, reader, api, pin, pdf = source
+    converted = api.convert(pin['source_id'])
+    receipt = converted['converted_id']
+    source_id, version, name, directory, _ = api.receipts[receipt]
+    text = (('科研原文 αβ — ![](image.png)' + newline) * 6000)
+    (directory/'source.md').write_bytes(text.encode('utf-8'))
+    api.receipts[receipt] = (source_id, version, name, directory, api._files(directory))
+    monkeypatch.setattr(server, 'SkillReader', lambda: api.skill)
+    monkeypatch.setattr(server, 'ConvertedSources', lambda *args: api)
+    monkeypatch.setattr(server.sys, 'argv', ['ppt-master', str(root/'inputs')])
+    app = server.create_server()
+    result = asyncio.run(app.call_tool('read_converted_source', {'converted_id': receipt}))
+    wire = result.model_dump(by_alias=True, exclude_none=True)
+    displayed = json.loads(wire['content'][0]['text'])
+    metadata = wire['structuredContent']
+    assert displayed['text'] == text and displayed['truncated'] is False
+    assert metadata['version_sha256'] == pin['version_sha256']
+    assert metadata['markdown_sha256'] == hashlib.sha256(text.encode()).hexdigest()
+    assert metadata['markdown_bytes'] == len(text.encode())
+    assert metadata['full_text_in_content'] is True and 'text' not in metadata
+    assert len(json.dumps(metadata).encode()) < 4096
+    tools = {t.name: t.model_dump(by_alias=True, exclude_none=True) for t in asyncio.run(app.list_tools())}
+    assert 'outputSchema' not in tools['read_converted_source']
+    (directory/'source.md').write_text('changed', encoding='utf-8')
+    with pytest.raises(ToolError, match='converted_source_version_changed'):
+        asyncio.run(app.call_tool('read_converted_source', {'converted_id': receipt}))

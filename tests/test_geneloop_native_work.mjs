@@ -102,6 +102,10 @@ test('present only accepts output paths and emits immutable task-bounded proof p
   const artifacts=comparisonArtifacts(join(f.root,'artifacts'));
   const rows=artifacts.snapshot('turn-one','baseline',0,f.root,new Set(proofs.keys()),false,new Set(proofs.keys()));
   assert.equal(rows.length,1);assert.equal(artifacts.read('turn-one','baseline',rows[0]).toString(),'first bytes');
+  writeFileSync(join(output,'failed-draft.pptx'),'incomplete export without notes');
+  const pptRows=captureComparisonDeliveries(artifacts,{...context,turn:'ppt-final-only',lane:'baseline',attempt:0,adapter:'ppt',status:'completed'});
+  assert.deepEqual(pptRows.map(row=>row.name),['outputs/code/report.docx']);
+  rmSync(join(output,'failed-draft.pptx'));
   writeFileSync(join(output,'report.docx'),'changed');assert.equal(nativePresentedFiles(context).size,0);
   assert.equal(captureComparisonDeliveries(artifacts,{...context,turn:'changed-after-present',lane:'baseline',attempt:0,adapter:'workspace',status:'completed'}).length,0);
   // Simulate a writer swapping bytes after proof collection but before copy.

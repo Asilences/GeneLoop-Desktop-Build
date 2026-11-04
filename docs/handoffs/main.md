@@ -1,3 +1,10 @@
+## 2026-11-04：PR131成员模式修复
+
+- 用户授权修复后合并PR131，未授权部署。基线`7ced3b0`，修复分支`codex/pr131-member-fixes-20261104`；精确提交/最终合并以[PR131](https://github.com/jingyio/GeneLoop/pull/131)和Git历史为准。
+- 修复成员页面学习Session绑定和独立Capability验证的命令代理接线，保留原在线权限检查、认证与账户隔离。原Motif/公共控制器没有重写。
+- 本地全量2300 Python、1607 Node通过，Linux实际经代理完成发布及后继。原库兼容导出PPT75/Paper77，IR和来源不变，旧目录保留。详情、失败及测试范围见[科研PPT交接](research_ppt.md)与[实验追加](../experiments/ppt-public-rsi-20261104.md)。
+- 合并必须核对修复head的远程CI；生产服务及私有账本未改动，模型调用0。PR132/133仍独立保留，后续整合保留双方文档。
+
 ## 2026-11-03：Creation Efficiency 构造反馈与重新选择（当前）
 
 - 用户已授权按[开发计划](../creation-efficiency-development-plan.md)直接实现和验收。基于实时远程main `2b3d0051`，当前分支`codex/creation-efficiency-20261103`，机制及兼容修复源码`8e0a454f`，后续提交仅补证据文档；已推送并创建[草稿PR128](https://github.com/jingyio/GeneLoop/pull/128)，未合并/部署，远程CI按最新head核对。私人`reference/`保留。

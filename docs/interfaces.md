@@ -1,5 +1,109 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## 成员PPT学习/验证传输（2026-11-04修复）
+
+页面参数化提案复用`PptCapabilityBudget`：成员模型`session-UUID`在发送前绑定原账户`turn-任务ID`，结束时取消预算任务并解绑，保留null预算与unknown用量。Owner无账户前缀时沿原直连身份。
+
+Artifact命令代理新增`{operation:"capability",file:"私有学习器的manifest.json"}`，仅接受`learning/ppt-账户scope摘要/capability/improvements/代际/机会/attempt-N/publication/{validation,followup}/manifest.json`。宿主核对当前原生材料、账户/scope、grant和独立工作区，再运行原`run-artifact-capability.mjs --member-public`。账户路径由宿主映射，资源沿原宿主配置，持续重读撤回与manifest。在线run入口权限不变。此入口不接收源码、验证器或任意执行参数。
+
+## PPT 受控制作与正常页面学习（2026-11-04）
+
+PPT Generate 原生工具增加 `prepare_ppt({project})`。项目在 `/work/projects/`，先写好 `spec_lock.md` 与 `design_spec.md`。宿主执行锁定上游的角色校准，返回常规/粗体测量表、实际字体文件及版本依赖；相同规范、计划文字与环境复用 `validation/host-typography.json`。原生 Skill 与 MCP `read_skill_entry.runtime_policy` 使用同一 `runtime-policy.md`，上游原文与完整性校验保留。
+
+`finalize_ppt` 自动识别 `notes/total.md`，生成或核验页面清单，集中执行官方门禁、PPTX、Office PDF 与逐页 PNG。已通过的回执绑定当前源文件与输出 SHA，`present` 核对当前 Generate 成品。相同版本复用。字体/字符框诊断和直接 Generate 检查器调用转交宿主工具；原始资料的读取及原生 PPTX 往返路径继续可用。
+
+`ppt_annotation_repair.py` 仅计算基础静态几何的 `data-pptx-bounds` 注释，复用锁定检查器的文字度量。文字、绘图坐标、样式和备注保持原值；真实几何相交、越界与不支持的对象交回原检查。回执记录修改前后 SHA 与操作类型。官方错误按页和对象直接返回，warning保存在原始报告中。自动修复前后的实际渲染验证与两组独立生成的共同题面评审分别记录。
+
+`create_ppt_page` 可提供 `project` 和 `page`，直接安装到项目 `svg_output`。宿主 `ppt-native-pages.jsonl` 将成功的组件安装与受管导出绑定到原生工具 call ID、参数摘要、页面 SHA。正常完成任务的学习快照优先使用原生 `present` 实际交付文件，失败的中间导出稿继续保留在私有诊断目录。
+
+参数修订增加可选 `expected_page_sha256`。缺省仅新建页面；存在目标页时必须核对当前 SHA，再用本次程序结果原子替换。工具返回 `installed_page_sha256`，同一目标页并发执行拒绝，过期版本拒绝，其他页保留。共同运行规则优先要求调整组件内容参数后重新执行，再按明确不适用原因进入普通制作路径。
+
+组件 schema 支持有界、非递归的本地 `$defs/$ref` 展开，再沿原 Harness schema 子集与额外容量检查。外部引用、循环引用和不支持的语义字段拒绝。认证与在线使用同一检查器，认证CLI写库后再调用实际在线加载器。执行工具、schema、渲染与交付代码变化进入学习签名，触发重新认证；已有提案可按原响应及源码摘要复用。
+
+Generate 项目页的独立 CairoSVG/rsvg/DPI 预览转交 `finalize_ppt`，原始来源图件处理继续可用。最终组件来源追溯可跨失败导出的宿主非绘制注释修复链。只有同项目、同页、明确操作类型及前后SHA相连的链路被接受，手工源页变化另计。真实使用证据、一次漏记的独立重算和批量材料范围见[结果记录](experiments/ppt-managed-learning-20261104-results.md)。
+
+正常任务自动进入账户/scope内材料池。已有程序编译及字体经验学习继续执行；页面候选通过 `ppt_page_learning.py` 从两个独立来源的重复版式，或成品再次成为新任务输入的依赖中提出。它们是候选选取信号。模型参数化后沿用 Artifact 独立执行认证，失败保留原因，同一证据版本保留尝试状态，通过后在后续任务 probation。任务开始时冻结库，Baseline保留共同工程工具并排除学得程序。既有 active 晋级仍要求后续真实对照，单路运行的费用与质量证据分别记录。
+
+真实 Web 学习 worker 默认沿当前私有 `SSS_WEB_POLICY` 使用账户预算与委托凭证。可用私有 `GENELOOP_PPT_COMPONENT_LEARNING_POLICY` 指定测试策略。编译任务使用账户 `budget_task_prefix` 和 `turn-<task-id>`，沿用预算与累计账本，单独保存 `model-proposal/attribution.json` 和终态用量。独立成员的认证继续通过现有命令 broker，公网不接收任意源码。当前更改的正式部署与真实认证范围见本轮记录。
+
+### 与 main 公共 RSI 的对接边界
+
+PPT已通过`scenarios/ppt_master/capability_adapter.py`接入公共`CapabilityImprovementAdapter`。普通合格单路任务结束后，现有worker自动登记结构观察和通过原生认证的Artifact材料，保留账户与scope隔离。公共材料由实际原生loader复核代码锁、程序及证书，Builder读取的目录继承已发布能力。
+
+`inspect_run`解释宿主封存的正常任务证据，`freeze_publication_inputs`固定validation/followup的参数、来源和SVG/PNG参考，`publish`复用`completeCapabilityCycle`完成验证、Store发布、重新加载和不同输入的后继执行。`artifact_capability_runtime.ts`沿原Artifact沙箱执行，每次检查owner、任务/参数证据、原生库、代码版本及输出授权。页面根通过原`create_ppt_page`调用，后续仍沿`finalize_ppt`导出，Baseline继续排除学得页面程序。
+
+公共付费构造由宿主`GENELOOP_PPT_CAPABILITY_PLAN`显式配置。计划沿公共`capability_improvement_plan_v1`，用原字节引用指定PPT适配器与`scene_dependencies`，发布输入使用`ppt_capability_publication_inputs_v1`，字段由适配器验证。worker按原生库版本和冻结计划摘要确定构造轮次，相同代际任务复用尝试记录；新材料可进入下一轮。未配置计划时继续自动采集和登记材料，公共构造保持关闭。
+
+公共页面目录以`parameters_from_program`引用已提供的原生参数契约。依赖和参数契约一致时省去重复schema；新接口继续提供自身契约，运行时参数容量和版本校验照常执行。
+
+真实Web使用`PptCapabilityBudget`委托既有账户预算服务，学习任务独立记账；成员模式保留账户前缀和原生Session绑定。公共`propose_once`增加可选宿主session分配接缝，其他场景保持原行为。纯参数调用以当前批准参数形成执行证据；文件绑定另核对实际来源版本。原生候选撤回或代际替换时同步撤回旧公共选择，历史材料和失败保留。
+
+已真实构造一个依赖既有页面原语的公共根，通过独立源页文字/像素检查、发布后换输入执行，并在新任务通过原页面工具与Office导出得到PPTX/PDF/PNG。该根只有一个原语步骤。学习1请求、估费约USD0.00091104，构造后的执行新增模型请求0。初始化失败与解释器恢复保留，科学质量和新增公共机制的净收益另评。见[接入与验收](experiments/ppt-public-rsi-20261104.md)。
+
+尚未合并的 `codex/rsi-privacy` 在 `83c1185` 将现有 Graph 编译入口迁到脱敏结构投影。后续合并须同时保留 `privacy_projection=True`、本轮新增代码锁及独立认证，继续验证单路准入。该投影不含科学正文；页面参数化的源稿、默认参数和程序描述仍在账户内材料池，跨账户共享需要另外的准入与撤回机制。
+
+## PPT学习稳定状态绑定与独立Web恢复（2026-11-03）
+
+学习器将Task身份、账号/会话、来源与模式、执行结果及已结算任务用量封存为 `tasks/<id>/learning-state-<sha256>.json`（`ppt_learning_state_binding_v1`）。Python离线认证和TypeScript在线准入均核对封存摘要，并重新读取当前权威 `task-state.json` 比较相同字段。界面进度和全局累计统计刷新不应退役候选；来源、权限相关身份、状态失败及任务用量变化仍拒绝。成品、receipt和源码版本的既有锁不变。旧证书不重签或放宽，旧失败记录保留，由新认证形成下一代候选。兼容种子Paper49/PPT46的原读取IR不变，不算新结构发现。
+
+`scripts/harness-web.py --resume --run-id <原run-id>` 只用于Linux独立测试，要求原目录、账号/provider一致且先前launcher/Harness均已退出。保留原Home、任务、学习库、全部成品与累计账本，原配置/登录文件及主preset配置转存私有 `resume-history/`，新启动独立记录。仅显式resume复用原preset目录，目录/文件重定向及文件硬链接继续拒绝；普通启动不接受重复目录。重启沿现有Runtime将未完成Task标为失败，不自动再次付费重做；调用方继续未执行任务。F10a的兼容种子为Paper50/PPT47，原读取IR不变。正式网页仍统一通过 `npm run service -- ...` 管理，该参数不是正式发布入口。`runtime-exit.json`先保存清理前的退出码/异常类别，外部计费registry缺本地Task时保留既有计量，不用本地0覆盖。实际修复/恢复证据见[同一实验记录](experiments/ppt-single-12tasks-20261103.md)。
+
+## PPT长文本读取的MCP回执（2026-11-03，候选）
+
+`mcp__ppt_master__read_converted_source(converted_id)`保留既有工具schema及完整正文`content`，新增显式MCP `structuredContent`作为执行观察：`version_sha256`、`markdown_sha256`、`markdown_bytes`、`markdown_path`、`directory`、`name`、`file_count`及读取范围标记。结构化部分不重复长正文；它只能在来源授权、源版本和派生字节核验后产生。DSH展示层附加spill提示不改变该执行回执。普通文本中的伪造JSON、失败结果及错误版本不能成为回执。
+
+`ppt-master-v48`兼容导出保留v47的已学习IR、MCP schema和来源证据，旧包不改、没有新学习或模型调用。真实读取诊断和未部署边界见[修复记录](experiments/ppt-read-receipt-fix-20261103.md)。此变更不保证完整PPT降本，也不表示已接入通用参数化排版学习。
+
+## PPT 历史页面组件接口（2026-11-04，实验候选）
+
+`scripts/learn-ppt-components.py` 从历史原生 write 或实际 Bash 后状态中提取 SHA 绑定的 SVG 页面，关联已评审 PPTX 的 SHA、页码和文字。后台正常任务仅收集账户内机会材料。付费源码提炼需显式 `--call-model --budget-policy`，沿用原中央预算和累计账本，费用归学习。候选进入原 Artifact 沙箱认证，源文字/画布与 PNG 等价、独立输入和重复执行分别检查，不能将源 PNG 等价解释为 Office 或科研质量认证。
+
+真实 Web 的 `create_ppt_page({id, parameters, output})` 在全局工具表注册，PPT Execute 且账户内已有已认证程序时才增加到允许表。Baseline 没有该入口或组件目录。参数由当前模型填写，完整组件 schema 在 Runtime 校验，当前支持的数组/字数/数值容量约束不能由 SDK 的简化 schema 代替。新原生工具单独校验 schema，旧 Graph MCP 证书范围保持不变。
+
+原生工具和原 `geneloop-component JSON`/Python 调用共用 Artifact 执行协议，成员请求仍经原 `/artifact` broker 在宿主重建和核验，不在成员命名空间嵌套任意执行器。任务、用户、会话、版本、写权限、输入 SHA 与全新输出目录守卫保留，支持前台取消。`program_reuses` 记录经回执核验的程序执行，与 `verified_skips` 分别统计。
+
+账户内组件缓存保存 SVG 和源 PNG，绑定程序、输入及环境版本并逐文件核验。相同对象不同 JSON 键顺序使用相同输入字节，内容变化重新执行，缓存损坏回退计算。实际Office交付另由下述入口执行。
+
+前轮兼容候选为 PPT55/Paper57。其真实调用和负向费用结果见[页面组件实验](experiments/ppt-component-learning-20261103.md)。
+
+## PPT 共同交付与字体经验（2026-11-04）
+
+原生 `create_ppt_page` 的 output 现为可选，宿主默认分配全新目录。只自动绑定 schema 声明的 const 参数，科学内容仍由当前任务提供。源渲染会检查实际字体覆盖和可确定的文字背景对比。
+
+原生 `finalize_ppt` 在真实 PPT Master 场景的普通与优化模式均提供，需要当前任务允许输出。最小参数如下。
+
+```json
+{"project":"/work/projects/deck"}
+```
+
+可选 manifest 指向项目内清单，pages按文件名顺序列出SVG。省略时宿主生成delivery.json。`notes_source: "total"`表示以notes/total.md为权威输入，由官方脚本拆分。首次只有总备注而没有逐页备注时可自动选此模式。`allow_font_fallback: true`允许当前账户的认证字体经验在实际缺字时尝试修复项目副本。
+
+入口复用官方final SVG检查与PPTX导出、实际Office渲染、页数/可编辑文字/正文备注检查。返回artifacts、page_receipts、findings、mechanical_status、review_status和next_action。实际PNG仍需通过read_image查看，再由present交付。原生往返编辑继续其原流程。
+
+`ppt-delivery-receipts/`在任务私有输出内保存版本回执。来源、图片、备注、profile、Office/字体或检查代码变化会使结果失效。官方派生质量报告与工作流日志单独处理。检查未执行完、文件字节变化及权限变化不会变为通过。同一客观缺陷没有改善会返回stalled，运行异常保留日志，超时与源内容失败分别处理。
+
+`ppt_delivery_learning.py`由现有任务结束worker调用，从真实交付绑定的缺字/修复回执生成`delivery-font-rules.json`版本1。TS核对证据后在后续任务冻结加载。操作限制为`font_family_only_v1`，绑定账户与环境，必须显式允许回退，执行后重新走实际交付检查。两个不同来源的后继合格应用才机械晋级，科研与费用晋级仍单独记录。
+
+组件的`program_reuses`继续表示成功执行。新增`component_used_in_delivery`仅在present的实际PPTX与宿主导出回执、组件源版本相符时记录。生成程序和历史导入仍使用显式离线入口。
+
+当前兼容候选PPT60/Paper62保留原Graph载荷。固定导出报告属于输出依赖，相同实际源输入可复用交付回执。Generate导出指引覆盖项目变量及脚本目录变量写法，全面自由Bash约束仍有边界。实现与真实质量/费用结果见[本轮修复记录](experiments/ppt-component-delivery-repair-20261104-results.md)。
+
+## PPT 质量和程序学习接线（2026-11-02）
+
+原 PPT 用户轨迹 worker 额外输出共享 `quality_evaluation`，按 `scenarios/ppt_master/quality-rubric.json` 解释机械检查及可选用户评审。没有明确评审的科研/视觉/可用性项为 unknown，不能从文件有效推断整体质量。
+
+真实 PPT 任务的 Bash 前后证据使用既有 `reuse-boundaries.jsonl` / `reuse-evidence/`，后台用原 Artifact 编译/认证器生成私有库；`program-selected.json` 冻结账户、scope、库、代码与证据，后续任务保存 `ppt-program-snapshot.json`。Baseline 不加载；程序实际执行记 `program_reuses`，不记作 verified skip。两项后续独立配对的完整模型费用/机械交付通过才 active，失败或负反馈回普通工具。不购买额外对照，不自动编写未知程序。
+
+学习独立性取账号内 comparison 的主对话归属，或已校验单路receipt的实际会话；同一主对话的各轮执行子会话与付费重试归为一个决定，不重复计入 Graph/程序训练、认证或晋级数。旧记录缺少主对话元数据时保留原来源根；冲突归属拒绝。
+
+单路完成边界新增宿主记录 `tasks/<task-id>/ppt-learning-delivery.json`（`ppt_single_delivery_v1`），引用既有 `comparison-artifacts/native-<task-id>/baseline/0/` 不可变存储，保留真实任务mode。路径中的baseline是原native存储桶，不把Execute样本重标为Baseline。worker无需comparison文件：Graph只收原始合格Baseline，Code也能收Execute中的原生模型程序调用；来源、账号、scope、成品和用量守卫全部保留。单路只供学习/认证/后续probation，不伪造配对降费证据，不从旧可变工作区补快照。正常任务不用填表或先购买对照；费用/质量评估独立记录。
+
+现有账号命令 socket 新增内部 `POST /artifact`。`{operation:"run",session,file}` 只接受本 Session 的私有 job；宿主核对当前 PPT task/冻结库，重新绑定当前输入与全新输出目录。`{operation:"certify",file}` 只接受本账号学习目录的两个独立正常任务候选。没有任意源码参数、不向公网开放，沿用原流式退出/取消协议。独立网页无成员 socket 时仍直接使用同一受限沙箱。
+
+内部目录消息的 producer 为 `ppt-program-library` / `artifact-motif`，只在模型上下文和私有轨迹保留；公开投影和聊天组件隐藏它们，不以脚本关键词隐藏真实用户消息。当前候选共享读取包为 Paper48/PPT45；兼容导出不认证新程序或质量收益。
+
+详见[实现与验证](experiments/ppt-rsi-reuse-integration-20261102.md)；编译/认证通过不代表科学质量或真实净降费。
+
 ## File 分页种子 file-v17（2026-11-02）
 
 `motif-libraries/file-v17` 在 v16 四项图之外新增两项独立认证的 PDF 分页 `sss-operation-flow-v3`；未新增运行时字段或工具。包内沿用的四项 payload／certificate 原字节不改，证书仍指向来源 `file-v16`，新两项证书指向 `file-v17`。发布包版本不替代证书来源版本，现有校验器回溯来源 manifest，再核验当前工具契约和执行版本；新账号安装六项，已有账号只补缺项且保留停用状态。种子 `grants_execution=false`，实际执行继续受当前任务权限约束。

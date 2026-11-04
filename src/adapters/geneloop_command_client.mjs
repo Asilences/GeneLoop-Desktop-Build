@@ -2,7 +2,9 @@
 import {request} from 'node:http';
 const payload=Buffer.from(process.argv[3]??'','base64url');
 let receivedExit=false;
-const req=request({socketPath:process.argv[2],path:'/run',method:'POST',headers:{'Content-Type':'application/json','Content-Length':payload.length}},res=>{
+const path=process.argv[4]??'/run';
+if(!['/run','/artifact'].includes(path))throw Error('Unsupported isolated command route');
+const req=request({socketPath:process.argv[2],path,method:'POST',headers:{'Content-Type':'application/json','Content-Length':payload.length}},res=>{
  if(res.statusCode!==200){res.resume();process.stderr.write('Isolated command admission failed\n');process.exitCode=1;return;}
  let pending='';
  res.setEncoding('utf8');
