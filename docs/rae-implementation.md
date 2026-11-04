@@ -104,3 +104,10 @@ T3 诊断中的初始 C 由宿主指定并独立发布；后代 D/E 的完整 pr
 已授权创建独立PR，不合并、不部署。首轮诊断模型调用0；连续研发真实调用、费用和失败见[最新记录](experiments/rae-followup-20261104.md)，沿用原账本。开发起点已成功核对远程main；最终推送阶段HTTPS凭证不可用，现有SSH key对目标仓库无权限，浏览器登录不能代替Git推送权限。首轮机制提交和本轮增量在本地保留；最新测试与未通过研究门禁以连续研发记录为准。推送/PR/远程CI待Git访问恢复，不能写成已创建PR。原凭证和远程配置未改。PR正文与补交命令保留私有`.local/rae-pr-body.md`，Git bundle保留本轮提交。
 
 交付更新（2026-11-04）：本机GitHub认证已恢复，已核对远程main `690d2340`且合并预演无冲突；分支已从Mac推送并创建[PR #132](https://github.com/jingyio/GeneLoop/pull/132)。当前远程CI运行中；前述认证阻塞属于此前状态。未合并、未部署。
+
+
+## PR131 合并后的兼容整合（2026-11-04）
+
+以远程 main `eda9409b` 整合 PR132，文档冲突保留两边接口和交接。首次全量出现17项 Python、1项 Node 失败，原因为三个公共控制器文件的源码锁变化，旧库按约定拒绝加载。原始失败留在私有 `.local/pr132-133-integration-20261104/`。
+
+沿原 `reexport-ppt-managed-compat.py --rae-integration --write --update-registry --validation-record docs/rae-implementation.md` 导出 PPT76/Paper78，原库保留，`library.json`、`online-manifest.json`、`task.json`、`tool-schemas.json`、`source-evidence.json` 保持字节一致。新证书绑定当前控制器及RAE依赖，未重新挖掘训练或调用模型。独立验收、关闭开关与旧版本拒绝检查继续执行。最终回归及远程CI以PR最新head记录为准，真实自应用和收益研究仍待验证。

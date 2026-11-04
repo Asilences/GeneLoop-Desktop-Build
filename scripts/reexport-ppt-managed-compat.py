@@ -70,7 +70,31 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
-    if '--member-transport-fix' in sys.argv:
+    if '--rae-integration' in sys.argv:
+        sys.argv.remove('--rae-integration')
+        reviewed = {
+            'scripts/reexport-ppt-managed-compat.py',
+            'src/adapters/capability_improvement.py',
+            'src/adapters/capability_proposal.py',
+            'src/adapters/capability_scene.py',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v75', 'ppt-master-v76', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v77', 'paper-web-v78', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= {
+            'schemas/capability-improvement-v1.schema.json',
+            'src/adapters/capability_motif_learning.py',
+            'src/adapters/capability_builder_application.py',
+            'src/adapters/capability_source_authoring.py',
+            'src/adapters/capability_program_training.py',
+            'src/adapters/capability_construction_history.py',
+            'src/adapters/capability_feedback.py',
+            'src/adapters/capability_evolution.py',
+        }
+    elif '--member-transport-fix' in sys.argv:
         sys.argv.remove('--member-transport-fix')
         reviewed = {
             'scripts/reexport-ppt-managed-compat.py', 'scripts/run-artifact-capability.mjs',
