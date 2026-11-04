@@ -123,3 +123,7 @@ B 使用同一官方 Skill、模型和宿主交付能力，工具目录包含共
 整合 main 后的独立Linux全量回归已通过，Python2345通过/207跳过，Node1599通过/8跳过，0失败；smoke和motif:check均通过。测试原始日志留本机`.local/pr-main-*.log`。此阶段新增模型请求0，原24题继续使用冻结版本。
 
 整理时批量已完成N01，N02执行中。N02出现4次组件拒绝，回执分别为`component_project_and_page_required`和`component_explicit_parameters_required`，属于页面参数或调用封装不符合接口；完整后继结果与恢复成本继续留在原队列。批量结果尚未评审，本节不据其声称稳定降费。
+
+代码提交`1c8a6af`已推送至`feature/research-ppt-agent`，已创建[PR131](https://github.com/jingyio/GeneLoop/pull/131)。远端代码tree与本地逐SHA一致。以开放PR129的`a597083`、PR130的`23c1b50`做整合预检，两项均自动合并通过；隐私分支仍有3处需保留双方行为的代码/测试冲突。公共Capability的PPT适配待开发，当前PR接入范围为账户worker与Artifact。
+
+远端CI首个Linux检查在`npm run setup`下载Python依赖时发生`BrokenPipeError`，未进入测试阶段，其他检查仍运行中。独立Linux回归与GitHub CI分别记录，正式服务保持既有版本。

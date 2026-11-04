@@ -1,19 +1,20 @@
 # 科研 PPT 当前交接
 
-## 2026-11-04 PR整理中，24项正常材料任务继续执行
+## 2026-11-04 PR131已提交，24项正常材料任务继续执行
 
-- 目标与范围。限制无依据审查、固定活动脚本化、正常页面学习与后继成品使用已做出真实验证。原实验分支为`codex/ppt-rsi-transfer-20261102`；本次提交在独立`codex/ppt-managed-learning-20261104`副本整合最新main `5d73a4b`，拟推送用户交付分支`feature/research-ppt-agent`并创建PR。当前推送及PR状态待最终确认，正式服务保持既有版本。
+- 目标与范围。限制无依据审查、固定活动脚本化、正常页面学习与后继成品使用已做出真实验证。原实验分支为`codex/ppt-rsi-transfer-20261102`；本次提交在独立`codex/ppt-managed-learning-20261104`副本整合最新main `5d73a4b`，代码提交`1c8a6af`已推送到用户交付分支`feature/research-ppt-agent`，已创建[PR131](https://github.com/jingyio/GeneLoop/pull/131)，等待审核。正式服务保持既有版本。
 - 已完成。共同运行规则、真实角色字体校准、Generate统一交付和预览守卫、静态边界注释修复、实际成品快照及源页证据。正常worker自动提炼页面程序，沿Artifact认证后在未来任务冻结加载。新增局部schema引用兼容、认证后实际在线加载检查、`expected_page_sha256`参数修订、执行协议变化重新认证、跨失败导出注释链的成品来源统计。
 - 已验证。服务器`npm test` Python1807通过/202跳过、Node1491通过/4跳过；最后仅追加TS来源修复，全部Node1492通过/4跳过，smoke/motif通过。Windows定向Python16/1，本机Node依赖不足，完整结论依据Linux。实际Office注释修复前后PNG相同、MAE0。225项代码锁本机/服务器一致，457份私有证据已下载并逐SHA验证。
 - 实验与配置。ID为`ppt-managed-learning-20261104`，结果在同名`-results.md`。服务器候选仍为开发父目录下`.local/ppt-managed-learning-20261104-c5`，PPT70/Paper72保留原Graph载荷。Flash/off、393216容量、沿旧账本不限设置。两项正常训练完成，G03/G04四次后继执行完成，24项普通材料任务已启动。学习与Judge单列。
 - 效果与边界。G03 B66/O61请求、费用低1.67%，标题/事实质量仍有问题，完整程序成品复用0。G04 B53/O47、费用低18.92%，组件调用并进入最终成品1次，非盲辅助查看可读，科学/视觉盲评待完成。G04两组有接口阶段差异，不能把全部差额归于RSI。初次提案由worker自动完成，源码保持原样；后续开发维护重认证复用该提案，额外模型调用0。
-- 证据修订。C3/C4入口失败、schema回退后的130请求取消任务、每次认证拒绝与旧源码均保留。G04来源漏记由失败导出已完成的注释修复引起，已在`evaluation/lineage-reconciliation/`单独副本重算，原任务事件不改。学习使用gate通过，候选仍为probation，未伪造active配对。当前6个独立任务的最终源页版本进入材料池，29个来源版本包含草稿，统计须区分。
+- 证据修订。C3/C4入口失败、schema回退后的130请求取消任务、每次认证拒绝与旧源码均保留。G04来源漏记由失败导出已完成的注释修复引起，已在`evaluation/lineage-reconciliation/`单独副本重算，原任务事件不改。学习使用gate通过，候选仍为probation，未伪造active配对。批量前6个独立任务的最终源页版本进入材料池，29个来源版本包含草稿，统计须区分。
 - 配置与数据。私有运行、论文、脚本和证据留`.local/`。页面学习默认沿真实Web的`SSS_WEB_POLICY`及委托凭证，可用`GENELOOP_PPT_COMPONENT_LEARNING_POLICY`指定测试策略。账户预算前缀与`turn-<task-id>`单独记编译费用，不修改累计账本。
 - 私有入口。运行配置与队列在候选目录`.local/evaluations/ppt-managed-learning-20261104/`，`normal-batch/batch-state.json`为进度，客户端依已有runner状态恢复，不能盲目重提付费任务。`bash <开发父目录>/.local/run-managed-c5.sh python3 .local/batch-status.py`只读查询；24题使用同一隔离Web与旧账本。Web由官方`--resume`恢复，同一Home/output保留。正式服务保持既有版本。
-- 权限与支出。真实测试授权持续有效，批量前含全部诊断738请求/$1.257498594代理估费，学习1请求/$0.008429100已单列。批量继续另计，实付与人工分钟未知。当前未提交、推送或正式部署，前序未提交工作保留。成品在本机`.local/deliverables/ppt-managed-learning-20261104/`。
+- 权限与支出。真实测试授权持续有效，批量前含全部诊断738请求/$1.257498594代理估费，学习1请求/$0.008429100已单列。批量继续另计，实付与人工分钟未知。本轮代码已提交、推送并创建PR，正式服务保持既有版本，前序实验工作区及未提交工作保留。成品在本机`.local/deliverables/ppt-managed-learning-20261104/`。
 - 下一步。观察24题交付与真实在线来源计数，确认合格终态进入池；结束后做辅助质量评审与失败归类，再以冻结最终代码做独立合格费用验证。程序当前以自包含结论页为主，长标题、公式与复杂图件仍需验收，干净安装待补。回退使用对应源码/库及已保留快照，保持任务和账本。
 - PR整理。提交仅新增PPT71/Paper73两个兼容库，直接沿main的PPT44/Paper47保留原IR和来源，223项代码锁一致。私有轨迹、论文、产物、实验客户端、中间库和分轮兼容脚本保留在实验目录。必要回归保留。独立Linux整合回归Python2345通过/207跳过、Node1599通过/8跳过，smoke和motif:check通过，新增模型请求0。PPT70/Paper72实验副本与正在进行的队列不改。
-- 团队接线。开放PR129仅改工作区对话且与本次文件无重叠；PR130仅与本次文档重叠。`codex/rsi-privacy`的`83c1185`会修改PPT脱敏结构编译入口，后续合并须保留`privacy_projection=True`、新增代码锁及单路准入测试。main公共RSI仍为显式离线机制，PPT目前使用账户worker/Artifact；`CapabilityImprovementAdapter`的PPT适配与页面后端桥接待开发，详见接口。
+- 团队接线。核对时main仍为`5d73a4b`，开放PR129为`a597083`、PR130为`23c1b50`，两项与本提交的`git merge-tree`均自动合并通过。`codex/rsi-privacy`的`83c1185`与本提交有3处代码/测试冲突，后续合并须同时保留`privacy_projection=True`、新增代码锁及单路准入测试。main公共RSI仍为显式离线机制，PPT目前使用账户worker/Artifact；`CapabilityImprovementAdapter`的PPT适配与页面后端桥接待开发，详见接口。
+- 远端检查。GitHub已确认PR可合并。首个Linux检查在`npm run setup`下载Python依赖时发生`BrokenPipeError`，尚未执行测试；其他检查仍运行中。GitHub CI结果须在审核前继续核对，独立Linux全量回归结果单列。代码通过GitHub官方Git Database API快进推送，远端tree与commit SHA均与本地一致。
 - 最新队列观察。N01已完成，N02执行中且有4次接口参数/封装拒绝，完整恢复与质量后续核对。批量材料与成本不混入前述两题对照。
 
 ## 2026-11-04：交付修复与小规模验收收尾
