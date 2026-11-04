@@ -153,6 +153,55 @@ def test_evaluation_freezes_candidate_package(tmp_path, skills):
         run._review(node['node_id'])
 
 
+def test_failed_review_can_retry_without_overwriting_evidence_or_prior_cost(tmp_path, skills):
+    run = make_run(tmp_path, skills)
+    node = run._create('seed', {'extra.txt': 'helper'}, PROPOSAL)
+    run._evaluate(node['node_id'], 'validation')
+    ledger = tmp_path / 'original-review-cost.jsonl'
+    calls = []
+    def independent_review(request):
+        calls.append(request)
+        with ledger.open('a') as stream:
+            stream.write(json.dumps({'request_id': len(calls), 'owner': 'original-review-session',
+                                     'observed_model_usd_decimal': '0.1'}) + '\n')
+        if len(calls) == 1:
+            raise json.JSONDecodeError('Reviewer returned prose', 'Independent review: promising', 0)
+        return {'accepted': True, 'reason': 'Second independent review produced a valid verdict'}
+    run.review = independent_review
+    first = run.dispatch('review_candidate', {'node_id': node['node_id']})
+    assert first['status'] == 'error' and 'JSONDecodeError' in first['error']
+    original_request = run.directory / node['node_id'] / 'review-request.json'
+    original_bytes = original_request.read_bytes()
+    first_ledger_bytes = ledger.read_bytes()
+    assert 'review' not in node and node['status'] == 'proposed'
+    result = run.dispatch('review_candidate', {'node_id': node['node_id']})
+    assert result['accepted'] is True
+    assert len(calls) == 2
+    assert original_request.read_bytes() == original_bytes
+    assert ledger.read_bytes().startswith(first_ledger_bytes)
+    settled = [json.loads(line) for line in ledger.read_text().splitlines()]
+    assert [row['request_id'] for row in settled] == [1, 2]
+    assert all(row['owner'] == 'original-review-session' for row in settled)
+    attempts = list((run.directory / node['node_id'] / 'review-attempts').iterdir())
+    assert len(attempts) == 2
+    assert all((attempt / 'request.json').is_file() for attempt in attempts)
+    assert sum((attempt / 'failure.json').is_file() for attempt in attempts) == 1
+    assert sum((attempt / 'review.json').is_file() for attempt in attempts) == 1
+    assert run.dispatch('review_candidate', {'node_id': node['node_id']}) == result
+    assert len(calls) == 2
+
+
+def test_invalid_review_verdict_is_retained_without_admission(tmp_path, skills):
+    run = make_run(tmp_path, skills)
+    node = run._create('seed', {'extra.txt': 'helper'}, PROPOSAL)
+    run._evaluate(node['node_id'], 'validation')
+    run.review = lambda request: {'accepted': 'looks good', 'reason': 'Prose is not a boolean verdict'}
+    result = run.dispatch('review_candidate', {'node_id': node['node_id']})
+    assert 'skill_review_result_invalid' in result['error']
+    assert 'review' not in node and node['status'] == 'proposed'
+    assert list((run.directory / node['node_id'] / 'review-attempts').glob('*/failure.json'))
+
+
 def test_missing_agent_decision_is_explicit_failure(tmp_path, skills):
     run = make_run(tmp_path, skills)
     run.call_agent = lambda request, dispatch: {'diagnostic': True}
@@ -160,6 +209,48 @@ def test_missing_agent_decision_is_explicit_failure(tmp_path, skills):
     assert result['status'] == 'failed'
     assert 'decision_missing' in result['error']
     assert (tmp_path / 'run/result.json').is_file()
+
+
+def test_premature_continue_is_repairable_within_the_same_tool_session(tmp_path, skills):
+    run = make_run(tmp_path, skills, candidate_budget=1)
+    sessions = []
+    def repair_in_session(request, dispatch):
+        sessions.append(request)
+        premature = dispatch('select_parent', {'selected_node_id': 'seed', 'action': 'continue',
+                                              'reason': 'A useful change is planned'})
+        assert premature['status'] == 'error'
+        assert 'skill_continue_requires_candidate' in premature['error']
+        assert 'use stop' in premature['error']
+        assert run.active_decision is None
+        assert run.created == 0
+        assert not (run.directory / 'decision-000.json').exists()
+        current = dispatch('read_skill', {'node_id': 'seed', 'resource': 'SKILL.md'})
+        node = dispatch('create_candidate', {'parent_id': 'seed',
+            'files': {'SKILL.md': current['content'] + '\nimproved-task\n'}, 'proposal': PROPOSAL})
+        assert node['node_id'] == 'i000-c1'
+        assert dispatch('evaluate_candidate', {'node_id': node['node_id']})['score'] == '1'
+        assert dispatch('review_candidate', {'node_id': node['node_id']})['accepted'] is True
+        assert dispatch('select_parent', {'selected_node_id': node['node_id'], 'action': 'continue',
+                                         'reason': 'Independent evaluation supports the constructed change'})['action'] == 'continue'
+        return {'diagnostic': True}
+    run.call_agent = repair_in_session
+    result = run.run()
+    assert result['status'] == 'completed'
+    assert result['selected_node'] == 'i000-c1'
+    assert result['candidate_count'] == 1
+    assert len(sessions) == 1
+    receipt = json.loads((run.directory / 'tool-calls/00001.json').read_text())
+    assert receipt['status'] == 'failed'
+
+
+def test_stop_without_candidate_retains_seed(tmp_path, skills):
+    run = make_run(tmp_path, skills)
+    run._evaluate('seed', 'validation')
+    result = run.dispatch('select_parent', {'selected_node_id': 'seed', 'action': 'stop',
+                                          'reason': 'No evidence supports a revision'})
+    assert result['action'] == 'stop'
+    assert run.created == 0
+    assert run.active_decision['selected_node_id'] == 'seed'
 
 
 def test_review_is_required_before_selection(tmp_path, skills):

@@ -138,6 +138,96 @@ def test_legacy_input_identity_comes_from_verified_manifest(fixture):
         benchmark.observation_input_fingerprint(row)
 
 
+def _independence_context(fixture, trials):
+    from src.adapters.capability_contract import create_capability_snapshot
+    from src.adapters.capability_investigation import Investigation
+    owner = json.loads(verify(trials[0]['observation']))['owner']
+    entries = [{'split': 'training', 'scope': 'diagnostic', 'evidence': trial['observation']}
+               for trial in trials]
+    investigation = Investigation(create_capability_snapshot(owner, [], []), entries,
+        'diagnostic', fixture.root / 'independence-inquiry', inspector=benchmark.inspect_benchmark)
+    context = investigation.context(list(investigation.observations))
+    candidate = {'kind': 'task_strategy', 'scope': 'diagnostic',
+        'burden': 'Repeated processing of separate input instances',
+        'expected_behavior': 'Reuse the witnessed stable processing',
+        'verification': 'Independent original task checks',
+        'failure_conditions': 'Keep the existing method if checks reject the candidate',
+        'evidence_ids': [row['id'] for row in context['observations']],
+        'proposal': {'applicability': 'The inspected task family',
+            'decision_policy': 'Check inputs before choosing processing',
+            'capability_refs': [], 'parent': None}}
+    return context, candidate
+
+
+def test_distinct_inputs_in_one_family_support_the_existing_investigation(fixture):
+    from src.adapters.capability_evolution_agent import validate_candidate
+    (fixture.test / 'environment/input.txt').write_text('Separate original input')
+    trials = [fixture.host.trial('task-one', label='prior-development'),
+              fixture.host.trial('task-one', split='test', label='prior-observed-instance')]
+    original_bytes = {Path(trial[key]['path']): verify(trial[key])
+                      for trial in trials for key in ('record', 'observation', 'manifest')}
+    raw = [json.loads(verify(trial['observation'])) for trial in trials]
+    assert raw[0]['source_identity'] == raw[1]['source_identity']
+    context, candidate = _independence_context(fixture, trials)
+    assert context['independent_sources'] == 2
+    assert validate_candidate(candidate, context) == candidate
+    for row in context['observations']:
+        state = row['decision_context']['state']
+        assert state['task_family_identity'] == raw[0]['source_identity']
+        assert state['source_independence_basis'] == 'verified_input_fingerprint'
+        assert benchmark.observation_input_fingerprint(row) == row['input_fingerprint']
+    assert original_bytes == {path: path.read_bytes() for path in original_bytes}
+
+
+@pytest.mark.parametrize('second_kind', ['renamed-task', 'retry', 'continuation'])
+def test_same_input_does_not_gain_support_through_names_retries_or_continuations(fixture, second_kind):
+    from src.adapters.capability_evolution_agent import validate_candidate
+    first = fixture.host.trial('task-one')
+    task = 'task-one'
+    if second_kind == 'renamed-task':
+        source(fixture.root, 'training/task-two')
+        task = 'task-two'
+    second = fixture.host.trial(task, label=second_kind)
+    context, candidate = _independence_context(fixture, [first, second])
+    assert context['independent_sources'] == 1
+    with pytest.raises(ValueError, match='cross_task_support_required'):
+        validate_candidate(candidate, context)
+
+
+@pytest.mark.parametrize('claimed_fingerprint', [None, 'unwitnessed-claim'])
+def test_unwitnessed_legacy_records_keep_the_conservative_family_identity(fixture, claimed_fingerprint):
+    result = fixture.host.trial('task-one')
+    raw = json.loads(verify(result['observation']))
+    raw['evidence'] = [ref for ref in raw['evidence'] if Path(ref['path']).name != 'manifest.json']
+    raw['input_fingerprint'] = claimed_fingerprint
+    path = Path(result['observation']['path']).with_name('legacy-experience.json')
+    path.write_text(json.dumps(raw))
+    before = path.read_bytes()
+    projected = benchmark.inspect_benchmark(file_ref(path), raw['owner'])
+    assert projected['source_identity'] == raw['source_identity']
+    assert projected['decision_context']['state']['source_independence_basis'] == 'legacy_family_identity'
+    assert benchmark.observation_input_fingerprint(projected, require_manifest=True) is None
+    assert path.read_bytes() == before
+
+
+def test_projected_fingerprint_still_checks_original_manifest_and_family(fixture):
+    result = fixture.host.trial('task-one')
+    raw = json.loads(verify(result['observation']))
+    projected = benchmark.inspect_benchmark(result['observation'], raw['owner'])
+    assert benchmark.observation_input_fingerprint(projected) == raw['input_fingerprint']
+    projected['input_fingerprint'] = 'changed'
+    with pytest.raises(ValueError, match='input_fingerprint_changed'):
+        benchmark.observation_input_fingerprint(projected)
+    projected = benchmark.inspect_benchmark(result['observation'], raw['owner'])
+    projected['decision_context']['state']['task_family_identity'] = 'changed-family'
+    with pytest.raises(ValueError, match='input_source_identity_changed'):
+        benchmark.observation_input_fingerprint(projected)
+    projected = benchmark.inspect_benchmark(result['observation'], raw['owner'])
+    projected['evidence'] = [ref for ref in projected['evidence'] if Path(ref['path']).name != 'manifest.json']
+    with pytest.raises(ValueError, match='input_manifest_required'):
+        benchmark.observation_input_fingerprint(projected)
+
+
 @pytest.mark.parametrize('record,expected', [
     ({'split': 'test', 'label': 'validation'}, 'validation'),
     ({'split': 'test', 'evaluation_role': 'development'}, 'development'),

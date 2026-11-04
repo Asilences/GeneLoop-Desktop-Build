@@ -150,3 +150,9 @@ Python主任务族已预取原`python:3.11-slim`和`python:3.9.19-slim`基础标
 | `manufacturing-fjsp-optimization` | 返回0，reward1.0 | Python3.11.18、pandas2.2.3 | 90.92秒 |
 
 前者run为`manufacturing-equipment-maintenance-1793813505267439067`，镜像为`sha256:93598ffc44f5cfe628a9c5c5f0aaaf82a7dee6ec76ee69e1e52329a03d08a228`。后者run为`manufacturing-fjsp-optimization-1793813533114743855`，镜像为`sha256:05c826f759a8ce3450f8dfcd991539e5da335f540cdc2c24a221eeb36413aed3`。原环境、oracle和评分器预检均通过，模型调用0，材料继续与真实学习输入隔离。
+
+### 2026-11-05 独立任务实例的读取投影
+
+审计发现原 `source_identity` 由 TaskID 与数据集版本生成，EA 因此会把同一任务族的不同原始输入合并。读取 `inspect_benchmark` 现在从已核验的原 manifest 恢复输入摘要，按真实输入实例生成调查侧来源身份。原 family 身份保存在 `decision_context.state.task_family_identity`，原 record、manifest 及其摘要保留。缺少可核验输入摘要的旧记录继续按原 family 保守计数，并标记 `legacy_family_identity`。后续读取投影的输入摘要仍需匹配原 family 和 manifest。
+
+同一 family 的独立输入可以为现有 Investigation 提供两个来源。相同输入改 TaskID、重试和续写继续合并。训练、验证与最终留出的原角色约束仍分别执行，适用域依据实际验收范围记录。本次属于零模型工程诊断，冻结中的 R9/R8 继续使用其原代码快照。

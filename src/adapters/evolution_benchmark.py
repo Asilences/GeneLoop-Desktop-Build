@@ -10,6 +10,7 @@ import time
 from uuid import uuid4
 
 from .capability_feedback import file_ref, verify
+from .capability_contract import capability_digest
 from .capability_improvement import save
 from .capability_proposal import parse_proposal
 from .research_harness import ResearchHarness
@@ -89,19 +90,24 @@ def validation_dataset_splits(mapping=None):
     return dict(mapping or {})
 
 
-def observation_input_fingerprint(row):
+def observation_input_fingerprint(row, *, require_manifest=False):
     """Recover old host records only from their original verified manifest."""
+    state = row.get('decision_context', {}).get('state', {})
+    family = state.get('task_family_identity', row.get('source_identity'))
     for reference in row.get('evidence', []):
         if Path(reference['path']).name != 'manifest.json':
             continue
         manifest = json.loads(verify(reference))
-        if (manifest.get('format') == 'skillsbench_trial_manifest_v1'
-                and manifest.get('source_identity') == row.get('source_identity')):
+        if manifest.get('format') == 'skillsbench_trial_manifest_v1':
+            if manifest.get('source_identity') != family:
+                raise ValueError('benchmark_input_source_identity_changed')
             fingerprint = input_fingerprint(manifest)
             if row.get('input_fingerprint') not in (None, fingerprint):
                 raise ValueError('benchmark_input_fingerprint_changed')
             return fingerprint
-    return row.get('input_fingerprint')
+    if state.get('source_independence_basis') == 'verified_input_fingerprint':
+        raise ValueError('benchmark_input_manifest_required')
+    return None if require_manifest else row.get('input_fingerprint')
 
 
 def benchmark_evaluation_role(record):
@@ -487,4 +493,17 @@ def inspect_benchmark(reference, owner):
                 'source_record': evidence, 'references': added,
                 'scope': 'original_quality_diagnostics_only_no_post_verification_artifacts'}
         break
+    # Preserve the original family/version identity in stored evidence. The
+    # investigation view counts witnessed input instances across task families.
+    state = value.setdefault('decision_context', {}).setdefault('state', {})
+    family = value['source_identity']
+    if state.get('task_family_identity', family) != family:
+        raise ValueError('benchmark_task_family_identity_changed')
+    fingerprint = observation_input_fingerprint(value, require_manifest=True)
+    state['task_family_identity'] = family
+    state['source_independence_basis'] = 'legacy_family_identity'
+    if fingerprint is not None:
+        value['input_fingerprint'] = fingerprint
+        value['source_identity'] = capability_digest({'benchmark_input_fingerprint': fingerprint})
+        state['source_independence_basis'] = 'verified_input_fingerprint'
     return value

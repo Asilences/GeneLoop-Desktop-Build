@@ -2,7 +2,7 @@
 
 ## 当前结论
 
-已实现同一工具驱动优化器的任务层与meta层适配，28项确定性协议诊断通过。真实模型、benchmark质量和成本对照由公共实验入口继续验收。
+已实现同一工具驱动优化器的任务层与meta层适配，32项确定性协议诊断通过。真实模型、benchmark质量和成本对照由公共实验入口继续验收。
 
 ## 依据与复现差异
 
@@ -74,6 +74,18 @@ R3早期baseline仅暴露评分与不可读取的引用，优化器缺少原轨�
 修复复用原reward与CTRF，仅在评分器正常完成、退出码1、官方reward位于`[0,1)`、CTRF计数与记录完整一致且全部失败均为调用阶段断言失败时，记录`evaluated`和原分数，并附`verifier_outcome=quality_rejected`及原CTRF引用。原非0退出码与日志保持。缺报告、初始化／收集／导入错误、不完整计数和超时继续保留故障与未知评分。
 
 155项相关无模型诊断通过，包含原Trial经Host把seed质量失败0分传入Skill∞优化器并实际调用后续优化入口。该回归仅验证失败反馈能够继续流转，真实策略优化效果待后续实验。原R7结果没有追改，新增真实模型调用0。
+
+## R8选择顺序与review重入
+
+原`code-r8/.local/results/baseline-threejs-002`最终因`skill_iteration_without_candidate`失败。Task优化器先调用`select_parent(seed, continue)`，同会话随后创建与评估候选被`skill_iteration_already_decided`拒绝。原约束在会话结束后才执行，反馈时机使模型无法在当前会话修正。
+
+修复将现有continue约束前移到选择工具，当前轮未创建候选时返回明确错误，暂不写decision或设置`active_decision`。同会话仍可正常构造、评估、独立审查与选父，stop保留seed继续允许，候选预算与原run兜底保持。
+
+同一R8运行中，另一inner候选的独立Reviewer返回自然语言长评，原严格JSON解析失败。重试review时，原`review-request.json`已存在，导致`FileExistsError`。修复为每次显式review调用新增独立`review-attempts/<id>/`，分别保存请求、原响应、合法判定或失败。首个`review-request.json`字节保留，合法成功后沿原`review.json`及候选状态接线。成功review再次读取复用已有结果。非法自然语言、非法accepted类型继续拒绝准入，模型调用与失败费用沿原宿主账本保留。
+
+新增4项诊断覆盖过早continue后同会话修正、无候选stop、首次review失败后第二次可真实调用回调且原请求与费用前缀不变、非法review结果保留。baseline共32项通过，与Host合计81项通过，新增真实模型请求0。原R8运行记录未改写。
+
+该R8真实运行累计233次请求，原代理观测费用USD0.47944473。局部OBJ task候选通过独立review并在验证与training中实际加载，单次同canonical reward保持1时，任务请求从33次降至8次；外层最终保留seed meta-skill，整体task优化未完成。本轮保留局部正向事实、元技能未更新和整体失败，完整优化开销单列。
 
 新增 `tests/test_research_harness.py` 的13项诊断通过，包含真实本机MCP2.2、原SDK、原生skill加载、工具回调、任务timeout及原累计费用账本。完整SDK诊断使用本机合成SSE Provider，原请求计数5→8，实际工具为`skill`和研究MCP工具，新增真实模型请求0。
 

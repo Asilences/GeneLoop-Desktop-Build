@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+from uuid import uuid4
 
 from .capability_feedback import file_ref, verify
 from .capability_improvement import save
@@ -394,19 +395,33 @@ class SkillInfinityRun:
                    'parent_rollout': parent.get('rollout'),
                    'candidate_rollout': node.get('rollout'),
                    'reviewer_policy': str(self._controller() / 'references/reviewer-policy.md')}
-        save(self.directory / node_id / 'review-request.json', request)
-        result = self.review(request)
-        if not isinstance(result.get('accepted'), bool) or not isinstance(result.get('reason'), str):
-            raise ValueError('skill_review_result_invalid')
-        self._node(node_id)
-        unchanged = _package(node['skill_directory'])['digest'] == _package(parent['skill_directory'])['digest']
-        result = {**result, 'skill_activated': node['evaluation'].get('skill_activated'),
-                  'activation_basis': 'original_evaluation_summary; independent_review_of_available_evidence'}
-        if unchanged:
-            result = {**result, 'accepted': False, 'host_rejection': 'unchanged_package'}
+        attempt = self.directory / node_id / 'review-attempts' / uuid4().hex
+        attempt.mkdir(parents=True)
+        save(attempt / 'request.json', request)
+        try:
+            save(self.directory / node_id / 'review-request.json', request)
+        except FileExistsError:
+            pass
+        try:
+            result = self.review(request)
+            save(attempt / 'response.json', result)
+            if (not isinstance(result, dict) or not isinstance(result.get('accepted'), bool)
+                    or not isinstance(result.get('reason'), str)):
+                raise ValueError('skill_review_result_invalid')
+            self._node(node_id)
+            unchanged = _package(node['skill_directory'])['digest'] == _package(parent['skill_directory'])['digest']
+            result = {**result, 'skill_activated': node['evaluation'].get('skill_activated'),
+                      'activation_basis': 'original_evaluation_summary; independent_review_of_available_evidence'}
+            if unchanged:
+                result = {**result, 'accepted': False, 'host_rejection': 'unchanged_package'}
+            save(attempt / 'review.json', result)
+            save(self.directory / node_id / 'review.json', result)
+        except Exception as error:
+            save(attempt / 'failure.json', {'error': type(error).__name__ + ':' + str(error),
+                                           'request': file_ref(attempt / 'request.json')})
+            raise
         node['review'] = result
         node['status'] = 'accepted' if result['accepted'] else 'rejected'
-        save(self.directory / node_id / 'review.json', result)
         return copy.deepcopy(result)
 
     def _select(self, selected_node_id, action, reason):
@@ -415,6 +430,9 @@ class SkillInfinityRun:
             raise ValueError('skill_selection_invalid')
         if not isinstance(reason, str) or not reason.strip() or self.active_decision is not None:
             raise ValueError('skill_selection_reason_or_duplicate')
+        if action == 'continue' and self.iteration_created == 0:
+            raise ValueError('skill_continue_requires_candidate: create and evaluate a candidate, '
+                             'complete its independent review, then select; use stop to retain the parent without a candidate')
         pending_reviews = [row['node_id'] for row in self.nodes.values()
                            if row['parent_id'] is not None and 'evaluation' in row and 'review' not in row]
         if pending_reviews:
