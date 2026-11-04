@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-04，新增默认关闭的 [Recursive Abstraction Evolution 研究机制](docs/rae-implementation.md)：真实 Capability 调用可进入原 Motif 学习器，学出的后代仍经原 Store 独立验收；反馈可改变下一轮抽象边界，Builder 的实际解析/绑定轨迹可走同一流程。`npm run rsi:rae:check` 保留机制执行证据，`npm run rsi:rae:learn -- --help` 查看离线入口。当前验收为确定性任务上的实际执行闭环，不等于真实模型自主创造或持续收益；生产路径不变。
+
 PPT新增公共RSI接线。合格单路轨迹与原生认证页面程序自动进入账户材料池，宿主显式配置公共计划后复用Builder、独立验证、Store发布及后继目录。真实模型候选已完成发布、换输入执行与原`create_ppt_page`→`finalize_ppt`交付，学习1请求约USD0.00091104，后继执行新增模型请求0。科研质量、额外净降本和生产部署继续独立验收。配置、失败与恢复见[本轮记录](docs/experiments/ppt-public-rsi-20261104.md)。
 
 GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。

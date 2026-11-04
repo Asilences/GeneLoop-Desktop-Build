@@ -1,3 +1,26 @@
+# 主线当前交接
+
+## 2026-11-04：PR132 同步 PR131 合并后的 main
+
+- 本次整合基线为远程 main `eda9409b`，PR132 原 head 为 `9c87126a`。保留 RAE 与 PPT/桌面接口及交接，复核共享 Builder 的语义视图与成员预算 Session 绑定。
+- PR131 已合并，原成员认证与预算修复纳入本分支。RAE 开关和原独立验收继续生效，真实 Builder 自应用及持续收益仍待研究验证。
+- 首轮全量发现原 PPT75/Paper77 的三个公共控制器代码锁失效，导致17项Python和1项Node拒绝加载。通过原兼容导出器的 `--rae-integration` 生成PPT76/Paper78，核对原图、来源、题面和工具schema字节一致；旧库保留。新增RAE相关依赖锁，默认研究开关仍关闭。
+- 本轮仅做整合与回归，模型请求新增 0。测试记录保存在私有 `.local/pr132-133-integration-20261104/`，最终检查状态由 PR 最新提交定位。PR133 后续同步本分支，不在本次同步中合并或部署。
+
+## 2026-11-04：RAE 连续研发
+
+- 更新时间与交接人：2026-11-04，Codex；本轮默认关闭，不合并、不部署。
+- 目标与范围：[原规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，机制/验收提交 `1b92ccac`、结果交接 `be89b159`（已从Mac推送），分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，认证恢复后已核对远程 main `690d2340`，合并预演无冲突。
+- 已完成：真实 Script 组合回执恢复、嵌套类型投影、原学习器发现局部候选、冻结验收器发布及后继调用；真实模型研究薄入口。Builder helper 训练材料前缀已接原两处 scene/Frontier 路径，默认关闭；独立审计修复相同输入重排冒充独立样本的问题。
+- 已验证：本轮独立历史候选 Linux 发布与 followup 通过；新模型构造发布成功。本地2301 Python/1587 Node通过（241/21跳过），Linux RAE102 Python+35 Node、最后适配/原生66项及smoke/Motif/RSI检查通过，详见[连续研发证据](../experiments/rae-followup-20261104.md)。此前 RAE 诊断 2256 Python、1587 Node 及专项成绩只代表之前源码，不能替代本次结果。
+- 实验结论：历史真实 `C,C,report` 保留完整重复拒绝，原 miner 自动学出 `C→report`；独立历史输入上发布/后继成功。新模型8次请求后选完整 paths 程序成功，C调用0，无Builder前缀。T6真实自应用未观察到，Gate0尚不通过，第二阶段Gate1/2不计完成；无本轮净收益结论。
+- 审计纠正：原 `BuilderConstructionSession` 只有诊断驱动实例化，宿主编译器没有原生认证后端；不可将其测试证书移入真实配置。现改用已有Script训练输入准备子过程，但不得凭接线测试宣称真实自主进化。
+- 配置与数据：入口、开关和最短命令见[接口](../interfaces.md#recursive-abstraction-evolution2026-11-04)。两端 `.local/rae-followup-20261104/` 保留成功和失败，另有本地模型审计目录；原日志/私有论文/凭证均不入Git。原累计账本沿用，未清零。
+- 权限与预算：11个真实请求，代理计量 USD0.047161500（含3个旧接口失败）；本批额度USD3。未核供应商账单；总经济成本未知。阶段内 `max_repairs=2` 是每个固定材料池修复段，成功获取材料后仍可续构，非总3请求限制。
+- 未完成与阻塞：真实任务流未产生可学习的Builder前缀，不能用人工轨迹补齐Gate0。本机认证已恢复，已创建[PR #132](https://github.com/jingyio/GeneLoop/pull/132)，远程CI正在运行，尚未形成通过结论；原其他分支及 `reference/` 保留。
+- 接手下一步：1. 审阅PR #132并核对远程Linux/Windows CI；2. 在真实后续任务中显式采集构造前缀，有独立样本后经同一learner/Store认证并实际用于后继Builder；3. Gate0通过后再启动反馈演化与ABC策略对照，不能强制C或只挑成功轨迹。
+- 回退与风险：不启用 `recursive_abstraction.builder_learning` 即原路径；旧库、原回执、累计账本和生产服务未覆盖。研究提交可以独立回退，不删除私有证据。
+
 ## 2026-11-04：PR131成员模式修复
 
 - 用户授权修复后合并PR131，未授权部署。基线`7ced3b0`，修复分支`codex/pr131-member-fixes-20261104`；精确提交/最终合并以[PR131](https://github.com/jingyio/GeneLoop/pull/131)和Git历史为准。
@@ -5,7 +28,7 @@
 - 本地全量2300 Python、1607 Node通过，Linux实际经代理完成发布及后继。原库兼容导出PPT75/Paper77，IR和来源不变，旧目录保留。详情、失败及测试范围见[科研PPT交接](research_ppt.md)与[实验追加](../experiments/ppt-public-rsi-20261104.md)。
 - 合并必须核对修复head的远程CI；生产服务及私有账本未改动，模型调用0。PR132/133仍独立保留，后续整合保留双方文档。
 
-## 2026-11-03：Creation Efficiency 构造反馈与重新选择（当前）
+## 2026-11-03：Creation Efficiency 构造反馈与重新选择
 
 - 用户已授权按[开发计划](../creation-efficiency-development-plan.md)直接实现和验收。基于实时远程main `2b3d0051`，当前分支`codex/creation-efficiency-20261103`，机制及兼容修复源码`8e0a454f`，后续提交仅补证据文档；已推送并创建[草稿PR128](https://github.com/jingyio/GeneLoop/pull/128)，未合并/部署，远程CI按最新head核对。私人`reference/`保留。
 - 已实现：`capability_construction_history.py`从原请求/结果/原生获取/验收证据生成只读视图；原Builder接收同目标历史、失败和费用，并可声明做法；原修复暂缓后可在有限研究预算内重新选择一次，不重置计数或预算。默认关闭，不新建Agent循环或总账。历史导入、原目录/版本冻结、未知费用、重复归属及提交后继失败均有守卫。接口见[说明](../interfaces.md#构造经历与做法重新选择2026-11-03)。

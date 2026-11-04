@@ -98,13 +98,19 @@ class CapabilityFeedback:
             finally:
                 if temp.exists():temp.unlink()
 
-    def observe(self,*,stage,subject,beneficiary=None,scope,status,cost=None,evidence,opportunity=None):
+    def observe(self,*,stage,subject,beneficiary=None,scope,status,cost=None,evidence,opportunity=None,relation=None):
         if stage not in ('execution','construction','attempt') or status not in ('passed','failed','unknown'):raise ValueError('feedback_fact_invalid')
         if cost is not None and (type(cost) not in (int,float) or not math.isfinite(cost) or cost<0):raise ValueError('feedback_cost_invalid')
         if not scope or not evidence:raise ValueError('feedback_scope_and_evidence_required')
+        if relation is not None and (stage!='construction' or relation not in
+                ('proposed_parent','material_read','compile_ref','runtime_call','verify_used')):
+            # Measured effects must use the independent study remeasurement
+            # entry, never a caller/model supplied relation label alone.
+            raise ValueError('feedback_relation_requires_witness_or_measurement')
         for ref in evidence:verify(ref)
         fact={'stage':stage,'subject':subject,'beneficiary':beneficiary,'scope':scope,'status':status,
               'cost':cost,'evidence':evidence,'opportunity':opportunity,'benefit':None}
+        if relation is not None:fact['relation']=relation
         identity=capability_digest(fact)
         with self.update() as state:state['facts'][identity]=fact
         return identity
@@ -192,8 +198,10 @@ class CapabilityFeedback:
         def score(ref):
             facts=[f for f in state['facts'].values() if f['subject']==ref]
             creation=sum(f['stage']=='construction' and f['status']=='passed'
+                         and f.get('relation') in (None,'compile_ref','runtime_call','verify_used')
                          and current_creation_credit(f) for f in facts)
-            execution=[f for f in facts if f['stage']=='execution' and (scope is None or f['scope']==scope)]
+            execution=[f for f in facts if f['stage']=='execution' and f.get('relation')!='measured_causal_effect'
+                       and (scope is None or f['scope']==scope)]
             passed=sum(f['status']=='passed' for f in execution)
             failed=sum(f['status']=='failed' for f in execution)
             # Cross-task costs are not compared. Only an explicit common scope

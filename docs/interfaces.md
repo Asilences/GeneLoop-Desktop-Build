@@ -1,5 +1,27 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## Recursive Abstraction Evolution（2026-11-04）
+
+规格、模块对应、T0–T8证据与研究边界见[实现记录](rae-implementation.md)。Capability IR、ID、Registry、账本不变；所有新增行为需要宿主显式启用。
+
+- `capture_capability_trace(snapshot, task_id=..., task_input=..., task_fingerprint=..., calls=..., role="task"|"builder")`：calls 含固定能力引用、外部 input_binding 与原 Runtime execution_ref；核验真实参数、结果、父子回执、原生完成事件和权限证据。返回原轨迹协议的类型化投影；内部回执保留，C 在学习视图中为一个节点。
+- `learn_capability_motifs(training, heldout, snapshot, regions=None)`：调用原 miner、compiler 和原 Capability 编译器；输出原 proposal/compiled/provenance。候选仍是 candidate，必须进入原 Store 验收。支持只读、嵌套必需字段封闭对象及 JSON 数组：学习观察采用可逆类型投影，候选恢复原 schema 和绑定。来源仅取明确 step 引用，不按值相等猜依赖。完整同名重复模式仍保留拒绝；同一 trace 可提供最大不重复连续窗口，不增加独立样本数。
+- `capture_composition_trace(snapshot, execution_ref=..., task_input=..., task_fingerprint=...)`：从成功 Script Runtime 原回执与 native stdout 恢复每次调用，核验每节点输入/输出 SHA、原父子关系和认证版本；保留原 trace，不伪造子调用为根执行。
+- `createCapabilityDischarge(host).run({signal})`：默认 disabled；宿主固定义务、独立 claim/predicate/verifier 与 binder 结果。调用原 Runtime 后独立验收并复核实时状态，成功返回有限 summary，未消解义务与组合新检查留在 remaining_frontier。完整 audit 必须保存；宿主将剩余内容交原语义路径。此接口不自行启动新 Agent。
+- `propose_evolution_boundary(..., enabled=True)` 将训练轨迹与已有反馈交宿主提案回调；`evolve_abstraction(..., enabled=True)` 核对反馈和新边界，调用同一学习器产生不同的可执行图。留出证据不送提案回调；不修改旧版本。同模块 `record_relation(feedback,...)` 将 proposed_parent/material_read/compile_ref/runtime_call/verify_used 写入原 CapabilityFeedback；`record_measured_effect` 只读复用原效率计量，未知费用不产生收益或预算。
+- 原 `prepare_capability_source_request` / `propose_once` 接受可选宿主 `construction_session`。`BuilderConstructionSession(enabled=True,...)` 经原 Runtime 记录实际解析、冻结绑定阶段，role=builder 进入同一学习器。已发布构造能力由宿主固定 selection 使用；仍与原编码器结果核对。默认关闭，失败留证并回原编码器，取消传播。尚未自动替换构造策略或证明提速。
+- `prepare_attempt/propose_once(..., abstraction_view=True)` 和提案 CLI `--abstraction-view` 隐藏 native ABI/组合内部图，仅提供语义接口；宿主任务 contract 固定，模型限 capability_source/defer，repair 不许更换视图模式。原始 snapshot 与映射仍保存供审计；输入样例只有 schema 检查，不冒充执行验证。
+
+离线入口：`npm run rsi:rae:learn -- --manifest MANIFEST --output .local/NEW_RUN [--execute]`。manifest 为 `{snapshot:<file_ref>, training:[<trace_ref>,...], heldout:[<trace_ref>,...]}`，可选 `evolution:{feedback_directory, prior_candidate:<compiled_ref>, proposal:<boundary_ref>}`。默认 preview 仅核验；execute 学习，不调用模型或发布。每次使用新私有目录，保存 effective、candidate_refs、拒绝/失败、源文件哈希；file_ref 复用原 `{path,sha256}`。
+
+发布复用 `capability_improvement_plan_v1`：`recursive_abstraction:{enabled:true,semantic_view?:true}`，job 可填 `learned_candidate:<candidate_ref>`。该引用来自学习 CLI 的 `result.candidates[].candidate_ref`，包含原 proposal/compiled/provenance；原 scene 再核验来源、当前版本、host contract 并重新编译，之后按原 Controller/Store 独立发布。`npm run rsi:improve -- --plan PLAN --execute` 仅接无发现/无模型/无学习路由的冻结候选 jobs；其他任务仍用既有 `--call-model`。新 schema 字段全部可选，未启用的旧 plan 行为不变。
+
+Builder 原生训练材料准备可显式配置 `recursive_abstraction:{enabled:true,builder_learning:{enabled:true,selection?:{root:<capability_ref>,candidate:<file_ref>,source_trace:<file_ref>}}}`。公共 scene 与 Paper Frontier 均将它传给原 `prepare_program_cases`。默认关闭；开启时保留实际候选前缀的宿主验证 grant/manifest、原回执和 `role=builder` 投影，容器仍为未认证 candidate。selection 必须已在当前库认证可见，来源为构造轨迹，符号展开与原参数流一致，否则退回原前缀；取消不回退执行。该接线尚未观察真实模型产生并复用学习组合，不能称自主策略学习。
+
+真实研究薄入口 `examples/capability-scenes/run-rae-real-acceptance.py` 默认预检，`--call-model` 显式调用原 Controller，`--observe-builder` 显式启用上述采集。固定任务、原独立验证、原累计账本与代码摘要；费用、失败和材料续构全部记录。
+
+模型请求为零只意味着没有模型费用；总执行/验证/维护成本仍未知。以上机制不授予生产执行、跨账号读写、上传或预算再投资权限。
+
 ## 成员PPT学习/验证传输（2026-11-04修复）
 
 页面参数化提案复用`PptCapabilityBudget`：成员模型`session-UUID`在发送前绑定原账户`turn-任务ID`，结束时取消预算任务并解绑，保留null预算与unknown用量。Owner无账户前缀时沿原直连身份。
