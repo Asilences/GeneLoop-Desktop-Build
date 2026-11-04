@@ -1,7 +1,7 @@
 /** Host-boundary diagnostics; synthetic programs/certificates are not research evidence. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync,existsSync,realpathSync} from 'node:fs';
 import {join,resolve,dirname} from 'node:path';
 import {tmpdir} from 'node:os';
 import {execFileSync,spawnSync} from 'node:child_process';
@@ -18,7 +18,7 @@ const save=(file,value)=>writeFileSync(file,JSON.stringify(value));
 const sha=file=>hash(readFileSync(file));
 const available=python&&existsSync(python);
 function fixture(t){
- const output=mkdtempSync(join(tmpdir(),'public-ppt-member-'));t.after(()=>rmSync(output,{recursive:true,force:true}));
+ const output=realpathSync(mkdtempSync(join(tmpdir(),'public-ppt-member-')));t.after(()=>rmSync(output,{recursive:true,force:true}));
  const owner='diagnostic-owner',scope='diagnostic-scope',learning=join(output,'learning','ppt-'+hash(owner+'\0'+scope));
  const programFolder=join(learning,'program-'+'b'.repeat(24));mkdirSync(programFolder,{recursive:true});
  const png=execFileSync(python,['-c',"import io,base64;from PIL import Image;b=io.BytesIO();Image.new('RGB',(1,1),'white').save(b,format='PNG');print(base64.b64encode(b.getvalue()).decode())"],{encoding:'utf8'}).trim();
