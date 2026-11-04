@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
+
 离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
 
 新增默认关闭的[能力变化后机会重新评价](docs/capability-aware-opportunities-v1.md)：独立发布成功后，结合仍未满足的真实需求提出候选，宿主提供冻结验收条件，再交原Builder。保留全部候选、筛选和结果，区分预期、编译与执行依赖。当前仅机制诊断，不包含节余再投资，不自动开启生产或付费探索。

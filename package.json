@@ -4,6 +4,12 @@
   "private": true,
   "description": "Motif runtime with DeepSeek Harness and configurable MCP scenarios",
   "scripts": {
+    "desktop:setup": "npm --prefix apps/desktop ci",
+    "desktop:dev": "npm --prefix apps/desktop run dev",
+    "desktop:check": "npm --prefix apps/desktop run check",
+    "desktop:smoke": "npm --prefix apps/desktop run smoke --",
+    "desktop:pack": "npm --prefix apps/desktop run pack",
+    "desktop:build": "npm --prefix apps/desktop run dist",
     "rsi:demo": "node scripts/project.mjs rsi-demo",
     "rsi:optimize": "node scripts/project.mjs rsi-optimize",
     "rsi:check": "node scripts/project.mjs python scripts/check-rsi-protocol.py",

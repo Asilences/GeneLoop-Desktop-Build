@@ -1404,3 +1404,19 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+
+## GeneLoop Desktop 接入（2026-11-03）
+
+0.2.0独立桌面自行实现页面、组件、交互状态与样式，复用现有账号、会话、场景、上传/交付与WebSocket接口，不新增服务器Agent或任务协议。安装包不再包含DSH网页/插件模块，也不获取 `__DSH_BOOT__` 或服务器页面。旧0.1.5另行冻结，不能将两者混称。
+
+`LocalFrontendHost` 在原服务器origin提供白名单 `/desktop/*` 与自有HTML；网络仅转发 `/api/`，未知UI返回404，外域拒绝。JSON RPC使用原生envelope；`session/list` 的字段为 `payload.args._request`，其他已用会话请求为 `payload.args.request`。WebSocket `/api/remote.mux` 订阅 `workspace/follow`、`session/control`、`session/follow` 和 `$events`。桌面按持久事件/surfaceOp投影历史、恢复紧凑流；对照通过 `user/message.data.harless_comparison` 元数据和原对照API读取。
+
+桌面逐轮把所选场景序列化为服务器的 `/ppt`、`/paper`、`/data`、`/file`、`/video` 命令，明确输入的命令优先，成功后恢复Chat。模型配置保存成功后才发送；同一未确认发送复用requestId，重连不自动提交。附件使用原生上传回执；人类问答按label和multiSelect提交；写权限只在明确确认后回复 `allowed-once`。设置复用账号与session-trash API，清空携带待核对列表的revision。
+
+桌面标题栏与连接页面的 IPC 仅对安装包内页面及其主 frame 开放；工作区无 Node 或该 IPC 桥接。服务器地址只接受 HTTPS 根 origin，Cookie 按服务器分区；开发本机 HTTP fixture 需显式启用且不适用于打包应用。已有认证、文件归属、版本守卫、预算/取消仍由原服务负责。
+
+0.1.5旧实现基线将标题栏改为32px应用/编辑菜单。工作区的隔离外观preload仅观察CSS颜色，不公开页面API；主进程只接受当前同源主frame发送的两个hex颜色值，并同步本地菜单栏及Windows按钮颜色，拒绝CSS文本与其他能力。用户已明确后续要求独立前端，此基线仅作对照/回退，不当作已完成该重构。
+
+0.1.3桌面协议转发按Electron/Chromium提供的可信 `initiatorOrigin` 核对服务器同源，再恢复转发中的 `Origin`；不从页面可控的referrer推断、不允许跨源或不透明源冒用服务器来源。未携带任何来源的有副作用请求同样拒绝，显式 `credentials:omit` 仍被尊重。原服务器网关的Origin检查不修改；网页登录与桌面登录使用同一账号API和服务器配置，Cookie各自保存。`npm --prefix apps/desktop run smoke:account` 用本机临时合成账号验证表单登录、密码拒绝、刷新与退出，不代替正式账号验收。
+
+当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](desktop.md)。
