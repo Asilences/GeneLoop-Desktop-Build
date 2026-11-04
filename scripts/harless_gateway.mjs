@@ -13,6 +13,8 @@ import {videoConfiguration} from '../src/adapters/geneloop_video.ts';
 import {composeNativeHost} from '../src/adapters/geneloop_native_host.mjs';
 import { createPublicRemoteBridge, forwardPublicRpc, isNativeRpcResponse, REMOTE_MUX_PATH } from './harless_public_transport.mjs';
 
+import { createDesktopModelRoute, DESKTOP_MODEL_PATH } from './harless_desktop_model.mjs';
+
 const modelTransport = JSON.parse(readFileSync(new URL('../config/geneloop-transport.json', import.meta.url), 'utf8'));
 if (Object.keys(modelTransport).sort().join(',') !== 'model_request_max_bytes,schema_version' ||
     modelTransport.schema_version !== 1 || !Number.isSafeInteger(modelTransport.model_request_max_bytes) ||
@@ -225,6 +227,7 @@ export function createGateway(config) {
     upstream.on('error', () => { if (!res.headersSent) send(res, 502, 'budget service unavailable'); else res.destroy(); });
     res.on('close',()=>{if(!res.writableEnded)upstream.destroy();});
     upstream.end(body);
+    return upstream;
   };
   const scopedBudget = scopedPort ? http.createServer(async (req, res) => {
     try {
@@ -286,17 +289,26 @@ export function createGateway(config) {
   const cookieName = 'harless_sess';
   const secure = new URL(origin).protocol === 'https:' ? 'Secure; ' : '';
   const cookie = (value, age) => `${cookieName}=${value}; Path=/; HttpOnly; ${secure}SameSite=Lax${age === undefined ? '' : `; Max-Age=${age}`}`;
-  const sessionFor = req => {
+  const sessionHash = req => {
     const raw = (req.headers.cookie ?? '').split(';').map(s => s.trim()).find(s => s.startsWith(cookieName + '='));
     const value = raw?.slice(cookieName.length + 1);
-    if (!value || !/^[A-Za-z0-9_-]{30,100}$/.test(value)) return null;
-    const row = db.sessions.find(s => s.hash === sha(value) && s.expiresAt > Date.now());
+    return value && /^[A-Za-z0-9_-]{30,100}$/.test(value) ? sha(value) : null;
+  };
+  const activeSession = hash => db.sessions.find(row => row.hash === hash && row.expiresAt > Date.now());
+  const sessionFor = req => {
+    const row = activeSession(sessionHash(req));
     return row ? db.users.find(u => u.id === row.userId) ?? null : null;
   };
   const requireOrigin = req => {
     const requestOrigin = req.headers.origin;
     return requestOrigin === origin && req.headers['sec-fetch-site'] !== 'cross-site';
   };
+  const desktopModel = createDesktopModelRoute({
+    config, json, requireOrigin, sessionHash,
+    isSessionActive: (hash, userId) => activeSession(hash)?.userId === userId,
+    readBounded: (req, limit, model) => readBounded(req, model ? MODEL_REQUEST_MAX_BYTES : limit, model),
+    forward: scopedForward,
+  });
   const issueSession = (res, user) => {
     const value = random();
     db.sessions = db.sessions.filter(s => s.expiresAt > Date.now());
@@ -390,6 +402,7 @@ export function createGateway(config) {
       return json(res, 200, { codes: createInvites({ db, save }, body.count) });
     }
     if (path === '/api/account/logout') {
+      desktopModel?.revokeSession(sessionHash(req));
       const raw = (req.headers.cookie ?? '').split(';').map(s => s.trim()).find(s => s.startsWith(cookieName + '='));
       db.sessions = db.sessions.filter(s => s.hash !== sha(raw?.slice(cookieName.length + 1) ?? ''));
       save(); return json(res, 200, { ok: true }, { 'set-cookie': cookie('', 0) });
@@ -602,6 +615,15 @@ export function createGateway(config) {
         if (input.action === 'claim') return json(res, 200, { code: createOwnerClaim({ db, save }) });
         return json(res, 400, { error: 'invalid action' });
       }
+      if (path.startsWith(DESKTOP_MODEL_PATH + '/')) {
+        if (!desktopModel) return json(res, 404, { error: '该服务器尚未开放本机模型试用。' });
+        try { return await desktopModel.handle(req, res, path, user); }
+        catch (error) {
+          if (error?.status === 413) return rejectOversizedBody(req, res, error);
+          if (!res.headersSent) return json(res, 400, { error: '本机模型请求无效。' });
+          return res.destroy();
+        }
+      }
       if (path.startsWith('/api/account/')) return accountApi(req, res, path, user);
       if (path === '/api/workspace/ready' && req.method === 'GET') return memberReady(res, user);
       if (path === '/account' || path === '/login' || path === '/register' || path === '/claim' || path === '/starting') {
@@ -656,6 +678,7 @@ export function createGateway(config) {
     if (closing) return;
     closing = true;
     remoteBridge.close();
+    desktopModel?.close();
     // Include booting children, and upgraded/idle browser connections that
     // server.close() otherwise keeps alive during an ordinary SIGTERM restart.
     for (const child of memberChildren) child.kill();

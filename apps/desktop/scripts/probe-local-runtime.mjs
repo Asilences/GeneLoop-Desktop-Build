@@ -5,16 +5,16 @@ import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { cpSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, posix, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { stageRuntime } from './runtime-bundle.mjs';
 
 assert.equal(process.platform, 'win32', '探针仅面向 Windows x64');
 assert.equal(process.arch, 'x64');
 const app = fileURLToPath(new URL('../', import.meta.url));
 const packed = resolve(process.argv[2] || join(app, 'release/win-unpacked'));
 const dependencies = resolve(process.argv[3] || app);
-const lock = JSON.parse(readFileSync(join(dependencies, 'package-lock.json'), 'utf8'));
 const root = mkdtempSync(join(tmpdir(), 'GeneLoop 本机探针 '));
 const install = join(root, 'GeneLoop Desktop');
 const workspace = join(root, '工作区');
@@ -35,38 +35,14 @@ symlinkSync(outside, join(workspace, '越界'), 'junction');
 console.log('隔离诊断目录：' + root);
 cpSync(packed, install, { recursive: true });
 
-// 依赖按锁文件的 Node 解析位置复制到安装目录，不能借用源码树或全局模块。
-const staged = new Set();
-function stage(name, requester = '', optional = false) {
-  let folder = requester;
-  while (true) {
-    const key = posix.join(folder, 'node_modules', name);
-    const entry = lock.packages[key];
-    if (entry && existsSync(join(dependencies, key, 'package.json'))) {
-      if (staged.has(key)) return;
-      staged.add(key);
-      cpSync(join(dependencies, key), join(install, 'resources/runtime', key), {
-        recursive: true,
-        filter: path => path === join(dependencies, key) || path.split(/[\\/]/).at(-1) !== 'node_modules',
-      });
-      for (const dep of Object.keys(entry.dependencies || {})) stage(dep, key);
-      for (const dep of Object.keys(entry.optionalDependencies || {})) stage(dep, key, true);
-      for (const dep of Object.keys(entry.peerDependencies || {})) stage(dep, key, entry.peerDependenciesMeta?.[dep]?.optional);
-      return;
-    }
-    if (!folder) break;
-    folder = folder.replace(/(?:^|\/)node_modules\/(@[^/]+\/)?[^/]+$/, '');
-  }
-  assert.ok(optional, '缺少锁定依赖：' + name + '（' + requester + '）');
-}
-stage('@deepseek-ai/dsh');
+const bundled = join(install, 'resources/geneloop-runtime');
+const packagedRuntime = existsSync(join(bundled, 'local-worker.mjs'));
+const runtime = packagedRuntime ? bundled : join(install, 'resources/runtime');
+const staged = packagedRuntime ? 0 : stageRuntime(app, runtime, dependencies);
 const executable = join(install, 'GeneLoop Desktop.exe');
-const cli = join(install, 'resources/runtime/node_modules/@deepseek-ai/dsh/lib/bin.js');
-const plugin = join(install, 'resources/runtime/local-runtime-probe.mjs');
+const cli = join(runtime, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
+const plugin = join(runtime, 'local-runtime-probe.mjs');
 cpSync(join(app, 'test/local-runtime-probe.mjs'), plugin);
-for (const name of ['local-files.mjs', 'local-file-tools.mjs', 'local-agent.mjs']) {
-  cpSync(join(app, 'runtime', name), join(install, 'resources/runtime', name));
-}
 const patch = join(root, 'probe.patch.yml');
 writeFileSync(patch, JSON.stringify([
   { id: 'persistent-pwsh', disabled: true },
@@ -184,7 +160,7 @@ try {
   await rpc(2, 'shutdown');
   child.stdin.end();
   assert.deepEqual(await closed, [0, null]);
-  console.log(JSON.stringify({ kind: 'packaged_windows_harness_probe', ...outcome, inventorySearchReport: true, initialized: true, gracefulShutdown: true, dependencies: staged.size, fixtureRequests, streamAborted, realModelRequests: 0 }));
+  console.log(JSON.stringify({ kind: 'packaged_windows_harness_probe', ...outcome, inventorySearchReport: true, initialized: true, gracefulShutdown: true, packagedRuntime, stagedDependencies: staged, fixtureRequests, streamAborted, realModelRequests: 0 }));
 } catch (error) {
   if (stderr) console.error(stderr);
   throw error;

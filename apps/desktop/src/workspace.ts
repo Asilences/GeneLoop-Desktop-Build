@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { downloadName, externalWebUrl, ownedDownload, sameServer, serverOrigin } from './policy.ts';
 import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
+import { LocalWorkspaceWindow } from './local-workspace.ts';
 import { LocalFrontendHost } from './frontend.ts';
 import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
 import type { Appearance } from './appearance.ts';
@@ -20,6 +21,7 @@ export class DesktopWorkspace {
   frontend: LocalFrontendHost | undefined;
   readonly ready: Promise<void>;
   private currentSession?: Session;
+  private localWorkspace?: LocalWorkspaceWindow;
   private downloadListener?: DownloadListener;
   private pageReady = false;
   private stateValue: DesktopState;
@@ -95,6 +97,13 @@ export class DesktopWorkspace {
     void view.executeJavaScript(`document.getElementById(${JSON.stringify(command)})?.click(); void 0`, true).catch(() => {});
   }
 
+  async openLocalWorkspace(): Promise<void> {
+    if (!this.currentSession || this.window.isDestroyed()) return;
+    this.localWorkspace ??= new LocalWorkspaceWindow({ parent: this.window, server: this.stateValue.server, session: this.currentSession });
+    try { await this.localWorkspace.open(); }
+    catch { if (!this.window.isDestroyed()) dialog.showErrorBox('本机工作区', '无法打开本机工作区。'); }
+  }
+
   private requireShell(event: IpcMainInvokeEvent): void {
     if (event.sender !== this.window.webContents || event.senderFrame !== this.window.webContents.mainFrame ||
         event.senderFrame.url !== pathToFileURL(this.page).href) throw new Error('此操作仅供桌面连接页面使用。');
@@ -142,6 +151,8 @@ export class DesktopWorkspace {
   async connect(input: string): Promise<void> {
     const server = serverOrigin(input, this.options.allowLoopback);
     const attempt = ++this.generation;
+    this.localWorkspace?.dispose();
+    this.localWorkspace = undefined;
     this.removeWorkspace();
     this.pageReady = false;
     this.stateValue.workspaceVisible = false;
@@ -261,6 +272,7 @@ export class DesktopWorkspace {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.localWorkspace?.dispose();
     ++this.generation;
     this.removeWorkspace();
     for (const channel of ['geneloop:state', 'geneloop:retry', 'geneloop:connect', 'geneloop:menu', 'geneloop:settings']) ipcMain.removeHandler(channel);

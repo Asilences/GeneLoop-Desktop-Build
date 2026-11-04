@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>本机工作区 · GeneLoop Desktop</title>
+  <link rel="stylesheet" href="local-workspace.css">
+</head>
+<body>
+  <main>
+    <header><img src="../assets/geneloop-spiral.svg" alt=""><span>GeneLoop Desktop</span><span class="pill">本机 · 预览</span></header>
+    <h1>文件管理</h1>
+    <dl>
+      <div><dt>读取文件夹</dt><dd id="directory"></dd></div>
+      <div><dt>报告目录</dt><dd id="output">未选择，仅可读取</dd><button type="button" id="choose-output">选择目录…</button></div>
+    </dl>
+    <section id="results" aria-label="本机任务结果" aria-live="polite"></section>
+    <form id="task">
+      <label for="prompt">任务</label>
+      <textarea id="prompt" required placeholder="例如，盘点这个文件夹，找出含指定关键词的文件。"></textarea>
+      <p>Agent 与工具在本机运行。发送时，任务描述和必要文件片段会发给云端模型。</p>
+      <div class="actions"><span id="status" role="status"></span><button type="button" id="cancel" hidden>停止</button><button type="submit" id="send">运行任务</button></div>
+    </form>
+  </main>
+  <script src="local-workspace.js"></script>
+</body>
+</html>

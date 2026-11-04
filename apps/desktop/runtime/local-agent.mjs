@@ -4,7 +4,7 @@ import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
-export async function openLocalFileAgent(ctx, { directory, reports, model }) {
+export async function openLocalFileAgent(ctx, { directory, reports, model, signal, onReport }) {
   const reader = openWorkspaceReader(directory);
   let writer, handle;
   try {
@@ -13,7 +13,8 @@ export async function openLocalFileAgent(ctx, { directory, reports, model }) {
       sessionId: randomUUID(),
       meta: { cwd: directory },
       agentOptions: model,
-      setup(scope) { registerLocalFileTools(scope, reader, writer); },
+      signal,
+      setup(scope) { registerLocalFileTools(scope, reader, writer, onReport); },
     });
   } catch (error) {
     writer?.close();

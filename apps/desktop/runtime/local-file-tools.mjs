@@ -6,7 +6,7 @@ const jsonOutput = {
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
 };
 
-export function registerLocalFileTools(scope, reader, writer) {
+export function registerLocalFileTools(scope, reader, writer, onReport) {
   const tools = [
     defineTool({
       name: 'local_list',
@@ -47,7 +47,11 @@ export function registerLocalFileTools(scope, reader, writer) {
       description: '在独立授权的报告目录中创建一份 Markdown 文件，返回文件名。请在报告中附上来源相对路径。',
       parameters: { markdown: string },
       output: jsonOutput,
-      async execute({ markdown }) { return writer.writeMarkdown(markdown); },
+      async execute({ markdown }) {
+        const report = writer.writeMarkdown(markdown);
+        onReport?.(report);
+        return report;
+      },
     }));
   }
   const allowed = new Set(tools.map(tool => tool.name));
