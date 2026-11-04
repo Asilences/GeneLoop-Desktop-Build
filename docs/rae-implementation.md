@@ -2,9 +2,15 @@
 
 - 规格：[用户提供的完整规格](GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md)。
 - 开始日期：2026-11-04；远程main经`ls-remote`与fetch核对为`5d73a4b90e4121e94c9e7240bc8823e8b6bb3bff`。
-- 分支：`codex/recursive-abstraction-evolution-20261104`，在当前工作区从该main建立；此前未推送研究分支完整保留，未整体带入。
+- 原分支：`codex/recursive-abstraction-evolution-20261104`，在当前工作区从该main建立；连续研发分支为 `codex/rae-stage1-real-20261104`；此前未推送研究分支完整保留，未整体带入。
 - 网页会话已读取最近轮次；助手正文接口返回引用占位，具体实现以用户本次请求及附件规格为准。
 - 完成口径：`Implemented`、`wiring_passed`、`autonomous_constructed`、`measured_improvement`分开。T8可选；新机制默认关闭、不部署。
+
+## 连续研发审计修订（2026-11-04）
+
+以下原矩阵主要描述确定性机制检查，不能等同真实 Controller 已自动接通。连续研发发现：`BuilderConstructionSession` 仅由诊断驱动实例化，真实 Frontier 未传入；宿主编译器函数也没有可复用的原生认证后端。因此 T6 的**真实构造接线仍待补齐**，原解析/冻结检查只记 wiring。当前改为复用实际 Builder 为新 helper 准备训练输入的 Script 前缀，不把诊断证书移入运行配置。
+
+真实历史图还暴露嵌套参数投影缺口，已增加保留原 schema/参数来源的可逆投影；只读成功 Script 组合可从原 native stdout 和每节点 SHA 恢复。完整重复模式的拒绝保留，原 learner 可自动发现受支持的局部窗口。连续研发详细证据与失败见后续实验记录；未完成阶段不计通过。
 
 ## T0 最小机制审计
 
@@ -32,15 +38,15 @@
 
 | 项 | 目标 | 状态/证据 |
 | --- | --- | --- |
-| T0 | 最新main/实际模块/兼容边界审计 | 已完成，见上表 |
+| T0 | main/实际模块/兼容边界审计 | 上次远程核对为 `5d73a4b9`；本次远程认证不可用，已完成当前研发源码审计，不能称新核对最新 main |
 | T1 | 宿主可信有界义务消解及失效回退 | `test_capability_discharge.mjs`：适用/权限/版本/证据/取消/组合新检查，未处理项保留 frontier |
 | T2 | 原Runtime实际调用与受限摘要 | 同上，实际 Python 原生操作与完整回执；`test_capability_abstraction_view.py` 验证模型只见语义接口、内部审计保留 |
 | T3 | C→真实G1→原miner/compiler产生D→发布→G2 | `test_capability_motif_learning.py`：实际发布 C、执行 G1，原 learner 学出 D、原 Store 发布，执行含 D 的 G2、继续学出并发布 E；原 DAG 拒绝前向/自引用 |
 | T4 | 反馈驱动新边界候选及新版本 | `test_capability_evolution_runtime.py`：三节点旧边界实际验证失败；反馈参与两节点候选生成，同一学习器编译、独立发布新版本；完整任务另执行剩余节点 |
 | T5 | 双价值/证据关系/费用未知 | `test_capability_evolution.py` 及原 feedback/efficiency 回归；材料阅读、编译引用、实际调用和独立测量分开；未知不产生额度 |
-| T6 | Builder真实轨迹进入同学习流程并回用 | `test_capability_builder_application.py`：真实解析/冻结绑定→相同 learner→原 Store→后继 Builder 调用学出的组合；禁用恢复原行为 |
+| T6 | Builder构造轨迹进入同学习流程并回用 | 原解析/冻结仅诊断驱动；现已接真实 helper 训练材料前缀，`test_builder_program_learning.py` 验证原学习/Store/后继消费与禁用恢复。真实模型本轮未产生该前缀，真实自应用 Research Pending |
 | T7 | Python/Node/Motif/RSI回归 | 见[本轮执行记录](experiments/rae-mechanism-20261104.md)，包含公共学习与原 improvement 发布入口 |
-| T8 | 小规模真实模型 | 本轮未运行，属于规格可选项；未模拟模型行为验收，未声称自主创造/收益 |
+| T8 | 小规模真实模型 | 连续研发11请求含失败；最终完整程序发布及后继通过，C调用0。另有真实历史图学习候选发布/复用通过；不能合并成一次新模型自主递归证明 |
 
 ## 实际闭包与最小复现
 
@@ -87,12 +93,12 @@ T3 诊断中的初始 C 由宿主指定并独立发布；后代 D/E 的完整 pr
 
 **Research Pending：** 在真实任务流上自主发现有用边界、模型自然采用后代抽象、同质量全成本 Creation Efficiency、持续跨代正反馈和一般性。没有本轮收益测量，不能抹去过去已观察的复用收益，也不能把过去收益归给本轮新机制。
 
-实现范围是只读、封闭必需字段对象、标量/简单数组参数与原编译器支持的连续区域。嵌套可选参数、任意 MCP、副作用任务、原编译器不支持的同名重复节点不偷偷降级，而是记录 unsupported/rejected。独立验收器与场景输入需要宿主提供；本轮未让正常聊天自动启用演化。
+实现范围是只读、嵌套封闭必需字段对象、JSON数组参数与原编译器支持的连续区域。嵌套可选参数、任意 MCP、副作用任务、原编译器不支持的同名重复节点不偷偷降级，而是记录 unsupported/rejected。独立验收器与场景输入需要宿主提供；本轮未让正常聊天自动启用演化。
 
-Builder 自应用先针对解析与冻结绑定阶段。后继 Builder 实际改用学出的组合入口，但保留原编码器一致性复算；这可能增加执行成本，因此尚不自动替换原构造策略，也不宣称构造效率提升。需要后续独立效果证据再决定推广。
+原解析与冻结绑定自应用仅由诊断驱动接线，保留原编码器一致性复算。连续研发将真实 scene/Frontier 的 helper 训练材料准备接入同一机制，默认关闭；学得前缀需在当前库认证并与原参数关系严格一致才可替换。当前只有诊断纵切验证后继消费，未观察真实自主采用，也不宣称构造效率提升。
 
 关闭开关或不注入 construction_session 即回原路径；研究产物留在私有独立目录，不删除旧版本。整个分支可直接弃用而不影响正式服务。未修改上游 Harness、共享账本或原 Capability 身份协议。
 
 ## 权限与交付
 
-本轮授权创建独立PR，不合并、不部署。实际运行使用原账本；本轮模型调用0。开发起点已成功核对远程main；最终推送阶段HTTPS凭证不可用，现有SSH key对目标仓库无权限，浏览器登录不能代替Git推送权限。因此当前为完整本地分提交、全部本地验收通过，推送/PR/远程CI待Git登录恢复，不能写成已创建PR。原凭证和远程配置未改。PR正文与补交命令保留私有`.local/rae-pr-body.md`，Git bundle保留本轮提交。
+已授权创建独立PR，不合并、不部署。首轮诊断模型调用0；连续研发真实调用、费用和失败见[最新记录](experiments/rae-followup-20261104.md)，沿用原账本。开发起点已成功核对远程main；最终推送阶段HTTPS凭证不可用，现有SSH key对目标仓库无权限，浏览器登录不能代替Git推送权限。首轮机制提交和本轮增量在本地保留；最新测试与未通过研究门禁以连续研发记录为准。推送/PR/远程CI待Git访问恢复，不能写成已创建PR。原凭证和远程配置未改。PR正文与补交命令保留私有`.local/rae-pr-body.md`，Git bundle保留本轮提交。

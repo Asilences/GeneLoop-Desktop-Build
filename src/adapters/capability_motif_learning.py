@@ -106,7 +106,39 @@ def _receipt_tree(receipts, root, capabilities, succeeded):
     if visited != set(by_call): _fail('orphan_receipt')
 
 
-def capture_capability_trace(snapshot, *, task_id, task_input, task_fingerprint, calls, role='task'):
+def _validation_manifest(snapshot, execution, task_input, reference):
+    """Observe a host-granted candidate container, never certify that container."""
+    raw = evidence(reference); manifest = json.loads(raw); grant = manifest.get('grant', {})
+    if (manifest.get('format') != 'script_capability_task_v1' or
+            manifest.get('owner') != snapshot['owner'] or manifest.get('task_id') != execution.get('task_id') or
+            grant.get('task_id') != execution.get('task_id') or grant.get('snapshot_sha256') != snapshot['digest'] or
+            grant.get('root') != execution.get('root') or grant.get('arguments_sha256') != capability_digest(task_input) or
+            grant.get('mode') != 'validate' or grant.get('effects') != ['read'] or grant.get('revoked') is not False or
+            execution.get('format') != 'script_capability_trace_v1' or execution.get('mode') != 'validate' or
+            execution.get('grant_id') != grant.get('id') or not grant.get('id') or
+            execution.get('validation_grant_id') != grant.get('id') or
+            execution.get('manifest_sha256') != hashlib.sha256(raw).hexdigest() or
+            execution.get('arguments_sha256') != capability_digest(task_input) or
+            execution.get('input_versions') != manifest.get('inputs')):
+        _fail('candidate_validation_grant_changed')
+    # Manifest is a frozen trusted-host input. Its selected registry and native
+    # libraries are rechecked, not inferred from candidate metadata.
+    from pathlib import Path
+    actual = validate_capability_snapshot(json.loads(Path(manifest['registry_path']).read_bytes()), snapshot['owner'])
+    if actual != snapshot: _fail('candidate_validation_snapshot_changed')
+    for ref in manifest.get('libraries', []): evidence(ref)
+    root = execution['root']
+    for cap in snapshot['capabilities']:
+        if capability_ref(cap) == root:
+            if cap['certification'] != 'candidate' or cap['implementation']['kind'] != 'composition':
+                _fail('candidate_validation_container_required')
+        elif cap['certification'] != 'certified' or cap['lifecycle'] != 'active':
+            _fail('candidate_validation_dependency_not_certified')
+    return manifest
+
+
+def capture_capability_trace(snapshot, *, task_id, task_input, task_fingerprint, calls, role='task',
+                             _validation_manifest_ref=None):
     """Capture an actual host execution graph without flattening called capabilities.
 
     Each call supplies its original IR input_binding and immutable execution_ref.
@@ -130,11 +162,14 @@ def capture_capability_trace(snapshot, *, task_id, task_input, task_fingerprint,
         ref = call['capability']
         if ref not in roots: _fail('call_not_visible')
         cap = by_id[ref['id']]
-        if cap['certification'] != 'certified' or cap['lifecycle'] != 'active':
+        if (cap['certification'] != 'certified' or cap['lifecycle'] != 'active') and _validation_manifest_ref is None:
             _fail('call_not_certified')
         _binding(call['input_binding'], set(results))
         args = _bind(call['input_binding'], task_input, results)
         execution = json.loads(evidence(call['execution_ref']))
+        if _validation_manifest_ref is not None:
+            if len(calls) != 1 or role != 'builder': _fail('candidate_validation_builder_container_required')
+            _validation_manifest(snapshot, execution, task_input, _validation_manifest_ref)
         receipts = execution.get('receipts', [])
         outer = [r for r in receipts if r.get('parent_call_id') is None]
         if len(outer) != 1: _fail('root_receipt_required')
@@ -191,6 +226,13 @@ def capture_capability_trace(snapshot, *, task_id, task_input, task_fingerprint,
 def _checked(trace, owner):
     if not isinstance(trace, dict) or trace.get('owner') != owner:
         _fail('owner_changed')
+    if trace.get('projection') == 'capability_composition_calls_v1':
+        rebuilt = capture_composition_trace(trace['snapshot'], execution_ref=trace['execution_ref'],
+            task_input=trace['execution_input'], task_fingerprint=trace['task_fingerprint'],
+            parent_call_id=trace['parent_call_id'], role=trace['role'],
+            validation_manifest_ref=trace.get('validation_manifest_ref'), available_snapshot=trace.get('available_snapshot'))
+        if trace != rebuilt: _fail('trace_changed')
+        return rebuilt
     rebuilt = capture_capability_trace(trace['snapshot'], task_id=trace['task_id'],
         task_input=trace['task_input'], task_fingerprint=trace['task_fingerprint'],
         calls=trace['calls'], role=trace['role'])
@@ -202,32 +244,154 @@ def _symbol(ref):
     return 'capability_' + ref['sha256']
 
 
-def _fields(schema, path=()):
-    """Guaranteed scalar/list output fields supported by the existing compiler."""
-    if schema.get('type') == 'object':
-        return [p for name in sorted(schema.get('required', []))
-                if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name)
-                for p in _fields(schema.get('properties', {}).get(name, {}), (*path, name))]
-    if schema.get('type') in ('string', 'number', 'integer', 'boolean') or (
-            schema.get('type') == 'array' and schema.get('items', {}).get('type') in ('string', 'number', 'integer', 'boolean')):
-        return [path] if path else []
-    return []
+def capture_composition_trace(snapshot, *, execution_ref, task_input, task_fingerprint,
+                              parent_call_id=None, role='task', validation_manifest_ref=None, available_snapshot=None):
+    """Project direct children from ORIGINAL Script Runtime evidence, without replay.
+
+    Native stdout is decoded exactly as script_capability_runtime does. Every
+    recovered node's input/output is checked against its original receipt hash;
+    neither child receipts nor their parent IDs are rewritten as new executions.
+    Other backends or missing output fail closed. Old evidence is never altered.
+    """
+    snapshot = validate_capability_snapshot(snapshot)
+    execution = json.loads(evidence(execution_ref))
+    # Reuse all existing root/tree, native completion, event and scope guards.
+    checked = capture_capability_trace(snapshot, task_id=execution['task_id'], task_input=task_input,
+        task_fingerprint=task_fingerprint, role=role, calls=[{'id': 'execution',
+            'capability': execution['root'], 'input_binding': {'kind': 'input', 'path': []},
+            'execution_ref': execution_ref}], _validation_manifest_ref=validation_manifest_ref)
+    available = snapshot if available_snapshot is None else validate_capability_snapshot(available_snapshot, snapshot['owner'])
+    if validation_manifest_ref is not None and (available_snapshot is None or role != 'builder'):
+        _fail('candidate_validation_available_builder_library_required')
+    if execution['status'] != 'succeeded': _fail('composition_success_required')
+    receipts = {r['call_id']: r for r in execution['receipts']}
+    root = next(r for r in receipts.values() if r['parent_call_id'] is None)
+    selected = parent_call_id or root['call_id']
+    if selected not in receipts: _fail('composition_parent_missing')
+    caps = {c['id']: c for c in snapshot['capabilities']}; recovered = {}; hashes = []
+    def visit(receipt, args):
+        cap = caps[receipt['capability']['id']]; implementation = cap['implementation']
+        if list(Draft202012Validator(cap['contract']['input_schema']).iter_errors(args)):
+            _fail('contract_mismatch')
+        if implementation['kind'] == 'legacy':
+            legacy = implementation['legacy_ref']
+            native = (receipt.get('backend_receipt') or {}).get('native_receipt') or {}
+            stdout = native.get('output')
+            if (legacy['backend'] != 'script_motif' or native.get('kind') != 'script_motif_receipt'
+                    or native.get('program_id') != legacy['object_id'] or native.get('script_version') != legacy
+                    or not isinstance(stdout, str) or native.get('network_evidence') != []
+                    or hashlib.sha256(stdout.encode('utf-8')).hexdigest() != native.get('output_sha256')):
+                _fail('script_output_witness_missing_or_changed')
+            result = {'stdout': stdout}
+            if 'value' in cap['contract']['output_schema'].get('properties', {}):
+                try: result['value'] = json.loads(stdout)
+                except (ValueError, TypeError): _fail('script_output_invalid_json')
+        else:
+            results = {}
+            for step, child in zip(implementation['steps'], receipt['child_call_ids']):
+                results[step['id']] = visit(receipts[child], _bind(step['arguments'], args, results))
+            result = _bind(implementation['output'], args, results)
+        if list(Draft202012Validator(cap['contract']['output_schema']).iter_errors(result)):
+            _fail('contract_mismatch')
+        recovered[receipt['call_id']] = {'arguments': args, 'result': result}
+        hashes.extend([args, result])
+        return result
+    result = visit(root, task_input)
+    wire = iter(_wire_hashes(hashes))
+    # recovered preserves the same post-order in which hashes were collected.
+    for identity in recovered:
+        if (next(wire) != receipts[identity]['arguments_sha256'] or
+                next(wire) != receipts[identity]['result_sha256']):
+            _fail('recovered_call_hash_changed')
+    if result != execution['result']: _fail('recovered_root_result_changed')
+    parent = receipts[selected]; cap = caps[parent['capability']['id']]
+    if cap['implementation']['kind'] != 'composition': _fail('composition_parent_required')
+    steps = []
+    for step, identity in zip(cap['implementation']['steps'], parent['child_call_ids']):
+        receipt = receipts[identity]; child = caps[receipt['capability']['id']]
+        if (receipt['capability'] not in available['roots'] or child['certification'] != 'certified'
+                or child['lifecycle'] != 'active'):
+            _fail('call_not_visible_or_certified')
+        live = next(c for c in available['capabilities'] if c['id'] == child['id'])
+        if live != child: _fail('call_available_version_changed')
+        steps.append({'call_id': step['id'], 'kind': 'CapabilityCall',
+            'capability': copy.deepcopy(receipt['capability']), 'input_binding': copy.deepcopy(step['arguments']),
+            **copy.deepcopy(recovered[identity]), 'status': receipt['status'],
+            'receipt_ref': copy.deepcopy(execution_ref), 'runtime_call_id': identity,
+            'parent_runtime_call_id': selected, 'parent_trace_id': execution['task_id'],
+            'guard_evidence': copy.deepcopy(execution_ref), 'output_refs': {'call_id': step['id'], 'path': []}})
+    value = {'format': checked['format'], 'projection': 'capability_composition_calls_v1',
+        'owner': snapshot['owner'], 'trace_id': execution['task_id'], 'task_id': execution['task_id'],
+        'task_fingerprint': task_fingerprint, 'role': role,
+        'task_input': copy.deepcopy(recovered[selected]['arguments']), 'execution_input': copy.deepcopy(task_input),
+        'snapshot': copy.deepcopy(snapshot), 'execution_ref': copy.deepcopy(execution_ref),
+        'parent_call_id': selected, 'steps': steps, 'evidence': [copy.deepcopy(execution_ref)],
+        'quality': 'unreviewed', 'benefit': None}
+    if available_snapshot is not None: value['available_snapshot'] = copy.deepcopy(available_snapshot)
+    if validation_manifest_ref is not None:
+        value['validation_manifest_ref'] = copy.deepcopy(validation_manifest_ref)
+        value['evidence'].append(copy.deepcopy(validation_manifest_ref))
+        value['container_certification'] = 'candidate'
+    value['digest'] = capability_digest(value)
+    return value
+
+
+def _layout(cap):
+    """Reversible typed slots, used only by the scalar Motif compiler.
+
+    Original JSON values, schemas and IR bindings remain authoritative. Canonical
+    JSON encoding permits empty arrays/objects and nested values without teaching
+    the old compiler an unrelated serialization or execution protocol.
+    """
+    if cap['contract']['effects'] != ['read'] or cap['contract']['input_schema'].get('type') != 'object':
+        _fail('unsupported_motif_contract')
+    inputs = {}; outputs = {}; reserved = set(cap['contract']['input_schema'].get('properties', {}))
+    def inputs_at(schema, path):
+        if schema.get('type') == 'object':
+            props = schema.get('properties', {})
+            if schema.get('additionalProperties') is not False or set(schema.get('required', [])) != set(props):
+                _fail('unsupported_motif_contract')
+            if props:
+                for key in sorted(props): inputs_at(props[key], [*path, key])
+                return
+            if not path: return  # Preserve original no-argument read capabilities.
+        if not path or schema.get('type') not in ('string', 'number', 'integer', 'boolean', 'null', 'array', 'object'):
+            _fail('unsupported_motif_contract')
+        name = path[0] if len(path) == 1 else 'slot' + str(len(inputs))
+        if len(path) != 1:
+            while name in reserved or name in inputs: name = '_' + name
+        inputs[name] = {'path': path, 'schema': copy.deepcopy(schema), 'encoding': 'canonical_json'}
+    def outputs_at(schema, path):
+        outputs['o' + str(len(outputs))] = {'path': path, 'schema': copy.deepcopy(schema), 'encoding': 'canonical_json'}
+        if schema.get('type') == 'object':
+            for key in sorted(schema.get('required', [])):
+                if key in schema.get('properties', {}): outputs_at(schema['properties'][key], [*path, key])
+    inputs_at(cap['contract']['input_schema'], [])
+    outputs_at(cap['contract']['output_schema'], [])
+    return {'capability': capability_ref(cap), 'input_schema': copy.deepcopy(cap['contract']['input_schema']),
+            'output_schema': copy.deepcopy(cap['contract']['output_schema']), 'inputs': inputs, 'outputs': outputs}
 
 
 def _tool_contract(cap):
-    schema = cap['contract']['input_schema']; props = schema.get('properties', {})
-    if (cap['contract']['effects'] != ['read'] or schema.get('type') != 'object' or
-            schema.get('additionalProperties') is not False or set(schema.get('required', [])) != set(props) or
-            any(s.get('type') not in ('string', 'number', 'integer', 'boolean', 'array') or
-                s.get('type') == 'array' and s.get('items', {}).get('type') not in ('string', 'number', 'integer', 'boolean')
-                for s in props.values()) or cap['contract']['output_schema'].get('type') != 'object'):
-        _fail('unsupported_motif_contract')
-    return ToolContract(required_params=tuple(sorted(props)), read_only=True,
-                        output_fields=tuple('.'.join(p) for p in _fields(cap['contract']['output_schema'])),
-                        collection_params=tuple(sorted(k for k, s in props.items() if s.get('type') == 'array')))
+    layout = _layout(cap)
+    return ToolContract(required_params=tuple(layout['inputs']), read_only=True,
+                        output_fields=tuple(layout['outputs']))
 
 
-def _project(trace, contracts, region):
+def _encoded(value):
+    capability_digest(value)
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False, separators=(',', ':'))
+
+
+def _binding_at(binding, path):
+    if binding['kind'] in ('input', 'step'):
+        return {**binding, 'path': [*binding['path'], *path]}
+    if not path: return binding
+    if binding['kind'] == 'object': return _binding_at(binding['fields'][path[0]], path[1:])
+    return None  # literals/arrays are values, never inferred dependency sources
+
+
+def _project(trace, contracts, region, layouts):
     steps = trace['steps']
     if region is not None:
         ids = [s['call_id'] for s in steps]
@@ -236,43 +400,70 @@ def _project(trace, contracts, region):
         start = ids.index(region[0])
         if ids[start:start + len(region)] != region: _fail('region_not_contiguous')
         steps = steps[start:start + len(region)]
-    records = []; segments = []; current = []; prior = {}
+    records = []; segments = []; current = []; prior = {}; latest = {}
     for index, step in enumerate(steps):
         symbol = _symbol(step['capability']); source = {}; binding = step['input_binding']
         eligible = step['status'] == 'succeeded' and symbol in contracts
-        if eligible and binding['kind'] == 'object':
-            for param, item in binding['fields'].items():
-                if item['kind'] == 'step' and item['step_id'] in prior:
-                    previous = prior[item['step_id']]
-                    field = '.'.join(item['path'])
-                    if field in contracts[_symbol(previous['capability'])].output_fields:
-                        source[param] = {'from_tool': _symbol(previous['capability']), 'from_field': field}
-        records.append(ToolRecord(symbol, step['arguments'], capability_digest(step['result']), eligible,
-            'witnessed_capability_call' if eligible else 'failed_or_unsupported_call', index,
-            step['result'] if isinstance(step['result'], dict) else None, source or None))
+        arguments = step['arguments']; observation = step['result']
         if eligible:
-            current.append(symbol); prior[step['call_id']] = step
+            layout = layouts[symbol]
+            arguments = {key: _encoded(_at(step['arguments'], slot['path'])) for key, slot in layout['inputs'].items()}
+            observation = {key: _encoded(_at(step['result'], slot['path'])) for key, slot in layout['outputs'].items()}
+            for param, slot in layout['inputs'].items():
+                item = _binding_at(binding, slot['path'])
+                if item and item['kind'] == 'step' and item['step_id'] in prior:
+                    previous = prior[item['step_id']]
+                    previous_symbol = _symbol(previous['capability'])
+                    # The old compiler addresses tools, not occurrences. Never
+                    # let an older repeated C masquerade as the later C in a
+                    # unique suffix, even when both returned equal JSON values.
+                    if latest.get(previous_symbol) != item['step_id']: continue
+                    for field, output in layouts[previous_symbol]['outputs'].items():
+                        if output['path'] == item['path']:
+                            source[param] = {'from_tool': previous_symbol, 'from_field': field}
+        records.append(ToolRecord(symbol, arguments, capability_digest(step['result']), eligible,
+            'witnessed_capability_call' if eligible else 'failed_or_unsupported_call', index,
+            observation if isinstance(observation, dict) else None, source or None))
+        if eligible:
+            current.append(symbol); prior[step['call_id']] = step; latest[symbol] = step['call_id']
         elif current:
-            segments.append(tuple(current)); current = []; prior = {}
+            segments.append(tuple(current)); current = []; prior = {}; latest = {}
     if current: segments.append(tuple(current))
+    # Keep complete observations (including the original repeat rejection), and
+    # expose maximal non-repeated contiguous windows supported by the EXISTING
+    # compiler. These are segments of ONE trace, not extra independent tasks.
+    for segment in list(segments):
+        for start in range(len(segment)):
+            end = start; seen = set()
+            while end < len(segment) and segment[end] not in seen:
+                seen.add(segment[end]); end += 1
+            window = segment[start:end]
+            if len(window) >= 2 and window not in segments and (start == 0 or segment[start - 1] in seen):
+                segments.append(window)
     return DshTrace(trace['trace_id'], tuple(records), tuple(segments), trace['task_fingerprint'])
 
 
-def _proposal(artifact, lookup, owner):
+def _proposal(artifact, lookup, owner, layouts):
     steps = []; inputs = {}; tool_steps = {}
     for index, tool in enumerate(artifact['tools']):
         cap = lookup[tool]; operator = artifact['dependencies']['operators'][tool]
-        transfers = {b['to_param']: b for b in operator['bindings']}; arguments = {}
+        transfers = {b['to_param']: b for b in operator['bindings']}; bindings = {}
         for param in operator['required_params']:
+            slot = layouts[tool]['inputs'][param]
             if param in transfers:
                 b = transfers[param]
-                arguments[param] = {'kind': 'step', 'step_id': tool_steps[b['from_tool']], 'path': b['from_field'].split('.')}
+                bindings[tuple(slot['path'])] = {'kind': 'step', 'step_id': tool_steps[b['from_tool']],
+                    'path': copy.deepcopy(layouts[b['from_tool']]['outputs'][b['from_field']]['path'])}
             else:
                 key = 'p' + str(index) + '_' + param
-                inputs[key] = copy.deepcopy(cap['contract']['input_schema']['properties'][param])
-                arguments[param] = {'kind': 'input', 'path': [key]}
+                inputs[key] = copy.deepcopy(slot['schema'])
+                bindings[tuple(slot['path'])] = {'kind': 'input', 'path': [key]}
+        def assemble(schema, path=()):
+            if path in bindings: return bindings[path]
+            return {'kind': 'object', 'fields': {key: assemble(child, (*path, key))
+                for key, child in schema.get('properties', {}).items()}}
         identity = 'call' + str(index); tool_steps[tool] = identity
-        steps.append({'id': identity, 'capability': capability_ref(cap), 'arguments': {'kind': 'object', 'fields': arguments}})
+        steps.append({'id': identity, 'capability': capability_ref(cap), 'arguments': assemble(cap['contract']['input_schema'])})
     return {'format': 'capability_compose_proposal_v1', 'owner': owner,
             'contract': {'input_schema': {'type': 'object', 'properties': inputs, 'required': list(inputs), 'additionalProperties': False},
                          'output_schema': copy.deepcopy(lookup[artifact['tools'][-1]]['contract']['output_schema']), 'effects': ['read']},
@@ -294,16 +485,17 @@ def learn_capability_motifs(training, heldout, snapshot, *, regions=None):
     if regions is not None and (not isinstance(regions, dict) or set(regions) != {r['trace_id'] for r in rows}):
         _fail('regions_must_cover_all_traces')
     lookup = {_symbol(capability_ref(c)): c for c in snapshot['capabilities'] if capability_ref(c) in snapshot['roots']}
-    contracts = {}; unsupported = []
+    contracts = {}; layouts = {}; unsupported = []
     for tool, cap in lookup.items():
         if cap['certification'] != 'certified' or cap['lifecycle'] != 'active': continue
-        try: contracts[tool] = _tool_contract(cap)
+        try:
+            contracts[tool] = _tool_contract(cap); layouts[tool] = _layout(cap)
         except ValueError: unsupported.append(capability_ref(cap))
     for trace in rows:
         for step in trace['steps']:
             if step['capability'] not in snapshot['roots']:
                 _fail('learning_dependency_changed')
-    projected = [_project(r, contracts, None if regions is None else regions[r['trace_id']]) for r in rows]
+    projected = [_project(r, contracts, None if regions is None else regions[r['trace_id']], layouts) for r in rows]
     train = projected[:len(training)]; validation = projected[len(training):]
     candidates = []; rejected = []
     for candidate in mine_dsh_traces(train, min_trace_support=2):
@@ -311,12 +503,19 @@ def learn_capability_motifs(training, heldout, snapshot, *, regions=None):
             compiled_motif = compile_read_motif(candidate, train, contracts)
             certified = [certify_read_motif(compiled_motif, trace, contracts) for trace in validation]
             artifact = certified[0]
-            proposal = _proposal(artifact, lookup, snapshot['owner'])
+            proposal = _proposal(artifact, lookup, snapshot['owner'], layouts)
             compiled = compile_proposal(proposal, snapshot, snapshot['owner'])
             candidates.append({'motif': artifact, 'proposal': proposal, 'compiled': compiled,
                 'provenance': {'training': [r['digest'] for r in rows[:len(training)]],
                     'heldout': [r['digest'] for r in rows[len(training):]], 'regions': copy.deepcopy(regions),
                     'roles': sorted({r['role'] for r in rows}),
+                    'typed_projection': {tool: layouts[tool] for tool in artifact['tools']},
+                    'source_input_bindings': [{'input_name': 'p' + str(index) + '_' + param,
+                        'step_index': index, 'capability': capability_ref(lookup[tool]),
+                        'argument_path': copy.deepcopy(layouts[tool]['inputs'][param]['path'])}
+                        for index, tool in enumerate(artifact['tools'])
+                        for param in artifact['dependencies']['operators'][tool]['required_params']
+                        if param not in {binding['to_param'] for binding in artifact['dependencies']['operators'][tool]['bindings']}],
                     'evidence': [ref for r in rows for ref in r['evidence']],
                     'scope': 'witnessed_parameter_flow_not_task_quality_or_causal_benefit'}})
         except (ValueError, KeyError, TypeError) as error:

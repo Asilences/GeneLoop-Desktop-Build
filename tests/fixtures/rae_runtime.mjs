@@ -42,14 +42,15 @@ export async function execute(snapshot,root,input,{taskId,mode='execute',operati
   async execute(call,operation,args){
    const value=await operations.get(operation).run(structuredClone(args));
    return {value,receipt:{call_id:call.callId,parent_call_id:call.parentCallId,task_id:taskId,
-    operation,status:'succeeded'}};
+    operation,status:'succeeded',...(operations.get(operation).nativeReceipt?
+      {native_receipt:operations.get(operation).nativeReceipt(value,call)}:{})}};
   },
  };
  const runtime=createCapabilityRuntime({taskId,owner:snapshot.owner,snapshot,readHost:()=>host,
   readCapability:ref=>snapshot.capabilities.find(c=>c.id===ref.id),
   ...(mode==='validate'?{readValidationGrant:()=>({id:'rae-validation-'+taskId,taskId,
    owner:snapshot.owner,snapshotDigest:snapshot.digest,root,revoked:false})}:{}),
-  backends:{artifact_motif:backend}});
+  backends:Object.fromEntries([...new Set([...operations.values()].map(op=>op.inspect().backend))].map(name=>[name,backend]))});
  const result=await runtime.execute(root,input);
  const execution={format:'capability_diagnostic_execution_v1',owner:snapshot.owner,task_id:taskId,
   mode,grant_id:host.grant.id,snapshot_sha256:snapshot.digest,root,

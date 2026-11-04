@@ -1,17 +1,18 @@
 # 主线当前交接
 
-## 2026-11-04：Recursive Abstraction Evolution
+## 2026-11-04：RAE 连续研发
 
-- 更新时间与交接人：2026-11-04，Codex；本轮为核心研究机制，生产路径未改。
-- 目标与范围：按[用户规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md)实现 Separation→Abstraction→Recomposition→Evolution；[设计与文件清单](../rae-implementation.md)。基于实查远程main `5d73a4b90e4121e94c9e7240bc8823e8b6bb3bff`，分支`codex/recursive-abstraction-evolution-20261104`；机制提交`b6d89955`/`96f87413`/`6cfa31e1`/`94f19c24`。原研究分支与私有`reference/`保留。
-- 已完成：真实Capability调用进入原Motif学习器，C→G1→D→G2→E使用同一学习/认证路径；原Runtime有界义务消解；真实反馈驱动新边界；Builder实际解析/冻结绑定轨迹同路径学习并回用；默认关闭的语义接口视图与公共学习/原控制器发布入口。
-- 已验证：2256 Python通过/241跳过，1587 Node通过/21跳过；专项60 Python+35 Node、smoke、Motif、RSI43与效率RSI95项通过。Node最终限制测试文件并发2；无放宽有效检查。原始失败和复测见[执行记录](../experiments/rae-mechanism-20261104.md)。
-- 实验结论：`wiring_passed`；实际Runtime/miner/compiler/Store数据流，确定性宿主任务与原语授权；非真实模型自主创造。T8可选本轮未做，同质量全成本创造效率与长期RSI仍pending。未重新解释或抹去历史复用收益。
-- 配置与数据：`npm run rsi:rae:check`一键复现并保留`.local/rae-check-<UTC>/`，内部effective记录代码与配置；`rsi:rae:learn`默认预览，输出candidate_ref给原`rsi:improve --execute`。全部schema可选，不新增IR/Registry/账本。
-- 未完成与阻塞：更广泛类型/任意MCP/副作用任务不在当前只读闭包范围。旧HTTP并发测试瞬时fetch失败单项不复现，未宣称根因修复。2026-11-04交付时本地提交尚未推送、PR未创建：HTTPS Git凭证不可用；现有SSH key属于另一账号且目标仓库拒绝访问。需有权限账号完成`gh auth login`与`gh auth setup-git`后推送本分支、创建PR并核对远程CI；不得将本地通过写成远程通过。
-- 接手下一步：审阅独立PR及远程Linux/Windows检查；选自然产生构造机会的真实任务流进行T8；再决定是否做同质量全成本对照，不强制D引用C。
-- 权限与预算：本轮0模型请求、0模型费用，总CPU/人工/维护成本未知；原账本未改。已授权创建PR，未授权本轮部署/合并，未做外部应用操作。
-- 回退与风险：不启用recursive_abstraction、不注入BuilderConstructionSession即可沿旧路径；旧库及版本未覆盖。不部署、不重启服务；独立验证、权限和预算不能由候选改变。
+- 更新时间与交接人：2026-11-04，Codex；本轮默认关闭，不合并、不部署。
+- 目标与范围：[原规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，本轮凭证失败不能称重新核对最新 main。
+- 已完成：真实 Script 组合回执恢复、嵌套类型投影、原学习器发现局部候选、冻结验收器发布及后继调用；真实模型研究薄入口。Builder helper 训练材料前缀已接原两处 scene/Frontier 路径，默认关闭；独立审计修复相同输入重排冒充独立样本的问题。
+- 已验证：本轮独立历史候选 Linux 发布与 followup 通过；新模型构造发布成功。本地2301 Python/1587 Node通过（241/21跳过），Linux RAE102 Python+35 Node、最后适配/原生66项及smoke/Motif/RSI检查通过，详见[连续研发证据](../experiments/rae-followup-20261104.md)。此前 RAE 诊断 2256 Python、1587 Node 及专项成绩只代表之前源码，不能替代本次结果。
+- 实验结论：历史真实 `C,C,report` 保留完整重复拒绝，原 miner 自动学出 `C→report`；独立历史输入上发布/后继成功。新模型8次请求后选完整 paths 程序成功，C调用0，无Builder前缀。T6真实自应用未观察到，Gate0尚不通过，第二阶段Gate1/2不计完成；无本轮净收益结论。
+- 审计纠正：原 `BuilderConstructionSession` 只有诊断驱动实例化，宿主编译器没有原生认证后端；不可将其测试证书移入真实配置。现改用已有Script训练输入准备子过程，但不得凭接线测试宣称真实自主进化。
+- 配置与数据：入口、开关和最短命令见[接口](../interfaces.md#recursive-abstraction-evolution2026-11-04)。两端 `.local/rae-followup-20261104/` 保留成功和失败，另有本地模型审计目录；原日志/私有论文/凭证均不入Git。原累计账本沿用，未清零。
+- 权限与预算：11个真实请求，代理计量 USD0.047161500（含3个旧接口失败）；本批额度USD3。未核供应商账单；总经济成本未知。阶段内 `max_repairs=2` 是每个固定材料池修复段，成功获取材料后仍可续构，非总3请求限制。
+- 未完成与阻塞：真实任务流未产生可学习的Builder前缀，不能用人工轨迹补齐Gate0。Git HTTPS凭证不可用，现有SSH key无目标仓库权限；PR未创建，远程CI未验证；原其他分支及 `reference/` 保留。
+- 接手下一步：1. 恢复Git访问后推送独立提交、建PR并核对远程CI；2. 在真实后续任务中显式采集构造前缀，有独立样本后经同一learner/Store认证并实际用于后继Builder；3. Gate0通过后再启动反馈演化与ABC策略对照，不能强制C或只挑成功轨迹。
+- 回退与风险：不启用 `recursive_abstraction.builder_learning` 即原路径；旧库、原回执、累计账本和生产服务未覆盖。研究提交可以独立回退，不删除私有证据。
 
 ## 2026-11-03：Creation Efficiency 构造反馈与重新选择
 

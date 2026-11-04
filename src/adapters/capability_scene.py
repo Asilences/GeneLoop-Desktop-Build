@@ -178,8 +178,11 @@ class CapabilityImprovementAdapter:
             save(directory/'request.json',{'format':'capability_program_acquisition_request_v1','job':job['id'],
                 'route':route,'source':refs,'snapshot_sha256':snapshot['digest'],'model_requests':0})
             try:
+                rae=self.plan.get('recursive_abstraction',{})
+                learning_options=({'builder_learning':rae['builder_learning']}
+                    if rae.get('enabled') is True and rae.get('builder_learning',{}).get('enabled') is True else {})
                 training=prepare_program_cases(task,snapshot,program_ref,intent_ref,route['construction_cases'],
-                    libraries,directory/'program-training',source_refs=refs)
+                    libraries,directory/'program-training',source_refs=refs,**learning_options)
                 for ref in refs:evidence(ref)
                 library=learn(program,training['cases'],directory/'native',result['capability_source_ref'])
                 observations=reference(directory/'native/observations.json')

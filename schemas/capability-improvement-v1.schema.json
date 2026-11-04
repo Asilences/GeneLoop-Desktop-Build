@@ -38,6 +38,24 @@
       ],
       "additionalProperties": false
     },
+    "builder_learning": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "selection": {
+          "type": "object",
+          "properties": {
+            "root": {"$ref": "#/$defs/capability"},
+            "candidate": {"$ref": "#/$defs/evidence"},
+            "source_trace": {"$ref": "#/$defs/evidence"}
+          },
+          "required": ["root", "candidate", "source_trace"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
     "observation": {
       "type": "object",
       "properties": {
@@ -278,7 +296,8 @@
           "type": "object",
           "properties": {
             "enabled": {"type": "boolean"},
-            "semantic_view": {"type": "boolean"}
+            "semantic_view": {"type": "boolean"},
+            "builder_learning": {"$ref": "#/$defs/builder_learning"}
           },
           "required": ["enabled"],
           "additionalProperties": false

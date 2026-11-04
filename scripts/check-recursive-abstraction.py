@@ -25,8 +25,9 @@ def main():
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
     python_tests = ['tests/test_capability_'+name+'.py' for name in (
         'motif_learning', 'evolution', 'evolution_runtime', 'builder_application',
-        'abstraction_view', 'learned_candidate')]
-    python_tests.append('tests/test_recursive_learning_cli.py')
+        'abstraction_view', 'learned_candidate', 'composition_projection')]
+    python_tests.extend(['tests/test_recursive_learning_cli.py', 'tests/test_recursive_paper_candidate.py',
+                         'tests/test_rae_real_acceptance.py', 'tests/test_builder_program_learning.py'])
     # No fixed/mock provider substitutes: these tests invoke actual local native
     # operations with diagnostic seed authority, separately labelled in reports.
     commands = [
@@ -37,12 +38,18 @@ def main():
     files = [*python_tests, 'tests/test_capability_discharge.mjs',
              'src/adapters/capability_motif_learning.py', 'src/adapters/capability_discharge.ts',
              'src/adapters/capability_evolution.py', 'src/adapters/capability_builder_application.py']
+    def git_value(*arguments):
+        result = subprocess.run(['git', *arguments], cwd=ROOT, text=True, capture_output=True)
+        return result.stdout.strip() if result.returncode == 0 else None
+    top = git_value('rev-parse', '--show-toplevel')
+    own_checkout = top is not None and Path(top).resolve() == ROOT.resolve()
     effective = {'format':'rae_mechanism_acceptance_v1', 'evidence_level':'wiring_pending',
         'model_requests':0, 'model_cost_usd':'0', 'total_cost':None,
         'autonomous_constructed':False, 'measured_improvement':None,
         'python':sys.version, 'node':subprocess.check_output(['node','--version'],text=True).strip(),
-        'head':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
-        'status':subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True),
+        'head':git_value('rev-parse','HEAD') if own_checkout else None,
+        'status':git_value('status','--porcelain') if own_checkout else None,
+        'source_identity':'git_checkout' if own_checkout else 'file_hashes_only',
         'files':{p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in files},
         'commands':commands, 'outcomes':[]}
     (output/'effective.json').write_text(json.dumps(effective,indent=2),encoding='utf-8')

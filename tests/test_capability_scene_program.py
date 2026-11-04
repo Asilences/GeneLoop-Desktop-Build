@@ -86,6 +86,24 @@ def test_default_acquire_routes_exact_source_intent_through_existing_learner_and
     assert len(calls)==2
 
 
+
+@pytest.mark.parametrize('outer,inner',[(False,True),(True,False),(True,True)])
+def test_builder_learning_is_forwarded_only_when_both_host_flags_are_enabled(tmp_path,monkeypatch,outer,inner):
+    from src.adapters import capability_program_training
+    d,adapter,job,result,attempt,_=setup_request(tmp_path);calls=[]
+    stub_native(monkeypatch,d,calls)
+    original=capability_program_training.prepare_program_cases;seen=[]
+    def observe(*args,**kwargs):
+        seen.append(kwargs.pop('builder_learning',None))
+        return original(*args,**kwargs)
+    monkeypatch.setattr(capability_program_training,'prepare_program_cases',observe)
+    config={'enabled':inner}
+    adapter.plan['recursive_abstraction']={'enabled':outer,'builder_learning':config}
+    outcome=adapter.acquire(job,result,attempt)
+    assert outcome['status']=='registered'
+    assert seen==[config if outer and inner else None]
+
+
 def test_failed_native_acquisition_keeps_negative_evidence_and_never_registers_or_replays(tmp_path,monkeypatch):
     d,adapter,job,result,attempt,_=setup_request(tmp_path);calls=[]
     stub_native(monkeypatch,d,calls,fail=True)
