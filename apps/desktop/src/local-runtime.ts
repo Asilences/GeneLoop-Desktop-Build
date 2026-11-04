@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -18,7 +19,7 @@ export function startLocalWorker(options: {
   onUpdate: (event: LocalTaskUpdate) => void;
 }) {
   mkdirSync(options.home, { recursive: true });
-  const run = mkdtempSync(join(options.home, 'run-'));
+  const run = mkdtempSync(join(tmpdir(), 'geneloop-agent-'));
   const patch = join(run, 'worker.patch.yml');
   const cli = join(options.runtime, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
   writeFileSync(patch, JSON.stringify([

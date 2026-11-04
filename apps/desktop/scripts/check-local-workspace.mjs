@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -89,7 +90,7 @@ try {
 
   const child = spawn(require('electron'), ['test/local-workspace.cjs'], {
     cwd: app, stdio: 'inherit', windowsHide: true,
-    env: { ...process.env, GENELOOP_LOCAL_WINDOW_FIXTURE: JSON.stringify({ origin, cookie, source, reports, profile: join(output, 'desktop'), waiting: join(output, 'waiting') }) },
+    env: { ...process.env, GENELOOP_LOCAL_WINDOW_FIXTURE: JSON.stringify({ origin, cookie, source, reports, profile: join(tmpdir(), 'geneloop-smoke-' + randomUUID().slice(0, 8)), waiting: join(output, 'waiting') }) },
   });
   timer = setTimeout(() => child.kill(), 90_000);
   const [code] = await once(child, 'exit');
