@@ -31,7 +31,7 @@ npm run web:literature -- --real-model --papers-dir ./testpdf
 
 从启动日志中的私有输出目录读取access-url.txt并打开认证地址，再访问同源/tasks。研究问题直接填写；默认选择服务端目录的全部1–20篇PDF，客户端不能传本地路径。每任务预算默认3美元/90请求，启动合计6美元/180请求，同时执行一个任务；上限不是预计费用，可用--budget-usd/--run-budget-usd/--request-limit/--run-request-limit覆盖。确认预算后自动阅读、逐论断复核、有界补缺、完整表综合并交付，不需人工科研审阅。来源变更拒绝旧任务，创建新预览。
 
-最终两不同问题各15字段/0程序缺口，共43请求/USD0.176891508；包含首版失败与纠正的开发总费USD0.358430952。自动检查不保证科研真值，没有新Motif收益/思考模式对照。输入/预算/收据/原生轨迹独立保留；旧agent.ts/8765的缓存与增量更新未移入此配置。免费复现 `node scripts/project.mjs python scenarios/literature-notes/check-web-pdf.py`，加--call-model会产生API费用。详情见[共享变更](../../docs/changes/literature-web-binding.md)、[验收记录](../../docs/experiments/literature-web-binding-20261012.md)。
+最终两不同问题各15字段/0程序缺口，共43请求/USD0.176891508；包含首版失败与纠正的开发总费USD0.358430952。自动检查不保证科研真值，没有新Motif收益/思考模式对照。输入/预算/收据/原生轨迹独立保留；旧agent.ts/8765的缓存与增量更新未移入此配置。免费复现 `node scripts/project.mjs python scenarios/literature-notes/check-web-pdf.py`，加--call-model会产生API费用。详情见[共享变更](../../docs/changes/literature-web-binding.md)、[验收记录](../../docs/debug/literature-web-binding-20261012.md)。
 
 # 科研文献场景：普通 PDF 证据与笔记
 

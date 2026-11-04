@@ -35,7 +35,7 @@ npm run motif:check
 
 `rsi:check` 检查生成文件一致性、Python 样本和 Node 定向回归。生成文件的可审阅来源是 `scripts/build-rsi-schema.py` 与 `scripts/rsi-protocol-fixtures.py`。修改协议后重新生成；不能靠修改旧库哈希绕过认证。
 
-真实联调入口为 `scripts/check-rsi-protocol-real.py`，默认只预览。执行必须提供私有授权、历史记账快照和 `.local/` 输出目录，并加 `--real-model`。普通模式复用 `call_bounded_prompt`/Harness 做有界选择；加 `--native-harness` 则复用 DSH 原生 AgentLoop、工具限制和工具生命周期，记录原生事件及同一个 call_id 的协议回执。两种模式共用累计费用代理。参数、结果及失败见[本轮记录](experiments/f02-protocol-local-20261024-v1.md)。
+真实联调入口为 `scripts/check-rsi-protocol-real.py`，默认只预览。执行必须提供私有授权、历史记账快照和 `.local/` 输出目录，并加 `--real-model`。普通模式复用 `call_bounded_prompt`/Harness 做有界选择；加 `--native-harness` 则复用 DSH 原生 AgentLoop、工具限制和工具生命周期，记录原生事件及同一个 call_id 的协议回执。两种模式共用累计费用代理。参数、结果及失败见[本轮记录](debug/f02-protocol-local-20261024-v1.md)。
 
 ## 接口与职责
 

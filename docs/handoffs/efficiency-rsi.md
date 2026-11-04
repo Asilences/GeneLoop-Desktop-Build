@@ -6,7 +6,7 @@
 - 提交与发布：A为`eba71e6`，B为`5efa221`；均已推送至[PR #122](https://github.com/jingyio/GeneLoop/pull/122)，目标main，未合并/部署。私人`reference/`保留且未提交；CI以PR当前head为准。
 - 已完成：`efficiency_rsi_measurement.py` 分离全 cell 预算与首成功成本，保留质量观察和未知费用，十进制计量；registry v2 冻结请求的 owner/cell/category；`efficiency_rsi_registry.py` 用宿主 journal 登记并导出，`CumulativeProposalGate(..., study_registry=...)` 在原 booking 边界接线。接口及版本迁移见[评价协议](../efficiency-rsi-evaluation.md)。
 - 已验证：本地完整 `npm test`：1835 Python 通过/237 跳过，1509 Node 通过/19 跳过，0 失败；最后路径预登记调整后本地/Linux定向各 69 项通过。`rsi:efficiency:check` 210 Python + 93 Node 通过；无模型 smoke 通过。它们是诊断回归，不是模型效果验收。旧上传 ECONNRESET 已在 main 中修复，不再列为当前未解决项。
-- 本轮实验记录：[计量反例与修复](../experiments/efficiency-rsi-measurement-20261102.md)。未重新计算历史收益，不将新口径追写成旧实验结果；本轮真实模型请求和费用新增均为 0，账单、人工与维护总成本仍未采集。
+- 本轮实验记录：[计量反例与修复](../debug/efficiency-rsi-measurement-20261102.md)。未重新计算历史收益，不将新口径追写成旧实验结果；本轮真实模型请求和费用新增均为 0，账单、人工与维护总成本仍未采集。
 - 配置与数据：私有 `.local/rsi-real-acceptance-20261102/` 保存修复前复现、A 回归日志及 `code-A` 快照/摘要；不提交原始轨迹。真实累计账本、生产配置均未改。工作区后续出现的 `script_motif_compiler.py` 及对应测试属于并行会话，A不修改、不提交；Linux A快照核验未包含这两份文件的后续改动。
 
 ## B 分支接手
@@ -20,7 +20,7 @@
 ## 既有机制和研究边界
 
 - Source、论文 Script 原生能力/独立检查、材料学习/认证入池、公共构造/修复/反馈与发布生命周期已接线。Source 曾有真实构造与后继执行；Script 的公共闭环目前主要由原生诊断验证。正常 Paper 任务自动结束采集、论文真实历史驱动自主学习/组合仍待 B 验收。见[Source 真实闭环](../experiments/efficiency-rsi-source-loop-20261102.md)、[材料接线](../experiments/efficiency-rsi-materials-20261102.md)、[Script 接线](../experiments/efficiency-rsi-script-20261102.md)。
-- 跨代结果保留：C 三次构造失败；D 修复后直接使用原语成功，没有调用 C。验证和后继执行各 4 视频/44 检查通过，不能称 C→D 或持续 RSI 成功；该轮 5 次真实请求估费 USD0.02025325。详见[递归尝试](../experiments/efficiency-rsi-recursive-20261102.md)。后续诊断改进见[离线重放](../experiments/efficiency-rsi-authoring-replay-20261102.md)和[反馈接线](../experiments/efficiency-rsi-feedback-20261102.md)。
+- 跨代结果保留：C 三次构造失败；D 修复后直接使用原语成功，没有调用 C。验证和后继执行各 4 视频/44 检查通过，不能称 C→D 或持续 RSI 成功；该轮 5 次真实请求估费 USD0.02025325。详见[递归尝试](../experiments/efficiency-rsi-recursive-20261102.md)。后续诊断改进见[离线重放](../debug/efficiency-rsi-authoring-replay-20261102.md)和[反馈接线](../debug/efficiency-rsi-feedback-20261102.md)。
 - 未完成：真实跨代构造；新增公共机制的增量效率和大规模同质量总成本验证；自动再投资及创造价值因果估计；任意 MCP 适配；F8 深谱系；生产接管、任意中断自动恢复。当前 A 的 journal 与预算 checkpoint 不是跨文件事务，写入失败或中断后须先核对预留/归属，不能自动重建后继续报告。全平台请求完整采集、研究预算在线执行也不由离线测量器提供。
 - 接手下一步：A 完成后由 B 做最小真实 Paper 端到端；之后独立开展 C→D 研究实验；生产自动演化启用前补恢复验收。不强求少量任务出现增益。
 - 权限与预算：A 没有模型/外部应用调用。真实 DeepSeek 测试持续授权按 AGENTS.md，仍须记录实际模型/模式/上限并沿用原账本；外部应用写入、私人原件修改和实际投稿未授权。

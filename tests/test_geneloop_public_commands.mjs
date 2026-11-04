@@ -13,6 +13,7 @@ import {AgentLoop} from '@deepseek-ai/dsh-agent-loop';
 import {SessionStore} from '@deepseek-ai/dsh-session';
 import {SessionProjectionRegistry} from '@deepseek-ai/dsh-session-projection';
 import {SystemPrompt} from '@deepseek-ai/dsh-system-prompt';
+import {SkillRegistry} from '@deepseek-ai/dsh-skill';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
 import {LlmRuntime} from '@deepseek-ai/dsh-llm';
 import {CommandRuntime} from '@deepseek-ai/dsh-commands';
@@ -35,7 +36,7 @@ async function fixture({restored=false}={}){
  if(restored){const scope=digest({output:directory,home:null});
   writeFileSync(join(directory,'session-ownership-'+scope+'.json'),JSON.stringify({scope,sessions:[restoredParent,restoredPrivate],bound:[],chat_only_sessions:[]}));
   writeFileSync(join(directory,'private-lane-sessions.json'),JSON.stringify({version:1,principal:'local-operator',sessions:{[restoredPrivate]:restoredParent}}));}
- new SessionStore(ctx);new AgentRegistry(ctx);new SessionProjectionRegistry(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx,{});new LlmRuntime(ctx);
+ new SessionStore(ctx);new AgentRegistry(ctx);new SessionProjectionRegistry(ctx);new SystemPrompt(ctx,{});new SkillRegistry(ctx);new ToolRuntime(ctx,{});new LlmRuntime(ctx);
  new CommandRuntime(ctx);new TokenMeter(ctx);new SubagentRuntime(ctx);nativeSpawn(ctx,{providerName:'spawn'});nativeCompact(ctx);
  const loop=new AgentLoop(ctx,{agents:[]});
  ctx.agentPresets={async mount(){},async select(){}};

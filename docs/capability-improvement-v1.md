@@ -65,7 +65,7 @@ node scripts/project.mjs python scripts/replay-capability-proposal.py \
   --output "$NEW_PRIVATE_OUTPUT" --repair-object-wrappers
 ```
 
-可选开关只在独立诊断副本中，为已经带类型的子绑定补缺失的对象包装，保存变更路径并重新编译；不改选择、绑定或原始文件，不修补非法JSON。该修改不是Agent自主修复。重放结果见[短记录](experiments/efficiency-rsi-authoring-replay-20261102.md)。
+可选开关只在独立诊断副本中，为已经带类型的子绑定补缺失的对象包装，保存变更路径并重新编译；不改选择、绑定或原始文件，不修补非法JSON。该修改不是Agent自主修复。重放结果见[短记录](debug/efficiency-rsi-authoring-replay-20261102.md)。
 
 
 ## 正常记录到机会、双价值到选择（2026-11-02续）

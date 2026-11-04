@@ -6,7 +6,7 @@
 
 本次修复两个接口问题：辅助模型请求不能消费 Motif 状态；新增无关工具不能使已认证的目标工具提示失效。局部真实任务观察到自动发布的 Negative 库在新版 44 工具环境中被后继任务精确加载，并实际投递 5 次提示。这支持兼容链路有效，**不证明恢复成功、净降本或完整论文报告合格**。两个限时任务均取消且没有交付报告 PDF，全部费用保留。
 
-本分支还包含此前默认关闭的 Positive 描述学习和提示型 Negative 学习。其历史真实结果与全部失败分别见[描述更新](paper-description-rsi-20261020-v1.md)和[Negative 闭环](paper-negative-rsi-20261021-v1.md)。本次不重跑 Baseline，不扩大执行或早停权限，不部署。
+本分支还包含此前默认关闭的 Positive 描述学习和提示型 Negative 学习。其历史真实结果与全部失败分别见[描述更新](../experiments/paper-description-rsi-20261020-v1.md)和[Negative 闭环](../experiments/paper-negative-rsi-20261021-v1.md)。本次不重跑 Baseline，不扩大执行或早停权限，不部署。
 
 ## 问题、改动与否定条件
 

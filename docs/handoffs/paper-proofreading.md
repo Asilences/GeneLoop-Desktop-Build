@@ -61,7 +61,7 @@
 ## 2026-10-23：回执传输独立 main 修复
 
 - 目标与范围：用户同意依次推进传输小PR、明确反例下的候选失效、成本决定。第一步从最新 main `62cb9787` 新建 `codex/script-receipt-transport-20261023`，只整理有界无损回执，不带入尚未发布的集合/关系/反馈实验。原实验分支 `codex/paper-evidence-split-20261023` 在 `fd7f98c9` 完整保留，Desktop脏工作区、生产、原件及旧库未动。
-- 已完成：Runtime校验并解码 `bounded_zlib_v1`，仅显式compactContext和新认证标记共同启用；模型始终看到可读stdout，包括解码结果更大的情况。认证器对来源/独立输入核对完整明文/压缩回执等价。原stdout、权限、版本和一次性授权守卫不变，旧明文路径保留；代码锁仍须实际重认证，不能直接补hash。接口见docs/interfaces，范围见[独立记录](../experiments/script-receipt-transport-20261023-v1.md)。
+- 已完成：Runtime校验并解码 `bounded_zlib_v1`，仅显式compactContext和新认证标记共同启用；模型始终看到可读stdout，包括解码结果更大的情况。认证器对来源/独立输入核对完整明文/压缩回执等价。原stdout、权限、版本和一次性授权守卫不变，旧明文路径保留；代码锁仍须实际重认证，不能直接补hash。接口见docs/interfaces，范围见[独立记录](../debug/script-receipt-transport-20261023-v1.md)。
 - 已验证：40项定向通过；完整Python1519通过/235跳过，Node1372通过/15跳过/1失败。未修改网关的大上传ECONNRESET在原样main私有独立检出也8/9失败，已定位为main同现问题，未借本PR改网关。smoke/motif:check通过、0模型。12个原历史程序重新沙箱认证，ID/模板/描述不变，私有transport-main-library摘要 `beb12ae8…`；未更新生产库。
 - 费用与配置：本步骤API0/USD0，累计6697/USD12.048783156，unknown13/pending2保留，非账单；本地/人工成本未货币量化。原始日志、原样main诊断检出、认证、state及PR材料放 `.local/paper-candidate-guard-20261023-v1/`。真实论文回执失败的付费回归属于先前实验分支，不把本次合成传输诊断称新论文效果。
 - 接手下一步：仅推送/提传输PR供审阅，不合并/部署；远端CI需独立查看。其后另开分支做当前程序/输入/任务目标绑定的明确质量反例，不将相似结果、未选、重写或单次任务失败直接编译为错误原因；关系扩展继续暂停。无后台付费，heartbeat保持暂停。
@@ -130,7 +130,7 @@
 - 已完成：`script_negative_learning.py`复用当前原生失败编译，两个不同任务且工具源码一致才有候选；有界模型生成+独立审核，强制prompt_only，审核缓存与失败不自动付费重试。`advance-script-motifs.py`区分完成任务Positive历史和已结束任务Negative历史，发布同一不可变round。`script_learning_store.ts`接入negative_file/digest与冻结加载；Runtime实际失败后投递建议。默认无negative-learning.json不启用。
 - 接线修复：自动生成12个Positive算子而实验未配置Embedding，曾因Invalid URL连带停用整个Runtime；`optionalScriptRuntime`现对空库直接跳过，对非空匹配器初始化失败仅局部回退，Negative/Reuse和原生Agent继续。完整配置下原cache catalog保持可用。库摘要/来源/代码锁失败仍保守拒绝。初判为空库已纠正，不以新增算子数量称收益。
 - 已验证：最终完整Python1359通过/213跳过，最终完整Node1206通过/5跳过；相关Python35、Node34定向通过，smoke与motif:check通过。确定性测试仅作诊断。完整Node曾有1项既有MCP子进程5秒期限失败，单独7项复跑及停付费任务后的完整Node均通过，未放宽超时、未删除失败日志；并行负载原因尚属推测。
-- main兼容更新：使用DSH的`isAgentLoopRequest`标记绕过compaction等辅助请求；自动提示规则逐失败见证绑定目标参数schema，无关工具新增允许提示复用，目标变化仍失效，早停规则不放宽。合并后Python1517通过/235跳过、Node1357通过/15跳过；相关Python38/Node38、smoke/motif通过。见[main兼容记录](../experiments/paper-rsi-main-compat-20261021-v1.md)。
+- main兼容更新：使用DSH的`isAgentLoopRequest`标记绕过compaction等辅助请求；自动提示规则逐失败见证绑定目标参数schema，无关工具新增允许提示复用，目标变化仍失效，早停规则不放宽。合并后Python1517通过/235跳过、Node1357通过/15跳过；相关Python38/Node38、smoke/motif通过。见[main兼容记录](../debug/paper-rsi-main-compat-20261021-v1.md)。
 - Windows CI修复：首轮2项失败定位为worker发布指针使用系统反斜杠，违背共享POSIX路径协议，继承时被拒绝。已统一三种资产指针为`as_posix()`并保留安全校验，原发布/继承回归补充格式检查；首轮失败不删除，远端结果以PR104最新提交为准。该序列化修复不另跑付费实验。
 - 真实结论：见[Negative闭环验收](../experiments/paper-negative-rsi-20261021-v1.md)。同论文两种历史失败候选，非七篇独立论文。A/B任务传输失败但原生结构错误仍自动采集；学习400后做了一次局部worker恢复。C自动发布5da69dc7…，D精确消费并提示；D结束自动重新生成/审核提示，另编译12个正面算子。E局部发现组件接线问题。第二次局部重编译/当前loader认证后，最终F/G均在当前代码下真实命中并投递，F自动发布a21a7de1…由G精确加载，源码与冻结快照一致。两次人工worker恢复单列，不冒充自动触发。
 - 质量与限制：C/D均有实际7页PDF及工具交付回执，但在最后组件隔离修复前；最终F/G为45秒投递检查，主动取消，未重复完整恢复。没有重检文献真实性或逐页视觉验收，不能称完整论文质量合格。D仍尝试不合法单章重组且保留旧说明；提示不保证修复成功。A通用summary把原论文图片PDF算成报告，本轮已按真实documents产物纠正统计，未改旧原始summary。

@@ -111,7 +111,7 @@ test('native header deduplicates shadowed trajectory tabs without replacing titl
 const user=(seq,text='你好')=>({kind:'user',seq,time:1700000000000+seq*1000,content:[{type:'text',text}]});
 const assistant=(seq,text)=>({kind:'assistant',seq,time:1700000000000+seq*1000,blocks:[{kind:'text',text}]});
 const task=(id,seq,single=false)=>({...node(id),anchorSeq:seq,location:{turn:{turn:4}},data:{...node(id).data,
-  presentation:single?'single':'paired',lanes:{baseline:{trace:[{id:'b'+id,kind:'assistant',text:'baseline '+id,label:'回复'}]},
+  presentation:single?'single':'paired',display_order:single?['baseline']:['baseline','motif'],lanes:{baseline:{trace:[{id:'b'+id,kind:'assistant',text:'baseline '+id,label:'回复'}]},
     ...(!single?{motif:{trace:[{id:'m'+id,kind:'tool',text:'motif '+id,label:'核验',optimized:true}]}}:{})}}});
 
 test('all actual rounds stay in chronological order and only paired rounds have per-round graph lane controls',()=>{
@@ -124,7 +124,7 @@ test('all actual rounds stay in chronological order and only paired rounds have 
   const controls=()=>f.all(row=>row.props.className==='geneloop-trace-lanes');assert.equal(controls().length,2);
   assert.equal(controls()[0].props['aria-label'],'第 4 轮图示轨迹');assert.equal(controls()[1].props['aria-label'],'第 6 轮图示轨迹');
   const plots=()=>f.all(row=>row.props.className==='geneloop-trace-plot');assert.equal(plots()[4].props['data-shown-lane'],'single');
-  f.all(row=>row.type==='button'&&f.content(row)==='Motif',controls()[0])[0].props.onClick();f.render();
+  f.all(row=>row.type==='button'&&row.props['data-lane']==='motif',controls()[0])[0].props.onClick();f.render();
   assert.equal(plots()[3].props['data-shown-lane'],'motif');assert.equal(plots()[5].props['data-shown-lane'],'baseline');
   assert.equal(f.all(row=>row.props['data-optimized']==='true',plots()[3]).length,1);
   assert.deepEqual(f.all(row=>row.props.traceOnly===true).map(row=>row.props.node.data.id),['four','five','six']);

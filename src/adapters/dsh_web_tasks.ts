@@ -58,6 +58,7 @@ import {createClosingTurnMirror} from './geneloop_task_trace.ts';
 import {PlanModeController} from '@deepseek-ai/dsh-plan-mode';
 import {createPlanAdmission,PLAN_GUIDANCE} from './geneloop_plan.ts';
 import {GoalService} from '@deepseek-ai/dsh-goal';
+import {registerApprovedSkill} from './geneloop_native_work.ts';
 import {apply as nativeGoalDriver} from '@deepseek-ai/dsh-goal-round-driver';
 import {createGoalAdmission,GOAL_GUIDANCE} from './geneloop_goal.ts';
 import {guardNativeModeCommand,protectGoalRpc} from './geneloop_runtime_routes.ts';
@@ -65,7 +66,7 @@ import {guardNativeModeCommand,protectGoalRpc} from './geneloop_runtime_routes.t
 export const name = 'sss-web-tasks';
 // Controllers constructed below share this plugin's Cordis context. Their
 // service dependencies are not inherited from their static inject declarations.
-export const inject = ['llm', 'agents', 'sessionController', 'sessionProjections', 'connection', 'webServer', 'fileUploads', 'commands', 'agentPresets', 'attachments', 'workspaceRegistry', 'workspaceController','tokenMeter','subagents','tools','systemPrompt','sessions'];
+export const inject = ['llm', 'agents', 'sessionController', 'sessionProjections', 'connection', 'webServer', 'fileUploads', 'commands', 'agentPresets', 'attachments', 'workspaceRegistry', 'workspaceController','tokenMeter','subagents','tools','skills','systemPrompt','sessions'];
 const conversationReaders=new WeakMap<object,(sessionId:string)=>Promise<{role:string,text:string}[]>>();
 // Cordis gives each plugin a traceable service proxy. Its exported original
 // identity distinguishes host/isolation scopes while surviving those proxies.
@@ -275,6 +276,8 @@ export function apply(ctx: any) {
     const instructions = instructionsFor(scene, sourcePending);
     const disposers = [...bindProductPrompt(agent), agent.ctx.tools.restrict({ allow: allowedTools }),
       agent.ctx.tools.guard((call: any) => allowed.has(call.name) ? commonToolDenial(call) : 'Tool is outside the configured capability profile')];
+    if (scene.id === 'ppt' && scene.ppt_execution_strategy === 'ppt_master')
+      disposers.push(registerApprovedSkill(agent.ctx, config.command_resources));
     disposers.push(agent.ctx.systemPrompt.section({name:'geneloop:attachment-context-policy',order:10220,text:attachmentContextPolicy}));
     disposers.push(agent.ctx.systemPrompt.section({name:'geneloop:goal-policy',order:10225,text:GOAL_GUIDANCE}));
     if (instructions) {

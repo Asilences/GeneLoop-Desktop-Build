@@ -46,4 +46,4 @@ npm --prefix apps/desktop run smoke:packaged
 
 上述测试均不证明真实模型效果。正式账号、六场景真实交付、评分/归档/清空/改密等服务器持久操作仍需隔离账号验收；不通过读取用户密码、复制浏览器Cookie或模拟回复补齐。本机Agent/工具执行属于下一阶段，模型仍可通过网络调用云服务。
 
-当前版本与证据见[桌面交接](handoffs/desktop.md)和[独立前端记录](experiments/geneloop-desktop-independent-20261103.md)。
+当前版本与证据见[桌面交接](handoffs/desktop.md)和[独立前端记录](debug/geneloop-desktop-independent-20261103.md)。
