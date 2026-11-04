@@ -197,8 +197,101 @@ def test_history_is_queryable_by_evidence_without_a_new_store(tmp_path, data):
     service = make(tmp_path, data, history=[history])
     found = service.search('history', 'net gain')['items']
     assert len(found) == 1
-    assert service.read('history', found[0]['id'], 'content')['content']['status'] == 'no_change'
+    assert json.loads(service.read('history', found[0]['id'], 'content')['content'])['status'] == 'no_change'
     assert service.overview()['history_entries'] == 1
+
+
+def test_history_summary_is_compact_and_original_content_is_paged(tmp_path, data):
+    value = {'owner': 'owner', 'format': 'evolution_result', 'status': 'no_change', 'kind': 'investigation',
+             'tool_calls': [{'result': {'payload': '真实调查' * 1000}} for _ in range(53)]}
+    reference = put(tmp_path / 'large-history.json', value)
+    original = verify(reference).decode('utf-8')
+    service = make(tmp_path, data, history=[reference])
+    identifier = service.search('history')['items'][0]['id']
+    card = service.read('history', identifier)
+    assert card['entry_counts'] == {'tool_calls': 53}
+    assert card['evidence_id'] == 'evidence_' + reference['sha256']
+    assert card['reference'] == reference
+    assert len(json.dumps(card, ensure_ascii=False)) < 1000
+    assert 'payload' not in json.dumps(card)
+    first = service.read('history', identifier, 'content', limit=1)
+    assert first['content'] == original[:512]
+    assert first['total_characters'] == len(original) and first['next_offset'] == 1
+    assert first['evidence_id'] == card['evidence_id']
+    assert service.read('evidence', card['evidence_id'], 'content', limit=1)['content'] == first['content']
+    assert verify(reference).decode('utf-8') == original
+
+
+@pytest.mark.parametrize('kind', ['history', 'evidence'])
+def test_json_subtree_selection_paginates_only_selected_content(tmp_path, data, kind):
+    value = {'owner': 'owner', 'tool_calls': [{'result': {'payload': '字段' * 800}}, {'result': 'unselected'}]}
+    reference = put(tmp_path / 'selected-history.json', value)
+    service = make(tmp_path, data, history=[reference])
+    identifier = ('history_' if kind == 'history' else 'evidence_') + reference['sha256']
+    selected_path = ['tool_calls', 0, 'result']
+    expected = json.dumps(value['tool_calls'][0]['result'], ensure_ascii=False)
+    chunks = []
+    offset = 0
+    while offset is not None:
+        page = service.dispatch('evolution_read', {'kind': kind, 'id': identifier, 'section': 'content',
+            'json_path': selected_path, 'offset': offset, 'limit': 1})
+        assert page['json_path'] == selected_path
+        assert page['total_characters'] == len(expected)
+        assert page['content_encoding'] == 'json'
+        chunks.append(page['content'])
+        offset = page['next_offset']
+    assert ''.join(chunks) == expected
+    assert 'unselected' not in ''.join(chunks)
+    assert json.loads(verify(reference)) == value
+
+
+@pytest.mark.parametrize('selector', ['tool_calls', [True], [-1], [None], [{}]])
+def test_invalid_json_selectors_are_rejected(tmp_path, data, selector):
+    reference = put(tmp_path / 'history.json', {'owner': 'owner', 'tool_calls': []})
+    service = make(tmp_path, data, history=[reference])
+    with pytest.raises(ValueError, match='json_path_invalid'):
+        service.read('evidence', 'evidence_' + reference['sha256'], 'content', json_path=selector)
+
+
+@pytest.mark.parametrize('selector', [['missing'], ['tool_calls', 1], ['tool_calls', '0']])
+def test_missing_json_fields_or_array_indices_remain_explicit_failures(tmp_path, data, selector):
+    reference = put(tmp_path / 'history.json', {'owner': 'owner', 'tool_calls': [{}]})
+    service = make(tmp_path, data, history=[reference])
+    with pytest.raises(ValueError, match='json_path_missing'):
+        service.read('history', 'history_' + reference['sha256'], 'content', json_path=selector)
+
+
+def test_json_selector_does_not_expand_evidence_or_bypass_version_checks(tmp_path, data):
+    reference = put(tmp_path / 'history.json', {'owner': 'owner', 'tool_calls': [{'result': 1}]})
+    service = make(tmp_path, data, history=[reference])
+    with pytest.raises(ValueError, match='read_unavailable'):
+        service.read('evidence', str(reference['path']), 'content', json_path=[])
+    Path(reference['path']).write_text('{}')
+    with pytest.raises(ValueError, match='evidence_changed'):
+        service.read('history', 'history_' + reference['sha256'], 'content', json_path=['tool_calls'])
+
+
+def test_json_selector_requires_json_while_plain_evidence_remains_unchanged(tmp_path, data):
+    raw = tmp_path / 'original.txt'
+    raw.write_text('原始纯文本证据')
+    reference = file_ref(raw)
+    row = json.loads(verify(data[1][0]['evidence']))
+    row['evidence'].append(reference)
+    data[1][0]['evidence'] = put(tmp_path / 'row-0.json', row)
+    service = make(tmp_path, data)
+    identifier = 'evidence_' + reference['sha256']
+    assert service.read('evidence', identifier, 'content')['content'] == raw.read_text()
+    with pytest.raises(ValueError, match='json_content_required'):
+        service.read('evidence', identifier, 'content', json_path=[])
+
+
+def test_read_tool_schema_documents_and_accepts_local_json_selection(tmp_path, data):
+    tool = next(tool for tool in make(tmp_path, data).tools() if tool['name'] == 'evolution_read')
+    validator = Draft202012Validator(tool['parameters'])
+    validator.validate({'kind': 'history', 'id': 'history-id', 'section': 'content',
+                        'json_path': ['tool_calls', 0, 'result'], 'offset': 1, 'limit': 2})
+    assert 'compact card' in tool['description'] and '512-character' in tool['description']
+    assert 'json_path' in tool['description'] and 'next_offset' in tool['description']
 
 
 def test_notes_are_model_interpretations_with_source_refs(tmp_path, data):

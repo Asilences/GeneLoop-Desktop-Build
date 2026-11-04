@@ -59,6 +59,19 @@ R3正式GeneLoop终测的首次构建在0.72秒内失败。原日志显示失败
 
 原Dockerfile SHA为`de08dbad0830afbc282ba0783e11d4e3c88a4fa6ce46d2e5729839c4a8313623`。R3代码、原题面、tests和首次失败记录均保留。本次环境诊断没有运行模型或oracle。服务器证据目录为`threejs-preflight/runs/canonical-fjsp-environment-dcc304a3118e46db90afa18959be2f5f`，本地构建证据为`.local/debug/canonical-fjsp-environment-20261105/`。
 
+## lab环境追加一次重试
+
+按本轮指示，`lab-unit-harmonization`训练与canonical变体各追加一次原Dockerfile构建。两侧原限时分别为build600秒、agent1800秒、verifier1800秒，本次只使用build限时。原`task.toml`已逐字复制进各诊断目录，两侧SHA均为`19e655c13c116d296cec9ae4c527c15dbfbb68f60e305a0c393b519279b448ed`。
+
+| 变体 | 原基础镜像 | 本次结果 | 实际构建耗时 | 停止位置 |
+| --- | --- | --- | --- | --- |
+| training | python:3.9.19-slim | timeout | 600.008秒 | apt下载系统依赖，尚未进入pip |
+| canonical | python:3.12-slim | timeout | 600.008秒 | apt下载系统依赖，尚未进入pip |
+
+两种基础镜像已有缓存，本次未新增pull。训练需要下载123MB系统包，600秒截止时仍在下载第25个包，canonical到第33个包。未更改源、Dockerfile、tests或限时，无模型调用，无oracle执行。两侧本次构建日志列出的中间容器均已不存在，未操作其他容器或正式服务。
+
+按指示暂缓该场景，不再反复重试。服务器证据为`threejs-preflight/runs/lab-unit-environment-retry-training-eaeba9a702cb4f61ae3de50b5cc1634d`及`lab-unit-environment-retry-test-2b617c66151d4e2b8689de6901eb128b`，本地原日志、结果、原task限时与归属核对记录位于`.local/debug/lab-unit-environment-retry-20261105/`。
+
 评分同时保留数值与状态。原dialogue评分可产生部分reward，论文avg成功条件为reward大于零，完整通过情况应单列。缺失、非法或评分运行失败保留未知。
 
 ## 验证状态

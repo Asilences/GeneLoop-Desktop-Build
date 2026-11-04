@@ -278,6 +278,12 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
     materials = getattr(host, 'materials', None)
     if materials is not None and materials.owner != OWNER:
         raise ValueError('gene_benchmark_material_owner_changed')
+    material_configuration = None
+    if materials is not None and getattr(materials, 'directory', None) is not None:
+        material_directory = Path(materials.directory).resolve()
+        material_configuration = {'owner': materials.owner, 'directory': str(material_directory),
+            'publication_store': str(Path(getattr(materials, 'publication_store',
+                                                  material_directory / 'publication-store')).resolve())}
     initial = materials.catalog()['snapshot'] if materials is not None else create_capability_snapshot(OWNER, [], [])
     snapshot = validate_capability_snapshot(snapshot if snapshot is not None else initial, OWNER)
     if not isinstance(scope, str) or not scope.strip():
@@ -313,7 +319,8 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                           'capability': 'native_certification_adapter_unavailable',
                           'boundary': 'supported_runtime_trace_adapter_unavailable'}}
     save(directory / 'effective.json', {'owner': OWNER, 'scope': scope,
-         'snapshot': snapshot, 'development_tasks': development, 'validation_tasks': validation,
+         'snapshot': snapshot, 'material_configuration': material_configuration,
+         'development_tasks': development, 'validation_tasks': validation,
          'test_tasks': tests, 'prior_observations': observations, 'history': prior_history,
          'quality_threshold': str(threshold),
          'budget_usd': None, 'max_requests': None, 'production_enabled': False})
@@ -398,11 +405,36 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                        'evidence': [trial['record'] for trial in runs]}
             evaluation['verdict'] = verdict
             save(folder / 'result.json', evaluation)
+            evaluation['record'] = file_ref(folder / 'result.json')
             packages[strategy['id']] = package
             return verdict
 
         admit = strategy_handler(snapshot=snapshot, feedback=feedback, target='task', scope=scope,
                                  evaluate=evaluate, parent_selection=prior_selection)
+
+        def validation_feedback(start):
+            recent = validations[start:]
+            references = []
+            cards = []
+            for evaluation in recent:
+                if evaluation.get('record') is not None:
+                    references.append(evaluation['record'])
+                for trial in evaluation['runs']:
+                    actual = inspect_benchmark(trial['observation'], OWNER)
+                    references.extend([trial['record'], trial['observation'], *actual['evidence']])
+                    cards.append({'task_id': trial['task_id'], 'split': trial['split'],
+                                  'verifier_status': trial.get('evaluation', {}).get('status'),
+                                  'quality_assessment': trial.get('quality_assessment'),
+                                  'skill_activated': trial.get('skill_activated'),
+                                  'record_evidence_id': 'evidence_' + trial['record']['sha256'],
+                                  'observation_evidence_id': 'evidence_' + trial['observation']['sha256'],
+                                  'diagnostic_evidence_ids': actual.get('decision_context', {}).get('outcome', {}).get(
+                                      'diagnostic_evidence_ids', {})})
+            unique = {(ref['path'], ref['sha256']): ref for ref in references}
+            for reference in unique.values():
+                verify(reference)
+            return {'checks': [check for row in recent for check in row.get('verdict', {}).get('checks', [])],
+                    'validation_feedback': cards, 'evidence_refs': list(unique.values())}
 
         def task_strategy(candidate, context, candidate_directory):
             nonlocal selected
@@ -412,9 +444,18 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                 if any(ref not in snapshot['roots'] and ref in latest['roots'] for ref in proposed_refs):
                     return {'status': 'pending', 'reason': 'new_material_requires_next_generation_snapshot',
                             'snapshot_sha256': latest['digest']}
-            outcome = admit(candidate, context, candidate_directory)
+            start = len(validations)
+            try:
+                outcome = admit(candidate, context, candidate_directory)
+            except Exception as error:
+                if not any(row['runs'] for row in validations[start:]):
+                    raise
+                return {'status': 'rejected', 'reason': type(error).__name__ + ':' + str(error),
+                        **validation_feedback(start)}
             selected = outcome['selection']
-            return outcome
+            feedback_result = validation_feedback(start)
+            feedback_result['evidence_refs'].extend(outcome['selection'].values())
+            return {**outcome, **feedback_result}
 
         entries = [{'split': 'training', 'scope': scope, 'evidence': reference}
                    for reference in development_refs]
@@ -499,7 +540,8 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
         prior_history.append(construction_history())
         save(directory / 'continuation.json', {
             'format': 'gene_benchmark_continuation_v1', 'owner': OWNER, 'scope': scope,
-            'snapshot': next_snapshot, 'selection': selected, 'feedback_directory': str(feedback_root),
+            'snapshot': next_snapshot, 'material_configuration': material_configuration,
+            'selection': selected, 'feedback_directory': str(feedback_root),
             'quality_threshold': str(threshold),
             'entries': [{'split': 'training', 'scope': scope, 'evidence': reference} for reference in observations],
             'history': prior_history,

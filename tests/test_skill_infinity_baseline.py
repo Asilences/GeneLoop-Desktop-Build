@@ -75,27 +75,61 @@ def test_native_discovery_archive_and_independent_review(tmp_path, skills):
     assert (tmp_path / 'run/seed/evaluation/result.json').is_file()
 
 
-def test_unactivated_candidate_is_preserved_and_ineligible(tmp_path, skills):
+@pytest.mark.parametrize('activation', [False, None])
+@pytest.mark.parametrize('accepted', [False, True])
+def test_activation_summary_is_retained_and_independent_review_decides(tmp_path, skills, activation, accepted):
     run = make_run(tmp_path, skills)
-    run.evaluate = lambda request: {**evaluate(request), 'skill_activated': None}
+    run.evaluate = lambda request: {**evaluate(request), 'skill_activated': activation}
+    def independent_review(request):
+        assert request['evaluation']['skill_activated'] is activation
+        return {'accepted': accepted, 'reason': 'Original evidence reviewed', 'skill_activated': True}
+    run.review = independent_review
     run._evaluate('seed', 'validation')
     node = run.dispatch('create_candidate', {'parent_id': 'seed', 'files': {'extra.txt': 'helper'},
                                            'proposal': PROPOSAL})
     run.dispatch('evaluate_candidate', {'node_id': node['node_id']})
     result = run.dispatch('review_candidate', {'node_id': node['node_id']})
-    assert result['accepted'] is False
-    assert result['host_rejection'] == 'activation_unconfirmed'
+    assert result['accepted'] is accepted
+    assert result['skill_activated'] is activation
+    assert 'host_rejection' not in result
     decision = run.dispatch('select_parent', {'selected_node_id': node['node_id'], 'action': 'stop', 'reason': 'Try'})
-    assert decision['status'] == 'error'
-    assert run.nodes[node['node_id']]['status'] == 'rejected'
+    if accepted:
+        assert decision['selected_node_id'] == node['node_id']
+    else:
+        assert decision['status'] == 'error'
+    assert run.nodes[node['node_id']]['status'] == ('accepted' if accepted else 'rejected')
+    persisted = json.loads((tmp_path / 'run' / node['node_id'] / 'review.json').read_text())
+    assert persisted['skill_activated'] is activation
 
 
-def test_unchanged_candidate_cannot_be_accepted(tmp_path, skills):
+@pytest.mark.parametrize('activation', [True, False, None])
+def test_unchanged_candidate_cannot_be_accepted(tmp_path, skills, activation):
     run = make_run(tmp_path, skills)
+    run.evaluate = lambda request: {**evaluate(request), 'skill_activated': activation}
     run._evaluate('seed', 'validation')
     node = run._create('seed', {}, PROPOSAL)
     run._evaluate(node['node_id'], 'validation')
     assert run._review(node['node_id'])['host_rejection'] == 'unchanged_package'
+
+
+def test_partial_activation_review_receives_candidate_training_and_validation(tmp_path, skills):
+    run = make_run(tmp_path, skills)
+    run._evaluate('seed', 'validation')
+    node = run._create('seed', {'extra.txt': 'helper'}, PROPOSAL)
+    run.evaluate = lambda request: {**evaluate(request), 'skill_activated': request['split'] == 'training'}
+    run._evaluate(node['node_id'], 'training')
+    run._evaluate(node['node_id'], 'validation')
+    def partial_review(request):
+        assert request['candidate_rollout']['skill_activated'] is True
+        assert request['evaluation']['skill_activated'] is False
+        return {'accepted': True, 'reason': 'Partial loading confirmed in original training rollout'}
+    run.review = partial_review
+    result = run._review(node['node_id'])
+    assert result['accepted'] is True
+    assert result['skill_activated'] is False
+    policy = (Path(skills[1]) / 'references/reviewer-policy.md').read_text()
+    assert 'never activated' in policy
+    assert 'partial activation' in policy
 
 
 def test_candidate_count_includes_failed_draft(tmp_path, skills):

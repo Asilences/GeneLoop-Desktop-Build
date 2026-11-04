@@ -18,6 +18,38 @@ from src.adapters.skill_infinity_baseline import (
 )
 
 
+def material_configuration(continuation, explicit_root, output):
+    """Resolve the original private backend location before creating its adapter."""
+    owner = 'overnight-research'
+    if not isinstance(continuation, dict):
+        raise ValueError('benchmark_continuation_invalid')
+    if continuation and (continuation.get('format') != 'gene_benchmark_continuation_v1'
+                         or continuation.get('owner') != owner):
+        raise ValueError('benchmark_continuation_format_or_owner_changed')
+    saved = continuation.get('material_configuration')
+    if saved is not None:
+        if (not isinstance(saved, dict) or set(saved) != {'owner', 'directory', 'publication_store'}
+                or saved['owner'] != owner or any(not isinstance(saved[key], str) or not saved[key].strip()
+                                                 for key in ('directory', 'publication_store'))):
+            raise ValueError('benchmark_material_configuration_invalid')
+        directory = Path(saved['directory']).resolve()
+        publication = Path(saved['publication_store']).resolve()
+        if explicit_root is not None and explicit_root.resolve() != directory:
+            raise ValueError('benchmark_material_root_conflict: --materials-root differs from continuation material_configuration.directory')
+        if not directory.is_dir():
+            raise ValueError('benchmark_inherited_material_directory_missing')
+    else:
+        if continuation.get('snapshot', {}).get('roots') and explicit_root is None:
+            raise ValueError('benchmark_legacy_material_root_required: provide --materials-root for this older continuation')
+        directory = (explicit_root or output / 'materials').resolve()
+        publication = directory / 'publication-store'
+    private = next((ancestor for ancestor in ROOT.resolve().parents
+                    if ancestor.name == '.local' and ancestor.is_dir()), (ROOT / '.local').resolve())
+    if not directory.is_relative_to(private) or not publication.is_relative_to(private):
+        raise ValueError('benchmark_private_material_root_required')
+    return {'owner': owner, 'directory': str(directory), 'publication_store': str(publication)}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--training-root', required=True, type=Path)
@@ -44,9 +76,12 @@ def main():
     if not output.is_relative_to(ROOT / '.local'):
         raise ValueError('benchmark_private_output_required')
     output.mkdir(parents=True, exist_ok=False)
+    continuation = json.loads(args.continuation.read_text()) if args.mode == 'geneloop' and args.continuation else {}
+    material_config = material_configuration(continuation, args.materials_root, output) if args.mode == 'geneloop' else None
     effective = {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()}
     effective.update(budget_usd=None, max_requests=None, model='deepseek-flash',
-                     reasoning_effort='off', max_tokens=393216, cumulative_ledger_reset=False)
+                     reasoning_effort='off', max_tokens=393216, cumulative_ledger_reset=False,
+                     material_configuration=material_config)
     save(output / 'effective.json', effective)
     if not args.call_model:
         print(json.dumps({'status': 'preview', 'output': str(output)}))
@@ -57,7 +92,15 @@ def main():
             materials = None
             if args.mode == 'geneloop':
                 from src.adapters.benchmark_script_materials import BenchmarkScriptMaterials
-                materials = BenchmarkScriptMaterials('overnight-research', args.materials_root or output / 'materials')
+                materials = BenchmarkScriptMaterials(material_config['owner'], material_config['directory'],
+                    publication_store=material_config['publication_store'])
+                if continuation.get('snapshot') is not None:
+                    from src.adapters.capability_contract import validate_capability_snapshot
+                    inherited = validate_capability_snapshot(continuation['snapshot'], material_config['owner'])
+                    available = materials.catalog()['snapshot']
+                    if (any(ref not in available['roots'] for ref in inherited['roots'])
+                            or any(cap not in available['capabilities'] for cap in inherited['capabilities'])):
+                        raise ValueError('benchmark_inherited_material_backend_missing: selected root does not contain the continued capabilities')
             host = BenchmarkHost(args.training_root, args.test_root, output / 'host',
                                  source_version=args.source_version, gate=gate,
                                  verifier_environment=dict(value.split('=', 1) for value in args.verifier_env),
@@ -66,7 +109,6 @@ def main():
                 result = host.trial(args.task, split=args.split)
             elif args.mode == 'geneloop':
                 from src.adapters.evolution_benchmark_gene import run_gene_benchmark
-                continuation = json.loads(args.continuation.read_text()) if args.continuation else {}
                 result = run_gene_benchmark(host, development_tasks=args.development_task,
                     validation_tasks=args.validation_task or [args.task], test_tasks=[args.task],
                     output=output / 'generation', snapshot=continuation.get('snapshot'),

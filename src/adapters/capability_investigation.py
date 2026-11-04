@@ -17,6 +17,7 @@ from .capability_contract import capability_digest, validate_capability_snapshot
 from .capability_evolution_agent import inspect_graph
 from .capability_feedback import file_ref, verify
 from .capability_improvement import save
+from .negative_field_compiler import MISSING, _at
 
 
 def _page(values, offset, limit):
@@ -147,6 +148,16 @@ class Investigation:
                 'observed_steps': len(row.get('steps', []))}
 
     @staticmethod
+    def _history_card(item):
+        value = item['value']
+        return {'id': item['id'], 'format': value.get('format'), 'status': value.get('status'),
+                'kind': value.get('kind', value.get('target')),
+                'entry_counts': {key: len(child) for key, child in value.items()
+                                 if isinstance(child, (dict, list))},
+                'evidence_id': 'evidence_' + item['reference']['sha256'],
+                'reference': copy.deepcopy(item['reference'])}
+
+    @staticmethod
     def _task_alias(row):
         return 'task_' + capability_digest(row['task_id'])[:24]
 
@@ -195,10 +206,7 @@ class Investigation:
         elif kind == 'history':
             for item in self.history.values():
                 verify(item['reference'])
-            rows = [{'id': key, 'format': item['value'].get('format'),
-                     'status': item['value'].get('status'),
-                     'kind': item['value'].get('kind', item['value'].get('target'))}
-                    for key, item in sorted(self.history.items())]
+            rows = [self._history_card(item) for key, item in sorted(self.history.items())]
             searchable = {key: json.dumps(item['value'], ensure_ascii=False).casefold()
                           for key, item in self.history.items()}
         else:
@@ -210,7 +218,13 @@ class Investigation:
         rows.sort(key=lambda row: (-scores[row['id']], row['id']))
         return {'kind': kind, 'query': query, **_page(rows, offset, limit)}
 
-    def read(self, kind, id, section='summary', offset=0, limit=10):
+    def read(self, kind, id, section='summary', offset=0, limit=10, json_path=None):
+        if json_path is not None:
+            if (kind not in ('history', 'evidence') or section != 'content'
+                    or not isinstance(json_path, list)
+                    or any(type(field) not in (str, int) or type(field) is int and field < 0
+                           for field in json_path)):
+                raise ValueError('investigation_json_path_invalid')
         if kind == 'experience':
             row = self._row(id)
             if section == 'summary':
@@ -244,18 +258,33 @@ class Investigation:
         elif kind == 'history' and id in self.history:
             item = self.history[id]
             verify(item['reference'])
-            if section in ('summary', 'content'):
-                return {'id': id, 'content': copy.deepcopy(item['value'])}
+            if section == 'summary':
+                return self._history_card(item)
+            if section == 'content':
+                evidence_id = 'evidence_' + item['reference']['sha256']
+                return {**self.read('evidence', evidence_id, 'content', offset, limit, json_path),
+                        'id': id, 'evidence_id': evidence_id}
         elif kind == 'evidence' and id in self.evidence and section in ('summary', 'content'):
             if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
                 raise ValueError('investigation_page_invalid')
             raw = verify(self.evidence[id]).decode('utf-8')
+            selection = {}
+            if json_path is not None:
+                try:
+                    value = json.loads(raw)
+                except ValueError as error:
+                    raise ValueError('investigation_json_content_required') from error
+                selected = _at(value, json_path)
+                if selected is MISSING:
+                    raise ValueError('investigation_json_path_missing')
+                raw = json.dumps(selected, ensure_ascii=False, allow_nan=False)
+                selection = {'json_path': copy.deepcopy(json_path), 'content_encoding': 'json'}
             # Each page unit is 512 Unicode characters, including single-line JSON.
             start = offset * 512
             end = min(start + limit * 512, len(raw))
             return {'id': id, 'content': raw[start:end], 'offset': offset,
                     'total_characters': len(raw), 'page_unit_characters': 512,
-                    'next_offset': offset + limit if end < len(raw) else None}
+                    'next_offset': offset + limit if end < len(raw) else None, **selection}
         raise ValueError('investigation_read_unavailable')
 
     def note(self, hypothesis, evidence_ids, next_questions):
@@ -315,11 +344,17 @@ class Investigation:
               'stage': {'enum': ['execution', 'construction', 'capability']},
               'status': {'enum': ['passed', 'failed', 'unknown']}, 'capability': text,
               'offset': page, 'limit': size}, ['kind']),
-            ('evolution_read', 'Read a selected interface, local trace, diagnostic or indexed original evidence.',
+            ('evolution_read', 'Read a selected interface, trace or evidence. History summary returns a compact card. '
+             'History/evidence content uses 512-character page units with offset/limit and next_offset. '
+             'For JSON content, select a local subtree with json_path, for example ["tool_calls",0,"result"], '
+             'then follow its next_offset. Omit json_path to read original text.',
              {'kind': {'enum': ['capability', 'experience', 'history', 'evidence']}, 'id': text,
               'section': {'enum': ['summary', 'context', 'steps', 'diagnostics', 'actions', 'evidence',
                                    'interface', 'implementation', 'content']},
-              'offset': page, 'limit': size}, ['kind', 'id']),
+              'offset': page, 'limit': size,
+              'json_path': {'type': 'array', 'items': {'oneOf': [text, page]},
+                            'description': 'Optional JSON object fields/array indices for history/evidence content only.'}},
+             ['kind', 'id']),
             ('evolution_note', 'Save your hypothesis, supporting observation IDs and remaining questions.',
              {'hypothesis': text, 'evidence_ids': {'type': 'array', 'items': text},
               'next_questions': {'type': 'array', 'items': text}},

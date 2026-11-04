@@ -101,7 +101,13 @@ def create_seed_meta_skill(directory):
     _text(directory / 'references/reviewer-policy.md',
           '# Independent review\n\nReview the parent, candidate, proposal, '
           'evaluation, and supporting rollout without optimizer deliberations. '
-          'Reject unchanged, unusable, or unactivated revisions. Meta revisions '
+          'Reject unchanged or unusable revisions and revisions that were never '
+          'activated according to the full rollout and native loading evidence. '
+          'The evaluation activation summary is true when all evaluated executions '
+          'confirm loading, false when any execution lacks loading, and null when '
+          'unknown. A false summary can include partial activation. Assess partial '
+          'or unknown loading from all available rollout and validation evidence, '
+          'and retain uncertainty without claiming actual use. Meta revisions '
           'must retain evidence-based diagnosis, candidate construction, '
           'external evaluation, independent review, and parent selection. '
           'Give the verdict and its supporting evidence.\n')
@@ -386,6 +392,7 @@ class SkillInfinityRun:
                    'candidate_skill_directory': node['skill_directory'],
                    'proposal': node['proposal'], 'evaluation': node['evaluation'],
                    'parent_rollout': parent.get('rollout'),
+                   'candidate_rollout': node.get('rollout'),
                    'reviewer_policy': str(self._controller() / 'references/reviewer-policy.md')}
         save(self.directory / node_id / 'review-request.json', request)
         result = self.review(request)
@@ -393,9 +400,10 @@ class SkillInfinityRun:
             raise ValueError('skill_review_result_invalid')
         self._node(node_id)
         unchanged = _package(node['skill_directory'])['digest'] == _package(parent['skill_directory'])['digest']
-        if unchanged or node['evaluation'].get('skill_activated') is not True:
-            result = {**result, 'accepted': False, 'host_rejection':
-                      'unchanged_package' if unchanged else 'activation_unconfirmed'}
+        result = {**result, 'skill_activated': node['evaluation'].get('skill_activated'),
+                  'activation_basis': 'original_evaluation_summary; independent_review_of_available_evidence'}
+        if unchanged:
+            result = {**result, 'accepted': False, 'host_rejection': 'unchanged_package'}
         node['review'] = result
         node['status'] = 'accepted' if result['accepted'] else 'rejected'
         save(self.directory / node_id / 'review.json', result)

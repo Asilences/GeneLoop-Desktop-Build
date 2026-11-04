@@ -148,9 +148,20 @@ def test_failed_quality_or_missing_activation_does_not_take_over(tmp_path, valid
     result = run(tmp_path, host)
     assert result['selection'] is None
     assert host.trials[-1]['skill_directory'] is None
-    assert host.submissions[0]['status'] == 'rejected'
-    assert 'evaluation_failed' in host.submissions[0]['reason']
+    assert host.submissions[0]['status'] == 'submitted'
+    assert host.submissions[0]['outcome']['status'] == 'rejected'
+    assert 'evaluation_failed' in host.submissions[0]['outcome']['reason']
     assert result['validation'][0]['verdict']['passed'] is False
+    outcome = host.submissions[0]['outcome']
+    assert any(check['status'] == 'failed' for check in outcome['checks'])
+    feedback = outcome['validation_feedback'][0]
+    assert feedback['skill_activated'] is activated
+    assert feedback['quality_assessment']['full_quality'] is validation_pass
+    trial = result['validation'][0]['runs'][0]
+    original = json.loads(verify(host.submissions[0]['record']))['outcome']
+    assert trial['record'] in original['evidence_refs'] and trial['observation'] in original['evidence_refs']
+    assert all(verify(reference) is not None for reference in original['evidence_refs'])
+    assert feedback['record_evidence_id'] == 'evidence_' + trial['record']['sha256']
 
 
 def test_construction_policy_is_pending_without_fake_builder_run(tmp_path):
@@ -484,8 +495,8 @@ def test_construction_feedback_inherits_submissions_no_change_and_original_cost_
     assert '0.023' in inquiry.read('evidence', 'evidence_' + cost_ref['sha256'])['content']
     if action == 'task_strategy':
         assert manifest['sources']['validation']
-        assert manifest['submissions'][0]['status'] == 'rejected'
-        assert 'reason' in manifest['submissions'][0]
+        assert manifest['submissions'][0]['status'] == 'submitted'
+        assert manifest['submissions'][0]['outcome_status'] == 'rejected'
         assert result['selection'] is None
     elif action == 'construction_strategy':
         assert manifest['submissions'][0]['status'] == 'pending'
@@ -712,3 +723,67 @@ def test_skipping_development_still_requires_two_independent_original_sources(tm
         run_gene_benchmark(host, development_tasks=[], validation_tasks=['fresh-validation'],
             test_tasks=['fresh-test'], prior_observations=[one] * count, output=tmp_path / 'later')
     assert host.trials == [] and host.agent_calls == []
+
+
+def test_successful_strategy_returns_same_actual_validation_evidence(tmp_path):
+    host = Host(tmp_path / 'trials')
+    result = run(tmp_path, host)
+    outcome = host.submissions[0]['outcome']
+    assert outcome['status'] == 'evaluated'
+    assert all(check['status'] == 'passed' for check in outcome['checks'])
+    assert outcome['validation_feedback'][0]['skill_activated'] is True
+    original = json.loads(verify(host.submissions[0]['record']))['outcome']
+    assert result['selection']['strategy'] in original['evidence_refs']
+    assert result['selection']['evaluation'] in original['evidence_refs']
+
+
+def test_failed_validation_preserves_previous_admitted_selection(tmp_path):
+    first = run(tmp_path, Host(tmp_path / 'original'))
+    continuation = json.loads(verify(first['continuation']))
+    host = Host(tmp_path / 'later-trials', activated=False)
+    result = run_gene_benchmark(host, development_tasks=['later-a', 'later-b'],
+        validation_tasks=['later-validation'], test_tasks=['later-test'], output=tmp_path / 'later',
+        prior_selection=continuation['selection'],
+        prior_observations=[entry['evidence'] for entry in continuation['entries']],
+        history=continuation['history'], feedback_directory=continuation['feedback_directory'])
+    assert host.submissions[0]['outcome']['status'] == 'rejected'
+    assert result['selection'] == first['selection']
+    assert host.trials[-1]['skill_directory'] is not None
+
+
+def test_validation_feedback_does_not_become_new_discovery_observations(tmp_path):
+    host = Host(tmp_path / 'trials', activated=False)
+    original = host.agent
+    counts = []
+    def agent(request, dispatch):
+        def tracking(name, arguments):
+            outcome = dispatch(name, arguments)
+            if name == 'evolution_submit':
+                counts.append(dispatch('evolution_search', {'kind': 'experience'})['total'])
+                assert outcome['outcome']['status'] == 'rejected'
+                assert outcome['outcome']['available_evidence_count'] > 0
+                record_id = outcome['outcome']['validation_feedback'][0]['record_evidence_id']
+                original = dispatch('evolution_read', {'kind': 'evidence', 'id': record_id, 'limit': 10})
+                assert json.loads(original['content'])['evaluation']['reward'] == 1
+            return outcome
+        return original(request, tracking)
+    host.agent = agent
+    run(tmp_path, host)
+    assert counts == [2]
+
+
+def test_strategy_errors_without_a_host_validation_keep_original_diagnostic(tmp_path):
+    host = Host(tmp_path / 'trials')
+    original = host.agent
+    def agent(request, dispatch):
+        def tracking(name, arguments):
+            if name == 'evolution_submit':
+                arguments['candidate']['proposal']['unexpected'] = True
+            return dispatch(name, arguments)
+        return original(request, tracking)
+    host.agent = agent
+    result = run(tmp_path, host)
+    assert result['validation'] == []
+    assert host.submissions[0]['status'] == 'rejected'
+    assert 'strategy_proposal_invalid' in host.submissions[0]['reason']
+    assert 'outcome' not in host.submissions[0]

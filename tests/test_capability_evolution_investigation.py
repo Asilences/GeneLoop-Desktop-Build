@@ -5,7 +5,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from src.adapters.capability_evolution_investigation import run_investigation
-from src.adapters.capability_feedback import verify
+from src.adapters.capability_feedback import file_ref, verify
 from tests.test_capability_investigation import data, make
 
 
@@ -137,6 +137,50 @@ def test_submission_reply_avoids_echoing_model_source_and_retains_original(tmp_p
         return {}
     result = run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'run')
     assert result['submissions'][0]['status'] == 'pending'
+
+
+def test_real_host_feedback_is_readable_without_echoing_all_references(tmp_path, data):
+    diagnostic = tmp_path / 'host-validation.txt'
+    diagnostic.write_text('Independent validation failed its quality check.\n')
+    reference = file_ref(diagnostic)
+
+    def handler(*_args):
+        return {'status': 'rejected', 'checks': [{'id': 'quality', 'status': 'failed'}],
+                'evidence_refs': [reference]}
+
+    def agent(request, dispatch):
+        identifiers = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        reply = dispatch('evolution_submit', {'candidate': candidate(identifiers), 'observation_ids': identifiers})
+        assert reply['outcome']['status'] == 'rejected'
+        assert reply['outcome']['available_evidence_count'] == 1
+        assert 'evidence_refs' not in reply['outcome']
+        original = dispatch('evolution_read', {'kind': 'evidence', 'id': 'evidence_' + reference['sha256']})
+        assert original['content'] == diagnostic.read_text()
+        dispatch('evolution_finish', {'reason': 'Actual independent feedback is available for revision'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert result['submissions'][0]['outcome']['evidence_refs'] == [reference]
+
+
+def test_local_candidate_limit_bounds_real_evaluations_without_limiting_reads(tmp_path, data):
+    handled = []
+    def handler(*args):
+        handled.append(args)
+        return {'status': 'rejected', 'reason': 'Independent evaluation failed'}
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        for expected in (1, 0):
+            reply = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+            assert reply['remaining_candidate_evaluations'] == expected
+        rejected = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        assert 'evaluation_limit_reached' in rejected['reason']
+        assert dispatch('evolution_overview', {})['scope'] == 'study'
+        dispatch('evolution_finish', {'reason': 'Retain two actual rejected candidates for the next investigation'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(handled) == 2 and len(result['submissions']) == 3
 
 
 def test_tool_error_can_be_corrected_in_same_session(tmp_path, data):
