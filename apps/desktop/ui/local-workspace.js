@@ -11,7 +11,12 @@ const setContext = id => {
 };
 scene.onchange = () => setContext(undefined);
 byId('reset-context').onclick = () => setContext(undefined);
+byId('back').onclick = async () => {
+  try { await bridge.back(); }
+  catch (error) { byId('status').textContent = error?.message || '无法返回工作区。'; }
+};
 const setBusy = busy => {
+  byId('back').disabled = busy;
   byId('send').disabled = busy;
   scene.disabled = busy;
   byId('reset-context').disabled = busy;
@@ -21,6 +26,7 @@ const setBusy = busy => {
 };
 async function refreshHistory(continueLatest = false) {
   const state = await bridge.state();
+  byId('workspace-name').textContent = state.name;
   byId('directory').textContent = state.directory;
   byId('output').textContent = state.output;
   historyList.replaceChildren();

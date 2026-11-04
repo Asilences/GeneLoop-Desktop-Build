@@ -15,16 +15,19 @@ const until = async (predicate, label) => {
   throw Error('等待超时：' + label);
 };
 app.whenReady().then(async () => {
-  const { LocalWorkspaceWindow } = await import(pathToFileURL(join(__dirname, '../dist/local-workspace.js')).href);
+  const { LocalWorkspacePanel } = await import(pathToFileURL(join(__dirname, '../dist/local-workspace.js')).href);
   const profile = session.fromPartition('local-workspace-test');
   await profile.cookies.set({ url: fixture.origin, name: 'harless_sess', value: fixture.cookie });
   const parent = new BrowserWindow({ show: false });
-  const local = new LocalWorkspaceWindow({ parent, server: fixture.origin + '/', session: profile });
+  let returned = 0;
+  const local = new LocalWorkspacePanel({ parent, server: fixture.origin + '/', session: profile, onClose: () => { returned++; } });
   try {
     const workspace = { id: 'workspace', name: '本机诊断', directory: fixture.source, updatedAt: Date.now() };
     await local.open(workspace);
     const view = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
     assert.ok(view);
+    assert.equal(BrowserWindow.getAllWindows().length, 1);
+    assert.ok(parent.contentView.children.some(child => child.webContents === view));
     view.setBackgroundThrottling(false);
     const evaluate = code => view.executeJavaScript(code);
     await until(() => evaluate(`document.getElementById('directory').textContent.length>0`), '本机目录展示');
@@ -41,7 +44,9 @@ app.whenReady().then(async () => {
     await until(() => existsSync(fixture.waiting), '上游模型处于等待');
     await evaluate(`document.getElementById('cancel').click()`);
     await until(() => evaluate(`document.getElementById('status').textContent==='任务已停止。'`), '取消任务并结算');
-    BrowserWindow.fromWebContents(view).destroy();
+    await until(() => evaluate("!document.getElementById('back').disabled"), '取消结算后可返回');
+    await evaluate("document.getElementById('back').click(); void 0").catch(() => {});
+    await until(() => !local.isOpen && returned === 1, '同窗返回工作区');
     await local.open(workspace);
     const reopened = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
     assert.ok(reopened && reopened !== view);

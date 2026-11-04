@@ -1,9 +1,10 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import type { IpcMainInvokeEvent, Session } from 'electron';
+import { app, WebContentsView, dialog, ipcMain, shell } from 'electron';
+import type { BrowserWindow, IpcMainInvokeEvent, Session } from 'electron';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { TITLE_BAR_HEIGHT } from './appearance.ts';
 import { startLocalWorker } from './local-runtime.ts';
 import type { LocalScene, LocalTaskUpdate } from './local-runtime.ts';
 import { reopenDirectory } from './local-workspaces.ts';
@@ -11,7 +12,7 @@ import type { LocalWorkspace } from './local-workspaces.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const page = join(here, '../ui/local-workspace.html');
-const channels = ['state', 'start', 'cancel', 'reveal'];
+const channels = ['state', 'start', 'cancel', 'reveal', 'back'];
 const leasePath = '/api/harless/desktop-model/lease';
 type SavedTask = {
   prompt: string;
@@ -31,8 +32,8 @@ function loadTasks(path: string): SavedTask[] {
   } catch { return []; }
 }
 
-export class LocalWorkspaceWindow {
-  private child?: BrowserWindow;
+export class LocalWorkspacePanel {
+  private view?: WebContentsView;
   private workspaceId?: string;
   private busy = false;
   private closed = false;
@@ -40,13 +41,23 @@ export class LocalWorkspaceWindow {
   private pending?: AbortController;
   private reports = new Set<string>();
 
-  constructor(private options: { parent: BrowserWindow; server: string; session: Session }) {}
+  constructor(private options: { parent: BrowserWindow; server: string; session: Session; onClose: () => void }) {}
+
+  get isOpen(): boolean { return !!this.view; }
+
+  fit(): void {
+    if (!this.view || this.options.parent.isDestroyed()) return;
+    const [width, height] = this.options.parent.getContentSize();
+    this.view.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: Math.max(0, height - TITLE_BAR_HEIGHT) });
+  }
+
+  setVisible(visible: boolean): void { this.view?.setVisible(visible); }
 
   async open(workspace: LocalWorkspace): Promise<void> {
     if (!workspace.directory) throw Error('请先为工作区添加本机文件夹。');
-    if (this.child && !this.child.isDestroyed()) {
-      if (this.workspaceId !== workspace.id) throw Error('请先关闭另一个工作区的任务窗口。');
-      this.child.focus();
+    if (this.view) {
+      if (this.workspaceId !== workspace.id) throw Error('请先返回另一个工作区。');
+      this.view.webContents.focus();
       return;
     }
     if (this.busy || this.closed || this.pending) return;
@@ -68,26 +79,31 @@ export class LocalWorkspaceWindow {
           if (update?.kind === 'report' && reportName.test(update.report?.name)) this.reports.add(update.report.name);
         }
       }
-      const child = this.child = new BrowserWindow({
-        parent: this.options.parent, width: 760, height: 680, minWidth: 500, minHeight: 480, show: false,
-        title: workspace.name + ' · GeneLoop Desktop', autoHideMenuBar: true,
+      const view = this.view = new WebContentsView({
         webPreferences: { preload: join(here, 'local-preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
       });
+      view.setVisible(false);
+      this.options.parent.contentView.addChildView(view);
+      this.fit();
       this.workspaceId = workspace.id;
-      child.setMenu(null);
-      child.webContents.on('will-navigate', event => event.preventDefault());
-      child.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+      const contents = view.webContents;
+      contents.on('will-navigate', event => event.preventDefault());
+      contents.setWindowOpenHandler(() => ({ action: 'deny' }));
       const handle = (channel: string, fn: (input: unknown) => unknown) => {
         ipcMain.handle('geneloop-local:' + channel, (event: IpcMainInvokeEvent, input: unknown) => {
-          if (event.sender !== child.webContents || event.senderFrame !== child.webContents.mainFrame ||
+          if (event.sender !== contents || event.senderFrame !== contents.mainFrame ||
               event.senderFrame.url !== pathToFileURL(page).href) throw Error('Invalid local workspace sender');
           return fn(input);
         });
       };
       const emit = (event: LocalTaskUpdate) => {
-        if (!child.isDestroyed()) child.webContents.send('geneloop-local:update', event);
+        if (!contents.isDestroyed()) contents.send('geneloop-local:update', event);
       };
-      handle('state', () => ({ directory, output, tasks }));
+      handle('state', () => ({ name: workspace.name, directory, output, tasks }));
+      handle('back', () => {
+        if (this.pending) throw Error('请先停止或等待当前本机任务。');
+        this.closePanel();
+      });
       handle('start', input => {
         if (this.pending) throw Error('已有本机任务正在运行。');
         const { prompt, scene, continuation } = (input ?? {}) as { prompt?: unknown; scene?: unknown; continuation?: unknown };
@@ -124,16 +140,16 @@ export class LocalWorkspaceWindow {
           shell.showItemInFolder(join(reopenDirectory(output), name));
         }
       });
-      child.once('closed', () => {
-        this.pending?.abort();
-        this.controller?.cancel();
-        for (const channel of channels) ipcMain.removeHandler('geneloop-local:' + channel);
-        this.child = undefined;
-        this.workspaceId = undefined;
-        this.reports.clear();
-      });
-      try { await child.loadFile(page); child.show(); }
-      catch (error) { child.destroy(); throw error; }
+      contents.once('render-process-gone', () => this.closePanel());
+      try {
+        await contents.loadFile(page);
+        if (this.view !== view) return;
+        view.setVisible(true);
+        contents.focus();
+      } catch (error) {
+        if (this.view === view) this.closePanel();
+        throw error;
+      }
     } finally { this.busy = false; }
   }
 
@@ -186,16 +202,29 @@ export class LocalWorkspaceWindow {
     }
   }
 
+  private closePanel(notify = true): void {
+    const view = this.view;
+    if (!view) return;
+    this.view = undefined;
+    this.workspaceId = undefined;
+    this.pending?.abort();
+    this.controller?.cancel();
+    for (const channel of channels) ipcMain.removeHandler('geneloop-local:' + channel);
+    this.reports.clear();
+    if (!this.options.parent.isDestroyed()) this.options.parent.contentView.removeChildView(view);
+    if (!view.webContents.isDestroyed()) view.webContents.close();
+    if (notify) this.options.onClose();
+  }
+
   releaseWorkspace(id: string): void {
     if (id !== this.workspaceId) return;
     if (this.pending) throw Error('请先结束当前本机任务，再修改文件夹。');
-    this.child?.destroy();
+    this.closePanel();
   }
 
   dispose(): void {
     this.closed = true;
-    this.pending?.abort();
     this.controller?.stop();
-    this.child?.destroy();
+    this.closePanel(false);
   }
 }

@@ -262,6 +262,23 @@ app.whenReady().then(async()=>{
      await until(()=>evaluate(`!!document.querySelector('.local-workspace-home')&&!document.querySelector('dialog')`),'创建后在主窗口打开工作区');
      assert.equal(BrowserWindow.getAllWindows().length,1);
      const id=await evaluate(`document.querySelector('${localRow}').dataset.localWorkspaceId`);
+     if (require('node:fs').existsSync(join(__dirname,'../runtime-bundle/local-worker.mjs'))) {
+       const contents=require('electron').webContents;
+       await evaluate(`[...document.querySelectorAll('.local-workspace-home button')].find(item=>item.textContent==='新建任务').click()`);
+       let localView;
+       await until(()=>!!(localView=contents.getAllWebContents().find(view=>view.getURL().endsWith('/local-workspace.html'))),'主窗口打开本机任务面板');
+       await until(()=>localView.executeJavaScript(`document.getElementById('workspace-name').textContent==='本机源文件夹'`),'本机面板读取所选工作区');
+       assert.equal(BrowserWindow.getAllWindows().length,1);
+       assert.equal(desktop.workspace.getVisible(),false);
+       desktop.showSettings();
+       assert.equal(desktop.window.contentView.children.find(child=>child.webContents===localView).getVisible(),false);
+       desktop.showWorkspace();
+       assert.equal(desktop.window.contentView.children.find(child=>child.webContents===localView).getVisible(),true);
+       await localView.executeJavaScript(`document.getElementById('back').click();void 0`).catch(()=>{});
+       await until(()=>desktop.workspace.getVisible(),'返回同一工作区首页');
+       assert.equal(await evaluate(`document.querySelector('.local-workspace-home h2').textContent`),'本机源文件夹');
+       check('本机任务在同一主窗口打开，连接设置及返回保留工作区');
+     }
      selected=replacement;
      await evaluate(`document.querySelector('${localRow}').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}));document.querySelector('[data-action=local-edit]').click();document.querySelector('dialog input').value='更名后的本机工作区';document.querySelector('.workspace-folder-pick').click()`);
      await until(()=>evaluate(`document.querySelector('.workspace-folder-name')?.textContent==='更换后的文件夹'`),'更换源文件夹');

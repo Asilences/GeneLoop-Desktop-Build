@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('localWorkspace', Object.freeze({
+  back: () => ipcRenderer.invoke('geneloop-local:back'),
   state: () => ipcRenderer.invoke('geneloop-local:state'),
   start: (input: { prompt: string; scene: string; continuation?: string }) => ipcRenderer.invoke('geneloop-local:start', input),
   cancel: () => ipcRenderer.invoke('geneloop-local:cancel'),

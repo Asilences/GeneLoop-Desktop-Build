@@ -7,7 +7,7 @@ import { downloadName, externalWebUrl, ownedDownload, sameServer, serverOrigin }
 import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
 import { authorizedDirectory, LocalWorkspaceStore, reopenDirectory } from './local-workspaces.ts';
-import { LocalWorkspaceWindow } from './local-workspace.ts';
+import { LocalWorkspacePanel } from './local-workspace.ts';
 import { LocalFrontendHost } from './frontend.ts';
 import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
 import type { Appearance } from './appearance.ts';
@@ -22,7 +22,7 @@ export class DesktopWorkspace {
   frontend: LocalFrontendHost | undefined;
   readonly ready: Promise<void>;
   private currentSession?: Session;
-  private localWorkspace?: LocalWorkspaceWindow;
+  private localWorkspace?: LocalWorkspacePanel;
   private readonly localWorkspaces: LocalWorkspaceStore;
   private readonly folderTickets = new Map<string, string>();
   private downloadListener?: DownloadListener;
@@ -73,7 +73,7 @@ export class DesktopWorkspace {
       this.requireShell(event);
       if (name !== 'file' && name !== 'edit' && name !== 'view' && name !== 'help') return;
       if (this.stateValue.phase === 'connected' && this.stateValue.modalOpen) return;
-      if (this.pageReady && this.stateValue.phase === 'connected') this.workspace?.webContents.focus();
+      if (this.pageReady && this.stateValue.phase === 'connected' && !this.localWorkspace?.isOpen) this.workspace?.webContents.focus();
       Menu.getApplicationMenu()?.getMenuItemById('desktop-' + name)?.submenu?.popup({ window: this.window, x: { file: 8, edit: 58, view: 108, help: 158 }[name], y: TITLE_BAR_HEIGHT });
     });
     ipcMain.handle('geneloop:settings', event => { this.requireShell(event); this.showSettings(); });
@@ -104,14 +104,14 @@ export class DesktopWorkspace {
   runWorkspaceCommand(command: 'new-session' | 'new-workspace' | 'attach' | 'account-nav'): void {
     const view = this.workspace?.webContents;
     if (!view || view.isDestroyed() || !this.stateValue.workspaceVisible ||
-        this.stateValue.phase !== 'connected' || this.stateValue.modalOpen ||
+        this.stateValue.phase !== 'connected' || this.stateValue.modalOpen || this.localWorkspace?.isOpen ||
         !sameServer(view.getURL(), this.stateValue.server)) return;
     // 附件按钮需要桌面菜单点击提供的用户手势来打开系统文件选择器。
     void view.executeJavaScript(`document.getElementById(${JSON.stringify(command)})?.click(); void 0`, true).catch(() => {});
   }
 
   async openLocalWorkspace(): Promise<void> {
-    if (this.stateValue.phase !== 'connected' || this.stateValue.modalOpen) return;
+    if (this.stateValue.phase !== 'connected' || this.stateValue.modalOpen || this.localWorkspace?.isOpen) return;
     const generation = this.generation;
     try {
       const picked = await this.pickWorkspaceDirectory('选择本机工作区文件夹');
@@ -181,8 +181,21 @@ export class DesktopWorkspace {
       return;
     }
     if (command === 'run' && this.currentSession) {
-      this.localWorkspace ??= new LocalWorkspaceWindow({ parent: this.window, server: this.stateValue.server, session: this.currentSession });
-      return this.localWorkspace.open(row);
+      this.localWorkspace ??= new LocalWorkspacePanel({
+        parent: this.window, server: this.stateValue.server, session: this.currentSession,
+        onClose: () => {
+          if (this.stateValue.phase === 'connected') {
+            this.workspace?.setVisible(true);
+            this.workspace?.webContents.focus();
+          }
+        },
+      });
+      const panel = this.localWorkspace;
+      await panel.open(row);
+      if (panel !== this.localWorkspace || !panel.isOpen) return;
+      this.workspace?.setVisible(false);
+      panel.setVisible(this.stateValue.phase === 'connected');
+      return;
     }
     throw Error('无效的本机工作区操作。');
   }
@@ -208,6 +221,7 @@ export class DesktopWorkspace {
   }
 
   private fit(): void {
+    this.localWorkspace?.fit();
     if (this.workspace && !this.window.isDestroyed()) {
       const [width, height] = this.window.getContentSize();
       this.workspace.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: Math.max(0, height - TITLE_BAR_HEIGHT) });
@@ -215,13 +229,15 @@ export class DesktopWorkspace {
   }
 
   showSettings(): void {
+    this.localWorkspace?.setVisible(false);
     this.workspace?.setVisible(false);
     this.update('settings');
   }
 
   showWorkspace(): void {
     if (this.workspace && this.pageReady && this.stateValue.phase !== 'error') {
-      this.workspace.setVisible(true);
+      this.workspace.setVisible(!this.localWorkspace?.isOpen);
+      this.localWorkspace?.setVisible(true);
       this.update('connected');
     } else void this.connect(this.stateValue.server);
   }
