@@ -22,9 +22,15 @@ Generate 项目页的独立 CairoSVG/rsvg/DPI 预览转交 `finalize_ppt`，原�
 
 ### 与 main 公共 RSI 的对接边界
 
-main `5d73a4b` 的 `capability_scene.py`、`capability_improvement.py` 和 Builder/Store 提供显式启用的离线公共构造、认证、发布与反馈机制。当前 PPT 接入账户内 worker、Artifact 认证与原生调用，公共 `CapabilityImprovementAdapter` 的 PPT 实现仍待开发。
+PPT已通过`scenarios/ppt_master/capability_adapter.py`接入公共`CapabilityImprovementAdapter`。普通合格单路任务结束后，现有worker自动登记结构观察和通过原生认证的Artifact材料，保留账户与scope隔离。公共材料由实际原生loader复核代码锁、程序及证书，Builder读取的目录继承已发布能力。
 
-对接需要将入选正常材料映射到 `inspect_run`，用 `freeze_publication_inputs` 固定独立论文、字体、渲染器与质量门槛，按现有 Artifact 权限和认证回执实现 `publish`。当前公共程序学习路由接受 `script_motif`，页面 Artifact 还需要受控后端桥接。费用反馈继续区分制作、学习、认证和评审。该适配属于后续工作，本次提交保留已验证的在线 PPT 路径。
+`inspect_run`解释宿主封存的正常任务证据，`freeze_publication_inputs`固定validation/followup的参数、来源和SVG/PNG参考，`publish`复用`completeCapabilityCycle`完成验证、Store发布、重新加载和不同输入的后继执行。`artifact_capability_runtime.ts`沿原Artifact沙箱执行，每次检查owner、任务/参数证据、原生库、代码版本及输出授权。页面根通过原`create_ppt_page`调用，后续仍沿`finalize_ppt`导出，Baseline继续排除学得页面程序。
+
+公共付费构造由宿主`GENELOOP_PPT_CAPABILITY_PLAN`显式配置。计划沿公共`capability_improvement_plan_v1`，用原字节引用指定PPT适配器与`scene_dependencies`，发布输入使用`ppt_capability_publication_inputs_v1`，字段由适配器验证。worker按原生库版本和冻结计划摘要确定构造轮次，相同代际任务复用尝试记录；新材料可进入下一轮。未配置计划时继续自动采集和登记材料，公共构造保持关闭。
+
+真实Web使用`PptCapabilityBudget`委托既有账户预算服务，学习任务独立记账；成员模式保留账户前缀和原生Session绑定。公共`propose_once`增加可选宿主session分配接缝，其他场景保持原行为。纯参数调用以当前批准参数形成执行证据；文件绑定另核对实际来源版本。原生候选撤回或代际替换时同步撤回旧公共选择，历史材料和失败保留。
+
+已真实构造一个依赖既有页面原语的公共根，通过独立源页文字/像素检查、发布后换输入执行，并在新任务通过原页面工具与Office导出得到PPTX/PDF/PNG。该根只有一个原语步骤。学习1请求、估费约USD0.00091104，构造后的执行新增模型请求0。初始化失败与解释器恢复保留，科学质量和新增公共机制的净收益另评。见[接入与验收](experiments/ppt-public-rsi-20261104.md)。
 
 尚未合并的 `codex/rsi-privacy` 在 `83c1185` 将现有 Graph 编译入口迁到脱敏结构投影。后续合并须同时保留 `privacy_projection=True`、本轮新增代码锁及独立认证，继续验证单路准入。该投影不含科学正文；页面参数化的源稿、默认参数和程序描述仍在账户内材料池，跨账户共享需要另外的准入与撤回机制。
 
