@@ -70,7 +70,43 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
-    if '--strategy-evolution' in sys.argv:
+    if '--overnight-evolution-integration' in sys.argv:
+        sys.argv.remove('--overnight-evolution-integration')
+        reviewed = {
+            'scripts/harness-web.py', 'scripts/reexport-ppt-managed-compat.py',
+            'src/adapters/capability_construction_history.py',
+            'src/adapters/capability_proposal.py', 'src/adapters/dsh_web_tasks.ts',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v77', 'ppt-master-v78', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v79', 'paper-web-v80', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= {
+            'src/adapters/capability_contract.py', 'src/adapters/capability_contract.ts',
+            'src/adapters/capability_strategy.py', 'src/adapters/capability_strategy.ts',
+            'src/adapters/capability_strategy_usage.py', 'src/adapters/harless_task_strategy.ts',
+            'src/adapters/capability_decision_evidence.py',
+            'src/adapters/capability_evolution_agent.py',
+            'src/adapters/capability_goal_proposal.py', 'scripts/run-strategy-evolution.py',
+        }
+
+        def integration_record(candidate, validation_record):
+            value = compatibility_record(candidate, validation_record)
+            value['release_scope'] = 'main_and_strategy_evolution_runtime_integration'
+            value['repairs'] += ['main_release_lineage_preserved',
+                                 'default_off_strategy_inheritance_and_usage',
+                                 'python_typescript_capability_contract_dependency_locks']
+            value['runtime_delta'] = (
+                'Main release bytes are retained for the original read IR, sources and MCP schemas. '
+                'Research strategy inheritance and usage are bound to current code; '
+                'the original Runtime remains the default execution path.'
+            )
+            return value
+
+        compat.compatibility_record = integration_record
+    elif '--strategy-evolution' in sys.argv:
         sys.argv.remove('--strategy-evolution')
         reviewed = {
             'scripts/reexport-ppt-managed-compat.py',

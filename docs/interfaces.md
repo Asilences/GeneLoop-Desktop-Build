@@ -1570,6 +1570,14 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。
 
+### 分层自主调查与同条件benchmark（2026-11-05）
+
+`capability_investigation.Investigation`提供overview/search/read/note，按需读取当前能力、真实经历及构造反馈。`capability_evolution_investigation.run_investigation`向原Harness注册提交与结束工具，候选仍由原策略、Script认证、Motif学习及Store流程处理。下一代continuation保留能力快照、经历及构造反馈的原FileRef，调查费用按研究范围记录。
+
+`node scripts/project.mjs python scripts/run-evolution-benchmark.py --help`提供trial、geneloop及skill-infinity三种隔离入口。真实调用需`--call-model`，费用沿原`--ledger-root`累计。根目录、公开来源版本、任务划分和输出目录必须显式提供。`--prewarm-dependencies`仅对精确匹配的原评分脚本准备公共依赖，时长和版本另存，原评分脚本及限时保留。论文复现差异见[基线记录](debug/skill-infinity-reproduction-20261105.md)。
+
+模型任务结束后先冻结产物，再注入原评分器。超时保留部分产物和实际费用。真实能力调用轨迹可进入原Motif学习器及Store，后继行为与净收益需按实际结果判断。当前boundary与construction-strategy的benchmark宿主仍待接通，生产默认关闭。实施及失败记录见[今晚记录](debug/evolution-overnight-20261105.md)。
+
 ## 匿名双栏展示与审计绑定（2026-11-04）
 
 `/api/harless/comparisons` 在 paired 结果中新增 `display_order`，为 `baseline`、`motif` 的一次随机排列。服务器在本轮准入时保存排列，GET、SSE、重试与重启恢复沿用同一值；旧记录首次读取其 store 时补齐并持久化。single 的排列为 `['baseline']`。

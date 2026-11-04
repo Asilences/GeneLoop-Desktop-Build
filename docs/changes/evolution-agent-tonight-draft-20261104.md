@@ -1,8 +1,8 @@
 # Evolution Agent 今晚实现草案
 
-日期为 2026-11-04。状态为待实施草案，分层上下文属于首版参考设计，具体呈现方式根据真实调查过程调整。
+日期为 2026-11-04。2026-11-05已进入实施与真实验收，分层上下文按本草案落为原Harness的分页调查工具。实际运行与失败记录见[今晚记录](../debug/evolution-overnight-20261105.md)。
 
-2026-11-05 更新。用户指定八小时内优先完成核心机制及可运行实验，费用与请求次数不限。主对照选用 Skill∞，优先使用其 SkillsBench 数据与评分流程，慢任务和 KernelBench 根据实际耗时后置。实施窗口从恢复开发时记录实际起点。
+2026-11-05 更新。用户指定八小时内优先完成核心机制及可运行实验，费用与请求次数不限。主对照选用 Skill∞论文复现版，采用同模型、任务和评分条件。优先使用其 SkillsBench 数据与评分流程，慢任务和 KernelBench 根据实际耗时后置。实施窗口为北京时间00:08至08:08。
 
 ## 1. 今晚只抓住一条主线
 
@@ -233,7 +233,7 @@ A1、A2 可在接口确定后并行。每阶段先做针对性诊断，再做真
 
 Skill∞在SkillsBench上使用SkillEvolver发布的训练数据与83个测试任务，另测三个KernelBench level-3问题。其主要实验采用Codex CLI、GPT-6 Luna和Harbor，SkillsBench结果使用每题五次试验的avg@5。论文包含seed meta-skill，可用于研究复现。实际任务清单与完整复现差异需进一步逐项核对。[Skill∞论文](https://arxiv.org/html/2610.35434v1#S4.SS1)
 
-截至2026-11-05查询，Skill∞官方仓库仍标注代码即将发布。主baseline确定为Skill∞，实现来源待用户确认论文复现路线。直接使用seed进行任务优化的配置需要单列为seed版本，完整baseline还应包括meta-skill自我改进及其成本。[官方仓库](https://github.com/taowangcheng/skill-infinity)
+截至2026-11-05查询，Skill∞官方仓库仍标注代码即将发布。用户已确认采用论文复现版并推进同条件比较。直接使用seed进行任务优化的配置需要单列为seed版本，完整baseline还应包括meta-skill自我改进及其成本。[官方仓库](https://github.com/taowangcheng/skill-infinity)
 
 SkillEvolver公开了训练变体、测试数据准备方式和SkillsBench固定版本。优先核对其数据交集及原评分器，锁定实际使用的commit、任务与文件哈希。当前SkillsBench主线已有版本演进，精确任务对齐以论文所用发布链为依据。[数据准备脚本](https://github.com/THU-AICosmos/skillevolver/blob/main/scripts/setup.sh) [训练与测试说明](https://github.com/THU-AICosmos/skillevolver/blob/main/docs/skillsbench.md)
 
@@ -302,6 +302,8 @@ GeneLoop组启用本草案的查询、演化和继承机制，记录策略与能
 
 ### 需要用户明确的一个选择
 
-Skill∞官方实现当前不可用。建议采用论文公开材料复现，在相同DeepSeek与任务条件下比较，明确标注论文复现版。此项已发起对接，待回复后确定baseline实施路线。其余机制设计与benchmark准备可继续按草案规划。
+用户已确认采用Skill∞论文复现版，在相同DeepSeek、任务与评分条件下比较。实施窗口记录为北京时间2026-11-05 00:08开始，八小时检查点为08:08。用户进一步明确效率RSI为首要效果门槛，场景按真实复用与后继组合机会优先。
+
+实施核对发现原可执行抽象学习后端主要支持Python。任务族优先匹配该支持范围，Three.js等JS任务可用于策略迁移的后续比较。先检查同质量执行节省及后继构造成本，机制正常而场景缺少复用机会时切换任务族。
 
 数据与评分口径建议优先对齐论文的SkillEvolver发布链，初始样本按CPU可运行性与耗时选择。完整83题及GPU实验按八小时内实际进度扩展。

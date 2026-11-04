@@ -102,7 +102,7 @@ export function capabilityRef(value:Capability):CapabilityRef{const checked=vali
 export function validateCapabilitySnapshot(value:any,expectedOwner?:string):CapabilitySnapshot {
  capabilityDigest(value);wireValues(value);if(value?.format!=='capability_snapshot_v1'||validateJsonSchemaValue(schema,value).length)fail('snapshot_schema_invalid');
  identifier(value.owner);if(expectedOwner!==undefined&&value.owner!==expectedOwner)fail('foreign_owner');
- const roots=value.roots.map(refKey);if(!roots.length||new Set(roots).size!==roots.length||JSON.stringify(roots)!==JSON.stringify([...roots].sort()))fail('roots_not_unique_sorted');
+ const roots=value.roots.map(refKey);if(new Set(roots).size!==roots.length||JSON.stringify(roots)!==JSON.stringify([...roots].sort()))fail('roots_not_unique_sorted');
  const capabilities:Capability[]=value.capabilities.map((c:Capability)=>validateCapability(c,value.owner)),ids=capabilities.map(c=>c.id);
  if(new Set(ids).size!==ids.length||JSON.stringify(ids)!==JSON.stringify([...ids].sort()))fail('snapshot_duplicates_or_order');
  const lookup=new Map(capabilities.map(c=>[c.id,c])),visiting=new Set<string>(),visited=new Set<string>();
