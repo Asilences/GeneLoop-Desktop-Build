@@ -274,3 +274,69 @@ def test_exact_external_prompt_has_final_capacity_gate(tmp_path):
                      system='x' * 200, prompt_request={}, max_prompt_bytes=100)
     assert gate.current is None
     assert not (tmp_path / 'model/requests.jsonl').exists()
+
+
+def test_semantic_pressure_groups_different_graphs_and_exposes_only_approved_context(tmp_path, data):
+    snapshot, rows = data
+    for index, entry in enumerate(rows):
+        row = json.loads(open(entry['evidence']['path']).read())
+        row['capabilities'] = [snapshot['roots'][index % 2]]
+        row['decision_context'] = {'objective': 'Prepare a verified result',
+            'state': 'Some inputs need an interface decision',
+            'remaining_judgments': ['Choose whether existing interfaces suffice'],
+            'interactions': [], 'outcome': 'Host review remains unknown'}
+        entry['evidence'] = put(__import__('pathlib').Path(entry['evidence']['path']), row)
+    result, context = make(tmp_path, data)
+    assert result['status'] == 'ready' and context['independent_sources'] == 3
+    visible, _ = model_view(context)
+    assert visible['observations'][0]['decision_context']['remaining_judgments']
+    assert str(tmp_path) not in json.dumps(visible)
+    assert len(json.loads(open(result['index']['path']).read())['groups']) == 1
+
+
+def test_evolved_policy_is_independently_admitted_then_enters_actual_builder_prompt(tmp_path, data):
+    from pathlib import Path
+    from src.adapters.capability_evolution_agent import strategy_handler
+    from src.adapters.capability_feedback import CapabilityFeedback
+    from src.adapters.capability_proposal import prepare_attempt
+    from src.adapters.capability_strategy import strategy_context
+    snapshot, _ = data
+    _, context = make(tmp_path, data)
+    feedback = CapabilityFeedback(tmp_path / 'policy-feedback', snapshot['owner'])
+    training = put(tmp_path / 'policy-training.json', {'input': 'first independent input'})
+    heldout = put(tmp_path / 'policy-heldout.json', {'input': 'second independent input'})
+    value = candidate(context)
+    value['kind'] = 'construction_strategy'
+    value['proposal'] = {'applicability': 'When an existing certified interface is relevant',
+        'decision_policy': 'Check the certified input and output contracts before generating glue.',
+        'capability_refs': [snapshot['roots'][0]], 'parent': None}
+    validate_candidate(value, context)
+    evaluated = []
+    def evaluate(strategy):
+        evaluated.append(strategy['id'])
+        return {'passed': True, 'checks': [{'id': 'diagnostic-independent-host-check', 'status': 'passed'}],
+                'training_sources': [training], 'heldout_sources': [heldout], 'evidence': [heldout]}
+    outcome = strategy_handler(snapshot=snapshot, feedback=feedback, target='construction',
+        scope='study', evaluate=evaluate)(value, context, tmp_path / 'policy-result')
+    selection = outcome['selection']
+    loaded = strategy_context(selection, snapshot, target='construction', scope='study', feedback=feedback)
+    assert loaded['decision_policy'] == value['proposal']['decision_policy']
+    catalog = {'source_catalog': {'inherited_strategy': {'enabled': True, 'selection': selection,
+        'scope': 'study', 'feedback_directory': str(feedback.directory.parent)}}}
+    effective, prompt = prepare_attempt(task={'id': 'later-task', 'instruction': 'Construct an independently checked result'},
+        catalog=catalog, snapshot=snapshot, output=tmp_path / 'later-builder')
+    assert value['proposal']['decision_policy'] in prompt
+    assert selection['strategy']['sha256'] in json.dumps(effective)
+    assert evaluated and outcome['actual_adoption'] is None
+    child = copy.deepcopy(value)
+    child['proposal']['decision_policy'] += ' Retain independently observed counterexamples.'
+    child_outcome = strategy_handler(snapshot=snapshot, feedback=feedback, target='construction',
+        scope='study', evaluate=evaluate, parent_selection=selection)(child, context, tmp_path / 'child-policy')
+    child_value = json.loads(Path(child_outcome['selection']['strategy']['path']).read_text())
+    assert child_value['parent'] == selection['strategy']
+    assert child_value['id'] != loaded['strategy']['id']
+    foreign = copy.deepcopy(context)
+    foreign['owner'] = 'another-owner'
+    with pytest.raises(ValueError, match='strategy_context_changed'):
+        strategy_handler(snapshot=snapshot, feedback=feedback, target='construction', scope='study',
+            evaluate=evaluate)(value, foreign, tmp_path / 'foreign-policy')

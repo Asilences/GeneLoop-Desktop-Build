@@ -27,7 +27,7 @@ that same container again. Use the supplied observation level and known coverage
 if no remaining burden is evidenced, no_change is preferable to inventing one.
 Propose at most two falsifiable improvements, or return {"candidates":[]} (no_change).
 Return exactly {"candidates":[...]} with each candidate containing exactly:
-kind: "boundary", "capability", or "construction_strategy";
+kind: "boundary", "capability", "construction_strategy", or "task_strategy";
 burden: specific repeated work to eliminate;
 evidence_ids: IDs of packet observations supporting the hypothesis;
 scope: applicability and exclusions;
@@ -39,7 +39,11 @@ For boundary, proposal is exactly {"regions":{task_id:[ordered contiguous call_i
 covering every supplied graph. Choose observed boundaries yourself, without
 assuming bigger or smaller is better. Include all independent evidence, not only
 successes. For capability, describe the desired interface and function in proposal.
-For construction_strategy, describe the concrete changed construction procedure.
+For construction_strategy or task_strategy, proposal is exactly
+{applicability: nonempty text, decision_policy: nonempty text,
+capability_refs: [visible exact capability references], parent: null}.
+Describe conditional decisions and which certified operations can perform the
+stable work. A policy is a candidate until independently admitted by the host.
 Existing trusted capabilities may perform solved work; identify new judgments
 still left to the model. Rewriting directly or keeping the original is valid.
 Do not claim certification, measured savings or causal creation value. The host
@@ -107,8 +111,11 @@ def packet(entries, snapshot, scope, directory, *, inspector=inspect_graph,
         if row['id'] in seen:
             continue
         seen.add(row['id'])
+        # Trusted semantic inspectors group a common decision across different
+        # execution graphs. Plain graph observations keep their original key.
         key = capability_digest({'scope': scope, 'stage': row['stage'], 'relation': row['relation'],
-                                 'capabilities': sorted({capability_digest(r) for r in row['capabilities']})})
+                                 'capabilities': [] if 'decision_context' in row else
+                                 sorted({capability_digest(r) for r in row['capabilities']})})
         groups.setdefault(key, []).append(row)
     out = Path(directory); out.mkdir(parents=True, mode=0o700, exist_ok=False)
     save(out / 'index.json', {'entries': entries, 'groups': groups})
@@ -165,7 +172,7 @@ def validate_candidate(candidate, context):
               'verification', 'failure_conditions', 'proposal'}
     if not isinstance(candidate, dict) or set(candidate) != fields:
         raise ValueError('evolution_candidate_fields_invalid')
-    if candidate['kind'] not in ('boundary', 'capability', 'construction_strategy'):
+    if candidate['kind'] not in ('boundary', 'capability', 'construction_strategy', 'task_strategy'):
         raise ValueError('evolution_candidate_kind_invalid')
     for field in fields - {'kind', 'evidence_ids', 'proposal', 'verification', 'failure_conditions'}:
         if not isinstance(candidate[field], str) or not candidate[field].strip():
@@ -241,6 +248,10 @@ def model_view(context):
                            observation_level=row.get('observation_level', 'host_observation'),
                            model_decision_count=row.get('model_decision_count'),
                            already_packaged_by=row.get('containers', []))
+        if 'decision_context' in row:
+            # Only an explicitly selected trusted inspector supplies this
+            # approved projection. Original private records stay in the index.
+            observation['decision_context'] = copy.deepcopy(row['decision_context'])
         observation.update(task_id=task, evidence_hashes=[ref['sha256'] for ref in row['evidence']],
             steps=[{'call_id': calls[s['call_id']], 'capability': s['capability'],
                     'input_binding': binding(s.get('input_binding')), 'status': s['status']} for s in row['steps']])
@@ -382,4 +393,48 @@ def construction_handler(*, plan, adapter, admit):
         validate('plan', selected); adapter.configure_jobs([job])
         save(directory / 'plan.json', selected)
         return run_improvement(selected, adapter, execute=True)
+    return handle
+
+
+def strategy_handler(*, snapshot, feedback, target, scope, evaluate, parent_selection=None):
+    """Submit a conditional policy to the host's independent evaluation.
+
+    The host supplies evaluator, owner and scope. The candidate supplies no
+    executable validator, permission, publication status or budget policy.
+    """
+    from .capability_strategy import create_strategy, admit_strategy, strategy_context
+    frozen = validate_capability_snapshot(snapshot, feedback.owner)
+    if target not in ('task', 'construction'):
+        raise ValueError('evolution_strategy_target_invalid')
+
+    def handle(candidate, context, directory):
+        expected = 'task_strategy' if target == 'task' else 'construction_strategy'
+        if (candidate['kind'] != expected or context['owner'] != feedback.owner or context['scope'] != scope
+                or context['snapshot_sha256'] != frozen['digest']):
+            raise ValueError('evolution_strategy_context_changed')
+        proposal = candidate['proposal']
+        if set(proposal) != {'applicability', 'decision_policy', 'capability_refs', 'parent'}:
+            raise ValueError('evolution_strategy_proposal_invalid')
+        # Parent changes require a separate host-selected version. A model may
+        # not turn an arbitrary local path into an evidence-reading request.
+        if proposal['parent'] is not None:
+            raise ValueError('evolution_strategy_parent_requires_host')
+        observations = {row['id']: row for row in context['observations']}
+        refs = [ref for identity in candidate['evidence_ids']
+                for ref in observations[identity]['evidence']]
+        parent = None
+        if parent_selection is not None:
+            strategy_context(parent_selection, frozen, target=target, scope=scope, feedback=feedback)
+            parent = parent_selection['strategy']
+        definition = {**proposal, 'parent': parent, 'owner': frozen['owner'], 'target': target,
+                      'scope': scope, 'evidence': refs}
+        value = create_strategy(definition, frozen)
+        directory = Path(directory)
+        directory.mkdir(parents=True, mode=0o700, exist_ok=False)
+        save(directory / 'candidate.json', value)
+        selection = admit_strategy(file_ref(directory / 'candidate.json'), frozen,
+            target=target, scope=scope, evaluate=evaluate,
+            directory=directory / 'evaluation', feedback=feedback)
+        return {'status': 'evaluated', 'selection': selection,
+                'actual_adoption': None, 'measured_net_benefit': None}
     return handle

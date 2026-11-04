@@ -70,7 +70,27 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
-    if '--rae-integration' in sys.argv:
+    if '--strategy-evolution' in sys.argv:
+        sys.argv.remove('--strategy-evolution')
+        reviewed = {
+            'scripts/reexport-ppt-managed-compat.py',
+            'src/adapters/capability_construction_history.py',
+            'src/adapters/capability_proposal.py',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v76', 'ppt-master-v77', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v78', 'paper-web-v79', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= {
+            'src/adapters/capability_strategy.py',
+            'src/adapters/capability_decision_evidence.py',
+            'src/adapters/capability_evolution_agent.py',
+            'src/adapters/capability_goal_proposal.py',
+            'scripts/run-strategy-evolution.py',
+        }
+    elif '--rae-integration' in sys.argv:
         sys.argv.remove('--rae-integration')
         reviewed = {
             'scripts/reexport-ppt-managed-compat.py',

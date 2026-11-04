@@ -103,6 +103,10 @@ def build_history(records, task):
                 'declared_strategy':json.loads(sources['strategy.json']) if 'strategy.json' in sources else None,
                 'compiled_dependencies':json.loads(sources['candidate.json'])['capability']['dependencies'] if 'candidate.json' in sources else None,
                 'verification':verification,'actual_dependencies':None}
+            effective = json.loads(sources['effective.json']) if 'effective.json' in sources else {}
+            if effective.get('inherited_strategy') is not None:
+                row['inherited_strategy'] = effective['inherited_strategy']
+                row['strategy_observation'] = result.get('strategy_observation')
             rows.append(row)
             if first is None and (verification or {}).get('status')=='published' and verification.get('evidence_ref'):
                 first={'attempt_index':len(rows)-1,'construction_model_usd_decimal':str(total) if known else None}
@@ -167,3 +171,27 @@ def unwrap_strategy(draft, output, snapshot, enabled):
     save(Path(output)/'strategy.json',{**strategy,'expected_dependencies':[table[alias] for alias in strategy['uses']],
         'actual_dependencies':None,'claim_scope':'model declaration, not observed strategy improvement'})
     return draft['proposal']
+
+
+def inherited_strategy_context(catalog, snapshot):
+    """Recheck one host-selected construction policy through original feedback."""
+    config = catalog.get('source_catalog', catalog).get('inherited_strategy')
+    if config is None:
+        return None
+    if not isinstance(config, dict) or type(config.get('enabled', False)) is not bool:
+        raise ValueError('construction_inherited_strategy_config_invalid')
+    if not config.get('enabled', False):
+        return None
+    if set(config) != {'enabled', 'selection', 'scope', 'feedback_directory'}:
+        raise ValueError('construction_inherited_strategy_config_invalid')
+    from .capability_feedback import CapabilityFeedback
+    from .capability_strategy import strategy_context
+    feedback = CapabilityFeedback(config['feedback_directory'], snapshot['owner'])
+    context = strategy_context(config['selection'], snapshot, target='construction',
+                               scope=config['scope'], feedback=feedback)
+    from .capability_authoring import aliases
+    context['capability_aliases'] = [alias for alias, ref in aliases(snapshot).items()
+                                     if ref in context['capability_refs']]
+    if len(json.dumps(context, ensure_ascii=False, allow_nan=False).encode('utf-8')) > 12000:
+        raise ValueError('construction_inherited_strategy_context_too_large')
+    return context

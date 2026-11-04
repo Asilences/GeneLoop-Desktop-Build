@@ -1562,3 +1562,8 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 0.1.3桌面协议转发按Electron/Chromium提供的可信 `initiatorOrigin` 核对服务器同源，再恢复转发中的 `Origin`；不从页面可控的referrer推断、不允许跨源或不透明源冒用服务器来源。未携带任何来源的有副作用请求同样拒绝，显式 `credentials:omit` 仍被尊重。原服务器网关的Origin检查不修改；网页登录与桌面登录使用同一账号API和服务器配置，Cookie各自保存。`npm --prefix apps/desktop run smoke:account` 用本机临时合成账号验证表单登录、密码拒绝、刷新与退出，不代替正式账号验收。
 
 当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](desktop.md)。
+
+
+## 条件化策略演化（2026-11-04）
+
+版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。

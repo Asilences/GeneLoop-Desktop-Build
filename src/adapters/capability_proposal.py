@@ -144,7 +144,7 @@ def read_json(path):
 
 def safe_error(error):
     text = str(error)
-    return text if re.fullmatch(r'(?:capability_[a-z_]+|proposal_[a-z_]+)', text) else type(error).__name__
+    return text if re.fullmatch(r'(?:capability_[a-z_]+|proposal_[a-z_]+|strategy_[a-z_]+)', text) else type(error).__name__
 
 
 def parse_proposal(answer):
@@ -279,12 +279,19 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
     output.mkdir(parents=True, exist_ok=False)
     stable_catalog=copy.deepcopy(catalog)
     stable_catalog.get('source_catalog',stable_catalog).pop('construction_feedback',None)
+    stable_catalog.get('source_catalog',stable_catalog).pop('inherited_strategy',None)
+    from src.adapters.capability_construction_history import inherited_strategy_context
+    inherited = inherited_strategy_context(catalog, snapshot)
+    inherited_identity = None if inherited is None else {key: inherited[key] for key in
+        ('strategy', 'selection', 'target', 'scope')}
     hashes = {'task_sha256': capability_digest(task), 'catalog_sha256': capability_digest(stable_catalog),
               'construction_snapshot_sha256': snapshot['digest'],
               'authoring_format': AUTHORING_FORMAT, 'aliases_sha256': capability_digest(aliases(snapshot))}
     repair = None
     if repair_from:
         parent = Path(repair_from).resolve(); prior = read_json(parent/'effective.json')
+        if prior.get('inherited_strategy') != inherited_identity:
+            raise ValueError('proposal_repair_inherited_strategy_changed')
         if prior.get('abstraction_view', False) is not abstraction_view:
             raise ValueError('proposal_repair_abstraction_view_changed')
         if any(prior.get(k) != v for k, v in hashes.items()):
@@ -304,11 +311,15 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
         repair.pop('fixed_choices_with_current_aliases', None)
     context = source_authoring_context(task, snapshot, catalog, abstract=abstraction_view)
     context['repair'] = repair
+    if inherited is not None:
+        context['inherited_strategy'] = inherited
     from src.adapters.capability_construction_history import model_context
     construction=model_context(catalog,task,snapshot)
     if construction is not None:context['construction_feedback']=construction
     strategy_instruction = '' if construction is None else STRATEGY_SYSTEM
     system = ABSTRACTION_SYSTEM if abstraction_view else SYSTEM
+    if inherited is not None:
+        system += '\nThe host supplied an independently admitted inherited_strategy. Use its applicability and decision policy to inform construction. It grants no permission, changes no task contract or evaluator, and does not require any dependency. Actual compiled dependencies remain independently checked.\n'
     prompt = system+strategy_instruction+'\nFrozen task and construction evidence:\n'+json.dumps(context, ensure_ascii=False, allow_nan=False)
     if len(prompt.encode()) > 4_000_000:
         raise ValueError('proposal_prompt_too_large')
@@ -317,6 +328,7 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
         **hashes, 'catalog_full_sha256':capability_digest(catalog),
         'prompt_sha256': sha(prompt), 'system_sha256':sha(system+strategy_instruction), 'model': MODEL, 'provider': 'deepseek-official',
         'abstraction_view': abstraction_view,
+        'inherited_strategy': inherited_identity,
         'reasoning_effort': 'off',
         'max_tokens': MAX_TOKENS, 'cap_usd': None, 'max_requests': None,
         'budget_policy': 'uncapped_user_authorized', 'reset_history': False,
@@ -346,7 +358,9 @@ def propose_once(*, task, catalog, snapshot, output, gate=None, repair_from=None
     output = Path(output).resolve()
     effective, prompt = prepare_attempt(task=task, catalog=catalog, snapshot=snapshot, output=output,
                                         repair_from=repair_from, feedback=feedback, abstraction_view=abstraction_view)
-    result = {'attempt_id': output.name, 'parent_attempt_id': effective['parent_attempt_id'],
+    result = {'inherited_strategy': effective.get('inherited_strategy'),
+        'strategy_observation': 'prompt_prepared_only' if effective.get('inherited_strategy') else None,
+        'attempt_id': output.name, 'parent_attempt_id': effective['parent_attempt_id'],
         'status': 'preview', 'construction_snapshot_sha256':snapshot['digest'], 'model': MODEL, 'reasoning_effort': 'off', 'max_tokens': MAX_TOKENS,
         'model_called': False, 'provider_requests': 0, 'observed_model_usd': None, 'billing_usd': None,
         'candidate_path': None, 'quality': 'not_independently_reviewed', 'publication_authorized': False}
@@ -391,10 +405,16 @@ def propose_once(*, task, catalog, snapshot, output, gate=None, repair_from=None
             answer, finish = response.final_response, response.finish_reason
         except TaskTurnEnded:
             answer, finish = final_response(guard.events), finish_reason(guard.events)
+        if effective.get('inherited_strategy'):
+            result['strategy_observation'] = 'prompt_exposure_only'
         write(output/'answer.txt', answer)
         result['finish_reason'] = finish
         if finish != 'completed':
             raise ValueError('proposal_incomplete_model_turn')
+        from src.adapters.capability_construction_history import inherited_strategy_context
+        current_strategy = inherited_strategy_context(catalog, snapshot)
+        if current_strategy is not None and current_strategy['strategy'] != effective['inherited_strategy']['strategy']:
+            raise ValueError('proposal_inherited_strategy_changed')
         draft = parse_proposal(answer)
         from src.adapters.capability_construction_history import model_context,unwrap_strategy
         enabled=model_context(catalog,task,snapshot) is not None
