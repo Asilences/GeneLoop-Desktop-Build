@@ -429,6 +429,39 @@ test('an explicitly named blank conversation keeps its visible name in the sideb
   ui.dispose();
 });
 
+test('new chats show a draft immediately, hide unused blanks, and preserve unsent content', async () => {
+  const ui = interactiveWorkspaceBrowser();
+  const list = ui.sessions.list.value;
+  list.byId.one = { id: 'one', title: '新会话', blank: true };
+  list.byId.old = { id: 'old', title: '新会话', blank: true };
+  list.byId.sent = { id: 'sent', title: '新会话', blank: false };
+  list.ids.push('old', 'sent');
+  ui.workspaces.list.value.items[0].sessionIds.push('old', 'sent');
+  const sidebarTitles = () => ui.nodes(ui.render())
+    .filter(row => row.type === 'button' && row.props?.className === 'geneloop-chat-name')
+    .map(row => row.children[0]);
+
+  ui.navigation.startSession('a');
+  assert.ok(ui.nodes(ui.render()).some(row => row.props?.role === 'status' &&
+    row.children[0]?.children?.includes('新会话 · 草稿')));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(sidebarTitles(), ['新会话 · 草稿', '新会话']);
+  assert.ok(!ui.calls.some(row => row[0] === 'create'), 'reuse the active empty native composer');
+
+  list.current = 'sent';
+  ui.sessions.list.emit();
+  assert.deepEqual(sidebarTitles(), ['新会话']);
+  ui.inputs.set('one', { draft: '', attachmentIds: ['unsent-file'], phase: 'plain' });
+  assert.deepEqual(sidebarTitles(), ['新会话 · 草稿', '新会话']);
+  assert.deepEqual(ui.inputs.get('one').attachmentIds, ['unsent-file']);
+
+  list.byId.one.blank = false;
+  ui.sessions.list.emit();
+  assert.deepEqual(sidebarTitles(), ['新会话', '新会话']);
+  assert.ok(!ui.calls.some(row => row[0] === 'trash'), 'visibility never deletes a conversation');
+  ui.dispose();
+});
+
 test('archive and trash belong to native settings while workspace and first chat retain a visible gap', () => {
   const ui = interactiveWorkspaceBrowser(); ui.workspaces.list.value.archivedSessionIds = ['one'];
   const sidebar = ui.nodes(ui.render());
