@@ -4,7 +4,7 @@ import {mkdtempSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {hash} from '../src/adapters/artifact_motif_runtime.ts';
-import {witnessedHeldoutInputs,sealArtifactLibrary} from '../scripts/certify-artifact-motifs.mjs';
+import {witnessedHeldoutInputs,sealArtifactLibrary,certifyArtifactRows} from '../scripts/certify-artifact-motifs.mjs';
 import {digest} from '../src/motif_core/online_skill_runtime.mjs';
 
 test('optional non-SVG profile cannot invalidate the persisted library digest',()=>{
@@ -14,6 +14,14 @@ test('optional non-SVG profile cannot invalidate the persisted library digest',(
  assert.equal(Object.hasOwn(body.programs[0],'output_profile'),false);
  assert.throws(()=>sealArtifactLibrary({metric:NaN}),/must_be_json/);
  assert.throws(()=>sealArtifactLibrary({parameters:[undefined]}),/must_be_json/);
+});
+
+test('certification rejects an unsupported component schema before executing candidate code',()=>{
+ const candidate={id:'diagnostic',component:{parameters_schema:{type:'string',pattern:'.*'}},witness:{call_id:'schema-only'}};
+ const result=certifyArtifactRows([{task_id:'heldout',scene:'ppt',candidates:[]},{task_id:'training',scene:'ppt',candidates:[candidate]}]);
+ assert.equal(result.report.published,0);
+ assert.equal(result.report.rejected.length,1);
+ assert.match(result.report.rejected[0].reason,/unsupported JSON schema/);
 });
 
 test('actual heldout argument flow wins over unrelated same-shaped JSON files',()=>{

@@ -187,6 +187,10 @@ export function captureComparisonDeliveries(service: ReturnType<typeof compariso
   if(context.status==='completed'&&!context.recoverMissing&&Number.isFinite(start)&&Number.isFinite(end)){scanCode(join(context.workspace,'outputs/code'));scanCode(join(context.workspace,'code'),0,true);}
   const presented=nativePresentedFiles(context,false);
   for(const path of presented.keys())codeFiles.add(path);
+  // A completed PPT task can contain failed exports and scratch previews.
+  // When native delivery exists, only its immutable bytes form the learning
+  // and download set. Legacy tasks without native evidence keep their path.
+  if(context.adapter==='ppt'&&presented.size)approved=new Set(presented.keys());
   if (context.adapter === 'data-report') {
     // The Session can contain later successful turns. Only this failed task's
     // own bounded tool events may grant a recovered download.

@@ -1,0 +1,10 @@
+{
+  "version": "ppt-delivery-quality-v1",
+  "mechanical_checks": ["editable_text", "speaker_notes", "rendered_pages", "registered_pngs"],
+  "review_checks": ["scientific", "visual", "usable"],
+  "limitations": [
+    "Mechanical checks do not establish scientific or visual quality.",
+    "Registered PNG validity does not prove that every slide was visually reviewed.",
+    "Human revision time remains unknown without an explicit user review."
+  ]
+}

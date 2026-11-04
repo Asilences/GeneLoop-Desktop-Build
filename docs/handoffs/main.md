@@ -1,9 +1,15 @@
 # 主线当前交接
 
+## 2026-11-04：PR133 跟进 PR132 整合
+
+- 同步 PR132 `5b623d91`，已包含远程 main `eda9409b` 和 PPT76/Paper78 兼容库。保留 Evolution Agent、RAE、PPT与桌面全部接口和交接。
+- PR133 已为 Ready 状态，base 继续使用 PR132 分支，仅展示 Evolution Agent 增量。合入顺序仍为 PR132 后 PR133；最新整合版本的本地回归及远程检查独立核对。
+- 研究状态继续保留真实 `no_change`、未采用候选与未知收益，不以 Ready 状态代表有效自主演化已得到验证。本轮整合模型请求新增 0，原失败和费用记录保留。
+
 ## 2026-11-04：Evidence-Grounded Evolution Agent
 
 - 目标与范围：用户明确改为专门的离线演化智能体；[实施方案](../evidence-grounded-evolution-agent.md)已固化。单个跨任务局部问题、一次有界提案，沿用原学习器/Builder/Store，不实现前端、常驻运行或自动再投资。
-- 分支与基线：`codex/evidence-evolution-agent-20261104` 从 `9c87126a` 开始；源码`f602c35e`已推送并创建[草稿PR133](https://github.com/jingyio/GeneLoop/pull/133)，依赖尚未合并的PR132，以其分支为base单独展示增量。实时 main `931d1bc5` 的新增内容是桌面/网页功能，本轮不覆盖。PR132的Linux/Windows四项检查已实查通过；PR133未合并/部署，新CI以当前head为准。私人 `reference/` 保留。
+- 分支与基线：`codex/evidence-evolution-agent-20261104` 从 `9c87126a` 开始；源码`f602c35e`已推送并创建[PR133](https://github.com/jingyio/GeneLoop/pull/133)，依赖尚未合并的PR132，以其分支为base单独展示增量。实时 main `931d1bc5` 的新增内容是桌面/网页功能，本轮不覆盖。PR132的Linux/Windows四项检查已实查通过；PR133未合并/部署，新CI以当前head为准。私人 `reference/` 保留。
 - 已完成：`capability_evolution_agent.py` 聚合、去重、匿名接口视图、模型提案校验、原边界与宿主构造队列接线；`run-evolution-agent.py` 单次论文研究入口；旧提案传输复用、有限物理请求数准入。默认关闭，模型不能修改验证/权限或自行发布。
 - 已验证：全量Python2318通过/241跳过，Node1587通过/21跳过；最终相关64项本地及Linux通过（包含后加的宿主准入队列与外发文本上限诊断）；smoke、Motif、RSI与效率计量检查通过。Linux最终专项结果见实验记录。确定性提案已走原miner→Store→后继执行，不能称真实模型自主演化。
 - 真实结果：2请求、代理计量USD0.0034098。首轮输入2918 tokens，建议重复封装已有组合图且验证字段被过严格式拒绝；离线修复格式后保留原失败。补充“已有容器覆盖/运行层级”后，第二轮输入3580 tokens、输出6 tokens，返回no_change。没有本轮新认证能力、实际后继采用或净收益结论。
@@ -11,6 +17,13 @@
 - 未完成：论文CLI只配置边界候选的宿主验收；其他能力/构造方式需要宿主提供现有job与独立检查器，未接即pending。有效真实演化、完整成本对照仍待验证；不能拿Runtime内部重复节点替代重复推理证据。
 - 下一步：审阅独立增量；从真实任务中采集可核对的剩余决策/接口修复及费用，而不是继续要求模型封装已解决的图。没有证据时保留no_change，不预写D、不强制调用C。
 - 权限与回退：每个显式真实批次1请求/USD3，当前两批均结束。关闭入口即保留原路径；无生产修改、不合并/部署。提交和PR状态见本轮交付消息。
+
+## 2026-11-04：PR132 同步 PR131 合并后的 main
+
+- 本次整合基线为远程 main `eda9409b`，PR132 原 head 为 `9c87126a`。保留 RAE 与 PPT/桌面接口及交接，复核共享 Builder 的语义视图与成员预算 Session 绑定。
+- PR131 已合并，原成员认证与预算修复纳入本分支。RAE 开关和原独立验收继续生效，真实 Builder 自应用及持续收益仍待研究验证。
+- 首轮全量发现原 PPT75/Paper77 的三个公共控制器代码锁失效，导致17项Python和1项Node拒绝加载。通过原兼容导出器的 `--rae-integration` 生成PPT76/Paper78，核对原图、来源、题面和工具schema字节一致；旧库保留。新增RAE相关依赖锁，默认研究开关仍关闭。
+- 本轮仅做整合与回归，模型请求新增 0。测试记录保存在私有 `.local/pr132-133-integration-20261104/`，最终检查状态由 PR 最新提交定位。PR133 后续同步本分支，不在本次同步中合并或部署。
 
 ## 2026-11-04：RAE 连续研发
 
@@ -25,6 +38,13 @@
 - 未完成与阻塞：真实任务流未产生可学习的Builder前缀，不能用人工轨迹补齐Gate0。本机认证已恢复，已创建[PR #132](https://github.com/jingyio/GeneLoop/pull/132)，远程CI正在运行，尚未形成通过结论；原其他分支及 `reference/` 保留。
 - 接手下一步：1. 审阅PR #132并核对远程Linux/Windows CI；2. 在真实后续任务中显式采集构造前缀，有独立样本后经同一learner/Store认证并实际用于后继Builder；3. Gate0通过后再启动反馈演化与ABC策略对照，不能强制C或只挑成功轨迹。
 - 回退与风险：不启用 `recursive_abstraction.builder_learning` 即原路径；旧库、原回执、累计账本和生产服务未覆盖。研究提交可以独立回退，不删除私有证据。
+
+## 2026-11-04：PR131成员模式修复
+
+- 用户授权修复后合并PR131，未授权部署。基线`7ced3b0`，修复分支`codex/pr131-member-fixes-20261104`；精确提交/最终合并以[PR131](https://github.com/jingyio/GeneLoop/pull/131)和Git历史为准。
+- 修复成员页面学习Session绑定和独立Capability验证的命令代理接线，保留原在线权限检查、认证与账户隔离。原Motif/公共控制器没有重写。
+- 本地全量2300 Python、1607 Node通过，Linux实际经代理完成发布及后继。原库兼容导出PPT75/Paper77，IR和来源不变，旧目录保留。详情、失败及测试范围见[科研PPT交接](research_ppt.md)与[实验追加](../experiments/ppt-public-rsi-20261104.md)。
+- 合并必须核对修复head的远程CI；生产服务及私有账本未改动，模型调用0。PR132/133仍独立保留，后续整合保留双方文档。
 
 ## 2026-11-03：Creation Efficiency 构造反馈与重新选择
 
@@ -74,6 +94,11 @@ PR124的`922d4227`随后在Windows push/PR检查各出现同样三项失败（PR
 ## 2026-11-03 上午：自主递归构造
 
 main `2f29d34a`已合并PR123；当前同工作区分支`codex/recursive-construction-20261103`，源码`4af5c56f`，已推送[草稿PR124](https://github.com/jingyio/GeneLoop/pull/124)，未合并/部署。四对检查点信息消融已封账：on4/4合格、2格完整C；off2/4合格、0格完整C；费用USD0.005062164/0.068178516，为局部信息作用，不是C对无C增益。新增同答program+显式组合意图/静态Python拼写，精确版本在认证前固定，错误repair显示当前alias，不替模型补绑定。从初始池六格另行封账：一格模型新写3273字符比较程序+完整C，在DoRA/BitFit四项检查全过、每项2次C回执；成功实际用JSON意图，Python拼写尚无真实模型使用证据。另一个WithC重写仅过2/4；Flat1完整重写过4/4且更便宜。完整效率RSI仍未达标。38请求/USD0.139684764含失败，原账本3315→3353，无unknown；本地1979Python/1516Node、Linux129、smoke/motif通过。协议、全量结果/失败、组会一分钟讲稿见[上午报告](../experiments/recursive-construction-20261103.md)、[推进协议](../recursive-construction-protocol-20261103.md)；当前接手见[论文交接](paper-proofreading.md)。
+
+## GeneLoop Desktop 0.2.40（PR #130）
+
+独立 Electron 前端复用 GeneLoop 服务端账号与执行接口。0.2.40 已通过本地 Electron 界面回归并构建 Windows x64 安装包。工作区删除尚未在正式服务器实测，安装包留在本地。当前构建、验证及 0.1.5 冻结基线见[桌面交接](desktop.md)。
+
 
 ## 2026-11-03：Capability Frontier 夜间研究
 

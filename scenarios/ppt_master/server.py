@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scenarios.ppt_master.package import installation, read_lock, read_verified
 from src.adapters.session_files import SessionFiles
-from scenarios.ppt_master.converted_source import ConvertedSources
+from scenarios.ppt_master.converted_source import ConvertedSources, source_read_response
 
 
 class SourceReader(SessionFiles):
@@ -52,7 +52,9 @@ class SkillReader:
     def read_skill_entry(self):
         return {'source_id': self.source_id, 'version_sha256': self.version,
                 'skill_dir': '/opt/geneloop/ppt-master',
-                'text': read_verified(self.root, 'SKILL.md', self.lock).decode('utf-8')}
+                'text': read_verified(self.root, 'SKILL.md', self.lock).decode('utf-8'),
+                'runtime_policy': {'id': 'geneloop-ppt-v1',
+                                   'text': Path(__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')}}
 
     def read_pinned_routing(self, source_id):
         if source_id != self.source_id:
@@ -72,7 +74,7 @@ class SkillReader:
 def create_server():
     from mcp.server import MCPServer
     from mcp.server.mcpserver.exceptions import ToolError
-    from mcp.types import ToolAnnotations
+    from mcp.types import CallToolResult, ToolAnnotations
     server = MCPServer('GeneLoop ppt-master')
     reader = SkillReader()
     files = SourceReader(Path(sys.argv[1]),max_files=16)
@@ -100,9 +102,9 @@ def create_server():
         try: return converted.convert(source_id)
         except (OSError, ValueError, subprocess.SubprocessError) as exc: raise ToolError(str(exc)) from None
 
-    def read_converted_source(converted_id: str) -> dict:
+    def read_converted_source(converted_id: str) -> CallToolResult:
         """Read the complete official Markdown and asset paths after rechecking source permission and every converted file. Does not certify visual or scientific accuracy."""
-        try: return converted.read(converted_id)
+        try: return source_read_response(converted.read(converted_id))
         except (OSError, ValueError) as exc: raise ToolError(str(exc)) from None
 
     for fn in (read_skill_entry, pin_source, read_source_page, convert_source, read_converted_source):

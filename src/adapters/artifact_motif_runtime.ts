@@ -5,11 +5,30 @@ import {join, resolve, relative, isAbsolute, extname, posix, basename, dirname} 
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {commandArgv} from './geneloop_shell.ts';
+import {assertComponentSchema,validateComponentParameters,bindComponentConstants} from './ppt_component_schema.ts';
+import {canonical} from './paper_rsi_program.ts';
+import {componentCacheKey,readComponentCache,saveComponentCache} from './ppt_component_cache.ts';
 import {digest} from '../motif_core/online_skill_runtime.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 export const artifactLocks=['src/adapters/artifact_motif_runtime.ts','src/adapters/artifact_motif_shell.ts','src/adapters/artifact_motif_web.ts','src/adapters/artifact_motif_trace.ts','src/adapters/artifact_motif_compiler.py','src/adapters/geneloop_shell.ts','src/adapters/geneloop_skill_installation.mjs','src/adapters/geneloop_delegation.ts','src/adapters/harless_web_client/index.mjs','src/adapters/dsh_web_tasks.ts','package-lock.json','scripts/learn-artifact-motifs.py','scripts/certify-artifact-motifs.mjs','scripts/run-artifact-motif.mjs','scripts/artifact-motif-web.py'];
 export const hash=(value:any)=>createHash('sha256').update(value).digest('hex');
+artifactLocks.push('src/adapters/ppt_program_learning.ts','src/adapters/ppt_program_learning.py',
+ 'src/adapters/harless_ppt_learning.ts','scripts/learn-web-ppt-tasks.py','scripts/harness-web.py',
+ 'src/adapters/ppt_program_broker.ts','src/adapters/geneloop_command_broker.ts','src/adapters/geneloop_command_client.mjs');
+artifactLocks.push('src/adapters/ppt_component_learning.py','src/adapters/ppt_component_render.py','src/adapters/ppt_component_literals.py',
+ 'src/adapters/ppt_component_cache.ts','scripts/learn-ppt-components.py');
+artifactLocks.push('src/adapters/ppt_component_schema.ts');
+artifactLocks.push('src/adapters/ppt_component_equivalence.py');
+artifactLocks.push('src/adapters/paper_rsi_program.ts');
+artifactLocks.push('src/adapters/source_program_compiler.py');
+artifactLocks.push('src/adapters/ppt_component_tool.ts','src/adapters/artifact_motif_transport.ts');
+artifactLocks.push('src/adapters/ppt_design_preflight.py','scenarios/ppt_master/design-profiles.json');
+artifactLocks.push('src/adapters/ppt_delivery_pipeline.ts','src/adapters/ppt_delivery_runner.py');
+artifactLocks.push('src/adapters/ppt_delivery_learning.py');
+artifactLocks.push('src/adapters/ppt_delivery_state.ts');
+artifactLocks.push('src/adapters/ppt_capability_broker.ts','src/adapters/artifact_capability_runtime.ts',
+ 'scripts/run-artifact-capability.mjs');
 const inside=(base:string,path:string)=>{const r=relative(base,path);return !r.startsWith('..')&&!isAbsolute(r);};
 const contexts=new Map<string,any>();
 export function identity(p:any){return Object.fromEntries(['version','source','inputs','dependencies','input_argument_indices','output_argument_index','argument_count','language','execution_policy'].map(k=>[k,p[k]]));}
@@ -21,6 +40,15 @@ export function loadArtifactLibrary(path:string){
   if(p.id!=='artifact_'+digest(identity(p)).slice(0,24)||p.source_sha256!==hash(p.source)||p.execution_policy!=='fresh_output_network_disabled_v1'||
    p.certification?.passed!==true||p.certification.distinct_inputs<2||p.certification.source_equivalent!==true||p.certification.program_sha256!==digest(identity(p)))throw Error('uncertified_artifact_program');
   if(p.dependencies?.ppt_master_package_sha256&&p.dependencies.ppt_master_package_sha256!==JSON.parse(readFileSync(join(root,'scenarios/ppt_master/skill-lock.json'),'utf8')).package_sha256)throw Error('artifact_public_dependency_changed');
+  if(p.component){
+   if(library.scene!=='ppt'||p.component.version!==1||p.component.render_mode!=='svg_png_v1'||
+      p.component.cache_policy!=='bound_page_output_v1'||p.inputs.length!==1||p.inputs[0].format!=='json'||
+      p.certification.component_source_equivalence?.passed!==true)throw Error('component_protocol_changed');
+   assertComponentSchema(p.component.parameters_schema);
+   const mode=p.component.certification_mode??'preserve';
+   if(!['preserve','font_repair_v1','readability_repair_v1'].includes(mode)||(p.certification.component_source_equivalence.mode??'preserve')!==mode)
+    throw Error('component_certification_mode_changed');
+  }
  }
  return library;
 }
@@ -57,6 +85,11 @@ export function provideArtifactPrograms(context:any){
   const file=join(dir,p.id+'.py');
   if(!existsSync(file))writeFileSync(file,p.source,{mode:0o400,flag:'wx'});
   if(realpathSync(file)!==resolve(file)||!lstatSync(file).isFile()||lstatSync(file).nlink!==1||hash(readFileSync(file))!==p.source_sha256)throw Error('artifact_cached_source_changed');
+  if(p.component){
+   const metadata=join(dir,p.id+'.json'),bytes=JSON.stringify({id:p.id,interface:p.interface,component:p.component});
+   if(!existsSync(metadata))writeFileSync(metadata,bytes,{mode:0o400,flag:'wx'});
+   if(realpathSync(metadata)!==metadata||lstatSync(metadata).nlink!==1||hash(readFileSync(metadata))!==hash(bytes))throw Error('component_cached_metadata_changed');
+  }
  }
  return context;
 }
@@ -97,13 +130,31 @@ export function artifactInvocation(session:string,command:string,workdir='/work'
   }catch(error){if(cachedReference)throw error;}
  }
  const nativeRecipe=cachedReference||!!nativeProgram;
- if(!transport.startsWith('geneloop-recipe ')&&!nativeRecipe){
-  if(/\bgeneloop-recipe\s/.test(command))throw Error('复用命令必须单独调用 geneloop-recipe JSON；仅支持 cd /work 前缀及保留完整回执的 tail，不能混入其它命令。');
+ const componentRecipe=transport.startsWith('geneloop-component ');
+ if(!transport.startsWith('geneloop-recipe ')&&!componentRecipe&&!nativeRecipe){
+  if(/\bgeneloop-(?:recipe|component)\s/.test(command))throw Error('复用命令必须单独调用，参数使用完整JSON。');
   return null;
  }
  const c=contexts.get(session);if(!c)throw Error('artifact_context_not_admitted');
+ if(c.allowOutput!==true)throw Error('artifact_output_not_authorized');
  let value:any;
- if(nativeRecipe){
+ if(componentRecipe){
+  const encoded=transport.slice('geneloop-component '.length).trim();
+  const request=JSON.parse(encoded.startsWith("'")&&encoded.endsWith("'")?encoded.slice(1,-1):encoded);
+  if(digest(Object.keys(request).sort())!==digest(['id','output','parameters']))throw Error('component_explicit_parameters_required');
+  const program=c.library.programs.find((p:any)=>p.id===request.id);
+  if(program?.component)request.parameters=bindComponentConstants(program.component.parameters_schema,request.parameters);
+  if(!program?.component)throw Error('component_parameters_invalid: unknown_component');
+  const errors=validateComponentParameters(program.component.parameters_schema,request.parameters);
+  if(errors.length)throw Error('component_parameters_invalid: '+JSON.stringify(errors));
+  const directory=join(c.workspace,'code','.geneloop-component-inputs');mkdirSync(directory,{recursive:true,mode:0o700});
+  if(realpathSync(directory)!==directory)throw Error('component_input_directory_changed');
+  const serialized=canonical(request.parameters),name=digest(request.parameters)+'.json',path=join(directory,name);
+  if(Buffer.byteLength(serialized)>1_000_000)throw Error('component_parameters_protocol_bound');
+  if(!existsSync(path))writeFileSync(path,serialized,{mode:0o400,flag:'wx'});
+  if(hash(readFileSync(path))!==hash(serialized))throw Error('component_input_bytes_changed');
+  value={id:request.id,inputs:['/work/.geneloop-component-inputs/'+name],output:request.output};
+ }else if(nativeRecipe){
   const words=nativeWords,path=posix.resolve(cwd,words[1]),program=nativeProgram;
   if(!program||words.length!==program.argument_count+2)throw Error('artifact_native_interface_changed');
   const cache=fixedArtifactInput(c.workspace,path);if(hash(cache.data)!==program.source_sha256)throw Error('artifact_cached_source_changed');
@@ -118,11 +169,11 @@ export function artifactInvocation(session:string,command:string,workdir='/work'
  }
  if(digest(Object.keys(value).sort())!==digest(['id','inputs','output'])||!Array.isArray(value.inputs))throw Error('artifact_explicit_binding_required');
  const program=c.library.programs.find((p:any)=>p.id===value.id);if(!program||value.inputs.length!==program.inputs.length)throw Error('artifact_program_or_arity_changed');
- if(c.allowOutput!==true)throw Error('artifact_output_not_authorized');
  const bound=value.inputs.map((p:string,i:number)=>{
   const b=fixedArtifactInput(c.workspace,p),version=hash(b.data);
   if(program.inputs[i].source_origin==='uploaded_input'&&!p.startsWith('/work/inputs/'))throw Error('artifact_input_origin_changed');
   if(!matchesArtifactInput(program.inputs[i],p,b.data))throw Error('artifact_input_contract_changed');
+  if(program.component&&validateComponentParameters(program.component.parameters_schema,JSON.parse(b.data.toString('utf8'))).length)throw Error('component_parameters_invalid');
   if(program.certification.invariant_input_versions?.[i]&&program.certification.invariant_input_versions[i]!==version)throw Error('artifact_fixed_protocol_changed');
   return {...b,sha256:version};
  });
@@ -130,7 +181,7 @@ export function artifactInvocation(session:string,command:string,workdir='/work'
  if(typeof value.output!=='string'||!/^\/work\/outputs\/[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$/.test(value.output))throw Error('artifact_new_output_directory_required');
  const destination=join(c.workspace,'outputs/code',value.output.slice(14));
  if(existsSync(destination))throw Error('artifact_output_already_exists');
- c.audit({kind:'artifact_program_selected',program_id:program.id,library_digest:c.library.digest,input_versions:bound.map((b:any)=>b.sha256),model_owned_selection:true,entry:nativeRecipe?'native_python':'recipe_json'});
+ c.audit({kind:'artifact_program_selected',program_id:program.id,library_digest:c.library.digest,input_versions:bound.map((b:any)=>b.sha256),model_owned_selection:true,entry:componentRecipe?'component_json':nativeRecipe?'native_python':'recipe_json'});
  return {...c,program,bound,output:value.output,destination,nonce:randomUUID()};
 }
 
@@ -160,16 +211,28 @@ export function runArtifactProgram(job:any){
  if(!outputVirtual.startsWith('/work/outputs/'))throw Error('artifact_output_must_be_fresh_child');
  const output=join(outputMount,outputVirtual.slice(14));
  if(existsSync(output)||snapshots.some(b=>inside(output,b.host)||inside(b.host,output)))throw Error('artifact_io_alias_rejected');
+ const cacheKey=componentCacheKey(job);let cached:any=null;
+ if(cacheKey){
+  try{cached=readComponentCache(job.cacheRoot,cacheKey,output);}
+  catch(error:any){job.audit({kind:'component_cache_rejected',reason:error.message,program_id:program.id});}
+ }
  const operator=join(scratch,'geneloop_cached_program.py');if(existsSync(operator))throw Error('artifact_operator_path_collision');writeFileSync(operator,program.source,{mode:0o400});
  const quote=(s:string)=>"'"+s.replaceAll("'","'\\''")+"'";
- const command=[process.env.SSS_PYTHON??'python3','-I','-B','/work/geneloop_cached_program.py',...argv].map(quote).join(' ');
+ let command=[process.env.SSS_PYTHON??'python3','-I','-B','/work/geneloop_cached_program.py',...argv].map(quote).join(' ');
+ if(program.component?.render_mode==='svg_png_v1'){
+  writeFileSync(join(scratch,'geneloop_component_render.py'),readFileSync(new URL('./ppt_component_render.py',import.meta.url)),{mode:0o400,flag:'wx'});
+  writeFileSync(join(scratch,'ppt_design_preflight.py'),readFileSync(new URL('./ppt_design_preflight.py',import.meta.url)),{mode:0o400,flag:'wx'});
+  const rendering=[process.env.SSS_PYTHON??'python3','-I','-B','/work/geneloop_component_render.py',outputVirtual];
+  if(job.certification&&job.componentReferenceAllowDesignFindings)rendering.push('--reference-design-findings');
+  command+=' && '+rendering.map(quote).join(' ');
+ }
  const layout={work:base,scratch,inputs,outputs:outputMount,temp};
  const native=commandArgv(layout,command,'/work',undefined,undefined,true,{...job.resources,network:'none'});
  // The only writable persistent mount is this fresh unpublished output root.
  const mount=native.findIndex((s,i)=>s==='--ro-bind'&&native[i+1]===outputMount&&native[i+2]==='/work/outputs');
  if(mount<0)throw Error('artifact_sandbox_mount_changed');native[mount]='--bind';
  if(extraReadonly.length){const point=native.indexOf('--chdir');if(point<0)throw Error('artifact_sandbox_layout_changed');native.splice(point,0,...extraReadonly.flatMap(b=>['--ro-bind',b.host,b.path]));}
- const result=spawnSync(native[0],native.slice(1),{encoding:'utf8',timeout:120000,maxBuffer:1_000_000});
+ const result=cached?{status:0,stdout:cached.stdout,stderr:cached.stderr,error:null}:spawnSync(native[0],native.slice(1),{encoding:'utf8',timeout:120000,maxBuffer:1_000_000});
  if(result.error||result.status!==0)throw Error('artifact_program_failed: '+String(result.stderr??'').slice(-1400));
  for(const b of bound)if(hash(readFileSync(b.host))!==b.sha256)throw Error('artifact_input_changed_during_execution');
  const files:any[]=[];let bytes=0;
@@ -187,6 +250,12 @@ export function runArtifactProgram(job:any){
  const receipt={kind:'artifact_program_receipt',program_id:program.id,nonce:job.nonce,input_versions:bound.map((b:any)=>b.sha256),
   output_directory:job.output,files,stdout:result.stdout,stderr:result.stderr,semantic_quality_accepted:false};
  if(job.certification)return {receipt,output};
+ if(cacheKey){
+  if(componentCacheKey(job)!==cacheKey)throw Error('component_render_environment_changed');
+  const stored=!cached&&saveComponentCache(job.cacheRoot,cacheKey,output,receipt);
+  Object.assign(receipt,{page_cache:{hit:!!cached,key:cacheKey,stored:!!stored}});
+  job.audit({kind:cached?'component_cache_hit':stored?'component_cache_populated':'component_cache_store_unchanged',program_id:program.id,key:cacheKey});
+ }
  const exportedSource=join(output,'geneloop_reused_program.py');
  if(existsSync(exportedSource))throw Error('artifact_program_export_collision');
  writeFileSync(exportedSource,program.source,{mode:0o600,flag:'wx'});

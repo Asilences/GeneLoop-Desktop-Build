@@ -97,6 +97,102 @@ def seed(owned):
     worker.advance(owned[2]);assert worker.read(owned[1]/'status.json')['status']=='probation'
 
 
+def test_completed_task_ui_refresh_does_not_retire_certified_evidence(owned):
+    seed(owned);out,store,req=owned;entry=store/'round-0001/release/entry.json';version=worker.sha(entry)
+    for path in (out/'tasks').glob('*/task-state.json'):
+        row=worker.read(path);row['progress']={'text':'refreshed'}
+        row['stats'].update(global_estimated_cost_usd=100.0,global_upstream_requests=9999)
+        save(path,row)
+    worker.advance(req)
+    assert worker.read(store/'selected.json')['phase']=='probation'
+    assert worker.sha(entry)==version and not (store/'round-0001/retired.json').exists()
+
+
+def test_changed_completed_task_facts_still_retire_certified_evidence(owned):
+    seed(owned);out,store,req=owned
+    p=out/'tasks'/f'{1:032x}'/'task-state.json';row=worker.read(p);row['failure']='late_verified_failure';save(p,row)
+    worker.advance(req)
+    assert worker.read(store/'selected.json')['phase']=='disabled'
+
+
+def single(owned,directory,*,session=None):
+    """Host-owned single receipt fixture, explicitly synthetic and not a pair."""
+    out,store,_=owned;identity=directory.name
+    if session:
+        for name in ('task-state.json','effective-config.json','task.json'):
+            path=directory/name;row=worker.read(path);row['session_id']=session;save(path,row)
+    state=worker.read(directory/'task-state.json')
+    turn='native-'+identity;rows=artifacts(owned,turn,'baseline')
+    for row in rows:row['verification']='code-output-v1'
+    save(out/'comparison-artifacts'/turn/'baseline/0/index.json',rows)
+    receipt={'schema_version':1,'kind':'ppt_single_delivery_v1','user':USER,'scope':SCOPE,'task_id':identity,
+        'session_id':state['session_id'],'mode':state['mode'],'status':state['status'],
+        'snapshot_turn':turn,'snapshot_lane':'baseline','artifacts':rows,
+        'output_sha256':hashlib.sha256(json.dumps(rows,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()}
+    save(directory/'ppt-learning-delivery.json',receipt)
+    return receipt
+
+
+def test_single_baselines_certify_without_comparisons_and_future_singles_do_not_fabricate_cost_pairs(owned):
+    out,store,req=owned;(out/'comparisons.json').unlink()
+    for n in range(1,4):single(owned,task(owned,n))
+    worker.advance(req)
+    assert worker.read(store/'status.json')['status']=='probation'
+    assert load_product_bundle(ROOT,store/'round-0001/release','ppt',private_root=store)['runtime_kind']=='ppt_master_v2'
+    admission=worker.read(store/'round-0001/admission.json')
+    assert all(r['comparison_id'].startswith('single-') for r in admission['support_reviews'])
+    assert all(r['review_id'] is None for r in admission['support_reviews'])
+    assert not (out/'comparisons.json').exists()
+    for n in (4,5):single(owned,task(owned,n))
+    worker.advance(req)
+    assert worker.read(store/'selected.json')['phase']=='probation'
+    assert worker.read(store/'round-0001/evaluation.json')['pairs']==[]
+    assert not (store/'round-0001/promotion.json').exists()
+    assert worker.read(store/'status.json')['extra_provider_requests']==0
+
+
+@pytest.mark.parametrize('issue',['foreign-user','foreign-scope','execute','failed','missing-receipt','changed-artifact',
+    'changed-index','receipt-digest','same-chat','evaluation-role','opt-out','pending'])
+def test_single_learning_rejects_unowned_incomplete_or_dependent_evidence(owned,issue):
+    out,store,req=owned;(out/'comparisons.json').unlink()
+    for n in range(1,4):
+        d=task(owned,n,mode='execute' if issue=='execute' and n==3 else 'baseline')
+        single(owned,d,session='same-chat' if issue=='same-chat' else None)
+    path=d/'ppt-learning-delivery.json';row=worker.read(path)
+    if issue=='foreign-user':row['user']='other'
+    elif issue=='foreign-scope':row['scope']='b'*64
+    elif issue=='receipt-digest':row['output_sha256']='a'*64
+    elif issue=='failed':
+        p=d/'task-state.json';s=worker.read(p);s['status']='failed';save(p,s)
+    elif issue in ('evaluation-role','opt-out'):
+        p=d/'task.json';s=worker.read(p);s['role']='holdout' if issue=='evaluation-role' else s.get('role')
+        if issue=='opt-out':s['learning_eligible']=False
+        save(p,s)
+    elif issue=='pending':
+        p=d/'task-state.json';s=worker.read(p);s['stats']['pending_requests']=1;save(p,s)
+    elif issue=='changed-artifact':
+        (out/'comparison-artifacts'/row['snapshot_turn']/'baseline/0'/row['artifacts'][0]['id']).write_bytes(b'changed')
+    elif issue=='changed-index':save(out/'comparison-artifacts'/row['snapshot_turn']/'baseline/0/index.json',[])
+    if issue=='missing-receipt':path.unlink()
+    else:save(path,row)
+    worker.advance(req)
+    assert not (store/'candidate.json').exists()
+
+
+def test_single_learning_can_be_used_by_future_real_paired_promotion_protocol(owned):
+    out,store,req=owned;(out/'comparisons.json').unlink()
+    for n in range(1,4):single(owned,task(owned,n))
+    worker.advance(req)
+    save(out/'comparisons.json',{'version':1,'principal':USER,'turns':[]})
+    for n in (4,5):
+        pair(owned,n,task(owned,n*10,source=n,cost=.003),
+             task(owned,n*10+1,source=n,mode='execute',version='round-0001',cost=.001),review=False)
+        worker.advance(req)
+    status=worker.read(store/'status.json')
+    assert status['status']=='active' and status['mechanical_cost_promoted'] is True
+    assert status['quality_cost_promoted'] is False
+
+
 def test_existing_user_traces_certify_then_two_future_reviewed_pairs_promote(owned):
     seed(owned);out,store,req=owned
     release=store/'round-0001/release';assert load_product_bundle(ROOT,release,'ppt',private_root=store)['runtime_kind']=='ppt_master_v2'
@@ -179,6 +275,39 @@ def test_automatic_learning_needs_no_review_and_keeps_scientific_quality_unknown
     assert not (owned[1]/'reviews.jsonl').exists()
 
 
+def test_shared_quality_records_bind_real_delivery_and_do_not_invent_a_review(owned):
+    from src.adapters.rsi_quality import quality_status, verify_quality_files
+    seed(owned)
+    out,store,req=owned
+    for n in (4,5):
+        pair(owned,n,task(owned,n*10,source=n,cost=.003),
+             task(owned,n*10+1,source=n,mode='execute',version='round-0001',cost=.001),review=False)
+    worker.advance(req)
+    evaluation=worker.read(store/'round-0001/evaluation.json')
+    assert evaluation['mechanical_cost_promoted'] is True and evaluation['quality_cost_promoted'] is False
+    for p in evaluation['pairs']:
+        for lane,proof in p['quality_records'].items():
+            record=worker.read(out/proof['record'])
+            verify_quality_files(record,out)
+            assert record['record_type']=='quality_evaluation'
+            assert quality_status(record,**proof['binding'],required_checks=proof['mechanical_checks'])=='passed'
+            assert quality_status(record,**proof['binding'],required_checks=proof['required_checks'])=='unknown'
+            assert all(c['status']=='unknown' for c in record['payload']['checks'] if c['id'] in ('scientific','visual','usable'))
+            assert p['evidence_locks'][proof['record']]==worker.sha(out/proof['record'])
+            assert p['baseline_human_minutes'] is None and p['motif_human_minutes'] is None
+
+
+def test_shared_quality_rejects_a_png_header_without_decodable_pixels(owned):
+    base=task(owned,1)
+    turn=pair(owned,1,base,review=False)
+    png=next(a for a in turn['lanes']['baseline']['artifacts'] if a['name'].endswith('.png'))
+    path=owned[0]/'comparison-artifacts'/turn['id']/'baseline'/'0'/png['id']
+    path.write_bytes(b'\x89PNG\r\n\x1a\nnot-an-image')
+    png['sha256']=worker.sha(path);png['bytes']=path.stat().st_size
+    with pytest.raises((ValueError,OSError)):
+        worker.delivery(owned[0],turn,'baseline',{})
+
+
 def test_operator_can_disable_automatic_learning(owned):
     for n in range(1,4):pair(owned,n,task(owned,n),review=False)
     config=worker.read(owned[2]);config['automatic_structural_learning']=False;save(owned[2],config)
@@ -230,6 +359,34 @@ def test_changed_model_configuration_can_use_its_own_independent_evidence(owned)
     assert worker.read(store/'status.json')['status']=='probation'
     admission=worker.read(store/'round-0001/admission.json')
     assert set(admission['support']['decision_id'])=={'web-'+f'{n:032x}' for n in (2,3,4)}
+
+
+def test_fresh_comparison_children_in_one_parent_are_not_independent_training(owned):
+    for n in range(1,4):pair(owned,n,task(owned,n),review=False)
+    path=owned[0]/'comparisons.json';journal=worker.read(path)
+    for turn in journal['turns']:turn['session_id']='session-same-parent'
+    save(path,journal);worker.advance(owned[2])
+    assert worker.read(owned[1]/'status.json')['eligible_tasks']==1
+    assert not (owned[1]/'selected.json').exists()
+
+
+def test_distinct_comparison_parents_keep_independent_evidence(owned):
+    for n in range(1,4):pair(owned,n,task(owned,n),review=False)
+    path=owned[0]/'comparisons.json';journal=worker.read(path)
+    for n,turn in enumerate(journal['turns']):turn['session_id']='session-parent-'+str(n)
+    save(path,journal);worker.advance(owned[2])
+    assert worker.read(owned[1]/'selected.json')['phase']=='probation'
+    assert len(worker.read(owned[1]/'round-0001/admission.json')['support']['decision_id'])==3
+
+
+def test_one_task_cannot_claim_conflicting_comparison_parentage(owned):
+    directory=task(owned,1);pair(owned,1,directory,review=False)
+    path=owned[0]/'comparisons.json';journal=worker.read(path)
+    first=journal['turns'][0];first['session_id']='session-one'
+    second=json.loads(json.dumps(first));second.update(id='comparison-other',session_id='session-two')
+    journal['turns'].append(second);save(path,journal)
+    with pytest.raises(ValueError,match='ambiguous comparison lineage'):
+        worker.task_info(owned[0],directory.name,worker.read(owned[2]),baseline=True)
 
 
 def test_feedback_during_compilation_cannot_reenable_the_stale_candidate(owned,monkeypatch):
