@@ -10,7 +10,7 @@
 <body>
   <main>
     <header><img src="../assets/geneloop-spiral.svg" alt=""><span>GeneLoop Desktop</span><span class="pill">本机 · 预览</span></header>
-    <h1>文件管理</h1>
+    <h1>本机任务</h1>
     <dl>
       <div><dt>读取文件夹</dt><dd id="directory"></dd></div>
       <div><dt>输出位置</dt><dd id="output"></dd></div>
@@ -21,6 +21,13 @@
     </details>
     <section id="results" aria-label="本机任务结果" aria-live="polite"></section>
     <form id="task">
+      <label for="scene">场景</label>
+      <select id="scene">
+        <option value="files">文件管理</option>
+        <option value="data">数据分析</option>
+        <option value="paper">论文材料核验</option>
+      </select>
+      <div id="continuation" hidden><span>正在续接本机会话</span><button type="button" id="reset-context">另起任务</button></div>
       <label for="prompt">任务</label>
       <textarea id="prompt" required placeholder="例如，盘点这个文件夹，找出含指定关键词的文件。"></textarea>
       <p>Agent 与工具在本机运行。发送时，任务描述和必要文件片段会发给云端模型。</p>

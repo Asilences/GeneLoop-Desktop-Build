@@ -10,6 +10,14 @@
 
 每次运行建立一个本机 Agent，本机任务记录保存在桌面应用数据目录。预览界面暂未提供历史恢复。
 
+Windows 预览支持以下本机任务。
+
+- **文件管理**浏览目录、读取和搜索文本，保存 Markdown 报告。
+- **数据分析**针对 UTF-8 CSV 或 TSV 进行分组统计，返回计数、缺失数、合计、均值、范围和源文件 SHA-256。单张表上限 256 KiB、10,000 行和 200 组。
+- **论文材料核验**按页提取含文本层的 PDF 或文本材料，返回页码和文件 SHA-256。支持检查 LaTeX 常用引用命令中的 BibTeX 键，报告缺失与重复定义。PDF 上限 8 MiB，扫描件 OCR 不在当前范围。
+
+完成后可直接输入下一轮，或在重开工作区后对历史任务选择「续接」。本机 Harness 保存同一目录及场景的会话上下文。每轮重新获得模型授权，并检查目录权限。「另起任务」开启独立上下文。旧任务仍可查看已有记录。
+
 首次真实验收使用独立服务器启动计划和试用账号。候选账号网关配置中加入 `"desktopLocalModel": {"accountIds": ["<隔离试用账号 ID>"]}`。保持原有预算代理、累计账本、服务入口和模型密钥。启用配置后，仅已登录且在名单中的账号能取得十分钟任务凭证，单账号同时一个本机任务。桌面使用该凭证调用 `deepseek-flash`，服务端在既有预算控制登记、绑定并结算。切断连接、撤销或超时后关闭模型转发。任务描述和必要文件片段发给云端模型。客户端不会收到供应商密钥。
 
 开发构建先执行 `npm --prefix apps/desktop run runtime:stage`，然后使用现有 dev 入口。Windows x64 的 `pack` 和 `dist` 将锁定的 Harness 运行时封入 `resources/geneloop-runtime.asar`，Windows 原生模块和外部工具保存在相邻的 `.asar.unpacked` 目录。桌面界面仍来自本仓库。用 `npm --prefix apps/desktop run smoke:local-workspace` 运行回环诊断，或运行 `node apps/desktop/scripts/probe-local-runtime.mjs --installed "<安装目录>"` 验证实际安装中的 Agent 和文件工具。真实云端模型验收使用隔离服务和试用账号，并核对预算账本、产物、取消与重复提交。

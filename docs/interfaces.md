@@ -1527,6 +1527,6 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 ## 桌面本机模型授权
 
-本机 Agent 使用独立的 HTTPS 模型入口。账号网关默认关闭该入口，仅在隔离候选配置显式设置 `desktopLocalModel.accountIds` 时开放。桌面主进程通过已登录的同源 Cookie 向 `POST /api/harless/desktop-model/lease` 发送空 JSON 对象，获得 `{token, model, expiresAt}`。凭证限一个账号的当前任务和十分钟，供应商密钥保留在网关。
+本机 Agent 使用独立的 HTTPS 模型入口。账号网关默认关闭该入口，仅在隔离候选配置显式设置 `desktopLocalModel.accountIds` 时开放。桌面主进程通过已登录的同源 Cookie 向 `POST /api/harless/desktop-model/lease` 发送含可选字段的 JSON 对象（scene 可取 files、data 或 paper，空对象默认 files），获得 `{token, model, expiresAt}`。凭证限一个账号的当前任务和十分钟，供应商密钥保留在网关。
 
-`POST /api/harless/desktop-model/v1/chat/completions` 只接收对应 Bearer 凭证和文本文件管理请求，使用现有模型传输容量。请求登记到原预算控制，网关替换计量绑定和上游认证，模型凭证不能调用控制接口。`DELETE /api/harless/desktop-model/lease` 撤销凭证并结束绑定。账号退出或凭证过期同样结束路由。Windows 上的本机工具、授权目录和报告均由桌面进程管理。配置与验收见[桌面说明](desktop.md#本机工作区-windows-预览)。
+`POST /api/harless/desktop-model/v1/chat/completions` 校验 Bearer 凭证及其场景的工具白名单，使用现有模型传输容量。请求登记到原预算控制，网关替换计量绑定和上游认证，模型凭证不能调用控制接口。`DELETE /api/harless/desktop-model/lease` 撤销凭证并结束绑定。账号退出或凭证过期同样结束路由。Windows 上的本机工具、授权目录和报告均由桌面进程管理。配置与验收见[桌面说明](desktop.md#本机工作区-windows-预览)。

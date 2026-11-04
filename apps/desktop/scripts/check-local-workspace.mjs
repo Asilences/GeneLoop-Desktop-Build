@@ -40,7 +40,7 @@ const upstream = createServer(async (req, res) => {
     name: 'local_read', arguments: JSON.stringify({ path: '资料.txt' }),
   }}] } : calls === 2 ? { tool_calls: [{ index: 0, id: 'fixture-save', type: 'function', function: {
     name: 'local_save_report', arguments: JSON.stringify({ markdown: report }),
-  }}] } : { content: '报告已保存。' };
+  }}] } : { content: calls === 5 ? '续接成功。' : '报告已保存。' };
   const base = { id: 'local-check-' + calls, object: 'chat.completion.chunk', created: 1, model: body.model };
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   for (const choices of [
@@ -97,7 +97,13 @@ try {
   assert.deepEqual(paths.map(row => row.path).slice(0, 6), ['/tasks/register', '/tasks/activate', '/bind', '/v1/chat/completions', '/v1/chat/completions', '/v1/chat/completions']);
   assert.deepEqual(paths.map(row => row.path).slice(6, 8).sort(), ['/tasks/cancel', '/unbind']);
   assert.deepEqual(paths.map(row => row.path).slice(8, 12), ['/tasks/register', '/tasks/activate', '/bind', '/v1/chat/completions']);
-  assert.deepEqual(paths.map(row => row.path).slice(12).sort(), ['/tasks/cancel', '/unbind']);
+  assert.deepEqual(paths.map(row => row.path).slice(12, 14).sort(), ['/tasks/cancel', '/unbind']);
+  assert.deepEqual(paths.map(row => row.path).slice(14, 18), ['/tasks/register', '/tasks/activate', '/bind', '/v1/chat/completions']);
+  assert.deepEqual(paths.map(row => row.path).slice(18).sort(), ['/tasks/cancel', '/unbind']);
+  const history = paths[17].body.messages;
+  assert.ok(history.some(message => message.role === 'user' && message.content.includes('读取资料并写报告')));
+  assert.ok(history.some(message => message.role === 'assistant' && message.content?.includes('报告已保存。')));
+  assert.ok(history.some(message => message.role === 'tool' && message.content === sample));
   assert.equal(canceledUpstream, true);
   const bindings = paths.filter(row => row.path === '/bind').map(row => row.body);
   assert.notEqual(bindings[0].session_id, bindings[1].session_id);
@@ -120,12 +126,17 @@ try {
     method: 'POST', headers: modelHeaders, body: JSON.stringify({ ...request, tools: [{ type: 'web_search' }] }),
   });
   assert.equal(response.status, 400); await response.body.cancel();
+  const wrongScene = await fetch(endpoint + '/v1/chat/completions', {
+    method: 'POST', headers: modelHeaders,
+    body: JSON.stringify({ ...request, tools: [{ type: 'function', function: { name: 'local_data_summarize' } }] }),
+  });
+  assert.equal(wrongScene.status, 400); await wrongScene.body.cancel();
   const logout = await fetch(origin + '/api/account/logout', { method: 'POST', headers: sessionHeaders, body: '{}' });
   assert.equal(logout.status, 200); await logout.body.cancel();
   const revoked = await fetch(endpoint + '/v1/chat/completions', { method: 'POST', headers: modelHeaders, body: JSON.stringify(request) });
   assert.equal(revoked.status, 401); await revoked.body.cancel();
-  assert.equal(paths.filter(row => row.path === '/v1/chat/completions').length, 4);
-  console.log(JSON.stringify({ kind: 'desktop_local_workspace_electron_gateway_diagnostic', modelRequests: 0, syntheticRequests: 4, canceledUpstream, report: join(reports, names[0]), settled: true }));
+  assert.equal(paths.filter(row => row.path === '/v1/chat/completions').length, 5);
+  console.log(JSON.stringify({ kind: 'desktop_local_workspace_electron_gateway_diagnostic', modelRequests: 0, syntheticRequests: 5, canceledUpstream, report: join(reports, names[0]), settled: true }));
 } finally {
   clearTimeout(timer);
   gateway.close();

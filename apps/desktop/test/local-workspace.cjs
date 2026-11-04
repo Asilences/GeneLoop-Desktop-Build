@@ -33,11 +33,11 @@ app.whenReady().then(async () => {
     assert.equal(await evaluate(`!!document.getElementById('choose-output')`), false);
     assert.equal(existsSync(fixture.reports), false, '打开工作区不提前创建输出目录');
     await evaluate(`document.getElementById('prompt').value='读取资料并写报告';document.getElementById('task').requestSubmit()`);
-    await until(() => evaluate(`document.getElementById('status').textContent==='任务已完成。'||!document.getElementById('send').disabled`), '本机任务结束');
+    await until(() => evaluate(`!document.getElementById('send').disabled`), '本机任务结束');
     assert.equal(await evaluate(`document.getElementById('status').textContent`), '任务已完成。');
     assert.match(await evaluate(`document.getElementById('results').innerText`), /报告已保存/);
     assert.ok(await evaluate(`document.querySelector('#results button').textContent.includes('.md')`));
-    await evaluate(`document.getElementById('prompt').value='等待取消';document.getElementById('task').requestSubmit()`);
+    await evaluate(`document.getElementById('reset-context').click();document.getElementById('prompt').value='等待取消';document.getElementById('task').requestSubmit()`);
     await until(() => existsSync(fixture.waiting), '上游模型处于等待');
     await evaluate(`document.getElementById('cancel').click()`);
     await until(() => evaluate(`document.getElementById('status').textContent==='任务已停止。'`), '取消任务并结算');
@@ -45,10 +45,14 @@ app.whenReady().then(async () => {
     await local.open(workspace);
     const reopened = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
     assert.ok(reopened && reopened !== view);
-    await until(() => reopened.executeJavaScript(`document.querySelectorAll('#history-list button').length===2`), '重新打开工作区后恢复历史任务');
+    await until(() => reopened.executeJavaScript(`document.querySelectorAll('#history-list li').length===2`), '重新打开工作区后恢复历史任务');
     await reopened.executeJavaScript(`document.querySelector('#history-list li:last-child button').click()`);
     assert.equal(await reopened.executeJavaScript(`document.getElementById('prompt').value`), '读取资料并写报告');
     assert.match(await reopened.executeJavaScript(`document.querySelector('#results button').textContent`), /\.md/);
+    await reopened.executeJavaScript("document.querySelector('#history-list li:last-child button:nth-child(2)').click()");
+    assert.equal(await reopened.executeJavaScript("document.getElementById('continuation').hidden"), false);
+    await reopened.executeJavaScript("document.getElementById('prompt').value='续接测试';document.getElementById('task').requestSubmit()");
+    await until(() => reopened.executeJavaScript("document.getElementById('results').innerText.includes('续接成功') && !document.getElementById('send').disabled"), '续接历史任务');
 
   } finally { local.dispose(); parent.destroy(); }
   app.exit(0);

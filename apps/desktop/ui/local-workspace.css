@@ -17,7 +17,11 @@ button:disabled { opacity: .55; cursor: default; }
 #history { padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; }
 #history summary { cursor: pointer; color: var(--muted); }
 #history-list { display: grid; gap: 5px; max-height: 160px; overflow: auto; list-style: none; padding: 0; margin: 8px 0 0; }
-#history-list button { display: block; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+#history-list li { display: flex; gap: 6px; }
+#history-list button:first-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+#scene { margin: 0 12px 10px 6px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; color: inherit; background: var(--panel); }
+#continuation { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; margin-bottom: 10px; border-radius: 8px; background: var(--panel); color: var(--muted); font-size: 12px; }
+#continuation button { padding: 3px 8px; }
 textarea { width: 100%; min-height: 82px; resize: vertical; padding: 10px; border: 1px solid var(--line); background: var(--panel); border-radius: 9px; }
 #results { display: grid; gap: 8px; margin: 14px 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 36vh; overflow: auto; }
 #results p { margin: 0; padding: 10px; border-radius: 9px; background: var(--panel); }

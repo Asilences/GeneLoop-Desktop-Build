@@ -1,11 +1,11 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { IpcMainInvokeEvent, Session } from 'electron';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
-import type { LocalTaskUpdate } from './local-runtime.ts';
+import type { LocalScene, LocalTaskUpdate } from './local-runtime.ts';
 import { reopenDirectory } from './local-workspaces.ts';
 import type { LocalWorkspace } from './local-workspaces.ts';
 
@@ -16,9 +16,12 @@ const leasePath = '/api/harless/desktop-model/lease';
 type SavedTask = {
   prompt: string;
   at: number;
+  scene?: LocalScene;
+  sessionId?: string;
   updates: Extract<LocalTaskUpdate, { kind: 'answer' | 'report' | 'done' }>[];
 };
 const reportName = /^GeneLoop-[a-f0-9-]{36}\.md$/;
+const sessionIdPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
 function loadTasks(path: string): SavedTask[] {
   try {
@@ -58,6 +61,7 @@ export class LocalWorkspaceWindow {
       const output = join(directory, 'GeneLoop 输出');
       const historyKey = createHash('sha256').update(workspace.id).update('\0').update(directory.toLowerCase()).digest('hex');
       const history = join(app.getPath('userData'), 'local-workspace', 'history', historyKey + '.json');
+      const home = join(app.getPath('userData'), 'local-workspace', 'contexts', historyKey);
       const tasks = loadTasks(history);
       for (const task of tasks) {
         for (const update of task.updates) {
@@ -86,12 +90,21 @@ export class LocalWorkspaceWindow {
       handle('state', () => ({ directory, output, tasks }));
       handle('start', input => {
         if (this.pending) throw Error('已有本机任务正在运行。');
-        if (typeof input !== 'string' || !input.trim()) throw Error('请输入任务内容。');
+        const { prompt, scene, continuation } = (input ?? {}) as { prompt?: unknown; scene?: unknown; continuation?: unknown };
+        if (typeof prompt !== 'string' || !prompt.trim()) throw Error('请输入任务内容。');
+        if (scene !== 'files' && scene !== 'data' && scene !== 'paper') throw Error('本机场景无效。');
+        const resume = continuation !== undefined;
+        const previous = resume && typeof continuation === 'string' && sessionIdPattern.test(continuation) &&
+          tasks.find(row => row.sessionId === continuation && row.scene === scene && row.updates.at(-1)?.kind === 'done' &&
+            row.updates.some(event => event?.kind === 'done' && event.status === 'completed'));
+        if (resume && !previous) throw Error('找不到该场景可继续的本机会话。');
+        const sessionId = previous ? previous.sessionId! : randomUUID();
         const abort = this.pending = new AbortController();
-        const task: SavedTask = { prompt: input, at: Date.now(), updates: [] };
-        return this.run(runtime, directory, input, abort, update => {
+        const task: SavedTask = { prompt, scene, at: Date.now(), updates: [] };
+        return this.run({ runtime, directory, prompt, scene, home, sessionId, resume }, abort, update => {
           if (update.kind !== 'ready') task.updates.push(update);
           if (update.kind !== 'done') { emit(update); return; }
+          if (update.status === 'completed') task.sessionId = sessionId;
           tasks.unshift(task);
           tasks.splice(30);
           try {
@@ -124,7 +137,8 @@ export class LocalWorkspaceWindow {
     } finally { this.busy = false; }
   }
 
-  private async run(runtime: string, directory: string, prompt: string, abort: AbortController, emit: (event: LocalTaskUpdate) => void) {
+  private async run(task: { runtime: string; directory: string; prompt: string; scene: LocalScene; home: string; sessionId: string; resume: boolean },
+    abort: AbortController, emit: (event: LocalTaskUpdate) => void) {
     const endpoint = new URL(leasePath, this.options.server);
     let token: string | undefined;
     let outcome: Extract<LocalTaskUpdate, { kind: 'done' }> | undefined;
@@ -132,7 +146,7 @@ export class LocalWorkspaceWindow {
       const response = await this.options.session.fetch(endpoint.href, {
         method: 'POST', credentials: 'include', redirect: 'error', bypassCustomProtocolHandlers: true,
         headers: { origin: endpoint.origin, 'content-type': 'application/json' },
-        body: '{}', signal: AbortSignal.timeout(22_000),
+        body: task.scene === 'files' ? '{}' : JSON.stringify({ scene: task.scene }), signal: AbortSignal.timeout(22_000),
       });
       if (!response.ok) throw Error(response.status === 404 ? '当前服务器尚未开放本机模型试用。' :
         response.status === 403 ? '请在云端工作区登录已获授权的试用账号。' :
@@ -142,9 +156,8 @@ export class LocalWorkspaceWindow {
       token = lease.token;
       abort.signal.throwIfAborted();
       this.controller = startLocalWorker({
-        executable: process.execPath, runtime, home: join(app.getPath('userData'), 'local-workspace'),
-        directory, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
-        token: lease.token, model: lease.model, prompt,
+        ...task, executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
+        token: lease.token, model: lease.model,
         onUpdate: event => {
           if (event.kind === 'done') { outcome = event; return; }
           if (event.kind === 'report') {

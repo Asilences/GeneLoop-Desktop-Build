@@ -9,10 +9,12 @@ export type LocalTaskUpdate =
   | { kind: 'answer'; text: string }
   | { kind: 'report'; report: { name: string; bytes: number } }
   | { kind: 'done'; status: 'completed' | 'canceled' | 'error'; error?: string };
+export type LocalScene = 'files' | 'data' | 'paper';
 
 export function startLocalWorker(options: {
   executable: string; runtime: string; home: string; directory: string;
   endpoint: string; token: string; model: string; prompt: string;
+  sessionId?: string; resume?: boolean; scene?: LocalScene;
   onUpdate: (event: LocalTaskUpdate) => void;
 }) {
   mkdirSync(options.home, { recursive: true });
@@ -30,7 +32,7 @@ export function startLocalWorker(options: {
     env: {
       SystemRoot: process.env.SystemRoot,
       USERPROFILE: run, HOME: run, LOCALAPPDATA: run, APPDATA: run, TEMP: run, TMP: run,
-      DSH_HOME: join(run, 'dsh'), ELECTRON_RUN_AS_NODE: '1',
+      DSH_HOME: options.sessionId ? join(options.home, 'dsh') : join(run, 'dsh'), ELECTRON_RUN_AS_NODE: '1',
       DEEPSEEK_BASE_URL: options.endpoint, DEEPSEEK_API_KEY: options.token,
     },
   });
@@ -66,7 +68,8 @@ export function startLocalWorker(options: {
       clearTimeout(timeout);
       if (canceled) return finish({ kind: 'done', status: 'canceled' });
       options.onUpdate({ kind: 'ready' });
-      send({ kind: 'run', directory: options.directory, model: options.model, prompt: options.prompt });
+      send({ kind: 'run', directory: options.directory, model: options.model, prompt: options.prompt,
+        sessionId: options.sessionId, resume: options.resume, scene: options.scene });
     } else if (message.kind === 'done') finish(message);
     else if (message.kind === 'answer' || message.kind === 'report') options.onUpdate(message);
   });

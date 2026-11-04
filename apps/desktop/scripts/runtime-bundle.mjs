@@ -38,6 +38,8 @@ export function stageRuntime(app, destination, dependencies = app) {
     assert.ok(optional, '缺少锁定依赖：' + name + '（' + requester + '）');
   }
   stage('@deepseek-ai/dsh');
+  stage('csv-parse');
+  stage('pdfjs-dist');
   cpSync(join(app, 'runtime'), destination, { recursive: true });
   return staged.size;
 }

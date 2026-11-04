@@ -1,18 +1,20 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { localSceneTools } from '../apps/desktop/runtime/local-scenes.mjs';
 
 export const DESKTOP_MODEL_PATH = '/api/harless/desktop-model';
 const leaseMs = 10 * 60_000;
 const requestFields = new Set(['model', 'messages', 'stream', 'stream_options', 'thinking', 'tools', 'temperature', 'max_tokens', 'stop']);
 const roles = new Set(['system', 'user', 'assistant', 'tool']);
-const localTools = new Set(['local_list', 'local_read', 'local_search', 'local_save_report']);
-const localFunction = value => value?.type === 'function' && localTools.has(value.function?.name);
-const validPayload = (value, model) => value?.model === model && value.stream === true &&
+const validPayload = (value, model, tools) => {
+  const localFunction = entry => entry?.type === 'function' && tools.has(entry.function?.name);
+  return value?.model === model && value.stream === true &&
   Object.keys(value).every(key => requestFields.has(key)) &&
   (value.thinking === undefined || value.thinking?.type === 'disabled') &&
   Array.isArray(value.messages) && value.messages.every(message =>
     roles.has(message?.role) && typeof message.content === 'string' &&
     (message.tool_calls === undefined || (Array.isArray(message.tool_calls) && message.tool_calls.every(localFunction)))) &&
   (value.tools === undefined || (Array.isArray(value.tools) && value.tools.every(localFunction)));
+};
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export function createDesktopModelRoute({ config, json, requireOrigin, sessionHash, isSessionActive, readBounded, forward }) {
@@ -62,7 +64,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
 
   const valid = lease => lease && !lease.settlement && lease.expiresAt > Date.now() && isSessionActive(lease.session, lease.userId);
 
-  async function issue(req, res, user) {
+  async function issue(req, res, user, tools) {
     const session = sessionHash(req);
     const existing = byAccount.get(user.id);
     if (existing && !valid(existing)) await close(existing);
@@ -72,7 +74,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
     const token = randomBytes(32).toString('base64url');
     const task = hash(user.id).slice(0, 8) + randomBytes(12).toString('hex');
     const lease = {
-      tokenHash: hash(token), task, session, userId: user.id, expiresAt: Date.now() + leaseMs,
+      tokenHash: hash(token), task, session, userId: user.id, tools, expiresAt: Date.now() + leaseMs,
       binding: { session_id: 'session-' + randomUUID(), budget_session_id: 'turn-' + task },
     };
     byAccount.set(user.id, lease);
@@ -107,8 +109,12 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       if (path === DESKTOP_MODEL_PATH + '/lease' && req.method === 'POST') {
         if (!user || !allowed.has(user.id) || !requireOrigin(req)) return json(res, 403, { error: '请先登录已获授权的试用账号。' });
         const body = await readBounded(req);
-        if (body.toString('utf8') !== '{}') return json(res, 400, { error: '无效的本机任务授权请求。' });
-        return issue(req, res, user);
+        let input;
+        try { input = JSON.parse(body.toString('utf8')); } catch { return json(res, 400, { error: '无效的本机任务授权请求。' }); }
+        const tools = input && !Array.isArray(input) && typeof input === 'object' &&
+          Object.keys(input).every(key => key === 'scene') && localSceneTools(Object.hasOwn(input, 'scene') ? input.scene : 'files');
+        if (!tools) return json(res, 400, { error: '无效的本机场景授权请求。' });
+        return issue(req, res, user, new Set(tools));
       }
       const authorization = req.headers.authorization;
       const token = typeof authorization === 'string' ? /^Bearer ([A-Za-z0-9_-]{43})$/.exec(authorization)?.[1] : undefined;
@@ -127,7 +133,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       if (lease.abort) return json(res, 409, { error: '该任务已有模型请求。' });
       let payload;
       try { payload = JSON.parse(body.toString('utf8')); } catch { return json(res, 400, { error: '模型请求格式无效。' }); }
-      if (!validPayload(payload, model)) return json(res, 400, { error: '模型请求超出本机文件管理授权。' });
+      if (!validPayload(payload, model, lease.tools)) return json(res, 400, { error: '模型请求超出本机场景授权。' });
       const upstream = forward(config.upstreamBrokerPort, '/v1/chat/completions', 'POST', {
         'content-type': 'application/json', authorization: 'Bearer ' + config.apiKey,
         'x-api-key': config.apiKey, 'x-deepseek-harness-session-id': lease.binding.session_id,

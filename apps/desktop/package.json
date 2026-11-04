@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.5",
+  "version": "0.3.0-preview.6",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -25,8 +25,10 @@
   "devDependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",
     "@types/node": "26.6.6",
+    "csv-parse": "7.0.3",
     "electron": "45.2.1",
     "electron-builder": "26.18.0",
+    "pdfjs-dist": "6.4.299",
     "sharp": "0.35.5",
     "typescript": "7.0.2"
   },

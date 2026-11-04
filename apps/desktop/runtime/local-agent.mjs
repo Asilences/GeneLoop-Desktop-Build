@@ -4,18 +4,19 @@ import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
-export async function openLocalFileAgent(ctx, { directory, model, signal, onReport }) {
+export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files' }) {
   const reader = openWorkspaceReader(directory);
   let writer, handle;
   try {
     writer = openReportWriter(directory);
-    handle = await ctx.agents.create({
-      sessionId: randomUUID(),
-      meta: { cwd: directory },
+    const options = {
       agentOptions: model,
       signal,
-      setup(scope) { registerLocalFileTools(scope, reader, writer, onReport); },
-    });
+      setup(scope) { registerLocalFileTools(scope, reader, writer, onReport, scene); },
+    };
+    handle = resume
+      ? await ctx.agents.resume({ ...options, resumeSessionId: sessionId })
+      : await ctx.agents.create({ ...options, sessionId, meta: { cwd: directory } });
   } catch (error) {
     writer?.close();
     reader.close();

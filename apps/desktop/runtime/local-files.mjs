@@ -50,7 +50,7 @@ function info(handle) {
   return {
     directory: Boolean(attributes & DIRECTORY),
     links: bytes.readUInt32LE(40),
-    oversized: bytes.readUInt32LE(32) > 0 || bytes.readUInt32LE(36) > MAX_BYTES,
+    size: bytes.readUInt32LE(32) > 0 ? Infinity : bytes.readUInt32LE(36),
   };
 }
 
@@ -157,19 +157,21 @@ export function openWorkspaceReader(directory) {
     }
   }
 
+  function readBytes(relativePath, limit = MAX_BYTES) {
+    return withEntry(relativePath, false, (handle, metadata) => {
+      if (metadata.links !== 1 || metadata.size > limit) throw Error('文件超过读取限制，或不是单链接普通文件。');
+      const bytes = Buffer.alloc(limit + 1);
+      const length = [0];
+      if (!readFile(handle, bytes, bytes.length, length, null) || length[0] > limit) {
+        throw Error('文件读取失败或超过限制。');
+      }
+      return bytes.subarray(0, length[0]);
+    });
+  }
   return {
     list(relativePath = '') { return withEntry(relativePath, true, enumerate); },
-    readText(relativePath) {
-      return withEntry(relativePath, false, (handle, metadata) => {
-        if (metadata.links !== 1 || metadata.oversized) throw Error('仅支持不超过 256 KiB 的普通文本文件。');
-        const bytes = Buffer.alloc(MAX_BYTES + 1);
-        const length = [0];
-        if (!readFile(handle, bytes, bytes.length, length, null) || length[0] > MAX_BYTES) {
-          throw Error('文本读取失败或超过 256 KiB。');
-        }
-        return new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length[0]));
-      });
-    },
+    readBytes,
+    readText(relativePath) { return new TextDecoder('utf-8', { fatal: true }).decode(readBytes(relativePath)); },
     close() {
       if (closed) return;
       closed = true;

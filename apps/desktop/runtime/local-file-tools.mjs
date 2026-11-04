@@ -1,4 +1,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools';
+import { localSceneTools } from './local-scenes.mjs';
+import { summarizeTable } from './local-data.mjs';
+import { readPaperPage, checkCitationKeys } from './local-paper.mjs';
 
 const string = { type: 'string', required: true };
 const jsonOutput = {
@@ -6,7 +9,9 @@ const jsonOutput = {
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
 };
 
-export function registerLocalFileTools(scope, reader, writer, onReport) {
+export function registerLocalFileTools(scope, reader, writer, onReport, scene = 'files') {
+  const names = localSceneTools(scene);
+  if (!names) throw Error('不支持该本机场景。');
   const tools = [
     defineTool({
       name: 'local_list',
@@ -52,7 +57,30 @@ export function registerLocalFileTools(scope, reader, writer, onReport) {
         return report;
       },
   }));
-  const allowed = new Set(tools.map(tool => tool.name));
+  if (scene === 'data') tools.push(defineTool({
+    name: 'local_data_summarize',
+    description: '在本机精确计算 UTF-8 CSV/TSV 的数值列统计。返回行数、分组和、均值、极值、缺失数及源文件 SHA-256；不分组时传入空字符串。',
+    parameters: { path: string, column: string, group_by: string },
+    output: jsonOutput,
+    async execute(input) { return summarizeTable(reader, input); },
+  }));
+  if (scene === 'paper') tools.push(
+    defineTool({
+      name: 'local_paper_read_page',
+      description: '本机读取含文本层的 PDF 指定页或 UTF-8 文本材料第 1 页，返回文件 SHA-256、页码和原文。扫描页需要其他工具。',
+      parameters: { path: string, page: { type: 'number', required: true } },
+      output: jsonOutput,
+      async execute(input) { return readPaperPage(reader, input); },
+    }),
+    defineTool({
+      name: 'local_paper_check_citations',
+      description: '核验 LaTeX 稿件引用键在 BibTeX 文献表中的匹配、缺失、重复情况，返回行号和两个来源的 SHA-256。',
+      parameters: { manuscript: string, bibliography: string },
+      output: jsonOutput,
+      async execute(input) { return checkCitationKeys(reader, input); },
+    }),
+  );
+  const allowed = new Set(names);
   scope.tools.guard(call => allowed.has(call.name) ? undefined : '工具不在本机文件管理权限内。');
   for (const tool of tools) scope.tools.register(tool);
 }
