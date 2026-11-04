@@ -105,6 +105,8 @@
       return;
     }
     let selected, navigating = 0, creating = false, notice = '', noticeIsError = true, contextMenu = null;
+    let showingWorkspaceHome = false, pendingDraft;
+    const localDrafts = new Set();
     let expandedGroups = new Set(), collapsedGroups = new Set();
     let trash = { sessions: [], deleted_session_ids: [], restored_archive_ids: [], revision: '', loading: true, error: '' }, trashBusy = false, trashVersion = 0;
     const isArchived = (ws, id) => ws.archivedSessionIds.includes(id) && !trash.restored_archive_ids.includes(id);
@@ -128,14 +130,16 @@
       if (current) addressedCurrent = current;
       if (current !== lastCurrent) {
         lastCurrent = current;
-        if (current) { selected = currentGroup(); if (selected) { expandedGroups = new Set([...expandedGroups, selected]); collapsedGroups.delete(selected); } }
+        if (current) { showingWorkspaceHome = false; selected = currentGroup(); if (selected) { expandedGroups = new Set([...expandedGroups, selected]); collapsedGroups.delete(selected); } }
         notify();
       }
     }), 'geneloop-selected-workspace');
     const originalStart = navigation.startSession, originalConnect = navigation.connectWorkspace;
-    const openSession = id => {
+    const openSession = (id, target = workspaces.list.getSnapshot().items.find(item => item.sessionIds.includes(id))?.workspaceId) => {
       navigating++;
-      selected = workspaces.list.getSnapshot().items.find(item => item.sessionIds.includes(id))?.workspaceId;
+      showingWorkspaceHome = false;
+      if (isDraft(sessions.list.getSnapshot().byId[id])) localDrafts.add(id);
+      selected = target;
       if (selected) { expandedGroups = new Set([...expandedGroups, selected]); collapsedGroups.delete(selected); }
       sessions.open(id); notify(); layout?.selectPanel(null);
     };
@@ -143,6 +147,21 @@
     const workspaceSource = { subscribe: fn => workspaces.list.subscribe(fn), snapshot: () => workspaces.list.getSnapshot() };
     const sessionSource = { subscribe: fn => sessions.list.subscribe(fn), snapshot: () => sessions.list.getSnapshot() };
     const publicSession = row => row && row.projectionValues?.harlessComparisonLane !== true && row.origin !== 'subagent' && !trash.deleted_session_ids.includes(row.id);
+    const sessionTitle = row => row.title || row.displayTitle || '新会话';
+    const isDraft = row => row?.blank === true && !row.running && sessionTitle(row) === '新会话';
+    const draftInput = id => {
+      const scope = sessions.scope?.(id);
+      return scope && ctx.get?.('conversation')?.input.for(scope)?.state.getSnapshot();
+    };
+    const draftTitle = row => isDraft(row) ? '新会话 · 草稿' : sessionTitle(row);
+    const visibleHistory = (ws, list, row, sidebar = false) => {
+      if (!publicSession(row) || isArchived(ws, row.id)) return false;
+      if (!isDraft(row)) return true;
+      if (sidebar && row.id === list.current && !showingWorkspaceHome) return true;
+      if (!localDrafts.has(row.id) && row.id !== list.current) return false;
+      const input = draftInput(row.id);
+      return Boolean(input?.draft?.trim() || input?.attachmentIds?.length);
+    };
     const clearDeletedCurrent = () => {
       if (!trash.deleted_session_ids.includes(sessions.list.getSnapshot().current || addressedCurrent)) return;
       addressedCurrent = undefined; navigating++; sessions.clear(); layout?.selectPanel(null);
@@ -266,7 +285,7 @@
         const row = list.byId[id];
         if (!id || !publicSession(row) || !row.blank || row.running || !belongs(id) || isArchived(ws, id)) return false;
         if (preserveCurrent && id === list.current) return true;
-        const scope = sessions.scope?.(id), input = scope && ctx.get?.('conversation')?.input.for(scope)?.state.getSnapshot();
+        const input = draftInput(id);
         return input && input.draft === '' && input.attachmentIds.length === 0 && input.phase === 'plain';
       });
     };
@@ -290,14 +309,20 @@
       if (target && !workspaces.list.getSnapshot().items.some(row => row.workspaceId === target)) {
         selected = undefined; setNotice('此工作区已移除，请重新选择。'); return;
       }
-      const generation = ++navigating; creating = true; setNotice('');
+      const generation = ++navigating;
+      creating = true; pendingDraft = { generation, target };
+      if (target) { expandedGroups = new Set([...expandedGroups, target]); collapsedGroups.delete(target); }
+      setNotice('');
       try {
         // A workspace may already own a native blank session. Reuse only an
         // actually empty composer; never replace someone's unsent draft/files.
         const id = await connect(target, false);
-        if (generation === navigating) { selected = target; if (target) { expandedGroups = new Set([...expandedGroups, target]); collapsedGroups.delete(target); } sessions.open(id); layout?.selectPanel(null); }
-      } catch { setNotice('新会话暂时无法创建，请重试。'); }
-      finally { creating = false; notify(); }
+        if (generation === navigating) {
+          localDrafts.add(id);
+          openSession(id, target);
+        }
+      } catch { if (generation === navigating) setNotice('新会话暂时无法创建，请重试。'); }
+      finally { creating = false; pendingDraft = undefined; notify(); }
     };
     navigation.startSession = workspaceId => { void start(workspaceId); };
     ctx.effect(() => () => { navigation.startSession = originalStart; navigation.connectWorkspace = originalConnect; navigating++; }, 'geneloop-new-session-target');
@@ -339,6 +364,8 @@
       const selectedId = React.useSyncExternalStore(subscription, () => selected);
       const status = React.useSyncExternalStore(subscription, () => notice);
       React.useSyncExternalStore(subscription, () => expandedGroups);
+      React.useSyncExternalStore(subscription, () => showingWorkspaceHome);
+      React.useSyncExternalStore(subscription, () => pendingDraft);
       React.useSyncExternalStore(subscription, () => trash);
       React.useSyncExternalStore(subscription, () => trashBusy);
       const [query, setQuery] = React.useState(''), [searching, setSearching] = React.useState(false), [adding, setAdding] = React.useState(false);
@@ -357,8 +384,8 @@
       }, []);
       const error = message => setNotice(message);
       const matches = title => String(title || '').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
-      const visible = row => publicSession(row) && !isArchived(ws, row.id);
-      const matchesChat = row => visible(row) && matches(row.title || row.displayTitle || '新会话');
+      const visible = row => visibleHistory(ws, list, row, true);
+      const matchesChat = row => visible(row) && matches(draftTitle(row));
       const open = openSession;
       const edit = (kind, id, title) => { setMenu(null); setName(title); setEditing({ kind, id }); setNotice(''); };
       const closeMenu = restore => { if (restore) menu?.trigger?.focus(); setMenu(null); };
@@ -394,9 +421,12 @@
       };
       const row = item => h('div', { className: 'geneloop-chat-row', key: item.id },
         h('button', { className: 'geneloop-chat-name', 'aria-current': list.current === item.id ? 'page' : undefined, onClick: () => open(item.id) },
-          item.title || '新会话'),
+          draftTitle(item)),
         h('button', { className: 'geneloop-row-action', 'aria-label': '会话操作 ' + (item.title || '新会话'), 'aria-haspopup': 'menu',
           'aria-expanded': menu?.kind === 'session' && menu.id === item.id, onClick: event => openMenu(event, 'session', item.id, item.title || '新会话') }, '⋯'));
+      const pendingRow = target => pendingDraft?.generation === navigating && pendingDraft.target === target &&
+        (!query || matches('新会话 · 草稿')) &&
+        h('div', { className: 'geneloop-chat-row', role: 'status' }, h('span', { className: 'geneloop-chat-name' }, '新会话 · 草稿'));
       const grouped = new Set(ws.items.flatMap(item => item.sessionIds));
       // Reconnection can replay one workspace identity; same-title workspaces
       // with different identities remain separate and retain all their chats.
@@ -417,14 +447,15 @@
         wide && h('div', { className: 'geneloop-workspace-list' }, ordered.map(item => {
           const workspaceMatches = matches(item.title);
           const children = [...new Set(item.sessionIds)].map(id => list.byId[id]).filter(Boolean).filter(workspaceMatches ? visible : matchesChat);
-          if (query && !children.length && !workspaceMatches) return null;
+          const pending = pendingRow(item.workspaceId);
+          if (query && !children.length && !workspaceMatches && !pending) return null;
           const expanded = expandedGroups.has(item.workspaceId) || (Boolean(query) && !collapsedGroups.has(item.workspaceId));
           const displayName = displayNames.get(item.workspaceId);
           return h('section', { key: item.workspaceId, 'aria-label': displayName },
             h('div', { className: 'geneloop-workspace-row', 'data-selected': selectedId === item.workspaceId },
               h('button', { className: 'geneloop-workspace-name', 'aria-pressed': selectedId === item.workspaceId, 'aria-expanded': expanded,
                 onClick: () => {
-                  navigating++; selected = item.workspaceId;
+                  navigating++; selected = item.workspaceId; showingWorkspaceHome = true;
                   expandedGroups = new Set(expandedGroups);
                   if (expanded) { expandedGroups.delete(item.workspaceId); collapsedGroups.add(item.workspaceId); }
                   else { expandedGroups.add(item.workspaceId); collapsedGroups.delete(item.workspaceId); }
@@ -434,8 +465,8 @@
                 pinned.includes(item.workspaceId) && h('span', { className: 'geneloop-workspace-pin', 'aria-label': '已置顶' }, icon('pin', 13))),
               h('button', { className: 'geneloop-row-action', 'aria-label': '工作区操作 ' + item.title, 'aria-haspopup': 'menu', 'aria-expanded': menu?.kind === 'workspace' && menu.id === item.workspaceId,
                 onClick: event => { event.stopPropagation(); openMenu(event, 'workspace', item.workspaceId, item.title); } }, '⋯')),
-            expanded && (children.length ? children.map(row) : query && !workspaceMatches ? h('p', { className: 'geneloop-workspace-empty' }, '没有匹配的对话') : h('button', { className: 'geneloop-workspace-empty', onClick: () => { void start(item.workspaceId); } }, '开始新对话')));
-        }), ungrouped.length > 0 && h('div', { className: 'geneloop-ungrouped' }, h('div', { className: 'geneloop-workspace-subheading' }, '未分组'), ungrouped.map(row)),
+            expanded && (pending || children.length ? [pending, ...children.map(row)] : query && !workspaceMatches ? h('p', { className: 'geneloop-workspace-empty' }, '没有匹配的对话') : h('button', { className: 'geneloop-workspace-empty', onClick: () => { void start(item.workspaceId); } }, '开始新对话')));
+        }), (ungrouped.length > 0 || pendingRow(undefined)) && h('div', { className: 'geneloop-ungrouped' }, h('div', { className: 'geneloop-workspace-subheading' }, '未分组'), pendingRow(undefined), ungrouped.map(row)),
         ws.items.length === 0 && !query && (ws.phase === 'pending' || list.phase === 'pending'
           ? h('p', { className: 'geneloop-workspace-empty', role: 'status' }, ws.state === 'error' ? '工作区连接中断，正在重新连接…' : '正在连接工作区…')
           : h('button', { className: 'geneloop-workspace-empty', onClick: () => setAdding(true) }, '创建第一个工作区')),
@@ -497,8 +528,8 @@
       React.useSyncExternalStore(subscription, () => trash);
       const workspace = ws.items.find(item => item.workspaceId === selectedId);
       if (!workspace) return h('main', { className: 'geneloop-workspace-home' }, h('h1', null, '选择工作区'),
-        h('p', null, '从侧栏选择一个工作区，或开始新的对话。'), h('button', { onClick: () => { layout?.selectPanel(null); } }, '返回对话'));
-      const chats = workspace.sessionIds.map(id => list.byId[id]).filter(item => publicSession(item) && !isArchived(ws, item.id));
+        h('p', null, '从侧栏选择一个工作区，或开始新的对话。'), h('button', { onClick: () => { showingWorkspaceHome = false; notify(); layout?.selectPanel(null); } }, '返回对话'));
+      const chats = workspace.sessionIds.map(id => list.byId[id]).filter(item => visibleHistory(ws, list, item));
       const stamp = value => { if (!value) return ''; const date = new Date(value); return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(date) : ''; };
       return h('main', { className: 'geneloop-workspace-home', 'aria-label': workspace.title + '工作区' },
         h('header', null, icon('folder', 30), h('h1', null, workspace.title),
@@ -510,7 +541,7 @@
         status && h('p', { className: noticeIsError ? 'error' : '', role: noticeIsError ? 'alert' : 'status' }, status),
         h('div', { className: 'geneloop-workspace-home-heading' }, h('h2', null, '对话'), h('span', null, chats.length + ' 个')),
         chats.length ? h('div', { className: 'geneloop-workspace-home-chats' }, chats.map(item => h('button', { key: item.id, onClick: () => openSession(item.id) },
-          h('span', null, item.title || '新会话'), h('time', null, stamp(item.updatedAt || item.createdAt)))))
+          h('span', null, draftTitle(item)), h('time', null, stamp(item.updatedAt || item.createdAt)))))
           : h('p', { className: 'geneloop-workspace-home-empty' }, '这个工作区还没有对话。点击上方开始，文字和上传资料都可以。'));
     }
     ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'geneloop-workspace' }, WorkspaceHome));
