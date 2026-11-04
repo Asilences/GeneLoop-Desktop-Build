@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.adapters.capability_improvement import save
 from src.adapters.capability_proposal import CumulativeProposalGate
-from src.adapters.evolution_benchmark import BenchmarkHost
+from src.adapters.evolution_benchmark import BenchmarkHost, validation_dataset_splits
 from src.adapters.skill_infinity_baseline import (
     create_seed_meta_skill, create_seed_task_skill, optimize_task_skill, refine_meta_skill,
 )
@@ -63,6 +63,9 @@ def main():
     parser.add_argument('--meta-task', action='append', default=[])
     parser.add_argument('--development-task', action='append', default=[])
     parser.add_argument('--validation-task', action='append', default=[])
+    parser.add_argument('--validation-split', action='append', default=[], metavar='TASK=training|test',
+                        help='Dataset for this task validation; training rollouts remain training.')
+    parser.add_argument('--evaluation-role', choices=['development', 'validation', 'final'])
     parser.add_argument('--continuation', type=Path)
     parser.add_argument('--verifier-env', action='append', default=[])
     parser.add_argument('--materials-root', type=Path)
@@ -72,6 +75,9 @@ def main():
     parser.add_argument('--inner-candidates', type=int, default=2)
     parser.add_argument('--call-model', action='store_true')
     args = parser.parse_args()
+    validation_splits = validation_dataset_splits(dict(value.split('=', 1) for value in args.validation_split))
+    if validation_splits.get(args.task) == 'test':
+        raise ValueError('benchmark_final_input_reserved_for_test')
     output = args.output.resolve()
     if not output.is_relative_to(ROOT / '.local'):
         raise ValueError('benchmark_private_output_required')
@@ -79,6 +85,7 @@ def main():
     continuation = json.loads(args.continuation.read_text()) if args.mode == 'geneloop' and args.continuation else {}
     material_config = material_configuration(continuation, args.materials_root, output) if args.mode == 'geneloop' else None
     effective = {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()}
+    effective['validation_splits'] = validation_splits
     effective.update(budget_usd=None, max_requests=None, model='deepseek-flash',
                      reasoning_effort='off', max_tokens=393216, cumulative_ledger_reset=False,
                      material_configuration=material_config)
@@ -104,13 +111,15 @@ def main():
             host = BenchmarkHost(args.training_root, args.test_root, output / 'host',
                                  source_version=args.source_version, gate=gate,
                                  verifier_environment=dict(value.split('=', 1) for value in args.verifier_env),
-                                 materials=materials, prewarm_dependencies=args.prewarm_dependencies)
+                                 materials=materials, prewarm_dependencies=args.prewarm_dependencies,
+                                 validation_splits=validation_splits)
             if args.mode == 'trial':
-                result = host.trial(args.task, split=args.split)
+                result = host.trial(args.task, split=args.split, evaluation_role=args.evaluation_role)
             elif args.mode == 'geneloop':
                 from src.adapters.evolution_benchmark_gene import run_gene_benchmark
                 result = run_gene_benchmark(host, development_tasks=args.development_task,
                     validation_tasks=args.validation_task or [args.task], test_tasks=[args.task],
+                    validation_splits=validation_splits,
                     output=output / 'generation', snapshot=continuation.get('snapshot'),
                     prior_selection=continuation.get('selection'),
                     prior_observations=[row['evidence'] for row in continuation.get('entries', [])],
@@ -136,7 +145,8 @@ def main():
                 save(output / 'optimization-result.json', optimized)
                 if optimized['status'] != 'completed':
                     raise ValueError('benchmark_task_optimization_failed')
-                final = host.trial(args.task, split='test', skill_directory=optimized['selected_skill'], label='final')
+                final = host.trial(args.task, split='test', skill_directory=optimized['selected_skill'],
+                                   label='final', evaluation_role='final')
                 result = {'status': 'evaluated', 'method': 'skill_infinity_paper_reproduction',
                           'self_improvement': refined['self_improvement'] if args.meta_task else 'seed_only',
                           'optimization': optimized, 'final': final}

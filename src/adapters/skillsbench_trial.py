@@ -32,6 +32,17 @@ def _files(directory):
     return files
 
 
+def input_fingerprint(manifest):
+    """Identify input bytes independently of task family or deployment files."""
+    files = {name: digest for name, digest in manifest.get('source_files', {}).items()
+             if Path(name).parts[0:1] == ('environment',)
+             and not {'skills', 'tests'}.intersection(Path(name).parts)
+             and Path(name).name not in ('Dockerfile', '.dockerignore')}
+    if not files:
+        return None
+    return hashlib.sha256(json.dumps(sorted(files.values()), separators=(',', ':')).encode()).hexdigest()
+
+
 def task_manifest(task_directory, *, task_id, split, source_version):
     """Freeze source bytes, including the original verifier, before deployment."""
     root = Path(task_directory).resolve()
@@ -47,6 +58,7 @@ def task_manifest(task_directory, *, task_id, split, source_version):
             'source_version': source_version,
             'source_identity': hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest(),
             'task_directory': str(root), 'source_files': sources,
+            'input_fingerprint': input_fingerprint({'source_files': sources}),
             'instruction': file_ref(root / 'instruction.md'),
             'environment': config.get('environment', {}),
             'agent': config.get('agent', {}), 'verifier': config.get('verifier', {}),
@@ -299,6 +311,7 @@ class SkillsBenchTrial:
                 result['status'] = 'verifier_timeout'
                 self.close()
         result.update(task_id=self.task_id, split=self.split,
+                      input_fingerprint=self._manifest['input_fingerprint'],
                       execution_timed_out=self.execution_timed_out,
                       execution_stop_evidence=self.execution_stop,
                       verifier_restart_evidence=restart['record'] if restart else None,

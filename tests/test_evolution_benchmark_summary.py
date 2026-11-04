@@ -199,6 +199,69 @@ def test_same_full_quality_inputs_are_marked_comparable_without_inventing_delta(
     assert value['savings_estimates'] == []
 
 
+def test_canonical_validation_and_final_roles_do_not_form_a_pair(tmp_path):
+    vanilla = root(tmp_path, 'vanilla')
+    gene = root(tmp_path, 'gene', 'geneloop')
+    ledger = tmp_path / 'ledger.jsonl'
+    one, first = trial(vanilla, ledger)
+    two, second = trial(gene, ledger, ids=(2,))
+    record = json.loads((one / 'result.json').read_text())
+    record['evaluation_role'] = 'validation'
+    put(one / 'result.json', record)
+    record = json.loads((two / 'result.json').read_text())
+    record['evaluation_role'] = 'final'
+    put(two / 'result.json', record)
+    lines(ledger, [settled(first, 1), settled(second, 2)])
+    value = summary.summarize([vanilla, gene], ledger)
+    assert {group['comparison_scope'] for group in value['matching_groups']} == {'canonical_validation', 'canonical_final'}
+    assert all(group['full_quality_comparable'] is False for group in value['matching_groups'])
+    assert all(row['evaluation_role_inferred'] is False for method in value['methods'] for row in method['trials'])
+    assert value['overall_accounting']['requests'] == 2
+
+
+def test_all_role_costs_remain_and_final_reuse_is_disclosed(tmp_path):
+    run = root(tmp_path, 'gene', 'geneloop')
+    ledger = tmp_path / 'ledger.jsonl'
+    providers = []
+    for index, role in enumerate(('development', 'validation', 'final'), 1):
+        output, session = trial(run, ledger, name=role, ids=(index,))
+        record = json.loads((output / 'result.json').read_text())
+        record.update(evaluation_role=role, label='same-label')
+        put(output / 'result.json', record)
+        providers.append(settled(session, index))
+    lines(ledger, providers)
+    value = summary.summarize([run], ledger)
+    assert value['overall_accounting']['requests'] == 3
+    assert value['overall_accounting']['model_usd_decimal'] == '0.30000003'
+    assert {phase['evaluation_role'] for phase in value['phases']} == {'development', 'validation', 'final'}
+    assert sum(phase['accounting']['requests'] for phase in value['phases']) == 3
+    final = next(group for group in value['matching_groups'] if group['evaluation_role'] == 'final')
+    assert final['reuses_observed_validation_dataset'] is True
+    assert final['heldout_status'] == 'observed_validation_reuse'
+    assert value['savings_estimates'] == []
+
+
+@pytest.mark.parametrize('label,split,expected', [
+    ('gene-frozen-test', 'test', 'final'), ('final', 'test', 'final'),
+    ('gene-independent-validation', 'test', 'validation'), ('validation', 'training', 'validation'),
+    ('gene-development', 'training', 'development'),
+])
+def test_legacy_role_inference_preserves_original_records(tmp_path, label, split, expected):
+    run = root(tmp_path)
+    ledger = tmp_path / 'ledger.jsonl'
+    output, session = trial(run, ledger)
+    record = json.loads((output / 'result.json').read_text())
+    record.update(label=label, split=split)
+    original = put(output / 'result.json', record).read_bytes()
+    lines(ledger, [settled(session, 1)])
+    value = summary.summarize([run], ledger)
+    row = value['methods'][0]['trials'][0]
+    assert row['evaluation_role'] == expected
+    assert row['evaluation_role_inferred'] is True
+    assert row['split'] == split
+    assert (output / 'result.json').read_bytes() == original
+
+
 @pytest.mark.parametrize('left_flag,right_flag,left_profile,right_profile,comparable', [
     (False, False, None, None, True),
     (True, True, 'same', 'same', True),

@@ -323,8 +323,8 @@ def test_fee_owner_restored_when_final_result_write_fails(tmp_path, injected, mo
     assert gate.current == prior
 
 
-@pytest.mark.parametrize('timeout_seconds', [None, 3])
-def test_original_harness_native_skill_and_callback_mcp_use_original_request_ledger(tmp_path, monkeypatch, timeout_seconds):
+@pytest.mark.parametrize('timeout_seconds,baseline_tools', [(None, False), (3, False), (None, True)])
+def test_original_harness_native_skill_and_callback_mcp_use_original_request_ledger(tmp_path, monkeypatch, timeout_seconds, baseline_tools):
     """Full local SDK round trip with synthetic SSE responses and actual tools."""
     from src.adapters import capability_proposal as proposal
 
@@ -387,6 +387,13 @@ def test_original_harness_native_skill_and_callback_mcp_use_original_request_led
         try:
             with proposal.CumulativeProposalGate(ledger) as gate:
                 call = request('Complete the diagnostic workflow.')
+                if baseline_tools:
+                    from src.adapters.skill_infinity_baseline import SkillInfinityRun, create_seed_task_skill
+                    seed = create_seed_task_skill(tmp_path / 'baseline-seed', 'diagnostic-task', 'Diagnostic task')
+                    optimizer = SkillInfinityRun(seed, tmp_path / 'baseline-archive',
+                        optimization_target='task_skill', context={}, call_agent=lambda *_: {},
+                        evaluate=lambda *_: {}, review=lambda *_: {}, meta_skill=skill)
+                    call['tools'] = optimizer.tools()
                 call['available_skill_cards'] = [{'name': 'diagnostic-skill',
                     'description': 'Synthetic diagnostic procedure', 'path': str(skill)}]
                 if timeout_seconds:
@@ -414,7 +421,12 @@ def test_original_harness_native_skill_and_callback_mcp_use_original_request_led
                 assert gate.state.request_count == 8
                 assert observed == [('read_skill', {'node_id': 'controller', 'resource': 'references/detail.md'})]
                 names = {tool['function']['name'] for tool in provider_calls[0]['tools']}
-                assert names == {'skill', 'mcp__research__read_skill'}
+                assert names == {'skill', *['mcp__research__' + tool['name'] for tool in call['tools']]}
+                if baseline_tools:
+                    candidate_tool = next(tool for tool in provider_calls[0]['tools']
+                                          if tool['function']['name'] == 'mcp__research__create_candidate')
+                    assert candidate_tool['function']['parameters']['properties']['files'][
+                        'additionalProperties']['type'] == ['string', 'null']
                 first_prompt = json.dumps(provider_calls[0]['messages'])
                 assert 'Synthetic diagnostic procedure' in first_prompt
                 assert 'Read the referenced detail' not in first_prompt

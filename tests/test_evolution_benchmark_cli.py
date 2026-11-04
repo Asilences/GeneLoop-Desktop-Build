@@ -14,6 +14,31 @@ from tests.test_evolution_benchmark import script_module
 OWNER = 'overnight-research'
 
 
+@pytest.mark.parametrize('mode', ['geneloop', 'skill-infinity'])
+def test_cli_freezes_shared_validation_dataset_mapping_without_model(tmp_path, monkeypatch, mode):
+    module = script_module()
+    monkeypatch.setattr(module, 'ROOT', tmp_path)
+    output = tmp_path / '.local' / mode
+    monkeypatch.setattr(module.sys, 'argv', ['run', '--training-root', str(tmp_path / 'train'),
+        '--test-root', str(tmp_path / 'test'), '--source-version', 'fixed', '--ledger-root', str(tmp_path / 'ledger'),
+        '--output', str(output), '--task', 'structure', '--mode', mode,
+        '--validation-split', 'to-obj=test'])
+    module.main()
+    config = json.loads((output / 'effective.json').read_text())
+    assert config['validation_splits'] == {'to-obj': 'test'}
+
+
+def test_cli_reserves_final_canonical_input_from_candidate_validation(tmp_path, monkeypatch):
+    module = script_module()
+    monkeypatch.setattr(module, 'ROOT', tmp_path)
+    monkeypatch.setattr(module.sys, 'argv', ['run', '--training-root', str(tmp_path / 'train'),
+        '--test-root', str(tmp_path / 'test'), '--source-version', 'fixed', '--ledger-root', str(tmp_path / 'ledger'),
+        '--output', str(tmp_path / '.local/run'), '--task', 'structure', '--mode', 'skill-infinity',
+        '--validation-split', 'structure=test'])
+    with pytest.raises(ValueError, match='final_input_reserved'):
+        module.main()
+
+
 def continuation(directory, *, snapshot=None):
     return {'format': 'gene_benchmark_continuation_v1', 'owner': OWNER,
             'snapshot': snapshot or {'roots': []},

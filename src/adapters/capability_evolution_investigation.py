@@ -125,10 +125,18 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                         investigation._index_evidence(outcome.get('evidence_refs', []))
                         submitted.update(status='submitted', outcome=outcome)
                 except Exception as error:
+                    required_fields = {'kind', 'burden', 'expected_behavior', 'verification',
+                                       'failure_conditions', 'proposal'}
+                    actual_fields = set(arguments['candidate']) if isinstance(arguments['candidate'], dict) else set()
+                    missing = sorted(required_fields - actual_fields)
+                    unexpected = sorted(actual_fields - required_fields - {'scope', 'evidence_ids'})
                     submitted.update(status='rejected', reason=type(error).__name__ + ':' + str(error),
-                        diagnostic={'message': 'Use experience observation IDs from evolution_search. '
+                        diagnostic={'message': ('Supply the missing candidate fields and remove unexpected fields. '
+                            'Keep the existing hypothesis and evidence selection.' if missing or unexpected else
+                            'Use experience observation IDs from evolution_search. '
                             'evidence_* IDs identify files and cannot establish cross-task support. '
-                            'Omit candidate.scope and candidate.evidence_ids to use the host-bound selection.',
+                            'Omit candidate.scope and candidate.evidence_ids to use the host-bound selection.'),
+                            'missing_fields': missing, 'unexpected_fields': unexpected,
                             'expected_scope': investigation.scope,
                             'available_observation_ids': list(investigation.observations)[:8],
                             'available_observations': len(investigation.observations),

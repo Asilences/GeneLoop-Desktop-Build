@@ -10,6 +10,21 @@ from src.adapters.deepseek_cost_gate import (State, normalize_request_limit, req
 
 
 class DeepSeekCostGateTests(unittest.TestCase):
+    def test_union_and_object_schema_types_preserve_real_media_reservation(self) -> None:
+        payload = {'model': 'deepseek-flash', 'max_tokens': 100, 'messages': [], 'tools': [
+            {'type': 'function', 'function': {'name': 'create_candidate', 'parameters': {
+                'type': 'object', 'properties': {
+                    'files': {'type': 'object', 'additionalProperties': {'type': ['string', 'null']}},
+                    'diagnostic': {'type': {'unexpected': 'object'}},
+                }}}}]}
+        body = json.dumps(payload).encode()
+        self.assertEqual(reservation(body, max_output=100)[2], len(body) + 2000)
+        payload['messages'] = [{'role': 'user', 'content': [
+            {'type': kind, 'url': 'diagnostic-media'}
+            for kind in ('image_url', 'input_image', 'file', 'image')]}]
+        body = json.dumps(payload).encode()
+        self.assertEqual(reservation(body, max_output=100)[2], len(body) + 2000 + 4 * 1024)
+
     def test_explicit_unlimited_normalization_rejects_invalid_counts(self) -> None:
         for value in (None, 0):
             self.assertIsNone(normalize_request_limit(value))

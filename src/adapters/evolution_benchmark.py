@@ -14,7 +14,7 @@ from .capability_improvement import save
 from .capability_proposal import parse_proposal
 from .research_harness import ResearchHarness
 from .skill_infinity_baseline import _card
-from .skillsbench_trial import SkillsBenchTrial
+from .skillsbench_trial import SkillsBenchTrial, input_fingerprint, task_manifest
 from .benchmark_capability_tools import benchmark_capability_tools, capability_trace_projection
 from .capability_motif_learning import capture_capability_trace
 
@@ -81,11 +81,50 @@ def _verification_evidence(evaluation, *, task_id, split, source_identity):
     return references
 
 
+def validation_dataset_splits(mapping=None):
+    if (mapping is not None and (not isinstance(mapping, dict)
+            or any(not isinstance(task, str) or not task.strip() or split not in ('training', 'test')
+                   for task, split in mapping.items()))):
+        raise ValueError('benchmark_validation_splits_invalid')
+    return dict(mapping or {})
+
+
+def observation_input_fingerprint(row):
+    """Recover old host records only from their original verified manifest."""
+    for reference in row.get('evidence', []):
+        if Path(reference['path']).name != 'manifest.json':
+            continue
+        manifest = json.loads(verify(reference))
+        if (manifest.get('format') == 'skillsbench_trial_manifest_v1'
+                and manifest.get('source_identity') == row.get('source_identity')):
+            fingerprint = input_fingerprint(manifest)
+            if row.get('input_fingerprint') not in (None, fingerprint):
+                raise ValueError('benchmark_input_fingerprint_changed')
+            return fingerprint
+    return row.get('input_fingerprint')
+
+
+def benchmark_evaluation_role(record):
+    state = record.get('decision_context', {}).get('state', {})
+    state = state if isinstance(state, dict) else {}
+    role = record.get('evaluation_role') or state.get('evaluation_role')
+    if role is not None:
+        if role not in ('development', 'validation', 'final'):
+            raise ValueError('benchmark_evaluation_role_invalid')
+        return role
+    label = record.get('label', state.get('label', '')) or ''
+    if 'validation' in label:
+        return 'validation'
+    if 'development' in label or label == 'training':
+        return 'development'
+    return 'final' if record.get('split', state.get('split')) == 'test' else 'development'
+
+
 class BenchmarkHost:
     """Identical task inputs, tools, model transport and verifier for both arms."""
 
     def __init__(self, training_root, test_root, output, *, source_version, gate,
-                 verifier_environment=None, materials=None, prewarm_dependencies=False):
+                 verifier_environment=None, materials=None, prewarm_dependencies=False, validation_splits=None):
         self.training = Path(training_root).resolve()
         self.test = Path(test_root).resolve()
         self.output = Path(output).resolve()
@@ -95,10 +134,18 @@ class BenchmarkHost:
         self.verifier_environment = verifier_environment
         self.materials = materials
         self.prewarm_dependencies = prewarm_dependencies
+        self.validation_splits = validation_dataset_splits(validation_splits)
         self.agent = ResearchHarness(gate, self.output / 'model-sessions')
         self.observations = []
 
-    def trial(self, task_id, *, split='training', skill_directory=None, label='initial'):
+    def input_fingerprint(self, task_id, split):
+        source = (self.test if split == 'test' else self.training) / task_id
+        return task_manifest(source, task_id=task_id, split=split,
+                             source_version=self.source_version)['input_fingerprint']
+
+    def trial(self, task_id, *, split='training', skill_directory=None, label='initial', evaluation_role=None):
+        evaluation_role = benchmark_evaluation_role({'evaluation_role': evaluation_role,
+                                                     'split': split, 'label': label})
         directory = self.output / 'trials' / (task_id + '-' + label + '-' + uuid4().hex)
         directory.parent.mkdir(exist_ok=True)
         source = (self.test if split == 'test' else self.training) / task_id
@@ -115,7 +162,9 @@ class BenchmarkHost:
             shutil.copytree(skill_directory, installed)
             cards.append({**card, 'path': str(installed)})
         started = time.monotonic()
-        result = {'status': 'failed', 'task_id': task_id, 'split': split, 'label': label}
+        result = {'status': 'failed', 'task_id': task_id, 'split': split, 'dataset_split': split,
+                  'evaluation_role': evaluation_role, 'label': label,
+                  'input_fingerprint': trial.manifest()['input_fingerprint']}
         capability_receipts = []
         try:
             prepared = trial.prepare(skills_directory=bundle)
@@ -248,6 +297,7 @@ class BenchmarkHost:
                 evidence.append(file_ref(path))
         row = {'owner': 'overnight-research', 'task_id': trial.task_id + '-' + trial.split,
                'source_identity': manifest['source_identity'], 'relation': 'benchmark-task-work',
+               'input_fingerprint': manifest['input_fingerprint'],
                'stage': 'execution', 'status': 'passed' if evaluation.get('passed') else 'failed',
                'quality': 'official_verifier' if evaluation.get('reward') is not None else 'unreviewed',
                'counterexample': False, 'capabilities': [], 'steps': [],
@@ -255,7 +305,8 @@ class BenchmarkHost:
                'observed_cost_usd': model.get('observed_model_usd'),
                'cost_attribution': 'task_model_requests_only; construction and shared research are separate',
                'decision_context': {'objective': verify(manifest['instruction']).decode('utf-8'),
-                    'state': {'task_id': trial.task_id, 'split': trial.split, 'label': result['label']},
+                    'state': {'task_id': trial.task_id, 'split': trial.split, 'dataset_split': trial.split,
+                              'evaluation_role': result['evaluation_role'], 'label': result['label']},
                     'outcome': {'reward': evaluation.get('reward'), 'error': result.get('error'),
                                 'model_finish': model.get('finish_reason'),
                                 'verifier_status': evaluation.get('status'),
@@ -312,11 +363,11 @@ class BenchmarkHost:
         return file_ref(path)
 
     def evaluate_skill(self, request):
-        # Canonical tasks remain final tests. Optimization validation uses a
-        # fresh run of the released training variant and is labelled explicitly.
         task_id = request['context']['task_id']
-        result = self.trial(task_id, split='training', skill_directory=request['skill_directory'],
-                            label=request['split'])
+        split = self.validation_splits.get(task_id, 'training') if request['split'] == 'validation' else 'training'
+        result = self.trial(task_id, split=split, skill_directory=request['skill_directory'],
+                            label=request['split'],
+                            evaluation_role='validation' if request['split'] == 'validation' else 'development')
         if result.get('score') is None:
             raise ValueError('benchmark_trial_unscored:' + result.get('error', result['status']))
         observation = inspect_benchmark(result['observation'], 'overnight-research')
@@ -326,7 +377,8 @@ class BenchmarkHost:
         return {'score': result['score'], 'skill_activated': result['skill_activated'],
                 'record': result['record'], 'observation': result['observation'],
                 'evidence_indexes': [file_ref(evidence_path)],
-                'validation_scope': 'fresh_run_of_training_variant',
+                'validation_scope': 'canonical_validation_input' if split == 'test' else 'fresh_run_of_training_variant',
+                'dataset_split': split, 'evaluation_role': result['evaluation_role'],
                 'observed_model_usd_decimal': str(result['model']['observed_model_usd'])
                     if result['model'].get('observed_model_usd') is not None else None}
 

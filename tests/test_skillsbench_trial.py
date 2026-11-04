@@ -97,6 +97,21 @@ def test_prepare_only_builds_environment_and_replaces_skills_in_copy(tmp_path):
     assert all(':/tests' not in str(row) for row in runner.calls)
 
 
+def test_input_fingerprint_separates_input_bytes_from_family_and_deployment(tmp_path):
+    root = source(tmp_path)
+    before = task_manifest(root, task_id='family', split='training', source_version='dataset')
+    (root / 'environment/Dockerfile').write_text('FROM different:diagnostic')
+    (root / 'environment/skills/curated/SKILL.md').write_text('Changed diagnostic skill')
+    (root / 'tests/test.sh').write_text('Changed diagnostic verifier')
+    deployed = task_manifest(root, task_id='other-family', split='test', source_version='dataset')
+    assert before['input_fingerprint'] == deployed['input_fingerprint']
+    assert before['source_identity'] != deployed['source_identity']
+    (root / 'environment/input.txt').write_text('Different heldout bytes')
+    changed = task_manifest(root, task_id='family', split='test', source_version='dataset')
+    assert before['source_identity'] == changed['source_identity']
+    assert before['input_fingerprint'] != changed['input_fingerprint']
+
+
 def test_candidate_skills_are_deployed_and_hashed(tmp_path):
     adapter = trial(tmp_path)
     skills = tmp_path / 'candidate'

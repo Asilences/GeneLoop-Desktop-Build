@@ -70,7 +70,16 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
-    if '--overnight-evolution-integration' in sys.argv:
+    if '--tool-schema-media-compat' in sys.argv:
+        sys.argv.remove('--tool-schema-media-compat')
+        reviewed = {'src/adapters/deepseek_cost_gate.py', 'scripts/reexport-ppt-managed-compat.py'}
+        compat.RELEASES = [
+            ('ppt-master-v78', 'ppt-master-v79', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v80', 'paper-web-v81', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+    elif '--overnight-evolution-integration' in sys.argv:
         sys.argv.remove('--overnight-evolution-integration')
         reviewed = {
             'scripts/harness-web.py', 'scripts/reexport-ppt-managed-compat.py',

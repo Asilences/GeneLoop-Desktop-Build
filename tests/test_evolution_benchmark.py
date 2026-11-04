@@ -108,6 +108,46 @@ def test_optimization_validation_uses_fresh_training_variant_and_labels_differen
     assert json.loads(verify(result['observation']))['source_identity'] == fixture.trials[0].manifest()['source_identity']
 
 
+def test_canonical_validation_mapping_does_not_change_training_rollouts(fixture):
+    fixture.host.validation_splits = {'task-one': 'test'}
+    (fixture.test / 'environment/input.txt').write_text('Separate canonical input')
+    package = seed(fixture)
+    train = fixture.host.evaluate_skill({'context': {'task_id': 'task-one'},
+        'skill_directory': package, 'split': 'training'})
+    validation = fixture.host.evaluate_skill({'context': {'task_id': 'task-one'},
+        'skill_directory': package, 'split': 'validation'})
+    assert [trial.split for trial in fixture.trials] == ['training', 'test']
+    assert train['evaluation_role'] == 'development'
+    assert validation['evaluation_role'] == 'validation'
+    assert validation['validation_scope'] == 'canonical_validation_input'
+    one, two = [json.loads(verify(row['observation'])) for row in (train, validation)]
+    assert one['source_identity'] == two['source_identity']
+    assert one['input_fingerprint'] != two['input_fingerprint']
+    assert two['decision_context']['state']['dataset_split'] == 'test'
+    assert two['decision_context']['state']['evaluation_role'] == 'validation'
+
+
+def test_legacy_input_identity_comes_from_verified_manifest(fixture):
+    result = fixture.host.trial('task-one')
+    row = json.loads(verify(result['observation']))
+    expected = row.pop('input_fingerprint')
+    assert benchmark.observation_input_fingerprint(row) == expected
+    row['input_fingerprint'] = 'changed'
+    with pytest.raises(ValueError, match='input_fingerprint_changed'):
+        benchmark.observation_input_fingerprint(row)
+
+
+@pytest.mark.parametrize('record,expected', [
+    ({'split': 'test', 'label': 'validation'}, 'validation'),
+    ({'split': 'test', 'evaluation_role': 'development'}, 'development'),
+    ({'split': 'test', 'label': 'final'}, 'final'),
+    ({'decision_context': {'state': {'split': 'test', 'label': 'gene-independent-validation'}}}, 'validation'),
+    ({'split': 'training'}, 'development'),
+])
+def test_evaluation_role_is_independent_of_dataset_split_and_legacy_labels(record, expected):
+    assert benchmark.benchmark_evaluation_role(record) == expected
+
+
 def test_final_canonical_trial_keeps_source_and_verifier_bytes_frozen(fixture):
     before = {str(p.relative_to(fixture.test)): p.read_bytes() for p in fixture.test.rglob('*') if p.is_file()}
     result = fixture.host.trial('task-one', split='test', skill_directory=seed(fixture), label='final')
@@ -331,7 +371,7 @@ def test_host_exposes_native_task_tools_and_original_capture(fixture):
     result = fixture.host.trial('task-one')
     assert result['status'] == 'evaluated'
     captured = json.loads(verify(result['capability_trajectory']))
-    assert captured['task_fingerprint'] == fixture.trials[0].manifest()['source_identity']
+    assert captured['task_fingerprint'] == fixture.trials[0].manifest()['input_fingerprint']
     assert captured['steps'][0]['arguments'] == {'value': 3}
     observation = benchmark.inspect_benchmark(result['observation'], 'overnight-research')
     assert observation['steps'][0]['status'] == 'succeeded'

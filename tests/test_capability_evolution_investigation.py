@@ -183,6 +183,24 @@ def test_local_candidate_limit_bounds_real_evaluations_without_limiting_reads(tm
     assert len(handled) == 2 and len(result['submissions']) == 3
 
 
+def test_missing_verification_reports_the_real_field_and_can_be_repaired(tmp_path, data):
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        proposed = candidate(ids)
+        verification = proposed.pop('verification')
+        failed = dispatch('evolution_submit', {'candidate': proposed, 'observation_ids': ids})
+        assert failed['diagnostic']['missing_fields'] == ['verification']
+        assert failed['diagnostic']['unexpected_fields'] == []
+        assert 'missing candidate fields' in failed['diagnostic']['message']
+        proposed['verification'] = verification
+        repaired = dispatch('evolution_submit', {'candidate': proposed, 'observation_ids': ids})
+        assert repaired['status'] == 'pending'
+        dispatch('evolution_finish', {'reason': 'Repaired the actual missing field without changing the hypothesis'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'run')
+    assert len(result['submissions']) == 2
+
+
 def test_tool_error_can_be_corrected_in_same_session(tmp_path, data):
     def agent(request, dispatch):
         error = dispatch('evolution_read', {'kind': 'experience', 'id': 'unknown'})

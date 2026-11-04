@@ -55,3 +55,15 @@ R5修复独立验证失败后的证据返回，质量、加载状态和原诊断
 跨代学习现累计原真实调用并保留split/source/snapshot，逐组交原learner；历史canonical重放只作历史source-equivalence，新的语义质量继续等待新任务。汇总修复了失败模型reward可能被误计full-quality的问题，并将实际依赖预热配置纳入配对条件。
 
 独立草稿[PR156](https://github.com/jingyio/GeneLoop/pull/156)已创建。四个GitHub job在启动前因账号付款或Actions消费额度阻挡，steps均为空，未执行远程测试。需要账号管理员处理Billing后重跑，不能把该状态解释为测试失败或通过。服务器与本地验证继续保留独立证据。
+
+## R7：参数依赖、评测角色与请求预检
+
+R7补公共接缝，不增加新的场景求解器：
+
+- `capability_call` 新增显式 `input_binding`，与 `value`、`input_file` 三选一。直接复用原Binding的step／object／array／literal，step只能引用同一任务、输入指纹和snapshot内已有成功调用；调用前重新核对原Runtime回执，再由原binder解析完整Runtime参数。禁止根据值相等推断依赖，也不允许没有来源的input绑定。调用失败仍保存原尝试；已产生的原生失败回执留在图中作为原learner的边界，无原生回执的尝试单独索引，保留 `runtime_started` 的执行不确定性。修复绑定错误后发生的真实成功调用不会被一并丢弃。
+- 数据集来源 `dataset_split` 与使用角色 `evaluation_role`（development／validation／final）分开保存。显式配置允许同题族canonical输入用于validation；按输入文件字节指纹检查，防止训练和验证只是题面或任务名不同。同轮final拒绝已用于development或validation的输入。递归采样按原输入指纹去重，validation反馈不能因来自test目录而冒充最终留出；旧记录只从原manifest重建身份并标注推断角色。
+- 汇总按角色隔离比较，同时保留各阶段全部费用。final复用已观察validation数据会明确标记，final角色本身不构成新留出证据。跨运行的完整暴露历史仍需实验者核对，汇总不会凭目录名证明泛化。
+- 调查候选缺字段时返回具体missing／unexpected字段，保留原假设和证据选择；避免所有提交错误都被笼统解释成证据ID错误。
+- 费用gate兼容工具Schema中数组／对象形式的 `type`，真正媒体内容仍按原逻辑预留；触发的新库兼容更新详见[库记录](overnight-library-compat-20261105.md)。
+
+本地R7定向375项通过，候选字段诊断21项通过；日志分别为 `.local/overnight-20261105/r7-final-targeted.log` 与 `r7-field-diagnostics.log`。首轮全量的两项兼容测试配对错误已修正，最终全量仍在重跑，暂不记为通过。这些检查属于无付费机制诊断；其中显式绑定及C→D学习链只说明宿主能够保留并使用依赖，不证明模型自主选择、跨代创造或效率收益。R7真实模型实验结果另按冻结源码、运行ID、原评分和完整账本追加。

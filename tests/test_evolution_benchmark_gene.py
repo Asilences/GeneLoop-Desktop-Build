@@ -1,5 +1,6 @@
 """Diagnostic trial/agent callbacks; real benchmark runs use BenchmarkHost."""
 import json
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -60,13 +61,19 @@ class Host:
         self.agent_calls = []
         self.submissions = []
 
-    def trial(self, task_id, *, split='training', skill_directory=None, label='initial'):
+    def input_fingerprint(self, task_id, split):
+        return hashlib.sha256(json.dumps({'task': task_id, 'split': split}).encode()).hexdigest()
+
+    def trial(self, task_id, *, split='training', skill_directory=None, label='initial', evaluation_role=None):
         index = len(self.trials)
-        value = {'task_id': task_id, 'split': split, 'skill_directory': skill_directory, 'label': label}
+        evaluation_role = evaluation_role or ('final' if split == 'test' else 'development')
+        value = {'task_id': task_id, 'split': split, 'skill_directory': skill_directory, 'label': label,
+                 'evaluation_role': evaluation_role}
         self.trials.append(value)
         passed = self.validation_pass if label == 'gene-independent-validation' else True
         reward = self.validation_reward if label == 'gene-independent-validation' and self.validation_reward is not None else 1 if passed else 0
         result = {'status': 'evaluated', 'task_id': task_id, 'split': split,
+                  'evaluation_role': evaluation_role, 'input_fingerprint': self.input_fingerprint(task_id, split),
                   'evaluation': {'status': 'evaluated', 'passed': passed, 'reward': reward},
                   'score': str(reward),
                   'skill_activated': self.activated if skill_directory else None,
@@ -75,14 +82,15 @@ class Host:
         source = put(self.directory / str(index) / 'input.json', {'task': task_id, 'split': split})
         observation = put(self.directory / str(index) / 'experience.json', {
             'owner': OWNER, 'task_id': task_id + '-' + split,
-            'source_identity': 'same-source' if self.duplicate_sources else task_id + '-' + split,
+            'source_identity': 'same-source' if self.duplicate_sources else task_id,
+            'input_fingerprint': self.input_fingerprint(task_id, split),
             'relation': 'benchmark-task-work', 'stage': 'execution',
             'status': 'passed' if passed else 'failed', 'quality': 'official_verifier',
             'counterexample': False, 'capabilities': [], 'steps': [],
             'model_decision_count': 1, 'observed_cost_usd': None,
             'cost_attribution': 'task_model_requests_only',
             'decision_context': {'objective': 'Complete ' + task_id,
-                                 'state': {'task_id': task_id, 'split': split},
+                                 'state': {'task_id': task_id, 'split': split, 'evaluation_role': evaluation_role},
                                  'outcome': {'reward': 1 if passed else 0}},
             'evidence': [record, source], 'interaction_evidence': []})
         self.observations.append(observation)
@@ -93,7 +101,14 @@ class Host:
         rows = dispatch('evolution_search', {'kind': 'experience'})['items']
         assert request['initial_context']['capabilities']['selectable'] == 0
         if self.action != 'no_change':
-            identifiers = [row['id'] for row in rows[:2]]
+            identifiers = []
+            sources = set()
+            for row in rows:
+                if row['source_identity'] not in sources:
+                    identifiers.append(row['id'])
+                    sources.add(row['source_identity'])
+                if len(identifiers) == 2:
+                    break
             proposal = {'kind': self.action, 'burden': 'Repeated interface investigation',
                         'evidence_ids': identifiers, 'scope': 'skillsbench',
                         'expected_behavior': 'Inspect the current interface before choosing a transformation',
@@ -111,6 +126,42 @@ class Host:
 def run(tmp_path, host, **kwargs):
     return run_gene_benchmark(host, development_tasks=['dev-one', 'dev-two'],
         validation_tasks=['future-one'], test_tasks=['future-one'], output=tmp_path / 'generation', **kwargs)
+
+
+def test_same_family_canonical_validation_uses_distinct_input_and_separate_role(tmp_path):
+    host = Host(tmp_path / 'trials')
+    result = run_gene_benchmark(host, development_tasks=['family-a', 'family-b'],
+        validation_tasks=['family-a'], validation_splits={'family-a': 'test'},
+        test_tasks=['family-b'], output=tmp_path / 'generation')
+    assert result['selection'] is not None
+    assert [(row['task_id'], row['split'], row['evaluation_role']) for row in host.trials] == [
+        ('family-a', 'training', 'development'), ('family-b', 'training', 'development'),
+        ('family-a', 'test', 'validation'), ('family-b', 'test', 'final')]
+    assert host.trials[-1]['skill_directory'] is not None
+
+
+def test_identical_validation_input_is_rejected_even_with_canonical_split(tmp_path):
+    host = Host(tmp_path / 'trials')
+    original = host.input_fingerprint
+    host.input_fingerprint = lambda task, split: original(task, 'training' if task == 'family-a' else split)
+    result = run_gene_benchmark(host, development_tasks=['family-a', 'family-b'],
+        validation_tasks=['family-a'], validation_splits={'family-a': 'test'},
+        test_tasks=['family-b'], output=tmp_path / 'generation')
+    assert result['selection'] is None
+    assert not any(row['evaluation_role'] == 'validation' for row in host.trials)
+    assert 'validation_input_overlap' in json.dumps(result)
+
+
+def test_final_input_already_used_for_development_is_rejected_before_execution(tmp_path):
+    host = Host(tmp_path / 'trials', action='no_change')
+    original = host.input_fingerprint
+    host.input_fingerprint = lambda task, split: original('family-a', 'training') \
+        if task == 'family-b' and split == 'test' else original(task, split)
+    with pytest.raises(ValueError, match='final_test_input_already_observed'):
+        run_gene_benchmark(host, development_tasks=['family-a', 'family-b'],
+            validation_tasks=['family-a'], validation_splits={'family-a': 'test'},
+            test_tasks=['family-b'], output=tmp_path / 'generation')
+    assert not any(row['evaluation_role'] == 'final' for row in host.trials)
 
 
 def test_real_host_seams_connect_policy_admission_to_frozen_native_test(tmp_path):
@@ -422,6 +473,44 @@ def test_original_miner_consumes_two_training_and_one_heldout_actual_runtime_tra
     assert result['publication'] == 'pending_independent_original_store_publication'
 
 
+def test_canonical_validation_trace_is_development_feedback_not_heldout(tmp_path, corpus):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, _, _, _, traces = corpus
+    runs = [{'split': 'training' if index < 2 else 'test',
+             'evaluation_role': 'development' if index < 2 else 'validation',
+             'capability_trajectory': put(tmp_path / ('role-' + str(index) + '.json'), trace)}
+            for index, trace in enumerate(traces)]
+    result = gene._recursive_learning(runs, tmp_path)
+    assert result['status'] == 'pending'
+    assert result['groups'][0]['training'] == 3 and result['groups'][0]['heldout'] == 0
+
+
+def test_recursive_input_identity_does_not_count_same_bytes_twice(tmp_path, corpus):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, _, _, _, traces = corpus
+    runs = [{'split': 'training' if index < 2 else 'test',
+             'evaluation_role': 'development' if index < 2 else 'final',
+             'source_identity': 'family-' + str(index),
+             'input_fingerprint': 'same-input' if index < 2 else 'fresh-final',
+             'capability_trajectory': put(tmp_path / ('same-' + str(index) + '.json'), trace)}
+            for index, trace in enumerate(traces)]
+    result = gene._recursive_learning(runs, tmp_path)
+    assert result['status'] == 'pending'
+    assert result['groups'][0]['training'] == 1 and result['groups'][0]['heldout'] == 1
+    assert len(result['duplicates']) == 1
+
+
+def test_same_family_distinct_inputs_remain_distinct_recursive_samples(tmp_path, corpus):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, _, _, _, traces = corpus
+    runs = [{'split': 'training' if index < 2 else 'test',
+             'evaluation_role': 'development' if index < 2 else 'final',
+             'source_identity': 'one-family', 'input_fingerprint': trace['task_fingerprint'],
+             'capability_trajectory': put(tmp_path / ('distinct-' + str(index) + '.json'), trace)}
+            for index, trace in enumerate(traces)]
+    assert gene._recursive_learning(runs, tmp_path)['status'] == 'candidates'
+
+
 def test_only_the_first_two_native_certification_examples_establish_independence(tmp_path):
     from types import SimpleNamespace
     from src.adapters.evolution_benchmark_gene import _example_files
@@ -554,6 +643,20 @@ def test_recursive_learning_accumulates_original_traces_across_generations(tmp_p
     assert result['certification_scope'] == 'historical_source_equivalence'
     assert result['independent_quality'] == 'pending_fresh_semantic_task_evaluation'
     assert len(result['previously_disclosed_heldout']) == 1
+
+
+def test_prior_canonical_validation_role_is_retained_as_development_feedback(tmp_path, corpus, monkeypatch):
+    import src.adapters.evolution_benchmark_gene as gene
+    _, snapshot, _, _, traces = corpus
+    monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
+    prior = [prior_runtime_observation(tmp_path / 'past', trace, 'training' if index < 2 else 'test')
+             for index, trace in enumerate(traces)]
+    last = json.loads(verify(prior[-1]))
+    last['decision_context']['state']['evaluation_role'] = 'validation'
+    prior[-1] = put(Path(prior[-1]['path']), last)
+    result = gene._recursive_learning([], tmp_path, prior_observations=prior)
+    assert result['status'] == 'pending'
+    assert result['groups'][0]['training'] == 3 and result['groups'][0]['heldout'] == 0
 
 
 def test_repeated_history_does_not_increase_independent_training_count(tmp_path, corpus, monkeypatch):

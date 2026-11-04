@@ -17,7 +17,9 @@ from .capability_feedback import CapabilityFeedback, execution_cost, file_ref, v
 from .capability_improvement import save
 from .capability_investigation import Investigation
 from .capability_strategy import strategy_context, strategy_ref
-from .evolution_benchmark import inspect_benchmark
+from .evolution_benchmark import (
+    benchmark_evaluation_role, inspect_benchmark, observation_input_fingerprint, validation_dataset_splits,
+)
 
 
 OWNER = 'overnight-research'
@@ -146,13 +148,14 @@ def _recursive_learning(runs, directory, *, materials=None, publish=None, prior_
                 raise ValueError('recursive_prior_input_projection_not_indexed')
             combined.append({'split': state['split'], 'capability_trajectory': trajectory,
                              'capability_input_projection': projection,
+                             'evaluation_role': benchmark_evaluation_role(row),
+                             'input_fingerprint': observation_input_fingerprint(row),
                              'source_identity': row['source_identity'], 'observation': reference, 'historical': True})
         except Exception as error:
             invalid_sources.append({'evidence': reference, 'reason': type(error).__name__ + ':' + str(error)})
     combined.extend(runs)
-    # Preserve original heldout identity when training variants share a source.
-    # Those training observations remain evidence, but cannot add independence.
-    combined.sort(key=lambda trial: trial.get('split') != 'test')
+    # Older records retain their original split semantics and historical scope.
+    combined.sort(key=lambda trial: benchmark_evaluation_role(trial) != 'final')
     for trial in combined:
         reference = trial.get('capability_trajectory')
         if reference is None:
@@ -170,21 +173,24 @@ def _recursive_learning(runs, directory, *, materials=None, publish=None, prior_
                         or value.get('trace_inputs') != trace['task_input'] or value.get('calls') != trace['calls']):
                     raise ValueError('recursive_original_projection_changed')
             source = trial.get('source_identity', trace['task_fingerprint'])
+            fingerprint = trial.get('input_fingerprint')
             if trial.get('observation') is not None:
                 row = inspect_benchmark(trial['observation'], OWNER)
                 source = row['source_identity']
+                fingerprint = observation_input_fingerprint(row)
                 if trace['owner'] != row['owner']:
                     raise ValueError('recursive_original_owner_changed')
                 if row.get('capability_trajectory') != reference:
                     raise ValueError('recursive_observation_trajectory_changed')
             group = groups.setdefault(trace['snapshot']['digest'], {
                 'training': [], 'heldout': [], 'evidence': [], 'sources': set(), 'fingerprints': set(), 'refs': {}, 'historical': [], 'historical_heldout': []})
-            split = 'heldout' if trial['split'] == 'test' else 'training'
-            if source in group['sources'] or trace['task_fingerprint'] in group['fingerprints']:
+            split = 'heldout' if benchmark_evaluation_role(trial) == 'final' else 'training'
+            source_key = 'input:' + fingerprint if fingerprint else 'legacy-source:' + source
+            if source_key in group['sources'] or trace['task_fingerprint'] in group['fingerprints']:
                 duplicates.append({'evidence': reference, 'source_identity': source, 'split': trial['split'],
                                    'reason': 'original_source_or_fingerprint_already_counted'})
                 continue
-            group['sources'].add(source)
+            group['sources'].add(source_key)
             group['fingerprints'].add(trace['task_fingerprint'])
             group[split].append(trace)
             group['refs'][trace['digest']] = reference
@@ -254,7 +260,8 @@ def _learn_recursive_group(group, directory, *, materials, publish):
 
 def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                        output, scope='skillsbench', snapshot=None, prior_selection=None,
-                       prior_observations=(), history=(), feedback_directory=None, quality_threshold='1'):
+                       prior_observations=(), history=(), feedback_directory=None, quality_threshold='1',
+                       validation_splits=None):
     """Run one generation, then freeze and test its selection exactly once.
 
     Returned continuation evidence is available to a later generation. Reusing
@@ -265,6 +272,8 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
     development = _tasks(development_tasks, minimum=0 if prior_observations else 2)
     validation = _tasks(validation_tasks)
     tests = _tasks(test_tasks)
+    validation_splits = validation_dataset_splits(validation_splits if validation_splits is not None
+                                                 else getattr(host, 'validation_splits', None))
     if isinstance(quality_threshold, bool):
         raise ValueError('gene_benchmark_quality_threshold_invalid')
     try:
@@ -273,7 +282,8 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
         raise ValueError('gene_benchmark_quality_threshold_invalid') from error
     if not threshold.is_finite() or threshold <= 0:
         raise ValueError('gene_benchmark_quality_threshold_invalid')
-    if set(development).intersection(validation):
+    if any(validation_splits.get(task, 'training') == 'training'
+           for task in set(development).intersection(validation)):
         raise ValueError('gene_benchmark_development_validation_overlap')
     materials = getattr(host, 'materials', None)
     if materials is not None and materials.owner != OWNER:
@@ -321,6 +331,7 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
     save(directory / 'effective.json', {'owner': OWNER, 'scope': scope,
          'snapshot': snapshot, 'material_configuration': material_configuration,
          'development_tasks': development, 'validation_tasks': validation,
+         'validation_splits': validation_splits,
          'test_tasks': tests, 'prior_observations': observations, 'history': prior_history,
          'quality_threshold': str(threshold),
          'budget_usd': None, 'max_requests': None, 'production_enabled': False})
@@ -369,7 +380,8 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
     try:
         prior_package = packages.get(json.loads(verify(selected['strategy']))['id']) if selected else None
         for task_id in development:
-            trial = host.trial(task_id, split='training', skill_directory=prior_package, label='gene-development')
+            trial = host.trial(task_id, split='training', skill_directory=prior_package,
+                               label='gene-development', evaluation_role='development')
             trial['quality_assessment'] = _quality(trial, threshold)
             result['development'].append(trial)
             observations.append(trial['observation'])
@@ -377,6 +389,10 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
         source_identities = {inspect_benchmark(reference, OWNER)['source_identity'] for reference in development_refs}
         if len(source_identities) < 2:
             raise ValueError('gene_benchmark_independent_development_required')
+        development_inputs = {observation_input_fingerprint(inspect_benchmark(reference, OWNER))
+                              for reference in development_refs}
+        development_inputs.discard(None)
+        validation_inputs = set()
 
         def evaluate(strategy):
             folder = directory / ('validation-' + str(len(validations)))
@@ -386,13 +402,20 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
             validations.append(evaluation)
             checks = []
             for task_id in validation:
-                trial = host.trial(task_id, split='training', skill_directory=package,
-                                   label='gene-independent-validation')
+                dataset = validation_splits.get(task_id, 'training')
+                if hasattr(host, 'input_fingerprint') and host.input_fingerprint(task_id, dataset) in development_inputs:
+                    raise ValueError('gene_benchmark_validation_input_overlap')
+                trial = host.trial(task_id, split=dataset, skill_directory=package,
+                                   label='gene-independent-validation', evaluation_role='validation')
                 runs.append(trial)
                 trial['quality_assessment'] = _quality(trial, threshold)
                 actual = inspect_benchmark(trial['observation'], OWNER)
-                if actual['source_identity'] in source_identities:
-                    raise ValueError('gene_benchmark_validation_source_overlap')
+                fingerprint = observation_input_fingerprint(actual)
+                if fingerprint is None:
+                    raise ValueError('gene_benchmark_validation_input_unknown')
+                if fingerprint in development_inputs:
+                    raise ValueError('gene_benchmark_validation_input_overlap')
+                validation_inputs.add(fingerprint)
                 passed = trial['quality_assessment']['full_quality'] is True
                 activated = trial.get('skill_activated') is True
                 checks.extend([{'id': 'official-full-quality-' + task_id,
@@ -520,7 +543,12 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
             prior_history.extend([selected['strategy'], selected['evaluation'], file_ref(directory / 'selection.json')])
             result['selected_subject'] = policy['strategy']
         for task_id in tests:
-            trial = host.trial(task_id, split='test', skill_directory=package, label='gene-frozen-test')
+            if hasattr(host, 'input_fingerprint'):
+                fingerprint = host.input_fingerprint(task_id, 'test')
+                if fingerprint is None or fingerprint in development_inputs | validation_inputs:
+                    raise ValueError('gene_benchmark_final_test_input_already_observed')
+            trial = host.trial(task_id, split='test', skill_directory=package,
+                               label='gene-frozen-test', evaluation_role='final')
             trial['quality_assessment'] = _quality(trial, threshold)
             result['test'].append(trial)
             observations.append(trial['observation'])

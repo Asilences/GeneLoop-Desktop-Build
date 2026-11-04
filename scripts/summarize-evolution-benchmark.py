@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.capability_feedback import file_ref, verify
 from src.adapters.efficiency_rsi_measurement import _cost
-from src.adapters.evolution_benchmark import _model_scoreable
+from src.adapters.evolution_benchmark import _model_scoreable, benchmark_evaluation_role
 
 
 IGNORED_DIRECTORIES = {'artifacts', 'environment', 'verifier', 'node_modules', '.git',
@@ -270,9 +270,14 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
                           'model': config.get('model'), 'reasoning_effort': config.get('reasoning_effort'),
                           'max_tokens': config.get('max_tokens'),
                           'harness_code_sha256': _code_digest(config.get('code'))}
+                state = local_result.get('decision_context', {}).get('state', {})
+                explicit_role = local_result.get('evaluation_role') or (
+                    state.get('evaluation_role') if isinstance(state, dict) else None)
                 trials[str(directory)] = {'directory': str(directory), 'run': str(root),
                     'method': run_info[root]['method'], 'task_id': local_result['task_id'],
                     'split': local_result['split'], 'label': local_result.get('label'),
+                    'evaluation_role': benchmark_evaluation_role(local_result),
+                    'evaluation_role_inferred': explicit_role is None,
                     'status': local_result.get('status'), 'source_identity': source_id,
                     'elapsed_seconds': local_result.get('elapsed_seconds'), 'model_directory': model_directory,
                     'artifact_collection_phase': local_result.get('artifacts', {}).get('collection_phase')
@@ -323,7 +328,7 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
         if not matched:
             if relevant:
                 assignments[key] = {'run': None, 'method': 'attribution_unknown', 'phase': 'attribution_unknown',
-                                    'task_id': None, 'split': None, 'label': None}
+                                    'task_id': None, 'split': None, 'label': None, 'evaluation_role': None}
             continue
         root = max(matched, key=lambda value: len(value.parts))
         if len(claims) == 1 and provider.get('attempt_path') not in (None, owner):
@@ -335,6 +340,7 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
             'owner_path': owner,
             'phase': 'task_execution' if trial else session.get('mode') or 'recorded_request',
             'task_id': trial['task_id'] if trial else None, 'split': trial['split'] if trial else None,
+            'evaluation_role': trial['evaluation_role'] if trial else None,
             'label': trial['label'] if trial else None}
     for directory, session in sessions.items():
         expected = session['result'].get('provider_requests')
@@ -350,13 +356,16 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
         trial['accounting'] = accounting(keys)
     groups = defaultdict(list)
     for key, owner in assignments.items():
-        groups[(owner['method'], owner['phase'], owner['task_id'], owner['split'], owner['label'])].append(key)
+        groups[(owner['method'], owner['phase'], owner['task_id'], owner['split'], owner['label'],
+                owner['evaluation_role'])].append(key)
     for trial in trials.values():
-        groups.setdefault((trial['method'], 'task_execution', trial['task_id'], trial['split'], trial['label']), [])
+        groups.setdefault((trial['method'], 'task_execution', trial['task_id'], trial['split'], trial['label'],
+                           trial['evaluation_role']), [])
     phases = [{'method': group[0], 'phase': group[1], 'task_id': group[2], 'split': group[3],
-               'label': group[4], 'accounting': accounting(keys),
+               'label': group[4], 'evaluation_role': group[5], 'accounting': accounting(keys),
                'trial_elapsed_seconds': {trial['directory']: trial['elapsed_seconds'] for trial in trials.values()
-                    if (trial['method'], 'task_execution', trial['task_id'], trial['split'], trial['label']) == group},
+                    if (trial['method'], 'task_execution', trial['task_id'], trial['split'], trial['label'],
+                        trial['evaluation_role']) == group},
                'session_elapsed_seconds': {owner: sessions[owner]['result'].get('elapsed_seconds')
                     for owner in {assignments[key].get('owner_path') for key in keys} if owner in sessions}}
               for group, keys in groups.items()]
@@ -383,7 +392,13 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
             'trials_with_unknown_elapsed': sum(_number(row['elapsed_seconds']) is None for row in method_trials)})
     matching = defaultdict(list)
     for trial in trials.values():
-        value = [trial['task_id'], trial['split'], trial['matching_conditions']]
+        trial['reuses_observed_validation_dataset'] = trial['evaluation_role'] == 'final' and any(
+            other['evaluation_role'] == 'validation' and other['method'] == trial['method']
+            and other['task_id'] == trial['task_id'] and other['split'] == trial['split']
+            and trial['matching_conditions']['source_files'] is not None
+            and other['matching_conditions']['source_files'] == trial['matching_conditions']['source_files']
+            for other in trials.values())
+        value = [trial['task_id'], trial['split'], trial['evaluation_role'], trial['matching_conditions']]
         signature = hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
         matching[signature].append(trial)
     matched = []
@@ -393,7 +408,13 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
                                    'model', 'reasoning_effort', 'max_tokens', 'harness_code_sha256',
                                    'prewarm_dependencies', 'dependency_preparation'))
         matched.append({'signature': signature, 'task_id': rows[0]['task_id'], 'split': rows[0]['split'],
-            'comparison_scope': 'canonical_test' if rows[0]['split'] == 'test' else 'training_replay',
+            'evaluation_role': rows[0]['evaluation_role'],
+            'comparison_scope': ('canonical_' if rows[0]['split'] == 'test' else 'training_')
+                + rows[0]['evaluation_role'],
+            'reuses_observed_validation_dataset': any(row['reuses_observed_validation_dataset'] for row in rows),
+            'heldout_status': ('observed_validation_reuse' if any(
+                row['reuses_observed_validation_dataset'] for row in rows) else 'prior_exposure_unverified')
+                if rows[0]['evaluation_role'] == 'final' else None,
             'methods': sorted({row['method'] for row in rows}), 'trials': [row['directory'] for row in rows],
             'full_quality_comparable': len({row['method'] for row in rows}) > 1 and not missing
                 and all(row['full_quality'] is True for row in rows),
@@ -405,6 +426,8 @@ def summarize(run_directories, ledger_ref, *, ledger_id=None, quality_threshold=
             'matching_groups': matched, 'savings_estimates': [], 'warnings': warnings,
             'source_count_scope': 'Original identities coalesced with identical source-file inventories.',
             'elapsed_scope': 'Per-trial and provider duration sums are recorded work, not overall wall time.',
+            'evaluation_scope': 'Dataset split records input provenance. Evaluation role records development, '
+                'validation or final use. Final-role records alone do not establish new heldout data.',
             'adoption_scope': 'Native skill loads and verified Runtime calls do not establish causal benefit.'}
 
 

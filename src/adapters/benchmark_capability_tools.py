@@ -10,9 +10,42 @@ import copy
 import json
 from pathlib import Path, PurePosixPath
 
-from .capability_contract import capability_digest, validate_capability_snapshot
+from .capability_contract import _binding, capability_digest, validate_capability_snapshot
 from .capability_feedback import file_ref, verify
 from .capability_improvement import save
+from .capability_motif_learning import _bind, capture_capability_trace
+
+
+def _resolve_call_binding(binding, records, snapshot, task_id, fingerprint):
+    available = {row['id']: row for row in records if row.get('status') == 'succeeded'}
+    _binding(binding, set(available))
+    pending = [binding]
+    referenced = set()
+    while pending:
+        item = pending.pop()
+        if item['kind'] == 'input':
+            raise ValueError('benchmark_capability_binding_input_source_unavailable: use value or input_file for external inputs')
+        if item['kind'] == 'step':
+            referenced.add(item['step_id'])
+        elif item['kind'] == 'object':
+            pending.extend(item['fields'].values())
+        elif item['kind'] == 'array':
+            pending.extend(item['items'])
+    results = {}
+    sources = []
+    for identifier in sorted(referenced):
+        row = available[identifier]
+        if (row['task_id'] != task_id or row['task_fingerprint'] != fingerprint
+                or row['snapshot'] != snapshot):
+            raise ValueError('benchmark_capability_binding_source_scope_changed')
+        # The original capture checks argument/result hashes, exact root, native
+        # completion evidence and nested receipts before the result is reused.
+        checked = capture_capability_trace(snapshot, task_id=task_id, task_input=row['arguments'],
+            task_fingerprint=fingerprint, calls=[{'id': identifier, 'capability': row['capability'],
+                'input_binding': {'kind': 'input', 'path': []}, 'execution_ref': row['execution_ref']}])
+        results[identifier] = checked['steps'][0]['result']
+        sources.append({'call_id': identifier, 'execution_ref': row['execution_ref']})
+    return _bind(binding, {}, results), sources
 
 
 def benchmark_capability_tools(materials, trial, directory, task_id):
@@ -24,7 +57,7 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
     catalog = materials.catalog()
     snapshot = validate_capability_snapshot(catalog['snapshot'], materials.owner)
     manifest = trial.manifest()
-    fingerprint = manifest.get('source_identity')
+    fingerprint = manifest.get('input_fingerprint', manifest.get('source_identity'))
     if not isinstance(fingerprint, str) or not fingerprint:
         raise ValueError('benchmark_capability_task_source_required')
     manifest_path = Path(trial.output) / 'manifest.json'
@@ -41,11 +74,15 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
          'For a primitive, value is its complete run(value) input; input_file may instead name an absolute file '
          'in this task container, mechanically wrapped as {data: parsed_JSON} or {text: UTF8_text}. '
          'For a composition, value is the complete object matching its listed input_schema. '
-         'Read that schema first; composition calls require value rather than the file shorthand.',
+         'Read that schema first; composition calls require value or input_binding rather than the file shorthand. '
+         'input_binding uses the existing Binding over COMPLETE Runtime arguments, usually {value: ...} for a primitive. '
+         'Use kind=step with step_id=an earlier successful call_id and path=output field names for result dependencies. '
+         'kind=object uses fields, kind=array uses items, and kind=literal uses value. kind=input has no source here.',
          'parameters': {'type': 'object', 'properties': {'capability_id': {'type': 'string'},
-             'input_file': {'type': 'string'}, 'value': {}},
+             'input_file': {'type': 'string'}, 'value': {}, 'input_binding': {'type': 'object',
+                 'description': 'Existing step/literal/object/array Binding for complete Runtime arguments; step_id refers to this task session call_id.'}},
              'required': ['capability_id'], 'additionalProperties': False,
-             'oneOf': [{'required': ['input_file']}, {'required': ['value']}]}}]
+             'oneOf': [{'required': ['input_file']}, {'required': ['value']}, {'required': ['input_binding']}]}}]
 
     def dispatch(name, arguments):
         if not isinstance(arguments, dict):
@@ -68,9 +105,9 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
                 for reference in roots[offset:end]]}
         if name != 'capability_call':
             raise ValueError('benchmark_capability_tool_unknown')
-        if (set(arguments) - {'capability_id', 'input_file', 'value'}
+        if (set(arguments) - {'capability_id', 'input_file', 'value', 'input_binding'}
                 or 'capability_id' not in arguments
-                or ('input_file' in arguments) == ('value' in arguments)):
+                or sum(key in arguments for key in ('input_file', 'value', 'input_binding')) != 1):
             raise ValueError('benchmark_capability_one_input_required')
         reference = next((ref for ref in snapshot['roots'] if ref['id'] == arguments['capability_id']), None)
         if reference is None:
@@ -91,7 +128,12 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
             if composition and 'input_file' in arguments:
                 required = capabilities[reference['id']]['contract']['input_schema'].get('required', [])
                 raise ValueError('benchmark_capability_composition_requires_value_fields:' + ','.join(required))
-            if 'input_file' in arguments:
+            binding = {'kind': 'input', 'path': [identifier]}
+            if 'input_binding' in arguments:
+                binding = copy.deepcopy(arguments['input_binding'])
+                value, binding_sources = _resolve_call_binding(binding, receipts[:-1], snapshot, task_id, fingerprint)
+                row.update(binding_sources=binding_sources, input_projection='explicit_original_binding_from_runtime_receipts')
+            elif 'input_file' in arguments:
                 path = arguments['input_file']
                 if (not isinstance(path, str) or not PurePosixPath(path).is_absolute()
                         or '\x00' in path or not path.strip('/')):
@@ -106,9 +148,13 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
                     'wrapper': 'json_data_or_utf8_text_by_native_material_adapter'}
             else:
                 value = arguments['value']
+            row['runtime_started'] = True
             executed = (materials.execute_arguments(reference, value, output / 'runtime', task_id)
-                        if composition else materials.execute(reference, value, output / 'runtime', task_id))
+                        if composition or 'input_binding' in arguments
+                        else materials.execute(reference, value, output / 'runtime', task_id))
             trace = executed['trace']
+            if 'input_binding' in arguments and capability_digest(executed['arguments']) != capability_digest(value):
+                raise ValueError('benchmark_capability_bound_arguments_changed')
             row.update(arguments=executed['arguments'], execution_ref=executed['execution_ref'], trace=trace)
             if (executed['snapshot']['digest'] != snapshot['digest']
                     or trace.get('task_id') != task_id or trace.get('root') != reference
@@ -118,15 +164,31 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
             if capability_digest(original) != capability_digest(trace):
                 raise ValueError('benchmark_capability_runtime_trace_changed')
             row.update(status=trace['status'], arguments=executed['arguments'],
-                       input_binding={'kind': 'input', 'path': [identifier]},
+                       input_binding=binding,
                        execution_ref=executed['execution_ref'], trace=trace)
             result = {'status': trace['status'], 'call_id': identifier,
                       'result': copy.deepcopy(trace.get('result')), 'receipt': executed['execution_ref']}
         except Exception as error:
             row.update(status='failed', error=type(error).__name__ + ':' + str(error))
+            # Native Script failures can write their genuine trace before the
+            # adapter raises. Keep that fixed host output as a failed graph node.
+            trace_path, args_path = output / 'runtime/trace.json', output / 'runtime/args.json'
+            if row.get('runtime_started') and 'execution_ref' not in row and trace_path.is_file() and args_path.is_file():
+                row['runtime_evidence'] = [file_ref(trace_path), file_ref(args_path)]
+                try:
+                    failed = json.loads(verify(row['runtime_evidence'][0]))
+                    if (failed.get('status') == 'succeeded' or failed.get('task_id') != task_id
+                            or failed.get('root') != reference or failed.get('snapshot_sha256') != snapshot['digest']):
+                        raise ValueError('benchmark_capability_failed_runtime_scope_changed')
+                    row.update(status=failed['status'], trace=failed,
+                               arguments=json.loads(verify(row['runtime_evidence'][1])),
+                               execution_ref=row['runtime_evidence'][0], input_binding=binding)
+                except Exception as recovery_error:
+                    row['runtime_recovery_error'] = type(recovery_error).__name__ + ':' + str(recovery_error)
             raise
         finally:
             save(output / 'call.json', row)
+            row['attempt_ref'] = file_ref(output / 'call.json')
         return result
 
     return tools, dispatch, receipts
@@ -135,9 +197,9 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
 def capability_trace_projection(receipts):
     """Project recorded real Runtime arguments for original capture_capability_trace.
 
-    Failed tool collection or incomplete native execution remains in the source
-    records. The caller may select complete successful contiguous subtraces for
-    this projection; cross-call dependencies are never guessed from equal data.
+    Attempts without a captured native receipt remain separately indexed. Real
+    Runtime failures stay in the graph as original learner barriers. Original
+    call indices remain increasing, including gaps; dependencies are explicit.
     """
     if not isinstance(receipts, list) or not receipts:
         raise ValueError('benchmark_capability_actual_calls_required')
@@ -145,18 +207,38 @@ def capability_trace_projection(receipts):
     calls = []
     inputs = {}
     sources = []
+    seen = set()
+    attempts = set()
+    nonexecuted = []
+    indices = []
+    last_index = -1
+    results = {}
     for row in receipts:
-        if (row.get('status') != 'succeeded' or 'execution_ref' not in row
-                or row.get('call_index') != first.get('call_index', 0) + len(calls)
+        if (type(row.get('call_index')) is not int or row['call_index'] <= last_index
                 or row['task_id'] != first['task_id']
                 or row['task_fingerprint'] != first['task_fingerprint']
                 or row['snapshot']['digest'] != first['snapshot']['digest']):
             raise ValueError('benchmark_capability_incomplete_or_mixed_trace')
-        verify(row['execution_ref'])
+        last_index = row['call_index']
         identifier = row['id']
-        if identifier in inputs:
+        if identifier in attempts:
             raise ValueError('benchmark_capability_duplicate_call')
-        inputs[identifier] = copy.deepcopy(row['arguments'])
+        attempts.add(identifier)
+        if 'execution_ref' not in row:
+            nonexecuted.append({key: copy.deepcopy(row[key]) for key in
+                ('id', 'call_index', 'status', 'error', 'model_arguments', 'runtime_started',
+                 'runtime_evidence', 'runtime_recovery_error', 'attempt_ref') if key in row})
+            continue
+        verify(row['execution_ref'])
+        indices.append(row['call_index'])
+        _binding(row['input_binding'], seen)
+        if row['input_binding']['kind'] == 'input':
+            inputs[identifier] = copy.deepcopy(row['arguments'])
+        bound = _bind(row['input_binding'], inputs, results)
+        if capability_digest(bound) != capability_digest(row['arguments']):
+            raise ValueError('benchmark_capability_projected_arguments_changed')
+        seen.add(identifier)
+        results[identifier] = json.loads(verify(row['execution_ref'])).get('result')
         calls.append({key: copy.deepcopy(row[key]) for key in
                       ('id', 'capability', 'input_binding', 'execution_ref')})
         if row.get('source_file') is not None:
@@ -164,5 +246,6 @@ def capability_trace_projection(receipts):
             sources.append(copy.deepcopy(row['source_file']))
     return {'snapshot': copy.deepcopy(first['snapshot']), 'task_id': first['task_id'],
             'task_fingerprint': first['task_fingerprint'], 'trace_inputs': inputs, 'calls': calls,
-            'source_files': sources,
-            'scope': 'input_projection_of_actual_native_calls_not_inferred_task_or_dependency_graph'}
+            'source_files': sources, 'native_call_indices': indices, 'nonexecuted_attempts': nonexecuted,
+            'nonexecuted_scope': 'No captured native receipt; runtime_started retains uncertain backend execution.',
+            'scope': 'actual_native_arguments_and_explicit_original_bindings_no_inferred_dependencies'}

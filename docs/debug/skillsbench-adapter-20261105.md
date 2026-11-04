@@ -72,6 +72,21 @@ R3正式GeneLoop终测的首次构建在0.72秒内失败。原日志显示失败
 
 按指示暂缓该场景，不再反复重试。服务器证据为`threejs-preflight/runs/lab-unit-environment-retry-training-eaeba9a702cb4f61ae3de50b5cc1634d`及`lab-unit-environment-retry-test-2b617c66151d4e2b8689de6901eb128b`，本地原日志、结果、原task限时与归属核对记录位于`.local/debug/lab-unit-environment-retry-20261105/`。
 
+## econ环境预热
+
+`econ-detrending-correlation`按静态数值任务结构选取，原题包含年／列对齐、价格指数归一、HP滤波与相关计算。仅同步原公开train／canonical目录到现有`data-clean`／`data-test-clean`，训练9文件、canonical11文件全部SHA逐项一致，无AppleDouble文件。完整来源哈希已追加`.local/overnight-20261105/skillsbench-selection.json`。
+
+| 变体 | 原build／agent／verifier限时 | 一次原环境构建耗时 | 实际Python | 成品镜像 |
+| --- | --- | --- | --- | --- |
+| training | 600／900／900秒 | 429.96秒，成功 | 3.10.22 | sha256:f600f07dd79e268ea6197bfcbb50dccacfad56b62362570e07b31b85fcbc127b |
+| canonical | 600／900／240秒 | 427.40秒，成功 | 3.12.16 | sha256:bd7fcf277284ca62d7e50320b4bbea546dee4cc379aa32b6aa3a199c2f97a264 |
+
+所缺原`python:3.10-slim`经既有公共mirror缓存同名tag，RepoDigest为`sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d`。canonical沿用既有`python:3.12-slim`，RepoDigest为`sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30`。原Dockerfile、原题面、tests和各自限时均保留。
+
+两侧实际pandas2.2.3、numpy1.26.4、openpyxl3.1.5、scipy1.14.1、statsmodels0.14.4，canonical另有原要求的xlrd2.0.1。所有依赖及`hpfilter`导入诊断通过，没有处理题目数据、运行oracle或调用模型。此处仅为环境可用性证据。
+
+服务器记录为`threejs-preflight/runs/econ-environment-training-fa825433a130416e801a0417c9adcda7`和`econ-environment-test-7e560c7d99f24ab2807feb39cb6f0f1f`。本地构建日志、原限时、版本及逐文件SHA位于`.local/debug/econ-environment-20261105/`，selection亦附实际结果与版本FileRef。
+
 评分同时保留数值与状态。原dialogue评分可产生部分reward，论文avg成功条件为reward大于零，完整通过情况应单列。缺失、非法或评分运行失败保留未知。
 
 ## 验证状态

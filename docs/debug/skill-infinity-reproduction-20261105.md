@@ -57,6 +57,16 @@ R3早期baseline仅暴露评分与不可读取的引用，优化器缺少原轨�
 
 激活审查覆盖`false`和`null`由独立Reviewer接受或拒绝时均原样保留、部分加载同时呈现训练与验证证据，以及三态下无修改候选都受Host拒绝。
 
+## R6优化器零请求故障
+
+`code-r6/.local/results/baseline-econ-001`在codebook seed验证产生51次原请求后，inner优化器首轮结束为`incomplete`，原生事件记录HTTP400，provider请求为0。原会话为`session-96fbd67de5ce4b04a04ca8529e7288b5`，已有失败与费用保留。
+
+精确根因在公共预算代理的`_image_count`。它递归扫描请求时，将工具JSON Schema的`type=["string","null"]`当作集合查询键，触发`TypeError: unhashable type: 'list'`。该异常在请求登记前被HTTP处理器转为400。用原事件中的`create_candidate.files` schema重建本机诊断请求，可在原`reservation`稳定复现。
+
+修复只在媒体类型集合查询前检查类型值为字符串，保留合法union工具schema与原费用归属。真实`image_url`、`input_image`、`file`、`image`仍逐项计入媒体储备。原SDK、本机MCP、原生Skill、完整baseline工具集、原预算代理和本机合成SSE Provider完成3次往返，账本从5增至8，union schema原样转发。相关gate、Harness及baseline合计63项诊断通过，新增真实API调用0。
+
+该代码文件属于managed library的执行代码锁，后续需通过既有兼容导出产生新独立版本。旧证书与R6运行保持原状。
+
 新增 `tests/test_research_harness.py` 的13项诊断通过，包含真实本机MCP2.2、原SDK、原生skill加载、工具回调、任务timeout及原累计费用账本。完整SDK诊断使用本机合成SSE Provider，原请求计数5→8，实际工具为`skill`和研究MCP工具，新增真实模型请求0。
 
 这批诊断发现并复核了资源读取激活误判、缺少请求证据、结束异常下费用归属恢复等问题。原生skill加载的内容摘要以注册时字节计算，避免将后续磁盘内容误记为已加载正文。

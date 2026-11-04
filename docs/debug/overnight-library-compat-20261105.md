@@ -29,3 +29,13 @@
 最终上述Python定向63项通过。跨语言契约与策略Node定向16项通过，执行时用 `SSS_PYTHON` 指向项目 `.venv312/bin/python`。首次直接Node调用使用系统Python缺少jsonschema，失败证据保留，切换原项目解释器后通过。
 
 原训练与质量结论保持其来源范围，本次模型请求、新训练与原始轨迹重放均为0。未推送、未合并、未部署。
+
+## R7：工具Schema媒体检查兼容更新
+
+R7修复 `deepseek_cost_gate._image_count` 对合法JSON Schema的处理：`type` 可以是数组或对象，先确认它是字符串，再判断是否为媒体内容类型，避免 `unhashable type` 在请求预检阶段阻断调用。真正的图片／文件内容继续参与原媒体额度预留，费用账本与预算规则未改变。
+
+该修复改变已认证源码锁，沿同一重导出器新增 `--tool-schema-media-compat`：从 `ppt-master-v78` 生成 `ppt-master-v79`，从 `paper-web-v80` 生成 `paper-web-v81`。审阅变更集合仅含 `src/adapters/deepseek_cost_gate.py` 与重导出器本身。新79／81已成为工作区默认，旧78／80保留；没有原地覆盖旧认证。原MCP schema与在线程序保持一致，写入回执记录模型请求0、新训练任务0、未提升质量或成本结论。
+
+复现沿原入口：`node scripts/project.mjs python scripts/reexport-ppt-managed-compat.py --tool-schema-media-compat --preview`；冻结源码后才使用 `--write --update-registry --validation-record docs/debug/overnight-library-compat-20261105.md`。私有预览与写入回执分别为 `.local/overnight-20261105/r7-compat-preview.json` 和 `r7-compat-written.json`。
+
+R7定向375项通过。首轮全量Python为2852通过、261跳过、2失败；两项失败来自兼容测试误把旧父子配对改成跨版本配对。已恢复原79→80及77→78，并另追加80→81及78→79，继续检查直接父证书及原IR不变。最终全量正在重跑，日志 `.local/overnight-20261105/full-regression-r7-final.log`，完成前不标记全量通过。此更新不表示远程CI通过或生产部署。
