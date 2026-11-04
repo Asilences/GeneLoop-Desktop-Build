@@ -228,3 +228,12 @@ Video 的额外四工具是已发布的学习程序接口，属于现有方法�
 首次向仓库旧地址推送收到 GitHub `failure in commit_refs`，已确认远端没有形成分支或PR，核对当前仓库标识后重试成功。原错误保留在本轮操作记录中。
 
 源码提交为 `1f416a87`，已推送并创建[PR #134](https://github.com/jingyio/GeneLoop/pull/134)。本次文档补记后以PR最新head为准，尚未合并或部署。观察时Linux/Windows的push与PR四项CI正在运行，未宣称远程通过。
+
+
+## PR134 Linux 原生启动测试修正
+
+用户反馈远程检查失败后，核对 `de3099d6` 的四项检查。Windows push/PR均成功，Ubuntu push/PR均在同一项 `test_native_host_loads_verified_skill_in_member_namespace` 失败。该Linux/bubblewrap专属测试仍断言Chat宿主全局目录为 `['ppt-master']`，与本次作用域清理冲突；macOS完整测试跳过此项，上一轮未同步该断言。
+
+现将测试更新为 `test_native_host_scopes_verified_skill_in_member_namespace`。保留真实成员命名空间启动、只读资源挂载、Skill原始字节、私有宿主路径不可见、文件系统/子进程替换与零任务断言，同时增加五个作用域检查。Chat宿主初始目录为空，PPT作用域可见并加载受管Skill，同级Chat和宿主目录仍为空，释放后PPT目录也为空。测试调用生产 `registerApprovedSkill` 与原生 `createScope`，正常PPT双栏入口继续由既有 `test_dsh_web_tasks.mjs` 覆盖。
+
+本地相关原生Skill诊断6/6通过，Python及生成的诊断JavaScript语法检查通过。Linux原生测试在macOS按原平台条件跳过，远程最终结果以修复提交的Linux/Windows四项完整CI为准。此次仅修改测试和交接记录，新增模型请求0，远端Web未重启或部署。

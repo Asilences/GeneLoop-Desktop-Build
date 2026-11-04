@@ -20,7 +20,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.skipif(sys.platform!='linux' or not Path('/usr/bin/bwrap').exists(),reason='Real account namespace requires Linux bubblewrap')
-def test_native_host_loads_verified_skill_in_member_namespace(tmp_path):
+def test_native_host_scopes_verified_skill_in_member_namespace(tmp_path):
     node=shutil.which('node')
     if not node:pytest.skip('Installed native Harness requires Node')
     node=Path(node).resolve();python=Path(sys.executable).resolve()
@@ -78,16 +78,27 @@ process.stdout.write(JSON.stringify({resources:result.native_resources,mounts:re
     diagnostic=user/'config/ready.mjs'
     diagnostic.write_text("""
 import {readFileSync,existsSync} from 'node:fs';
+import {createScope,scopeOf} from '@deepseek-ai/dsh-scope';
 import {geneLoopMounts} from 'file:///app/src/adapters/geneloop_fs.ts';
+import {registerApprovedSkill} from 'file:///app/src/adapters/geneloop_native_work.ts';
 export const name='member-namespace-readiness';export const inject=['connection','skills','fs','subprocess'];
 export function apply(ctx){ctx.connection.fetch.register({path:'/api/diagnostic/member-namespace',methods:['GET'],requestBody:'buffered',async fetch(request){
  const rejected=ctx.connection.requestRejection(request);if(rejected)return new Response('Unauthorized',{status:rejected});
  const policy=JSON.parse(readFileSync(process.env.SSS_WEB_POLICY,'utf8'));
  const mounts=geneLoopMounts(policy,'session-11111111-1111-4111-8111-111111111111');
  const skill=mounts.find(m=>m.logical==='/opt/geneloop/ppt-master');
- return Response.json({skills:(await ctx.skills.list({cwd:'/work'})).map(s=>s.name),
+ const names=async options=>(await ctx.skills.list({cwd:'/work',...options})).map(s=>s.name);
+ const skills=await names(),ppt=createScope(ctx,{}),chat=createScope(ctx,{});
+ try{
+ const release=registerApprovedSkill(ppt.ctx,policy.command_resources),pptView={scope:scopeOf(ppt.ctx)};
+ const pptSkills=await names(pptView),chatSkills=await names({scope:scopeOf(chat.ctx)}),hostSkills=await names();
+ const loaded=await ctx.skills.get('ppt-master',{cwd:'/work',...pptView});
+ release();
+ return Response.json({skills,ppt_skills:pptSkills,chat_skills:chatSkills,host_skills_during_ppt:hostSkills,
+  released_ppt_skills:await names(pptView),ppt_loaded:loaded,
   resources:policy.command_resources,skill_mount:skill,skill_text:readFileSync(skill.host+'/SKILL.md','utf8'),
   private_host_path_visible:existsSync(%s),filesystem:ctx.fs.constructor.name,subprocess:ctx.subprocess.constructor.name});
+ }finally{await ppt.dispose();await chat.dispose();}
  }});}
 """%json.dumps(str(project)))
     patch=deployment['patch']+[{'insert':[{'id':'member-namespace-ready','name':'file:///user/config/ready.mjs'}]}]
@@ -134,7 +145,12 @@ export function apply(ctx){ctx.connection.fetch.register({path:'/api/diagnostic/
             else:pytest.fail('Member native host failed to become ready:\n'+log.read_text()[-10000:])
             (fixture/'namespace-proof.json').write_text(json.dumps({'boot_seconds':time.monotonic()-boot_started,
                 'model_requests':0,'namespace':actual}))
-            assert actual['skills']==['ppt-master'],actual
+            assert actual['skills']==[],actual
+            assert actual['ppt_skills']==['ppt-master'],actual
+            assert actual['chat_skills']==[] and actual['host_skills_during_ppt']==[],actual
+            assert actual['released_ppt_skills']==[],actual
+            assert actual['ppt_loaded']['resourceBase']=={'kind':'directory','path':'/opt/geneloop/ppt-master'},actual
+            assert 'Read public diagnostic resources.' in actual['ppt_loaded']['content'],actual
             assert actual['filesystem']=='GeneLoopFileSystem',actual
             assert actual['subprocess']=='GeneLoopSubprocessRuntime',actual
             assert actual['resources']==deployment['resources'],actual
