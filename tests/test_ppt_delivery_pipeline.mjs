@@ -64,6 +64,7 @@ test('delivery dependencies change on source, manifest and notes revisions',()=>
  const project=join(workspace,'code/projects/deck');mkdirSync(join(project,'svg_output'),{recursive:true});
  writeFileSync(join(project,'delivery.json'),'{}');writeFileSync(join(project,'svg_output/slide_01.svg'),'<svg/>');
  const first=deliveryDependencies(workspace,'/work/projects/deck','/work/projects/deck/delivery.json');
+ assert.ok(first.files.some(row=>row.path==='svg_output/slide_01.svg'));
  mkdirSync(join(project,'validation'));
  writeFileSync(join(project,'validation/presentation.report.json'),'generated export report');
  const generated=deliveryDependencies(workspace,'/work/projects/deck','/work/projects/deck/delivery.json');

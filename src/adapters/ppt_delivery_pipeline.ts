@@ -84,12 +84,13 @@ export function deliveryDependencies(workspace:string,project:string,manifest:st
    const file=join(path,leaf),stat=lstatSync(file);
    if(stat.isSymbolicLink()||realpathSync(file)!==file)throw Error('delivery_dependency_changed');
    if(stat.isDirectory()){visit(file);continue;}
+   const logicalPath=relative(directory,file).split('\\').join('/');
    // These official reports are export outputs, including run-specific paths.
    // Source/spec/notes and other validation files remain version dependencies.
-   if(['validation/workflow.log','validation/svg_quality_report.json','validation/presentation.report.json'].includes(relative(directory,file)))continue;
-   if(notesFromTotal&&relative(directory,file).startsWith('notes/')&&file.endsWith('.md')&&leaf!=='total.md')continue;
+   if(['validation/workflow.log','validation/svg_quality_report.json','validation/presentation.report.json'].includes(logicalPath))continue;
+   if(notesFromTotal&&logicalPath.startsWith('notes/')&&file.endsWith('.md')&&leaf!=='total.md')continue;
    if(!stat.isFile()||stat.nlink!==1||files.length>=4096||(bytes+=stat.size)>200_000_000)throw Error('delivery_dependency_protocol_bound');
-   files.push({path:relative(directory,file),sha256:sha(readFileSync(file))});
+   files.push({path:logicalPath,sha256:sha(readFileSync(file))});
   }
  };
  visit(directory);
