@@ -30,6 +30,6 @@ manifest字段为 `snapshot / observations / scope / target / feedback_directory
 
 Evolution候选新增 `task_strategy`，`construction_strategy` 同样支持版本化策略。其proposal恰含 `applicability / decision_policy / capability_refs / parent`，模型parent为null，父策略由宿主parent_selection固定并核验。候选支持证据由已核验观察提供，最多两个候选，允许no_change。独立验收后的selection可通过上述既有Builder配置继承。
 
-任务策略已有表示、验收与上下文API。原在线聊天自动选择策略与主动问讯仍需任务宿主接线。Builder为无工具提案，问讯本身由原Harness的ask_user_question承担。
+任务策略已有表示、验收与上下文API。下一步接通用任务宿主的策略选择与继承，使条件策略影响任务分解、能力选择、执行顺序、验证范围和恢复方式。具体工具调用沿原Harness执行，问询是其中一种可能行为。验收需观察后继决策及实际结果，策略的稳定执行片段再沿原学习链积累。
 
 策略实际使用中的稳定执行片段继续经过原Runtime回执、RAE投影、原Motif learner/compiler及Store认证。本轮继承接线不自动保证出现新的稳定片段或净收益。

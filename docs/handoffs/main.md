@@ -5,7 +5,7 @@
 - 基于远程main `b8e04296`，整合PR133 `04d6d7b5` 后在仓库内独立研究工作区实施。原共享工作区的清理与网页修改保留。
 - 协议、证据适配和Builder继承由三个子Agent并行，主Agent负责Evolution候选与CLI、跨模块测试、兼容库和总回归。计划见[依赖树](../changes/strategy-evolution-20261104.md)，入口见[接口](../strategy-evolution-v1.md)。
 - 已实现版本化条件策略、原Feedback独立准入/撤回、宿主语义投影、跨图共同问题聚合、父策略继承和实际Builder Prompt接线。公开诊断覆盖原事件与实际Prompt，真实模型采用和收益仍待验证。
-- 原问讯事件可进入证据，任务策略可表示并验收。自动在线选择策略/主动问讯仍需任务宿主接线。原Builder稳定执行片段继续沿原RAE学习链。
+- 任务侧后续接通用策略选择与决策入口，观察任务分解、能力选择、组合、验证和恢复方式的实际变化。问询是行为例子。原Builder稳定执行片段继续沿原RAE学习链。
 - 本地全量2460 Python、1642 Node通过，smoke/Motif/RAE/RSI检查通过，模型请求0。服务器真实问讯样本目前为不同owner的单例；原始材料导出遭自动审批拒绝，具体隐私授权待明确，真实策略采用及收益pending。
 - 新兼容库PPT77/Paper79保留原Graph、工具schema与来源，绑定当前源码，旧库保留。本轮测试与未完成项见[记录](../experiments/strategy-evolution-20261104.md)。
 
