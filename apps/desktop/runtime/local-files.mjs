@@ -1,7 +1,11 @@
 import koffi from 'koffi';
+import { randomUUID } from 'node:crypto';
 import { win32 } from 'node:path';
 
 const READ_ATTRIBUTES = 0x80;
+const LIST_DIRECTORY = 1;
+const WRITE_REPORT = 0x40010000; // GENERIC_WRITE | DELETE for partial-write cleanup.
+const CREATE_NEW = 1;
 const GENERIC_READ = 0x80000000;
 const SHARE_READ_WRITE = 3; // Deliberately omit FILE_SHARE_DELETE.
 const OPEN_EXISTING = 3;
@@ -9,6 +13,11 @@ const OPEN_REPARSE_POINT = 0x00200000;
 const BACKUP_SEMANTICS = 0x02000000;
 const DIRECTORY = 0x10;
 const REPARSE_POINT = 0x400;
+const NO_MORE_FILES = 18;
+const FILE_FULL_DIRECTORY_INFO = 14;
+const FILE_FULL_DIRECTORY_RESTART_INFO = 15;
+const FILE_DISPOSITION_INFO = 4;
+const MAX_ENTRIES = 200;
 const MAX_BYTES = 256 * 1024;
 const MAX_PATH_UNITS = 32768;
 
@@ -17,10 +26,15 @@ const createFile = kernel.func('intptr_t __stdcall CreateFileW(const char16_t *p
 const getInfo = kernel.func('int __stdcall GetFileInformationByHandle(intptr_t file, void *information)');
 const getPath = kernel.func('uint32_t __stdcall GetFinalPathNameByHandleW(intptr_t file, void *path, uint32_t length, uint32_t flags)');
 const readFile = kernel.func('int __stdcall ReadFile(intptr_t file, void *data, uint32_t length, _Out_ uint32_t *read, void *overlapped)');
+const getDirectoryInfo = kernel.func('int __stdcall GetFileInformationByHandleEx(intptr_t file, int infoClass, void *info, uint32_t size)');
+const getLastError = kernel.func('uint32_t __stdcall GetLastError()');
+const writeFile = kernel.func('int __stdcall WriteFile(intptr_t file, void *data, uint32_t length, _Out_ uint32_t *written, void *overlapped)');
+const flushFile = kernel.func('int __stdcall FlushFileBuffers(intptr_t file)');
+const setInfo = kernel.func('int __stdcall SetFileInformationByHandle(intptr_t file, int infoClass, void *info, uint32_t size)');
 const closeHandle = kernel.func('int __stdcall CloseHandle(intptr_t file)');
 
-function open(path, access) {
-  const handle = createFile(path, access, SHARE_READ_WRITE, null, OPEN_EXISTING, BACKUP_SEMANTICS | OPEN_REPARSE_POINT, null);
+function open(path, access, disposition = OPEN_EXISTING, share = SHARE_READ_WRITE) {
+  const handle = createFile(path, access, share, null, disposition, BACKUP_SEMANTICS | OPEN_REPARSE_POINT, null);
   if (handle === -1 || handle === -1n) throw Error('无法打开授权目录内的文件或目录。');
   return handle;
 }
@@ -45,6 +59,46 @@ function finalPath(handle) {
   return bytes.toString('utf16le', 0, length * 2);
 }
 
+function childPrefix(path) {
+  return path.endsWith('\\') ? path : path + '\\';
+}
+
+function assertChild(handle, path) {
+  const actual = finalPath(handle);
+  if (!actual.toLowerCase().startsWith(childPrefix(path).toLowerCase())) {
+    throw Error('实际文件路径不在已验证的目录内。');
+  }
+  return actual;
+}
+
+function enumerate(handle) {
+  const bytes = Buffer.alloc(64 * 1024);
+  const entries = [];
+  let infoClass = FILE_FULL_DIRECTORY_RESTART_INFO;
+  while (getDirectoryInfo(handle, infoClass, bytes, bytes.length)) {
+    infoClass = FILE_FULL_DIRECTORY_INFO;
+    for (let offset = 0; ;) {
+      // FILE_FULL_DIR_INFO stores FileNameLength at byte 60 and UTF-16 FileName at byte 68.
+      const next = bytes.readUInt32LE(offset);
+      const length = bytes.readUInt32LE(offset + 60);
+      const end = offset + 68 + length;
+      if (length % 2 || end > bytes.length || (next && (next < 68 + length || offset + next + 68 > bytes.length))) {
+        throw Error('目录记录格式无效。');
+      }
+      const name = bytes.toString('utf16le', offset + 68, end);
+      const attributes = bytes.readUInt32LE(offset + 56);
+      if (name !== '.' && name !== '..' && !(attributes & REPARSE_POINT)) {
+        if (entries.length === MAX_ENTRIES) return { entries, truncated: true };
+        entries.push({ name, kind: attributes & DIRECTORY ? 'directory' : 'file' });
+      }
+      if (!next) break;
+      offset += next;
+    }
+  }
+  if (getLastError() !== NO_MORE_FILES) throw Error('无法枚举授权目录。');
+  return { entries, truncated: false };
+}
+
 function relativeParts(path) {
   if (typeof path !== 'string' || path.length > 2048 || win32.isAbsolute(path)) throw Error('请输入工作区内的相对路径。');
   const parts = path.split(/[\\/]/);
@@ -57,61 +111,115 @@ function relativeParts(path) {
   return parts;
 }
 
-// 在授权时打开根目录。每级子目录使用禁止跟随重解析点的句柄，并持有
-// 至读取结束，避免在校验后由另一个进程替换为 junction。
-export function openWorkspaceReader(directory) {
+// 在授权时打开根目录，所有子目录都用句柄固定，直到操作结束。
+function openRoot(directory, access) {
   if (!/^[A-Za-z]:[\\/]/.test(directory)) throw Error('首版本机工作区仅支持本地盘符路径。');
-  const root = open(win32.toNamespacedPath(directory), READ_ATTRIBUTES);
-  let canonical;
+  const handle = open(win32.toNamespacedPath(directory), access);
   try {
-    if (!info(root).directory) throw Error('工作区必须是目录。');
-    canonical = finalPath(root);
-    if (!/^\\\\\?\\[A-Za-z]:\\/.test(canonical)) throw Error('无法验证本地盘符。');
+    if (!info(handle).directory) throw Error('工作区必须是目录。');
+    const path = finalPath(handle);
+    if (!/^\\\\\?\\[A-Za-z]:\\/.test(path)) throw Error('无法验证本地盘符。');
+    return { handle, path };
   } catch (error) {
-    closeHandle(root);
+    closeHandle(handle);
     throw error;
   }
+}
+
+export function openWorkspaceReader(directory) {
+  const root = openRoot(directory, LIST_DIRECTORY | READ_ATTRIBUTES);
+  let closed = false;
+
+  function withEntry(relativePath, directory, operation) {
+    if (closed) throw Error('工作区授权已关闭。');
+    if (relativePath === '' && directory) return operation(root.handle, {});
+    const parts = relativeParts(relativePath);
+    const handles = [];
+    try {
+      let path = root.path;
+      for (const [index, part] of parts.entries()) {
+        const last = index === parts.length - 1;
+        const expectsDirectory = !last || directory;
+        const access = expectsDirectory ? LIST_DIRECTORY | READ_ATTRIBUTES : GENERIC_READ;
+        const handle = open(childPrefix(path) + part, access);
+        handles.push(handle);
+        const metadata = info(handle);
+        path = assertChild(handle, path);
+        if (metadata.directory !== expectsDirectory) throw Error('路径成员类型不符。');
+        if (last) return operation(handle, metadata);
+      }
+    } finally {
+      for (const handle of handles.reverse()) closeHandle(handle);
+    }
+  }
+
+  return {
+    list(relativePath = '') { return withEntry(relativePath, true, enumerate); },
+    readText(relativePath) {
+      return withEntry(relativePath, false, (handle, metadata) => {
+        if (metadata.links !== 1 || metadata.oversized) throw Error('仅支持不超过 256 KiB 的普通文本文件。');
+        const bytes = Buffer.alloc(MAX_BYTES + 1);
+        const length = [0];
+        if (!readFile(handle, bytes, bytes.length, length, null) || length[0] > MAX_BYTES) {
+          throw Error('文本读取失败或超过 256 KiB。');
+        }
+        return new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length[0]));
+      });
+    },
+    close() {
+      if (closed) return;
+      closed = true;
+      closeHandle(root.handle);
+    },
+  };
+}
+
+export function openReportWriter(directory, sourceDirectory) {
+  const source = openRoot(sourceDirectory, READ_ATTRIBUTES);
+  let output;
+  try {
+    output = openRoot(directory, READ_ATTRIBUTES);
+    const from = childPrefix(source.path).toLowerCase();
+    const to = childPrefix(output.path).toLowerCase();
+    if (from.startsWith(to) || to.startsWith(from)) {
+      throw Error('报告目录必须与源工作区分离。');
+    }
+  } catch (error) {
+    if (output) closeHandle(output.handle);
+    throw error;
+  } finally {
+    closeHandle(source.handle);
+  }
+
   let closed = false;
   return {
-    readText(relativePath) {
-      if (closed) throw Error('工作区授权已关闭。');
-      const parts = relativeParts(relativePath);
-      const handles = [];
+    writeMarkdown(text) {
+      if (closed) throw Error('报告目录授权已关闭。');
+      const length = Buffer.byteLength(text, 'utf8');
+      if (!length || length > MAX_BYTES) throw Error('报告必须为 1 至 256 KiB。');
+      const bytes = Buffer.from(text, 'utf8');
+      const name = 'GeneLoop-' + randomUUID() + '.md';
+      const handle = open(childPrefix(output.path) + name, WRITE_REPORT, CREATE_NEW, 0);
       try {
-        let path = canonical;
-        for (const [index, part] of parts.entries()) {
-          const isFile = index === parts.length - 1;
-          const next = path.endsWith('\\') ? path + part : path + '\\' + part;
-          const handle = open(next, isFile ? GENERIC_READ : READ_ATTRIBUTES);
-          handles.push(handle);
-          const metadata = info(handle);
-          const actual = finalPath(handle);
-          if (!actual.toLowerCase().startsWith((path.endsWith('\\') ? path : path + '\\').toLowerCase())) {
-            throw Error('实际文件路径不在已验证的目录内。');
-          }
-          if (!isFile) {
-            if (!metadata.directory) throw Error('相对路径包含非目录成员。');
-            path = actual;
-            continue;
-          }
-          if (metadata.directory || metadata.links !== 1 || metadata.oversized) {
-            throw Error('仅支持不超过 256 KiB 的普通文本文件。');
-          }
-          const bytes = Buffer.alloc(MAX_BYTES + 1);
-          const length = [0];
-          if (!readFile(handle, bytes, bytes.length, length, null) || length[0] > MAX_BYTES) {
-            throw Error('文本读取失败或超过 256 KiB。');
-          }
-          return new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length[0]));
+        assertChild(handle, output.path);
+        const written = [0];
+        if (!writeFile(handle, bytes, bytes.length, written, null) || written[0] !== bytes.length || !flushFile(handle)) {
+          throw Error('报告写入不完整。');
         }
+        return { name, bytes: length };
+      } catch (error) {
+        if (!setInfo(handle, FILE_DISPOSITION_INFO, Buffer.from([1]), 1)) {
+          throw Error('报告写入失败，无法清理本次生成的文件。', { cause: error });
+        }
+        throw error;
       } finally {
-        for (const handle of handles.reverse()) closeHandle(handle);
+        closeHandle(handle);
       }
     },
     close() {
       if (closed) return;
       closed = true;
-      closeHandle(root);
+      closeHandle(output.handle);
     },
   };
 }

@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
-import { cpSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, posix, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -19,11 +19,14 @@ const root = mkdtempSync(join(tmpdir(), 'GeneLoop 本机探针 '));
 const install = join(root, 'GeneLoop Desktop');
 const workspace = join(root, '工作区');
 const home = join(root, 'home');
+const reports = join(root, '报告');
 const outside = join(root, 'outside');
 const result = join(root, 'result.json');
 const sample = randomUUID();
 const modelPending = join(root, 'model-pending');
-for (const directory of [workspace, home, outside]) mkdirSync(directory);
+for (const directory of [workspace, home, outside, reports, join(workspace, '空目录'), join(workspace, '大量文件')]) mkdirSync(directory);
+for (let index = 0; index < 201; index++) writeFileSync(join(workspace, '大量文件', index + '.txt'), '');
+const report = '# 本机文件盘点\n\n- 来源：资料.txt（第 1 行）\n';
 writeFileSync(join(workspace, '资料.txt'), sample);
 writeFileSync(join(outside, 'secret.txt'), 'synthetic');
 linkSync(join(outside, 'secret.txt'), join(workspace, '硬链接.txt'));
@@ -61,7 +64,9 @@ const executable = join(install, 'GeneLoop Desktop.exe');
 const cli = join(install, 'resources/runtime/node_modules/@deepseek-ai/dsh/lib/bin.js');
 const plugin = join(install, 'resources/runtime/local-runtime-probe.mjs');
 cpSync(join(app, 'test/local-runtime-probe.mjs'), plugin);
-cpSync(join(app, 'runtime/local-files.mjs'), join(install, 'resources/runtime/local-files.mjs'));
+for (const name of ['local-files.mjs', 'local-file-tools.mjs', 'local-agent.mjs']) {
+  cpSync(join(app, 'runtime', name), join(install, 'resources/runtime', name));
+}
 const patch = join(root, 'probe.patch.yml');
 writeFileSync(patch, JSON.stringify([
   { id: 'persistent-pwsh', disabled: true },
@@ -79,13 +84,29 @@ const fixture = createServer(async (request, response) => {
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     assert.match(request.url, /chat\/completions$/);
     fixtureRequests++;
+    assert.deepEqual(body.tools.map(tool => tool.function.name).sort(), ['local_list', 'local_read', 'local_save_report', 'local_search']);
+    const toolResult = id => body.messages.find(message => message.role === 'tool' && message.tool_call_id === id)?.content;
+    let calls;
     if (fixtureRequests === 1) {
-      assert.deepEqual(body.tools.map(tool => tool.function.name), ['probe_read']);
-      const base = { id: 'local-probe', object: 'chat.completion.chunk', created: 1, model: body.model };
-      const tool = { index: 0, id: 'fixture-read', type: 'function', function: { name: 'probe_read', arguments: JSON.stringify({ path: '资料.txt' }) } };
+      calls = [
+        ['inventory', 'local_list', { path: '' }],
+        ['read', 'local_read', { path: '资料.txt' }],
+        ['search', 'local_search', { path: '资料.txt', query: sample }],
+      ];
+    } else if (fixtureRequests === 2) {
+      const listing = JSON.parse(toolResult('inventory'));
+      assert.ok(listing.entries.some(entry => entry.name === '资料.txt' && entry.kind === 'file'));
+      assert.ok(!listing.entries.some(entry => entry.name === '越界'));
+      assert.equal(toolResult('read'), sample);
+      assert.deepEqual(JSON.parse(toolResult('search')), { path: '资料.txt', matches: [1], truncated: false });
+      calls = [['report', 'local_save_report', { markdown: report }]];
+    }
+    if (calls) {
+      const base = { id: 'local-probe-' + fixtureRequests, object: 'chat.completion.chunk', created: 1, model: body.model };
+      const tools = calls.map(([id, name, args], index) => ({ index, id, type: 'function', function: { name, arguments: JSON.stringify(args) } }));
       response.writeHead(200, { 'Content-Type': 'text/event-stream' });
       for (const choices of [
-        [{ index: 0, delta: { role: 'assistant', tool_calls: [tool] }, finish_reason: null }],
+        [{ index: 0, delta: { role: 'assistant', tool_calls: tools }, finish_reason: null }],
         [{ index: 0, delta: {}, finish_reason: 'tool_calls' }],
         [],
       ]) {
@@ -94,8 +115,13 @@ const fixture = createServer(async (request, response) => {
       response.end('data: [DONE]\n\n');
       return;
     }
-    assert.equal(fixtureRequests, 2);
-    assert.ok(body.messages.some(message => message.role === 'tool' && JSON.stringify(message.content).includes(sample)));
+    assert.equal(fixtureRequests, 3);
+    const receipt = JSON.parse(toolResult('report'));
+    assert.match(receipt.name, /^GeneLoop-[a-f0-9-]+\.md$/);
+    assert.equal(receipt.bytes, Buffer.byteLength(report));
+    assert.deepEqual(readdirSync(reports), [receipt.name]);
+    assert.equal(readFileSync(join(reports, receipt.name), 'utf8'), report);
+    assert.equal(readFileSync(join(workspace, '资料.txt'), 'utf8'), sample);
     response.on('close', () => { streamAborted = !response.writableEnded; });
     response.writeHead(200, { 'Content-Type': 'text/event-stream' });
     response.write(': waiting for cancellation\n\n');
@@ -114,7 +140,7 @@ const child = spawn(executable, [cli, '--profile', 'sdk-minimal', '--patch', pat
     TEMP: root, TMP: root, USERPROFILE: home, HOME: home, APPDATA: home, LOCALAPPDATA: home,
     DSH_HOME: join(home, 'dsh'),
     ELECTRON_RUN_AS_NODE: '1',
-    GENELOOP_PROBE_RESULT: result, GENELOOP_PROBE_TEXT: sample, GENELOOP_PROBE_MODEL_PENDING: modelPending,
+    GENELOOP_PROBE_REPORTS: reports, GENELOOP_PROBE_RESULT: result, GENELOOP_PROBE_TEXT: sample, GENELOOP_PROBE_MODEL_PENDING: modelPending,
     DEEPSEEK_BASE_URL: 'http://127.0.0.1:' + fixture.address().port,
     DEEPSEEK_API_KEY: 'geneloop-probe-offline',
   },
@@ -153,12 +179,12 @@ try {
   assert.ok(!outcome.error, outcome.error);
   assert.equal(outcome.pid, child.pid);
   assert.equal(outcome.localRead && outcome.rejectedTraversalAndJunction && outcome.turnCanceled, true);
-  assert.equal(fixtureRequests, 2);
+  assert.equal(fixtureRequests, 3);
   assert.equal(streamAborted, true);
   await rpc(2, 'shutdown');
   child.stdin.end();
   assert.deepEqual(await closed, [0, null]);
-  console.log(JSON.stringify({ kind: 'packaged_windows_harness_probe', ...outcome, initialized: true, gracefulShutdown: true, dependencies: staged.size, fixtureRequests, streamAborted, realModelRequests: 0 }));
+  console.log(JSON.stringify({ kind: 'packaged_windows_harness_probe', ...outcome, inventorySearchReport: true, initialized: true, gracefulShutdown: true, dependencies: staged.size, fixtureRequests, streamAborted, realModelRequests: 0 }));
 } catch (error) {
   if (stderr) console.error(stderr);
   throw error;

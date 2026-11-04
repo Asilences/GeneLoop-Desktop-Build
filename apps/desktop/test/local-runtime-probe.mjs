@@ -2,73 +2,81 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
-import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { rename, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { defineTool } from '@deepseek-ai/dsh-tools';
-import { openWorkspaceReader } from './local-files.mjs';
+import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
+import { openLocalFileAgent } from './local-agent.mjs';
 
 export const name = 'geneloop-local-runtime-probe';
 export const inject = ['agents', 'agentLoop', 'tools'];
 
-async function probe(ctx, reader) {
+async function probe(local) {
   const root = process.cwd();
-  const { agent } = await ctx.agents.create({
-    sessionId: randomUUID(),
-    meta: { cwd: root },
-    agentOptions: { provider: 'deepseek-official', model: 'deepseek-flash', reasoningEffort: 'off' },
-    setup(scope) {
-      scope.tools.guard(call => call.name === 'probe_read' ? undefined : 'Tool outside Windows probe');
-      scope.tools.register(defineTool({
-        name: 'probe_read',
-        description: 'Read a synthetic workspace file for the Windows diagnostic',
-        parameters: { path: { type: 'string', required: true } },
-        output: { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] },
-        async execute({ path }) { return reader.readText(path); },
-      }));
-    },
-  });
+  const { agent } = local;
   const call = (name, path) => agent.ctx.tools.execute({
     name, callId: randomUUID(), agent, arguments: { path }, signal: new AbortController().signal,
   });
-  const read = await call('probe_read', '资料.txt');
+  const read = await call('local_read', '资料.txt');
   assert.equal(read.isError, false, JSON.stringify(read.error));
   assert.equal(read.value, process.env.GENELOOP_PROBE_TEXT);
   for (const path of ['../outside/secret.txt', resolve(root, '../outside/secret.txt'), '越界/secret.txt', '硬链接.txt', '超长.txt', '资料.txt:alternate', 'NUL']) {
-    assert.equal((await call('probe_read', path)).isError, true, path);
+    assert.equal((await call('local_read', path)).isError, true, path);
   }
   assert.equal((await call('pwsh', '资料.txt')).isError, true);
 
-  agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Windows runtime transport diagnostic' }] }));
+  local.submit('Windows runtime transport diagnostic');
   const deadline = Date.now() + 10_000;
   while (!existsSync(process.env.GENELOOP_PROBE_MODEL_PENDING)) {
     assert.ok(Date.now() < deadline, 'Loopback stream never entered waiting state');
     await delay(20);
   }
   assert.equal(agent.status, 'running');
-  agent.cancel({ kind: 'user' });
-  await agent.whenIdle();
+  await local.cancel();
   assert.equal(agent.status, 'idle');
-  reader.close();
-  assert.throws(() => reader.readText('资料.txt'), /授权已关闭/);
+  const disposed = local.close();
+  assert.equal(local.close(), disposed);
+  await disposed;
+  assert.throws(() => local.submit('已关闭'), /本机会话已关闭/);
   return {
     pid: process.pid, localRead: true, rejectedTraversalAndJunction: true,
     rejectedHardlinkOversizeAndDevice: true, revocation: true, shellUnavailable: true,
-    turnCanceled: true, realModelRequests: 0,
+    reportDirectorySeparated: true, enumerationBounded: true, turnCanceled: true, realModelRequests: 0,
   };
 }
 
 export function apply(ctx) {
   void (async () => {
-    let reader;
+    let local;
     let outcome;
     try {
-      reader = openWorkspaceReader(process.cwd());
-      outcome = await probe(ctx, reader);
+      const directory = process.cwd();
+      const reports = process.env.GENELOOP_PROBE_REPORTS;
+      const reader = openWorkspaceReader(directory);
+      try {
+        assert.deepEqual(reader.list('空目录'), { entries: [], truncated: false });
+        const large = reader.list('大量文件');
+        assert.equal(large.entries.length, 200);
+        assert.equal(large.truncated, true);
+        assert.throws(() => reader.list('越界'));
+      } finally {
+        reader.close();
+      }
+      assert.throws(() => reader.readText('资料.txt'), /授权已关闭/);
+      assert.throws(() => openReportWriter(directory, directory), /必须与源工作区分离/);
+      assert.throws(() => openReportWriter(resolve(directory, '空目录'), directory), /必须与源工作区分离/);
+      const writer = openReportWriter(reports, directory);
+      writer.close();
+      assert.throws(() => writer.writeMarkdown('已撤销'), /授权已关闭/);
+
+      local = await openLocalFileAgent(ctx, {
+        directory, reports,
+        model: { provider: 'deepseek-official', model: 'deepseek-flash', reasoningEffort: 'off' },
+      });
+      outcome = await probe(local);
     } catch (error) {
       outcome = { error: error.stack };
     } finally {
-      reader?.close();
+      await local?.close().catch(error => { outcome = { error: error.stack }; });
     }
     const destination = process.env.GENELOOP_PROBE_RESULT;
     await writeFile(destination + '.tmp', JSON.stringify(outcome));
