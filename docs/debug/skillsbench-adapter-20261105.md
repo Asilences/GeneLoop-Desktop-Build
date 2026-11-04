@@ -156,3 +156,9 @@ Python主任务族已预取原`python:3.11-slim`和`python:3.9.19-slim`基础标
 审计发现原 `source_identity` 由 TaskID 与数据集版本生成，EA 因此会把同一任务族的不同原始输入合并。读取 `inspect_benchmark` 现在从已核验的原 manifest 恢复输入摘要，按真实输入实例生成调查侧来源身份。原 family 身份保存在 `decision_context.state.task_family_identity`，原 record、manifest 及其摘要保留。缺少可核验输入摘要的旧记录继续按原 family 保守计数，并标记 `legacy_family_identity`。后续读取投影的输入摘要仍需匹配原 family 和 manifest。
 
 同一 family 的独立输入可以为现有 Investigation 提供两个来源。相同输入改 TaskID、重试和续写继续合并。训练、验证与最终留出的原角色约束仍分别执行，适用域依据实际验收范围记录。本次属于零模型工程诊断，冻结中的 R9/R8 继续使用其原代码快照。
+
+### 2026-11-05 reviewer 证据授权边界
+
+临时合成文件诊断复现了候选 JSON 扩展 reviewer 读取授权的路径。读取候选文件后，其中的 FileRef 被递归加入证据表，随后可按摘要读取原本未列入授权范围的合成目标。诊断仅使用新建的公开标记文本，记录位于 `.local/debug/reviewer-evidence-boundary-20261105/pre-fix.json`，模型调用为0。
+
+reviewer 现沿用 `SkillInfinityRun._register_evidence` 的显式 host 字段规则。原评测与 rollout 的 `record`、`observation`、`evidence_refs` 可供读取，只有显式 `evidence_indexes` 内的 host 索引能够通过其 `evidence_refs` 和 `evidence_indexes` 扩展授权。候选、提案及普通 JSON 的路径和摘要继续作为数据读取。回归同时检查合成 oracleLike 拒绝、普通记录拒绝扩权，以及原 host 索引逐层发现执行事实。旧冻结快照及真实运行记录保留。

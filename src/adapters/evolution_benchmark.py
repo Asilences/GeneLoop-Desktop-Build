@@ -394,25 +394,37 @@ class BenchmarkHost:
         policy = Path(request['reviewer_policy'])
         roots = {'parent': parent, 'candidate': candidate, 'policy': policy.parent}
         references = {}
+        evidence_indexes = set()
 
-        def index_references(value):
-            if isinstance(value, dict):
-                if set(value) == {'path', 'sha256'}:
-                    verify(value)
-                    references[value['sha256']] = value
-                else:
-                    for child in value.values():
-                        index_references(child)
-            elif isinstance(value, list):
-                for child in value:
-                    index_references(child)
+        def register_host_evidence(value):
+            # Match SkillInfinityRun._register_evidence: only explicit host
+            # fields authorize reads, and only host indexes may extend them.
+            if not isinstance(value, dict):
+                raise ValueError('review_host_evidence_index_invalid')
+            for field in ('evidence_refs', 'evidence_indexes'):
+                for reference in value.get(field, []):
+                    if not isinstance(reference, dict) or set(reference) != {'path', 'sha256'}:
+                        raise ValueError('review_host_evidence_reference_invalid')
+                    verify(reference)
+                    references[reference['sha256']] = dict(reference)
+                    if field == 'evidence_indexes':
+                        evidence_indexes.add(reference['sha256'])
 
-        index_references(request)
+        for field in ('evaluation', 'parent_rollout', 'candidate_rollout'):
+            host_result = request.get(field)
+            if host_result is None:
+                continue
+            register_host_evidence(host_result)
+            for name in ('record', 'observation'):
+                if host_result.get(name) is not None:
+                    register_host_evidence({'evidence_refs': [host_result[name]]})
 
         def dispatch(name, arguments):
             if name != 'review_read':
                 raise ValueError('review_tool_unknown')
             if arguments['subject'] == 'evidence':
+                if arguments['resource'] not in references:
+                    raise ValueError('review_evidence_not_authorized')
                 reference = references[arguments['resource']]
                 raw = verify(reference)
                 path = Path(reference['path'])
@@ -424,8 +436,8 @@ class BenchmarkHost:
                 reference = file_ref(path)
                 raw = verify(reference)
             text = raw.decode('utf-8')
-            if path.suffix == '.json':
-                index_references(json.loads(text))
+            if arguments['subject'] == 'evidence' and reference['sha256'] in evidence_indexes:
+                register_host_evidence(json.loads(text))
             offset, limit = arguments.get('offset', 0), arguments.get('limit', 12000)
             if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 64000:
                 raise ValueError('review_page_invalid')

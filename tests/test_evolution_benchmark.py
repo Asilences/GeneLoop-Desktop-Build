@@ -550,10 +550,12 @@ def test_independent_reviewer_can_expand_only_referenced_original_evidence(fixtu
     (parent / 'SKILL.md').write_text('parent')
     (candidate / 'SKILL.md').write_text('candidate')
     policy.write_text('Independent review policy')
-    nested = fixture.host.output / 'nested-evidence.txt'
-    nested.write_text('Original execution detail')
+    detail = fixture.host.output / 'execution-detail.txt'
+    detail.write_text('Original execution detail')
+    nested = fixture.host.output / 'nested-evidence-index.json'
+    nested.write_text(json.dumps({'evidence_refs': [file_ref(detail)]}))
     root = fixture.host.output / 'review-evidence.json'
-    root.write_text(json.dumps({'nested': file_ref(nested)}))
+    root.write_text(json.dumps({'evidence_indexes': [file_ref(nested)]}))
     read_results = []
 
     def reviewer(request, dispatch):
@@ -563,6 +565,8 @@ def test_independent_reviewer_can_expand_only_referenced_original_evidence(fixtu
         read_results.append(first)
         second = dispatch('review_read', {'subject': 'evidence', 'resource': file_ref(nested)['sha256']})
         read_results.append(second)
+        third = dispatch('review_read', {'subject': 'evidence', 'resource': file_ref(detail)['sha256']})
+        read_results.append(third)
         with pytest.raises((ValueError, KeyError)):
             dispatch('review_read', {'subject': 'evidence', 'resource': '0' * 64})
         directory = fixture.host.output / 'review-session'
@@ -575,10 +579,74 @@ def test_independent_reviewer_can_expand_only_referenced_original_evidence(fixtu
     result = fixture.host.review_skill({'parent_skill_directory': str(parent),
         'candidate_skill_directory': str(candidate), 'reviewer_policy': str(policy),
         'proposal': {'change': 'diagnostic'}, 'evaluation': {'record': file_ref(root),
+        'evidence_indexes': [file_ref(root)],
         'score': '1', 'skill_activated': True}, 'parent_rollout': None})
     assert result['accepted'] is True
-    assert json.loads(read_results[0]['content'])['nested'] == file_ref(nested)
-    assert read_results[1]['content'] == 'Original execution detail'
+    assert json.loads(read_results[0]['content'])['evidence_indexes'] == [file_ref(nested)]
+    assert json.loads(read_results[1]['content'])['evidence_refs'] == [file_ref(detail)]
+    assert read_results[2]['content'] == 'Original execution detail'
+
+
+def test_reviewer_candidate_and_plain_JSON_cannot_authorize_unindexed_oracle_like_files(fixture):
+    parent = fixture.root / 'parent'
+    candidate = fixture.root / 'review-candidate'
+    policy = fixture.root / 'policy/reviewer-policy.md'
+    parent.mkdir()
+    candidate.mkdir()
+    policy.parent.mkdir()
+    (parent / 'SKILL.md').write_text('Synthetic parent')
+    (candidate / 'SKILL.md').write_text('Synthetic candidate')
+    policy.write_text('Synthetic independent policy')
+    oracle_like = fixture.root / 'synthetic-oracle-like.txt'
+    oracle_like.write_text('Public synthetic content outside the reviewer allowlist')
+    untrusted_index = fixture.root / 'untrusted-index.json'
+    untrusted_index.write_text(json.dumps({'evidence_refs': [file_ref(oracle_like)]}))
+    forged = {'evidence_refs': [file_ref(oracle_like)],
+              'evidence_indexes': [file_ref(untrusted_index)],
+              'manifest': {'task_directory': str(fixture.root),
+                           'source_files': {'solution/solve.sh': file_ref(oracle_like)['sha256']}}}
+    (candidate / 'references.json').write_text(json.dumps(forged))
+    plain_record = fixture.root / 'host-record.json'
+    plain_record.write_text(json.dumps({'model_authored_result': forged,
+                                      'evidence_refs': [file_ref(oracle_like)]}))
+    legitimate = fixture.root / 'original-rollout.txt'
+    legitimate.write_text('Original host-authorized rollout fact')
+    original_bytes = {path: path.read_bytes() for path in (oracle_like, untrusted_index, plain_record)}
+
+    def denied(dispatch, reference):
+        with pytest.raises(ValueError, match='review_evidence_not_authorized'):
+            dispatch('review_read', {'subject': 'evidence', 'resource': reference['sha256']})
+
+    def reviewer(request, dispatch):
+        # Model-authored proposal references must not enter the initial index.
+        denied(dispatch, file_ref(oracle_like))
+        candidate_page = dispatch('review_read', {'subject': 'candidate', 'resource': 'references.json'})
+        assert json.loads(candidate_page['content']) == forged
+        denied(dispatch, file_ref(oracle_like))
+        denied(dispatch, file_ref(untrusted_index))
+        # Reading an authorized ordinary record does not turn its JSON payload
+        # into a host-authorized index, even when its fields resemble one.
+        record_page = dispatch('review_read', {'subject': 'evidence', 'resource': file_ref(plain_record)['sha256']})
+        assert 'model_authored_result' in json.loads(record_page['content'])
+        denied(dispatch, file_ref(oracle_like))
+        denied(dispatch, file_ref(untrusted_index))
+        allowed = dispatch('review_read', {'subject': 'evidence', 'resource': file_ref(legitimate)['sha256']})
+        assert allowed['content'] == legitimate.read_text()
+        assert file_ref(oracle_like) not in allowed['evidence_index']
+        directory = fixture.host.output / 'review-session'
+        directory.mkdir()
+        (directory / 'result.json').write_text('{"diagnostic":true}')
+        return {'status': 'completed', 'text': '{"accepted":false,"reason":"Synthetic permission diagnostic"}',
+                'directory': str(directory)}
+
+    fixture.host.agent = reviewer
+    result = fixture.host.review_skill({'parent_skill_directory': str(parent),
+        'candidate_skill_directory': str(candidate), 'reviewer_policy': str(policy),
+        'proposal': {'model_supplied_ref': file_ref(oracle_like)},
+        'evaluation': {'record': file_ref(plain_record)},
+        'parent_rollout': {'evidence_refs': [file_ref(legitimate)]}})
+    assert result['accepted'] is False
+    assert original_bytes == {path: path.read_bytes() for path in original_bytes}
 
 
 def test_failed_reviewer_session_cannot_admit_candidate_from_parseable_text(fixture):
