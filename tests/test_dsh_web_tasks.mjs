@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import {execFileSync} from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, utimesSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, utimesSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { randomUUID, createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -23,6 +23,7 @@ import {SessionStore} from '@deepseek-ai/dsh-session';
 import {SessionProjectionRegistry} from '@deepseek-ai/dsh-session-projection';
 import {SystemPrompt} from '@deepseek-ai/dsh-system-prompt';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
+import {pptDeliveryTool,pptPreparationTool} from '../src/adapters/ppt_delivery_pipeline.ts';
 import {SubagentRuntime} from '@deepseek-ai/dsh-subagent';
 import {apply as nativeSpawn} from '@deepseek-ai/dsh-subagent-spawn-in-process';
 import {CommandRuntime} from '@deepseek-ai/dsh-commands';
@@ -269,7 +270,11 @@ async function fixture({ broker = false, dshHome = false, visionReply, statsRepl
       ctx=Object.assign(nativeHost(),ports);
       const { apply } = await import('../src/adapters/dsh_web_tasks.ts'); apply(ctx);
     },
-    stream(request, next) { return listeners.get('llm/stream')[0](request, next); },
+    stream(request, next) {
+      // Run the whole installed middleware chain, as the native host does.
+      // A new observer must never hide the task-envelope guard from this fixture.
+      return [...listeners.get('llm/stream')].reduceRight((tail, hook) => () => hook(request, tail), next)();
+    },
     async complete(task) { emit('agent/status', { agent: agents.get(task.session_id), status: 'idle' });
       await api(undefined, '?task_id=' + task.task_id); },
     async close() {
@@ -2348,6 +2353,39 @@ test('generated DOCX transfers to paper with exact lane bytes',options,async()=>
  }finally{await f.close();}
 });
 
+test('PPT revision with a new attachment carries the editable draft before many preview PNGs after restart',options,async()=>{
+ const f=await fixture({broker:true,scenes:attachmentScenes(),capability_profile:'new-scene',comparison_scenes:['ppt']});
+ try{
+  const {sessionId}=await f.ctx.sessionController.create({});
+  const first=await f.ctx.sessionController.prompt({sessionId,requestId:'ppt-many-previews',mode:'queue',
+   content:[{type:'text',text:'/ppt Make a presentation'}]},new AbortController().signal);
+  const original=await settleAttachmentTurn(f,sessionId,first.comparison_id,async task=>{
+   const folder=join(f.directory,'sessions',task.session_id,'work','outputs','code');mkdirSync(folder,{recursive:true});
+   // Routing diagnostic markers, not real authored PPT/PDF/PNG quality evidence.
+   for(const name of ['deck.pptx','deck.pdf',...Array.from({length:15},(_,i)=>`page-${i+1}.png`)]){
+    const path=join(folder,name);writeFileSync(path,name+'-'+task.session_id);
+    const at=new Date(Date.parse(task.started_at)+1);utimesSync(path,at,at);
+   }
+   await new Promise(r=>setTimeout(r,15));
+  });
+  await f.restart();
+  const image=await f.ctx.fileUploads.uploadStream({sessionId,name:'new-figure.png',data:(async function*(){yield Buffer.from('new figure diagnostic');})()});
+  const next=await f.ctx.sessionController.prompt({sessionId,requestId:'ppt-add-figure',mode:'queue',
+   content:[{type:'text',text:'/ppt Add this figure to the same draft; preserve all existing slides'},{type:'file',receiptId:image.receiptId}]},new AbortController().signal);
+  const revised=await settleAttachmentTurn(f,sessionId,next.comparison_id);
+  assert.equal(revised.status,'completed',JSON.stringify(revised));
+  for(const lane of ['baseline','motif']){
+   const task=(await f.api()).value.tasks.find(t=>t.task_id===revised.lanes[lane].task_id);
+   const deck=task.scene_inputs.find(r=>r.name==='deck.pptx'),pdf=task.scene_inputs.find(r=>r.name==='deck.pdf');
+   assert.ok(deck,'page previews must not crowd out the editable draft');assert.ok(pdf);
+   assert.ok(task.scene_inputs.some(r=>r.name==='new-figure.png'));
+   const work=join(f.directory,'sessions',task.session_id,'work','inputs');
+   assert.equal(readFileSync(join(work,deck.file),'utf8'),'deck.pptx-'+original.lanes[lane].session_id);
+   assert.equal(readFileSync(join(work,pdf.file),'utf8'),'deck.pdf-'+original.lanes[lane].session_id);
+  }
+ }finally{await f.close();}
+});
+
 test('native Chat DOCX is pinned before switching to paper and remains readable after a restart',options,async()=>{
  const f=await fixture({broker:true,scenes:attachmentScenes(),capability_profile:'new-scene',comparison_scenes:['paper-proofreading']});
  try{
@@ -2985,5 +3023,30 @@ test('large native images pass paired task preview without base64 or scene quota
    assert.equal(call.content.filter(p=>p.type==='image').length,9);
    assert.equal(call.content.find(p=>p.type==='image').data,image.data);
   }
+ }finally{await f.close();}
+});
+
+test('actual PPT adapter completion freezes single-learning evidence before another message edits outputs',
+ {skip:!process.env.SSS_PYTHON},async()=>{
+ const scenes=[{...multiScenes[0],id:'ppt',label:'PPT',adapter:'ppt',ppt_execution_strategy:'ppt_master',mcp_rows:[]}];
+ const f=await fixture({scenes,provider_mode:'real',capability_profile:'ppt',fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool]});
+ try{
+  const task=await f.preview('Synthetic completion-boundary diagnostic; no cloud model call');
+  await f.submit(task);
+  const output=join(f.directory,'sessions',task.session_id,'work/outputs/code');mkdirSync(output,{recursive:true});
+  const path=join(output,'diagnostic.pptx');writeFileSync(path,'synthetic bytes, not an authored deck');
+  const current=(await f.api(undefined,'?task_id='+task.task_id)).value;
+  const stamp=new Date(Date.parse(current.started_at)+1);utimesSync(path,stamp,stamp);
+  await new Promise(resolve=>setTimeout(resolve,10));await f.complete(task);
+  const receiptPath=join(f.directory,'tasks',task.task_id,'ppt-learning-delivery.json');
+  assert.equal(existsSync(receiptPath),true);
+  const receipt=JSON.parse(readFileSync(receiptPath,'utf8'));
+  assert.equal(receipt.kind,'ppt_single_delivery_v1');assert.equal(receipt.mode,'baseline');
+  assert.equal(receipt.task_id,task.task_id);assert.equal(receipt.artifacts.length,1);
+  const row=receipt.artifacts[0],frozen=join(f.directory,'comparison-artifacts','native-'+task.task_id,'baseline/0',row.id);
+  writeFileSync(path,'later turn');assert.equal(readFileSync(frozen,'utf8'),'synthetic bytes, not an authored deck');
+  assert.equal(existsSync(join(f.directory,'comparisons.json')),false);
+  // This fixture records model-selection RPCs in modelCalls; those are not
+  // provider HTTP requests. No fake request-count assertion is used here.
  }finally{await f.close();}
 });

@@ -2,6 +2,15 @@
  * The Harness retains max-tokens as a turn-end reason after steering, so its
  * later tool-calls also need a continuation until the provider actually stops.
  */
+/** Keep editable drafts ahead of their previews when a follow-up adds files.
+ * Callers still enforce the owning conversation/lane and read immutable bytes.
+ * This is ordinary input recovery, shared by Baseline and Motif, not a bypass.
+ */
+export function prioritizePptDeliveries<T extends {row:{name:string}}>(rows:T[]):T[]{
+  const priority=(name:string)=>/\.pptx$/i.test(name)?0:/\.pdf$/i.test(name)?1:2;
+  return [...rows].reverse().sort((a,b)=>priority(a.row.name)-priority(b.row.name));
+}
+
 export function createPptMasterRecovery(){
   let finish:string|null=null, recovering=false, continuations=0;
   return {

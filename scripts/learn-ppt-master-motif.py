@@ -45,7 +45,20 @@ def code_paths():
         'src/adapters/geneloop_presentation.py','src/adapters/geneloop_presentation.ts','src/adapters/geneloop_presentation_render.py',
         'src/adapters/deepseek_cost_gate.py','src/adapters/web_task_budget.py','scripts/web_budget_broker.mjs',
         'scripts/serve-web-budget.py','config/pdf-ocr-assets.json')]
-    files += [ROOT/p for p in ('src/adapters/harless_ppt_learning.ts','scripts/learn-web-ppt-tasks.py')]
+    files += [ROOT/p for p in ('src/adapters/harless_ppt_learning.ts','scripts/learn-web-ppt-tasks.py',
+        'src/adapters/ppt_delivery_quality.py','scenarios/ppt_master/quality-rubric.json',
+        'src/adapters/rsi_quality.py','src/adapters/rsi_quality.ts','src/adapters/rsi_protocol.py',
+        'src/adapters/rsi_protocol.ts','schemas/rsi-protocol-v1.schema.json')]
+    files += [ROOT/p for p in ('src/adapters/ppt_program_learning.py','src/adapters/ppt_program_learning.ts',
+        'src/adapters/artifact_motif_runtime.ts','src/adapters/artifact_motif_shell.ts',
+        'src/adapters/artifact_motif_trace.ts','src/adapters/artifact_motif_compiler.py',
+        'scripts/learn-artifact-motifs.py','scripts/certify-artifact-motifs.mjs','scripts/run-artifact-motif.mjs','scripts/harness-web.py',
+        'src/adapters/ppt_program_broker.ts','src/adapters/geneloop_command_client.mjs',
+        'src/adapters/ppt_learning_evidence.py','src/adapters/ppt_learning_evidence.ts')]
+    files += [ROOT/p for p in ('src/adapters/ppt_page_learning.py','src/adapters/ppt_component_learning.py',
+        'src/adapters/ppt_component_tool.ts','src/adapters/ppt_delivery_pipeline.ts','src/adapters/ppt_preparation_runner.py',
+        'src/adapters/ppt_delivery_runner.py','src/adapters/ppt_design_preflight.py','src/adapters/ppt_annotation_repair.py',
+        'src/adapters/ppt_component_literals.py','src/adapters/geneloop_native_work.ts')]
     return sorted(set(files+[Path(__file__).resolve()]))
 
 

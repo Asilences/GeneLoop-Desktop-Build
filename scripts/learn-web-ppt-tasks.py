@@ -16,13 +16,14 @@ import sys
 import subprocess
 import time
 from uuid import uuid4
-import zipfile
-from xml.etree import ElementTree as ET
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from src.adapters.file_lock import exclusive_lock
 from src.adapters.harless_rsi_bundle import load_product_bundle
+from src.adapters.ppt_delivery_quality import inspect_delivery, record_quality
+from src.adapters.ppt_program_learning import advance_programs
+from src.adapters.ppt_learning_evidence import freeze_state,verify_state_binding
 spec=importlib.util.spec_from_file_location('ppt_master_compiler',ROOT/'scripts/learn-ppt-master-motif.py')
 compiler=importlib.util.module_from_spec(spec);spec.loader.exec_module(compiler)
 SHA=re.compile(r'[a-f0-9]{64}')
@@ -43,7 +44,7 @@ def file(parent,path):
 def finite(value):return type(value) in (int,float) and math.isfinite(value) and value>=0
 
 
-def delivery(output,turn,lane,locks):
+def delivery(output,turn,lane,locks,*,store=None,info=None,review=None):
     """Verify actual immutable download bytes, not the model's success claim."""
     row=turn['lanes'][lane]
     if row.get('status')!='completed' or not SHA.fullmatch(row.get('output_sha256','')):raise ValueError('delivery not completed')
@@ -51,21 +52,19 @@ def delivery(output,turn,lane,locks):
     for artifact in row.get('artifacts',[]):
         if not re.fullmatch(r'[a-f0-9]{32}-[0-9]+',artifact.get('id','')) or type(artifact.get('attempt')) is not int:
             raise ValueError('invalid immutable artifact identity')
-        path=file(output,output/'comparison-artifacts'/turn['id']/lane/str(artifact['attempt'])/artifact['id'])
+        snapshot_turn=turn['id'];snapshot_lane=lane
+        if turn.get('evidence_kind')=='single_task':
+            if turn.get('presentation')!='single' or turn['id']!='single-'+row['task_id'] or lane!=turn.get('learning_lane'):
+                raise ValueError('invalid single task delivery binding')
+            snapshot_turn='native-'+row['task_id'];snapshot_lane='baseline'
+            if artifact['attempt']!=0 or artifact.get('verification')!='code-output-v1':raise ValueError('single task artifact not verified')
+        path=file(output,output/'comparison-artifacts'/snapshot_turn/snapshot_lane/str(artifact['attempt'])/artifact['id'])
         if sha(path)!=artifact.get('sha256') or path.stat().st_size!=artifact.get('bytes'):raise ValueError('delivery bytes changed')
         locks[path.relative_to(output).as_posix()]=sha(path)
         files.setdefault(Path(artifact['name']).suffix.lower(),[]).append(path)
-    if not all(files.get(ext) for ext in ('.pptx','.pdf','.png')):raise ValueError('PPTX/PDF/PNG delivery missing')
-    import fitz
-    with zipfile.ZipFile(files['.pptx'][-1]) as archive:
-        slides=[name for name in archive.namelist() if re.fullmatch(r'ppt/slides/slide[0-9]+\.xml',name)]
-        notes=[name for name in archive.namelist() if re.fullmatch(r'ppt/notesSlides/notesSlide[0-9]+\.xml',name)]
-        if not slides or len(notes)<len(slides):raise ValueError('slides or speaker notes missing')
-        if not any(ET.fromstring(archive.read(name)).find('.//{http://schemas.openxmlformats.org/drawingml/2006/main}t') is not None for name in slides):
-            raise ValueError('editable text missing')
-        with fitz.open(stream=files['.pdf'][-1].read_bytes(),filetype='pdf') as pdf:
-            if pdf.page_count!=len(slides):raise ValueError('rendered page count differs')
-    if any(not path.read_bytes().startswith(b'\x89PNG\r\n\x1a\n') for path in files['.png']):raise ValueError('invalid PNG preview')
+    details=inspect_delivery(files)
+    if store is not None:
+        return record_quality(output,store,turn,lane,info,files,details,review,locks)
     return {ext:len(paths) for ext,paths in files.items()}
 
 
@@ -91,32 +90,91 @@ def positive(review,turn,lane):
         finite(review.get('human_minutes')) and turn['lanes'][lane].get('feedback')!='down')
 
 
+def decision_root(output,identity,request,task_request,state):
+    """Comparison turns have fresh child Sessions; the parent owns independence."""
+    journal=read(file(output,output/'comparisons.json')) if (output/'comparisons.json').exists() else {'principal':request['user'],'turns':[]}
+    if journal.get('principal')!=request['user']:raise ValueError('foreign comparison lineage')
+    parents=set()
+    for turn in journal.get('turns',[]):
+        for lane,row in turn.get('lanes',{}).items():
+            expected={'compare-'+hashlib.sha256(json.dumps([turn['id'],lane,i],separators=(',',':')).encode()).hexdigest()[:48]
+                      for i in range(row.get('attempt',0)+1)}
+            if row.get('task_id')!=identity and task_request.get('request_id') not in expected:continue
+            parent=turn.get('session_id')
+            if parent is not None:
+                if not isinstance(parent,str) or not parent or len(parent)>256:raise ValueError('invalid comparison lineage')
+                parents.add(parent)
+    if len(parents)>1:raise ValueError('ambiguous comparison lineage')
+    if parents:return 'web-parent-'+next(iter(parents))
+    if (output/'tasks'/identity/'ppt-learning-delivery.json').exists():
+        parent=state.get('session_id')
+        if not isinstance(parent,str) or not parent or len(parent)>256:raise ValueError('invalid single task lineage')
+        return 'web-parent-'+parent
+    # Legacy records without parent metadata retain their existing source root.
+    return 'web-'+(state.get('source_task_id') or state['session_id'])
+
+
 def task_info(output,identity,request,*,baseline=False):
     if not TASK.fullmatch(identity):raise ValueError('invalid task identity')
     task=output/'tasks'/identity
     names=['task-state.json','effective-config.json','task.json','budget-route.json','learning-accounting.json','events.jsonl','answer.md']
-    locks={file(output,task/name).relative_to(output).as_posix():sha(task/name) for name in names}
+    locks={file(output,task/name).relative_to(output).as_posix():sha(task/name) for name in names[1:]}
+    file(output,task/names[0])
     state,effective,req,route,accounting=[read(task/name) for name in names[:5]]
     if any(row.get('task_id')!=identity for row in (state,effective,req,accounting)) or any(row.get('user_id')!=request['user'] for row in (state,effective)):
         raise ValueError('task ownership or identity changed')
     if (state.get('scene')!='ppt' or effective.get('provider_mode')!='real' or effective.get('ppt_execution_strategy')!='ppt_master' or
         state.get('session_id')!=req.get('session_id') or accounting.get('session_id')!=route.get('budget_session_id')):
         raise ValueError('not an owned real ppt-master task')
-    if baseline and (any(row.get('mode')!='baseline' for row in (state,effective,req)) or state.get('status')!='completed' or state.get('failure') or state.get('stats',{}).get('verified_skips',0)):
+    if baseline and (any(row.get('mode')!='baseline' for row in (state,effective,req)) or state.get('status')!='completed' or state.get('failure') or state.get('stats',{}).get('verified_skips',0) or
+                     req.get('role') in ('holdout','evaluate','benchmark') or req.get('learning_eligible') is False):
         raise ValueError('training requires a successful original Baseline')
     totals=compiler.accounting.reconcile(state,req,accounting['request_receipts'],qualifying=baseline)
     if (not totals['usage_complete'] or not finite(totals['proxy_peak_usd']) or
         any(type(v) is not int or v<0 for v in totals['tokens'].values())):raise ValueError('unsettled accounting')
+    binding=freeze_state(output,task,state)
+    locks[binding.relative_to(output).as_posix()]=sha(binding)
     schemas=compiler.accounting.native_schemas(effective['tools'])
     sources=sorted(row.get('version_sha256','') for row in state.get('scene_inputs',[]))
     if not sources or any(not SHA.fullmatch(v) for v in sources):raise ValueError('missing frozen source versions')
     question=' '.join(' '.join(p['text'] for p in req['content'] if p.get('type')=='text').casefold().split())
-    decision=state.get('source_task_id') or state['session_id']
+    decision=decision_root(output,identity,request,req,state)
     return {'task_id':identity,'task_dir':str(task),'state':state,'effective':effective,'request':req,'schemas':schemas,'totals':totals,'locks':locks,
-        'decision_id':'web-'+decision,'source_signature':digest(sources),'question_sha256':digest(question),
+        'decision_id':decision,'source_signature':digest(sources),'question_sha256':digest(question),
         'compatibility':digest({'tools':schemas,'model':effective.get('model'),'provider':effective.get('provider'),
             'reasoning':effective.get('reasoning_effort'),'skill':effective.get('skill_package_sha256'),
             'instructions':effective.get('instructions_sha256'),'compression':effective.get('compression')})}
+
+
+def single_turn(output,info,request):
+    """Admit a real single task through a separate host-owned receipt.
+
+    This common delivery view is in-memory only. It is never a comparison,
+    a counterfactual cost, or evidence that the task passed scientific review.
+    """
+    path=Path(info['task_dir'])/'ppt-learning-delivery.json'
+    if not path.exists():return None
+    path=file(output,path);row=read(path);identity=info['task_id']
+    if (row.get('schema_version')!=1 or row.get('kind')!='ppt_single_delivery_v1' or row.get('user')!=request['user'] or
+        row.get('scope')!=request['scope'] or row.get('task_id')!=identity or row.get('session_id')!=info['state']['session_id'] or
+        row.get('mode') not in ('baseline','execute') or row.get('status')!='completed' or row.get('snapshot_turn')!='native-'+identity or row.get('snapshot_lane')!='baseline' or
+        any(item.get('mode')!=row['mode'] for item in (info['state'],info['effective'],info['request'])) or info['state'].get('status')!='completed' or info['state'].get('failure')):
+        raise ValueError('single task delivery identity or origin invalid')
+    artifacts=row.get('artifacts')
+    if not isinstance(artifacts,list) or not artifacts or not SHA.fullmatch(row.get('output_sha256','')):
+        raise ValueError('single task immutable delivery missing')
+    # Match the original TypeScript JSON.stringify bytes, not Python's sorted digest.
+    raw=json.dumps(artifacts,ensure_ascii=False,separators=(',',':'),allow_nan=False).encode()
+    if hashlib.sha256(raw).hexdigest()!=row['output_sha256']:raise ValueError('single task delivery digest changed')
+    index=file(output,output/'comparison-artifacts'/('native-'+identity)/'baseline'/'0'/'index.json')
+    frozen=read(index)
+    if artifacts!=[r for r in frozen if r.get('verification')=='code-output-v1']:raise ValueError('single task snapshot index changed')
+    info['locks'][path.relative_to(output).as_posix()]=sha(path)
+    info['locks'][index.relative_to(output).as_posix()]=sha(index)
+    lane='baseline' if row['mode']=='baseline' else 'motif'
+    return {'id':'single-'+identity,'scene':'ppt','session_id':row['session_id'],'presentation':'single','evidence_kind':'single_task',
+            'learning_lane':lane,'status':'completed','lanes':{lane:{'task_id':identity,'status':'completed','attempt':0,
+            'output_sha256':row['output_sha256'],'artifacts':artifacts,'feedback':None}}}
 
 
 def validate_admission(output,store,pointer,request):
@@ -126,9 +184,24 @@ def validate_admission(output,store,pointer,request):
     admission=read(path)
     if admission.get('user')!=request['user'] or admission.get('scope')!=request['scope']:raise ValueError('foreign candidate')
     for name,version in admission['evidence_locks'].items():
-        if sha(file(output,output/name))!=version:raise ValueError('candidate evidence changed')
+        path=file(output,output/name)
+        if sha(path)!=version:raise ValueError('candidate evidence changed')
+        verify_state_binding(output,path)
     load_product_bundle(ROOT,folder/'release','ppt',private_root=store)
     return folder,admission
+
+
+def comparison_costs(turn,infos,locks):
+    """Use every paid attempt, shared by graph and program promotion."""
+    attempts={}
+    for lane in ('baseline','motif'):
+        expected={'compare-'+hashlib.sha256(json.dumps([turn['id'],lane,i],separators=(',',':')).encode()).hexdigest()[:48] for i in range(turn['lanes'][lane]['attempt']+1)}
+        runs=[item for item in infos.values() if item['request'].get('request_id') in expected]
+        if {item['request'].get('request_id') for item in runs}!=expected:raise ValueError('retry accounting incomplete')
+        for item in runs:locks.update(item['locks'])
+        attempts[lane]={'requests':sum(item['totals']['requests'] for item in runs),'proxy_usd':sum(item['totals']['proxy_peak_usd'] for item in runs),
+            'tokens':sum(item['totals']['tokens']['total_tokens'] for item in runs),'attempts':len(runs)}
+    return attempts
 
 
 def evaluate(output,store,pointer,request,turns,reviewed,infos):
@@ -164,16 +237,10 @@ def evaluate(output,store,pointer,request,turns,reviewed,infos):
         if any(base[key] in seen[key] for key in seen):continue
         for key in seen:seen[key].add(base[key])
         locks={**base['locks'],**info['locks']}
-        delivery(output,turn,'baseline',locks);delivery(output,turn,'motif',locks)
+        quality_records={lane:delivery(output,turn,lane,locks,store=store,info=item,review=review)
+            for lane,item,review in [('baseline',base,base_review),('motif',info,opt_review)]}
         # Every prior paid attempt belongs to this comparison's full cost.
-        attempts={}
-        for lane in ('baseline','motif'):
-            expected={'compare-'+hashlib.sha256(json.dumps([turn['id'],lane,i],separators=(',',':')).encode()).hexdigest()[:48] for i in range(turn['lanes'][lane]['attempt']+1)}
-            runs=[item for item in infos.values() if item['request'].get('request_id') in expected]
-            if {item['request'].get('request_id') for item in runs}!=expected:raise ValueError('retry accounting incomplete')
-            for item in runs:locks.update(item['locks'])
-            attempts[lane]={'requests':sum(item['totals']['requests'] for item in runs),'proxy_usd':sum(item['totals']['proxy_peak_usd'] for item in runs),
-                'tokens':sum(item['totals']['tokens']['total_tokens'] for item in runs),'attempts':len(runs)}
+        attempts=comparison_costs(turn,infos,locks)
         bypass=info['state'].get('stats',{}).get('verified_skips',0)
         audit=file(output,Path(info['task_dir'])/'motif-audit.jsonl')
         rows=[json.loads(line) for line in audit.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -184,7 +251,7 @@ def evaluate(output,store,pointer,request,turns,reviewed,infos):
         good=attempts['motif']['proxy_usd']<attempts['baseline']['proxy_usd'] and (not human_reviewed or opt_review['human_minutes']<=base_review['human_minutes'])
         pairs.append({'comparison_id':turn['id'],'baseline':attempts['baseline'],'motif':attempts['motif'],
             'baseline_human_minutes':base_review['human_minutes'] if base_review else None,'motif_human_minutes':opt_review['human_minutes'] if opt_review else None,
-            'verified_skips':bypass,'mechanical_quality_passed':True,'scientific_quality_reviewed':human_reviewed,'cost_passed':good,'evidence_locks':locks,
+            'verified_skips':bypass,'mechanical_quality_passed':True,'scientific_quality_reviewed':human_reviewed,'quality_records':quality_records,'cost_passed':good,'evidence_locks':locks,
             'review_ids':[review['id'] for review in (base_review,opt_review) if review]})
         if not good:blocked.append({'id':turn['id'],'reason':'cost_or_human_revision_regression'})
     return folder,admission,pairs,blocked
@@ -210,14 +277,25 @@ def advance(request_path):
         comparison_path=output/'comparisons.json'
         if request.get('automatic_structural_learning') is not True:
             status({'status':'disabled_by_operator'});return
-        if not comparison_path.exists():status({'status':'waiting_for_eligible_tasks','eligible_tasks':0});return
-        comparisons=read(file(output,comparison_path))
+        comparisons=read(file(output,comparison_path)) if comparison_path.exists() else {'principal':request['user'],'turns':[]}
         if comparisons.get('principal')!=request['user']:raise ValueError('foreign comparison store')
         turns={turn['id']:turn for turn in comparisons['turns'] if turn.get('scene')=='ppt'}
-        reviewed=reviews(output,store,request,turns);infos={};excluded=[]
+        infos={};excluded=[]
         for identity in dict.fromkeys(ids):
             try:infos[identity]=task_info(output,identity,request)
             except (ValueError,KeyError,OSError,TypeError) as error:excluded.append({'task_id':identity,'reason':str(error)[:160]})
+        paired_ids={row.get('task_id') for turn in turns.values() for row in turn.get('lanes',{}).values()}
+        for identity,info in infos.items():
+            if identity in paired_ids:continue
+            try:
+                single=single_turn(output,info,request)
+                if single is not None:turns[single['id']]=single
+            except (ValueError,KeyError,OSError,TypeError) as error:excluded.append({'task_id':identity,'reason':str(error)[:160]})
+        reviewed=reviews(output,store,request,turns)
+        try:advance_programs(output,store,request,infos,turns,reviewed,delivery=delivery,positive=positive,costs=comparison_costs)
+        except (ValueError,KeyError,OSError,TypeError,subprocess.SubprocessError) as error:
+            save(store/'program-status.json',{'status':'failed','reason':str(error)[:200],'extra_provider_requests':0})
+            save(store/'program-suspended.json',{'reason':'program_worker_failed'})
         selected_path=store/'selected.json';candidate_path=store/'candidate.json'
         candidate=read(candidate_path) if candidate_path.exists() else None
         if candidate:
@@ -230,7 +308,8 @@ def advance(request_path):
                     turn=turns.get(ref['comparison_id']);review=reviewed.get((ref['comparison_id'],'baseline'))
                     if not turn or not positive(review,turn,'baseline') or ref['review_id'] is not None and (not review or review['id']!=ref['review_id']):
                         blocked.append({'id':ref['comparison_id'],'reason':'support_review_changed'})
-                quality_promoted=len(pairs)>=2 and not blocked and all(pair['scientific_quality_reviewed'] for pair in pairs)
+                quality_promoted=len(pairs)>=2 and not blocked and all(pair['scientific_quality_reviewed'] and
+                    all(q['status']=='passed' for q in pair['quality_records'].values()) for pair in pairs)
                 save(folder/'evaluation.json',{'pairs':pairs,'blocked':blocked,'required_independent_pairs':2,'quality_cost_promoted':quality_promoted,
                     'mechanical_cost_promoted':len(pairs)>=2 and not blocked,'quality_scope':'mechanical_delivery_and_guarded_structure; scientific quality unknown unless explicitly reviewed'})
                 if blocked:
@@ -258,11 +337,13 @@ def advance(request_path):
                 status({'status':'disabled','round':candidate['round'],'reason':str(error)[:160]});return
         candidates=[];seen={key:set() for key in ('decision_id','source_signature','question_sha256')}
         for turn in turns.values():
+            if 'baseline' not in turn.get('lanes',{}):continue
             review=reviewed.get((turn['id'],'baseline'))
             if not positive(review,turn,'baseline'):continue
             identity=turn['lanes']['baseline'].get('task_id')
             try:
-                info=task_info(output,identity,request,baseline=True);delivery(output,turn,'baseline',info['locks'])
+                info=task_info(output,identity,request,baseline=True)
+                info['quality_record']=delivery(output,turn,'baseline',info['locks'],store=store,info=info,review=review)
                 if any((info['compatibility'],info[key]) in seen[key] for key in seen):continue
                 for key in seen:seen[key].add((info['compatibility'],info[key]))
                 info['support_review']={'comparison_id':turn['id'],'review_id':review['id'] if review else None};candidates.append(info)

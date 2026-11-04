@@ -56,9 +56,12 @@ function textFields(value: any, key = ''): any {
   return value;
 }
 
+const isProgramCatalog = (message: any) => message?.source?.kind === 'plugin' &&
+  ['ppt-program-library', 'artifact-motif'].includes(message.source.plugin);
+
 function messageView(message: any,expectedOriginal?:readonly any[]): any {
   if (!message) return message;
-  if (isAttachmentContext(message)) return {...message,content:[]};
+  if (isAttachmentContext(message) || isProgramCatalog(message)) return {...message,content:[]};
   if (message.source?.kind === 'user') {
     const content=humanContent(message.content??[],expectedOriginal);
     return content.length===(message.content??[]).length&&content.every((part,index)=>part===message.content[index])?message:{...message,content};
@@ -103,7 +106,7 @@ export function createPublicStreamProjection() {
 }
 
 export function publicSessionEvent(event: any,expectedOriginal?:readonly any[]): any {
-  if (event.type === 'user/message' && (event.data?.source?.kind === 'user'||isAttachmentContext(event.data))) {
+  if (event.type === 'user/message' && (event.data?.source?.kind === 'user'||isAttachmentContext(event.data)||isProgramCatalog(event.data))) {
     const data=messageView(event.data,expectedOriginal);return data===event.data?event:{...event,data};
   }
   let data = event.data;

@@ -16,6 +16,9 @@ import {symbols as cordisSymbols} from '@deepseek-ai/cordis';
 import { createOnlineInterceptor, loopbackSimilarity } from './dsh_online_motif.mjs';
 import {createPaperLearning} from './harless_paper_learning.ts';
 import {createPptLearning} from './harless_ppt_learning.ts';
+import {installPptProgramLearning} from './ppt_program_learning.ts';
+import {pptComponentScene,pptComponentGraphTools} from './ppt_component_tool.ts';
+import {pptDeliveryScene,pptDeliveryGraphTools,recordPptDeliveryReuse} from './ppt_delivery_pipeline.ts';
 import { createPaperFlowShadowObserver } from './harless_paper_flow_shadow.ts';
 import { digest, offeredSchemaMatches } from '../motif_core/online_skill_runtime.mjs';
 import { normalizeWebTaskRequest, WebTaskRequestError } from './web_task_request.ts';
@@ -26,7 +29,7 @@ import type { Scene, Selection } from './harless_settings.ts';
 import type { NormalizedWebTask, PromptPart, ExecutionMode } from './web_task_request.ts';
 import {bindUploadedPptTask,bindApprovedUploadedReadTask,bindUploadedSourceTask,closedPaperDocumentFirstPage,closedPptSourceFirstPage,closedPptConvertedSource,structuralOnlySimilarity} from './harless_rsi_binding.ts';
 import {videoProgramScene,videoProgramUnavailable,videoProgramReuse} from './harless_video_program.ts';
-import {createPptMasterRecovery} from './ppt_master_recovery.ts';
+import {createPptMasterRecovery,prioritizePptDeliveries} from './ppt_master_recovery.ts';
 import {createComparisonService,ComparisonError} from './harless_comparison.ts';
 import { attachmentContextMessage, attachmentContextPolicy, attachmentEvidence, attachmentImages, attachmentImageKey,
   uniqueAttachmentEvidence,uniqueAttachmentImages,humanContent,isAttachmentContext } from './harless_attachment_context.ts';
@@ -323,7 +326,7 @@ export function apply(ctx: any) {
       session_id: sessionId ?? null, model_calls: 0 };
   }
   const certifiedSchemaMatches = (scene: Scene, tools: any[]) =>
-    [scene.certified_tool_schemas, ...(scene.certified_tool_schema_variants ?? [])].some(row => row && digest(row) === digest(sceneCertifiedTools(scene, tools)));
+    [scene.certified_tool_schemas, ...(scene.certified_tool_schema_variants ?? [])].some(row => row && digest(row) === digest(sceneCertifiedTools(scene, pptComponentGraphTools(scene,pptDeliveryGraphTools(scene,tools)))));
   async function setSelection(sessionId: string | undefined, patch: unknown) {
     if (sessionId) await ensureOwned(sessionId);
     settingsView(sessionId); // ownership before mutation
@@ -517,7 +520,7 @@ export function apply(ctx: any) {
   const paperLearning=createPaperLearning({output:config.output,user:principal,scope:runScope,
     python:config.provider_mode==='real'?(process.env.SSS_PYTHON??config.learning_python):undefined,taskIds:()=>[...indexedTasks]});
   const pptLearning=createPptLearning({output:config.output,user:principal,scope:runScope,
-    python:config.provider_mode==='real'?(process.env.SSS_PYTHON??config.learning_python):undefined,taskIds:()=>[...indexedTasks]});
+    python:config.provider_mode==='real'?(process.env.SSS_PYTHON??config.learning_python):undefined,resources:config.command_resources,taskIds:()=>[...indexedTasks]});
   let creation: Promise<unknown> = Promise.resolve();
   const active = new Map<string, { comparison?: string; provider: string }>();
   // Serial admission prevents two preview/submit retries from creating duplicate work.
@@ -550,6 +553,9 @@ export function apply(ctx: any) {
     return tasks.get(id)!;
   }
   const forSession = (id: string): Task | undefined => tasks.get(sessions.get(id) ?? '');
+  if(config.provider_mode==='real')installPptProgramLearning(ctx,{current:forSession,resolve:()=>pptLearning.program(),resources:config.command_resources,
+    deliveryFontRules:()=>pptLearning.deliveryFontRules(),
+    reused:(task,count)=>{task.stats.program_reuses=Number(task.stats.program_reuses??0)+count;record(task);}});
   const closingTurns=createClosingTurnMirror((task,event)=>
     appendFileSync(join(task.output,'events.jsonl'),JSON.stringify(event)+'\n',{mode:0o600}));
   const delegation=installTaskDelegation(ctx,{taskForSession:forSession,
@@ -777,8 +783,8 @@ export function apply(ctx: any) {
     goals.disarmTask(task);
     task.status = status; task.failure = failure; task.finished_at = utc();
     // Pin command bytes before another turn can edit the persistent workspace.
-    if (task.scene.adapter === 'workspace' && status === 'completed' && !comparisons?.isLane(task.request.session_id)) {
-      try { nativeDeliveries(task); } catch { task.failure = 'delivery_snapshot_failed'; }
+    if ((task.scene.adapter === 'workspace'||task.scene.ppt_execution_strategy==='ppt_master') && status === 'completed' && !comparisons?.isLane(task.request.session_id)) {
+      try { pptLearning.captureSingle(task,nativeDeliveries(task)); } catch { task.failure = 'delivery_snapshot_failed'; }
     }
     task.input_abort?.abort(Error('task_finished'));
     progress.get(task.request.task_id)?.finish(status);
@@ -1250,7 +1256,7 @@ export function apply(ctx: any) {
       delivery.push({ type: 'text', text: `\n\n[来源 ${reference.resource_id}；版本 ${resource.version}]\n${resource.text}` });
     }
     const originalScene=paperLearning.resolve(sessionScene(existingSession ?? '', sceneFor(request.capability_profile)));
-    const scene = videoProgramScene(requestedMode==='baseline'?originalScene:pptLearning.resolve(originalScene),request.mode);
+    const scene = pptDeliveryScene(pptComponentScene(videoProgramScene(requestedMode==='baseline'?originalScene:pptLearning.resolve(originalScene),request.mode),request.mode,config.provider_mode==='real'&&!!pptLearning.program()),config.provider_mode==='real');
     if (existingSession && legacyChatSessions.has(existingSession) && request.content.some(part => part.type !== 'text'))
       throw new TaskError('new_session_required', '历史会话可以继续文字对话；使用文件或场景工具请新建会话。', 409);
     if (scene.unavailable_reason) throw new TaskError('scene_not_connected', scene.unavailable_reason, 409);
@@ -1829,7 +1835,8 @@ export function apply(ctx: any) {
           const carryResult = async (name: string, read: () => Uint8Array) => {
             await carry(name, read());
           };
-          const inheritedArtifacts = [...(turn.prior_artifacts?.[lane] ?? [])].reverse().sort((a: any,b: any) => Number(/(?:research_)?report\.pdf$/i.test(b.row.name)) - Number(/(?:research_)?report\.pdf$/i.test(a.row.name)));
+          const inheritedArtifacts = target.adapter==='ppt' ? prioritizePptDeliveries(turn.prior_artifacts?.[lane]??[]) :
+            [...(turn.prior_artifacts?.[lane] ?? [])].reverse().sort((a: any,b: any) => Number(/(?:research_)?report\.pdf$/i.test(b.row.name)) - Number(/(?:research_)?report\.pdf$/i.test(a.row.name)));
           for (const source of inheritedArtifacts) {
             const prior = comparisons!.snapshot(turn.session_id, source.turn);
             // Immutable store lookup, account/parent check, lane identity, and
@@ -2140,6 +2147,7 @@ export function apply(ctx: any) {
     const task=forSession(session.id);
     if(!task||task.status!=='running')return;
     appendFileSync(join(task.output,'events.jsonl'),JSON.stringify(event)+'\n',{mode:0o600});
+    if(task.scene.id==='ppt')recordPptDeliveryReuse(task,event.data?.files??[]);
   },{global:true});
   ctx.on('session/event', (session: any, event: any) => {
     if(closingTurns.record(session,event))return;

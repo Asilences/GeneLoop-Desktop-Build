@@ -5,6 +5,8 @@ import {appendFileSync,existsSync,lstatSync,mkdirSync,readFileSync,realpathSync,
 import {dirname,isAbsolute,join,relative,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import type {Scene} from './harless_settings.ts';
+import {qualityStatus} from './rsi_quality.ts';
+import {verifyPptStateBinding} from './ppt_learning_evidence.ts';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
 const hash=(bytes:any)=>createHash('sha256').update(bytes).digest('hex');
 const read=(path:string)=>JSON.parse(readFileSync(path,'utf8'));
@@ -15,24 +17,97 @@ function checked(parent:string,path:string){
   return full;
 }
 function write(path:string,value:any){const tmp=path+'.'+randomUUID()+'.tmp';writeFileSync(tmp,JSON.stringify(value),{mode:0o600,flag:'wx'});renameSync(tmp,path);}
-export function createPptLearning(config:{output:string;user:string;scope:string;python?:string;taskIds:()=>string[]}){
+function evidence(output:string,name:string,version:unknown,message:string){
+ const path=checked(output,join(output,name));if(hash(readFileSync(path))!==version)throw Error(message);verifyPptStateBinding(output,path);
+}
+export function createPptLearning(config:{output:string;user:string;scope:string;python?:string;resources?:any;taskIds:()=>string[]}){
   const output=realpathSync(config.output),store=join(output,'learning','ppt-'+hash(config.user+'\0'+config.scope));
   let running:Promise<void>|undefined,again=false;
   const enabled=Boolean(config.python);
   function ensure(){mkdirSync(store,{recursive:true,mode:0o700});if(realpathSync(store)!==store)throw Error('ppt_learning_store_redirected');}
   function status(value:any){try{ensure();write(join(store,'status.json'),value);}catch{}}
   async function run(){
-    ensure();write(join(store,'request.json'),{schema_version:1,output,user:config.user,scope:config.scope,task_ids:config.taskIds(),automatic_structural_learning:true});
+    ensure();write(join(store,'request.json'),{schema_version:1,output,user:config.user,scope:config.scope,task_ids:config.taskIds(),automatic_structural_learning:true,command_resources:config.resources??{}});
     await new Promise<void>((done,fail)=>{
-      const env:any={PATH:process.env.PATH,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8'};
-      for(const name of ['SYSTEMROOT','WINDIR','TMP','TEMP','TMPDIR'])if(process.env[name])env[name]=process.env[name];
+      const env:any={PATH:process.env.PATH,SSS_PYTHON:config.python,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8'};
+      for(const name of ['SYSTEMROOT','WINDIR','TMP','TEMP','TMPDIR','GENELOOP_COMMAND_SOCKET'])if(process.env[name])env[name]=process.env[name];
+      const learningPolicy=process.env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY??process.env.SSS_WEB_POLICY;
+      if(learningPolicy){
+        env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY=learningPolicy;
+        if(process.env.DEEPSEEK_API_KEY)env.DEEPSEEK_API_KEY=process.env.DEEPSEEK_API_KEY;
+      }
       const child=spawn(config.python!,[join(root,'scripts/learn-web-ppt-tasks.py'),'--request',join(store,'request.json')],{cwd:root,env,stdio:['ignore','pipe','pipe']});
       let log='';child.stdout.on('data',b=>{if(log.length<128000)log+=String(b);});child.stderr.on('data',b=>{if(log.length<128000)log+=String(b);});
-      const timer=setTimeout(()=>child.kill(),120000);child.on('error',error=>{clearTimeout(timer);fail(error);});
+      const timer=setTimeout(()=>child.kill(),env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY?900000:120000);child.on('error',error=>{clearTimeout(timer);fail(error);});
       child.on('close',code=>{clearTimeout(timer);try{write(join(store,'worker-log.json'),{code,log});code===0?done():fail(Error('ppt_learning_compiler_failed'));}catch(error){fail(error);}});
     });
   }
   const manager={
+    captureSingle(task:any,artifacts:any[]){
+      if(!enabled||task.scene?.id!=='ppt'||task.scene.ppt_execution_strategy!=='ppt_master'||task.status!=='completed')return;
+      const id=task.request.task_id,session=task.request.session_id,mode=task.request.mode;
+      if(!/^[a-f0-9]{32}$/.test(id)||!['baseline','execute'].includes(mode)||typeof session!=='string'||!session||
+        resolve(task.output)!==join(output,'tasks',id))throw Error('ppt_single_identity_invalid');
+      ensure();
+      // Capture at the owning completion boundary, before another message can
+      // edit the workspace. The worker never reconstructs an old mutable draft.
+      const body={schema_version:1,kind:'ppt_single_delivery_v1',user:config.user,scope:config.scope,
+        task_id:id,session_id:session,mode,status:task.status,snapshot_turn:'native-'+id,snapshot_lane:'baseline',
+        artifacts,output_sha256:hash(JSON.stringify(artifacts))};
+      const path=join(task.output,'ppt-learning-delivery.json');
+      if(existsSync(path)){
+        if(JSON.stringify(read(checked(output,path)))!==JSON.stringify(body))throw Error('ppt_single_delivery_changed');
+      }else write(path,body);
+    },
+    program(){
+      if(!enabled||!existsSync(join(store,'program-selected.json'))||existsSync(join(store,'program-suspended.json')))return null;
+      try{
+        const pointer=read(checked(store,join(store,'program-selected.json')));
+        if(pointer.user!==config.user||pointer.scope!==config.scope||!['probation','active'].includes(pointer.phase)||
+          (pointer.feedback_version??null)!==(existsSync(join(store,'feedback-version.json'))?hash(readFileSync(checked(store,join(store,'feedback-version.json')))):null))return null;
+        if(!Object.keys(pointer.evidence_locks??{}).length)throw Error('ppt_program_evidence_missing');
+        for(const [name,version] of Object.entries(pointer.evidence_locks))evidence(output,name,version,'ppt_program_evidence_changed');
+        const library=checked(store,join(store,pointer.library));
+        if(hash(readFileSync(library))!==pointer.library_sha256)throw Error('ppt_program_library_changed');
+        if(pointer.phase==='active'){
+          const path=checked(store,join(dirname(library),'evaluation.json'));
+          if(hash(readFileSync(path))!==pointer.evaluation_sha256)throw Error('ppt_program_evaluation_changed');
+          const evaluation=read(path),pairs=evaluation.pairs??[];
+          if(pairs.length<2||new Set(pairs.map((p:any)=>p.comparison_id)).size!==pairs.length)throw Error('ppt_program_independent_pairs_missing');
+          for(const pair of pairs){
+            const b=pair.attempts?.baseline?.proxy_usd,o=pair.attempts?.motif?.proxy_usd;
+            if(!Number.isFinite(b)||!Number.isFinite(o)||o<0||o>=b||pair.program_reuses<1)throw Error('ppt_program_cost_regression');
+            for(const lane of ['baseline','motif']){
+              const proof=pair.quality_records?.[lane];
+              if(!proof||pair.evidence_locks?.[proof.record]!==proof.sha256)throw Error('ppt_program_quality_missing');
+              const record=read(checked(output,join(output,proof.record)));
+              if(qualityStatus(record,proof.binding,proof.mechanical_checks)!=='passed')throw Error('ppt_program_quality_failed');
+              if(pointer.quality_cost_promoted===true&&qualityStatus(record,proof.binding,proof.required_checks)!=='passed')throw Error('ppt_program_quality_unknown');
+            }
+          }
+        }
+        return {...pointer,library};
+      }catch{return null;}
+    },
+    deliveryFontRules(){
+      const path=join(store,'delivery-font-rules.json');
+      if(!enabled||!existsSync(path)||existsSync(join(store,'suspended.json')))return [];
+      try{
+        const value=read(checked(store,path));
+        if(value.version!==1||!Array.isArray(value.rules)||value.rules.length>16)throw Error('font_rules_invalid');
+        return value.rules.filter((rule:any)=>{
+          if(rule.operation!=='font_family_only_v1'||rule.requires_allow_font_fallback!==true||!['probation','active'].includes(rule.phase)||
+            typeof rule.from_family!=='string'||typeof rule.to_family!=='string'||rule.from_family.length>512||rule.to_family.length>512||
+            /[;:{}<>\r\n\\]/.test(rule.from_family+rule.to_family)||
+            !Object.keys(rule.evidence_locks??{}).length)throw Error('font_rule_invalid');
+          for(const [name,version] of Object.entries(rule.evidence_locks))evidence(output,name,version,'font_rule_evidence_changed');
+          if(rule.phase==='active'&&(!Array.isArray(rule.independent_validations)||rule.independent_validations.length<2||
+             new Set(rule.independent_validations.map((row:any)=>row.task_id)).size!==rule.independent_validations.length||
+             new Set(rule.independent_validations.map((row:any)=>row.source_signature)).size!==rule.independent_validations.length))throw Error('font_rule_independent_validation_missing');
+          return true;
+        });
+      }catch{return [];}
+    },
     schedule(){if(!enabled)return;again=true;if(running)return;running=(async()=>{while(again){again=false;try{await run();}catch(error){
       status({status:'failed',reason:(error as Error).message});
       try{ensure();write(join(store,'suspended.json'),{reason:'worker_failed'});}catch{/* A missing store already fails closed. */}
@@ -74,14 +149,23 @@ export function createPptLearning(config:{output:string;user:string;scope:string
         if(hash(readFileSync(path))!==pointer.admission_sha256)throw Error('ppt_learning_admission_changed');
         const admission=read(path),bundle=join(folder,'release'),info=admission.runtime;
         if(admission.user!==config.user||admission.scope!==config.scope)throw Error('ppt_learning_owner_changed');
-        for(const [name,version] of Object.entries(admission.evidence_locks??{}))if(hash(readFileSync(checked(output,join(output,name))))!==version)throw Error('ppt_learning_evidence_changed');
+        for(const [name,version] of Object.entries(admission.evidence_locks??{}))evidence(output,name,version,'ppt_learning_evidence_changed');
         if(!Object.keys(admission.evidence_locks??{}).length)throw Error('ppt_learning_evidence_missing');
         if(pointer.phase==='active'){
           const promoted=checked(folder,join(folder,'promotion.json'));
           if(hash(readFileSync(promoted))!==pointer.promotion_sha256)throw Error('ppt_learning_promotion_changed');
           const promotion=read(promoted);
           if(promotion.round!==pointer.round||hash(readFileSync(checked(folder,join(folder,'evaluation.json'))))!==promotion.evaluation_sha256||!Object.keys(promotion.evidence_locks??{}).length)throw Error('ppt_learning_evaluation_changed');
-          for(const [name,version] of Object.entries(promotion.evidence_locks))if(hash(readFileSync(checked(output,join(output,name))))!==version)throw Error('ppt_learning_evaluation_changed');
+          for(const [name,version] of Object.entries(promotion.evidence_locks))evidence(output,name,version,'ppt_learning_evaluation_changed');
+          const evaluation=read(join(folder,'evaluation.json'));
+          for(const pair of evaluation.pairs??[])for(const lane of ['baseline','motif']){
+            const proof=pair.quality_records?.[lane];
+            if(!proof||pair.evidence_locks?.[proof.record]!==proof.sha256)throw Error('ppt_learning_quality_missing');
+            const record=read(checked(output,join(output,proof.record)));
+            if(qualityStatus(record,proof.binding,proof.mechanical_checks)!=='passed'||
+              qualityStatus(record,proof.binding,proof.required_checks)!==proof.status)throw Error('ppt_learning_quality_changed');
+            if(pointer.quality_cost_promoted===true&&proof.status!=='passed')throw Error('ppt_learning_quality_unknown');
+          }
         }
         const entry=read(checked(bundle,join(bundle,'entry.json'))),cert=read(checked(bundle,join(bundle,'certification.json')));
         if(entry.runtime_kind!=='ppt_master_v2'||entry.scene!=='ppt'||entry.mode!=='execute'||cert.binding_policy!=='ppt_master_sources_v1'||cert.matching_policy!=='structural_only'||cert.certification_scope!=='independent_trace_structure')throw Error('ppt_learning_kind_invalid');
