@@ -323,3 +323,32 @@ def test_host_binding_preserves_cross_task_independence_check(tmp_path, data):
         dispatch('evolution_finish', {'reason': 'One experience is insufficient for generalization'})
         return {}
     run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'run')
+
+
+def test_host_preflight_failures_do_not_spend_native_evaluation_slots(tmp_path, data):
+    called = []
+    def handler(proposal, context, directory):
+        called.append(proposal)
+        return {'status': 'evaluated'}
+    def preflight(proposal, context):
+        if proposal['proposal']['decision_policy'] == 'invalid contract':
+            error = ValueError('host_contract_invalid')
+            error.evolution_diagnostic = {'message': 'Choose a supported host input contract.', 'lookup_tool': 'host_inputs'}
+            raise error
+    handler.preflight = preflight
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        invalid = candidate(ids)
+        invalid['proposal']['decision_policy'] = 'invalid contract'
+        for _ in range(3):
+            result = dispatch('evolution_submit', {'candidate': invalid, 'observation_ids': ids})
+            assert result['remaining_candidate_evaluations'] == 2
+            assert result['diagnostic']['lookup_tool'] == 'host_inputs'
+        for expected in (1, 0):
+            result = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+            assert result['remaining_candidate_evaluations'] == expected
+        dispatch('evolution_finish', {'reason': 'Preserve three preflight failures and two actual evaluations'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(called) == 2 and len(result['submissions']) == 5

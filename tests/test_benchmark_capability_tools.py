@@ -1,7 +1,7 @@
 """Task-tool bridge diagnostics. No actual Docker or model calls."""
 import copy
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -500,3 +500,174 @@ def test_native_adapter_exception_preserves_already_written_failed_execution(tmp
     trace = actual_trace(receipts)
     assert trace['steps'][0]['status'] != 'succeeded'
     assert 'call_0' in projection['trace_inputs']
+
+
+class ExportTrial(Trial):
+    """Original trial operation shape with in-memory diagnostic container files."""
+    def __init__(self, output):
+        super().__init__(output)
+        self.export_fail = False
+        self.corrupt_export = False
+        self.end_after_mkdir = False
+        self.directories = {'/', '/app'}
+
+    def _invoke(self, argv):
+        if argv[:3] == ['docker', 'exec', self.container]:
+            self.operations.append(argv)
+            if argv[3] == '/bin/test':
+                assert argv[3:6] == ['/bin/test', '!', '-d']
+                return {'returncode': 1 if argv[6] in self.directories else 0,
+                        'record': put(self.output / ('target-' + str(len(self.operations)) + '.json'), {'argv': argv})}
+            assert argv[3:5] == ['/bin/mkdir', '-p']
+            assert PurePosixPath(argv[5]).is_absolute()
+            self.directories.add(argv[5])
+            if self.end_after_mkdir:
+                self.evaluated = True
+            return {'returncode': 0, 'record': put(self.output / ('mkdir-' + str(len(self.operations)) + '.json'), {'argv': argv})}
+        if argv[:2] == ['docker', 'cp'] and not argv[2].startswith(self.container + ':'):
+            self.operations.append(argv)
+            assert argv[3].startswith(self.container + ':')
+            destination = argv[3].split(':', 1)[1]
+            if not self.export_fail:
+                self.files[destination] = b'corrupt' if self.corrupt_export else Path(argv[2]).read_bytes()
+            return {'returncode': 1 if self.export_fail else 0,
+                    'record': put(self.output / ('export-' + str(len(self.operations)) + '.json'), {'argv': argv})}
+        return super()._invoke(argv)
+
+
+def export_tools(tmp_path, *, snapshot=None):
+    if snapshot is None:
+        _, library, _, _ = fixture(tmp_path)
+        snapshot = library['snapshot']
+    materials = Materials(snapshot)
+    trial = ExportTrial(tmp_path / 'trial')
+    tools, dispatch, receipts = benchmark_capability_tools(materials, trial, tmp_path / 'calls', 'export-task')
+    return materials, trial, tools, dispatch, receipts
+
+
+def test_export_object_writes_canonical_json_and_returns_small_file_receipt(tmp_path):
+    materials, trial, tools, dispatch, receipts = export_tools(tmp_path)
+    arguments = {'capability_id': materials.snapshot['roots'][0]['id'], 'value': {},
+                 'export_result': {'path': ['value'], 'container_path': '/app/output/count.json'}}
+    schema = next(tool['parameters'] for tool in tools if tool['name'] == 'capability_call')
+    Draft202012Validator(schema).validate(arguments)
+    result = dispatch('capability_call', arguments)
+    assert result['status'] == 'succeeded' and result['result_omitted'] is True
+    assert 'result' not in result
+    exported = result['exported_file']
+    assert exported['status'] == 'exported' and exported['encoding'] == 'canonical_json_utf8'
+    assert trial.files['/app/output/count.json'] == b'{"count":2}'
+    detail = json.loads(verify(exported['record']))
+    assert verify(detail['artifact']) == trial.files['/app/output/count.json']
+    assert detail['artifact']['sha256'] == exported['sha256'] == detail['copy_check']['sha256']
+    assert detail['source_receipt'] == result['receipt']
+    assert len(detail['operations']) == 4 and all(verify(ref) for ref in detail['operations'])
+    assert receipts[0]['status'] == 'succeeded' and receipts[0]['result_export'] == exported
+
+
+def test_string_export_preserves_utf8_and_newlines_without_echoing_source(tmp_path):
+    materials, trial, _, dispatch, _ = export_tools(tmp_path)
+    original = materials.execute
+    source = 'export const 名称 = "雪";\r\n' * 400
+    def execute(*args):
+        executed = original(*args)
+        executed['trace']['result']['stdout'] = source
+        executed['execution_ref'] = put(Path(executed['execution_ref']['path']), executed['trace'])
+        return executed
+    materials.execute = execute
+    result = dispatch('capability_call', {'capability_id': materials.snapshot['roots'][0]['id'], 'value': {},
+        'export_result': {'path': ['stdout'], 'container_path': '/app/generated.js'}})
+    assert trial.files['/app/generated.js'] == source.encode('utf-8')
+    assert result['exported_file']['encoding'] == 'utf8'
+    assert result['exported_file']['bytes'] == len(source.encode('utf-8'))
+    assert 'export const' not in json.dumps(result)
+    assert len(json.dumps(result)) < len(source) / 4
+
+
+@pytest.mark.parametrize('specification', [
+    {'path': ['value'], 'container_path': 'relative.js'},
+    {'path': ['value'], 'container_path': '/'},
+    {'path': ['value'], 'container_path': '/app/directory/'},
+    {'path': ['value'], 'container_path': '/app/..'},
+    {'path': ['value'], 'container_path': '/app/.'},
+    {'path': ['value'], 'container_path': '/app/bad\x00.js'},
+    {'path': [0], 'container_path': '/app/result.json'},
+    {'container_path': '/app/result.json'}])
+def test_invalid_export_request_does_not_execute_or_create_native_edge(tmp_path, specification):
+    materials, trial, _, dispatch, receipts = export_tools(tmp_path)
+    with pytest.raises(ValueError):
+        dispatch('capability_call', {'capability_id': materials.snapshot['roots'][0]['id'],
+                                    'value': {}, 'export_result': specification})
+    assert materials.executions == [] and trial.operations == []
+    projection = capability_trace_projection(receipts)
+    assert projection['calls'] == [] and len(projection['nonexecuted_attempts']) == 1
+
+
+@pytest.mark.parametrize('failure', ['copy', 'changed_bytes', 'missing_result_field', 'ended'])
+def test_export_failure_keeps_genuine_runtime_success_and_its_binding_available(tmp_path, failure):
+    snapshot = run_driver({'action': 'seed', 'owner': 'export-failure-diagnostic'})
+    trial = ExportTrial(tmp_path / 'trial')
+    materials = RuntimeMaterials(snapshot)
+    _, dispatch, receipts = benchmark_capability_tools(materials, trial, tmp_path / 'calls', 'export-failure-task')
+    trial.export_fail = failure == 'copy'
+    trial.corrupt_export = failure == 'changed_bytes'
+    trial.end_after_mkdir = failure == 'ended'
+    first = dispatch('capability_call', {'capability_id': snapshot['roots'][0]['id'], 'value': 3,
+        'export_result': {'path': ['missing'] if failure == 'missing_result_field' else ['value'],
+                          'container_path': '/app/output.json'}})
+    assert first['status'] == 'succeeded' and first['exported_file']['status'] == 'failed'
+    assert receipts[0]['status'] == 'succeeded'
+    assert actual_trace(receipts)['steps'][0]['status'] == 'succeeded'
+    if failure == 'ended':
+        assert all(operation[:2] != ['docker', 'cp'] for operation in trial.operations)
+        with pytest.raises(ValueError, match='task_not_active'):
+            dispatch('capability_call', {'capability_id': snapshot['roots'][1]['id'],
+                                        'input_binding': result_binding(first['call_id'])})
+    else:
+        second = dispatch('capability_call', {'capability_id': snapshot['roots'][1]['id'],
+                                             'input_binding': result_binding(first['call_id'])})
+        assert second['status'] == 'succeeded'
+        assert actual_trace(receipts)['steps'][1]['input_binding']['fields']['value']['kind'] == 'step'
+
+
+def test_successful_original_runtime_result_exports_without_rewriting_its_trace(tmp_path):
+    snapshot = run_driver({'action': 'seed', 'owner': 'native-export-diagnostic'})
+    materials = RuntimeMaterials(snapshot)
+    trial = ExportTrial(tmp_path / 'trial')
+    _, dispatch, receipts = benchmark_capability_tools(materials, trial, tmp_path / 'calls', 'native-export-task')
+    result = dispatch('capability_call', {'capability_id': snapshot['roots'][0]['id'], 'value': 3,
+        'export_result': {'path': [], 'container_path': '/app/native-result.json'}})
+    assert result['exported_file']['status'] == 'exported'
+    assert json.loads(trial.files['/app/native-result.json']) == json.loads(verify(result['receipt']))['result']
+    assert receipts[0]['trace'] == json.loads(verify(result['receipt']))
+    assert actual_trace(receipts)['steps'][0]['result'] == receipts[0]['trace']['result']
+
+
+def test_export_does_not_copy_a_directory_back_as_the_requested_file(tmp_path):
+    materials, trial, _, dispatch, receipts = export_tools(tmp_path)
+    result = dispatch('capability_call', {'capability_id': materials.snapshot['roots'][0]['id'], 'value': {},
+        'export_result': {'path': ['value'], 'container_path': '/app'}})
+    assert result['status'] == 'succeeded'
+    assert 'target_is_directory' in result['exported_file']['error']
+    assert not any(operation[:2] == ['docker', 'cp'] for operation in trial.operations)
+    assert receipts[0]['status'] == 'succeeded'
+
+
+def test_export_receipt_write_failure_does_not_relabel_native_execution(tmp_path, monkeypatch):
+    import src.adapters.benchmark_capability_tools as bridge
+    snapshot = run_driver({'action': 'seed', 'owner': 'export-audit-diagnostic'})
+    materials = RuntimeMaterials(snapshot)
+    trial = ExportTrial(tmp_path / 'trial')
+    _, dispatch, receipts = benchmark_capability_tools(materials, trial, tmp_path / 'calls', 'export-audit-task')
+    original_save = bridge.save
+    def save(path, value):
+        if Path(path).name == 'export.json':
+            raise OSError('diagnostic_export_receipt_unwritable')
+        return original_save(path, value)
+    monkeypatch.setattr(bridge, 'save', save)
+    outcome = dispatch('capability_call', {'capability_id': snapshot['roots'][0]['id'], 'value': 3,
+        'export_result': {'path': ['value'], 'container_path': '/app/export.json'}})
+    assert outcome['status'] == 'succeeded'
+    assert 'receipt_unwritable' in outcome['exported_file']['error']
+    assert receipts[0]['status'] == 'succeeded'
+    assert actual_trace(receipts)['steps'][0]['status'] == 'succeeded'

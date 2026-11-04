@@ -100,6 +100,35 @@ def parse_reward(directory):
     return {'status': 'scored', 'reward': float(value), 'evidence': source}
 
 
+def completed_quality_rejection(directory, verification, reward):
+    """Recognize completed pytest assertion failures from the original report."""
+    if (verification.get('status') != 'completed' or verification.get('returncode') != 1
+            or reward.get('status') != 'scored' or not 0 <= reward['reward'] < 1):
+        return None
+    report = Path(directory) / 'ctrf.json'
+    try:
+        result = json.loads(report.read_text(encoding='utf-8'))['results']
+        summary, tests = result['summary'], result['tests']
+        counts = [summary[key] for key in ('tests', 'passed', 'failed', 'skipped', 'pending', 'other')]
+        if (any(type(value) is not int or value < 0 for value in counts)
+                or summary['tests'] != len(tests) or summary['failed'] < 1
+                or summary['tests'] != summary['passed'] + summary['failed']):
+            return None
+        for row in tests:
+            if row['status'] == 'passed':
+                continue
+            if (row['status'] != 'failed' or row.get('raw_status') != 'call_failed'
+                    or 'due to an assertion error' not in row.get('message', '')
+                    or 'AssertionError' not in row.get('trace', '')):
+                return None
+        if (sum(row['status'] == 'passed' for row in tests) != summary['passed']
+                or sum(row['status'] == 'failed' for row in tests) != summary['failed']):
+            return None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return file_ref(report)
+
+
 class SkillsBenchTrial:
     """One fresh trial. Only environment/ is built; tests enter after execution.
 
@@ -303,10 +332,13 @@ class SkillsBenchTrial:
             collected = self._invoke(['docker', 'cp', self.container + ':/logs/verifier/.', str(logs)])
             reward = parse_reward(logs) if collected['returncode'] == 0 else {
                 'status': 'reward_collection_failed', 'reward': None, 'evidence': None}
-            valid = verification['returncode'] == 0 and reward['status'] == 'scored'
+            rejection = completed_quality_rejection(logs, verification, reward)
+            valid = reward['status'] == 'scored' and (verification['returncode'] == 0 or rejection is not None)
             result = {**reward, 'status': 'evaluated' if valid else 'verifier_failed',
                       'passed': reward['reward'] > 0 if valid else None,
                       'verification': verification['record']}
+            if rejection is not None:
+                result.update(verifier_outcome='quality_rejected', quality_rejection_evidence=rejection)
             if timed_out:
                 result['status'] = 'verifier_timeout'
                 self.close()

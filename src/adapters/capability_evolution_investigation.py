@@ -118,6 +118,9 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                     if handler is None:
                         submitted.update(status='pending', reason='existing_host_admission_unavailable')
                     else:
+                        preflight = getattr(handler, 'preflight', None)
+                        if preflight is not None:
+                            preflight(candidate, context)
                         if candidate_evaluations >= 2:
                             raise ValueError('evolution_candidate_evaluation_limit_reached: retain the outcomes and call evolution_finish')
                         candidate_evaluations += 1
@@ -141,6 +144,8 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                             'available_observation_ids': list(investigation.observations)[:8],
                             'available_observations': len(investigation.observations),
                             'more_observations_tool': 'evolution_search(kind=experience)'})
+                    if isinstance(getattr(error, 'evolution_diagnostic', None), dict):
+                        submitted['diagnostic'].update(error.evolution_diagnostic)
                 save(directory / ('submission-' + str(submitted['index']) + '.json'), submitted)
                 reference = file_ref(directory / ('submission-' + str(submitted['index']) + '.json'))
                 investigation._index_evidence([reference])

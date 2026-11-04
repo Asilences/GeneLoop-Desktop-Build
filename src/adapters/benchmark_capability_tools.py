@@ -48,6 +48,69 @@ def _resolve_call_binding(binding, records, snapshot, task_id, fingerprint):
     return _bind(binding, {}, results), sources
 
 
+def _validate_export(specification):
+    if not isinstance(specification, dict) or set(specification) != {'path', 'container_path'}:
+        raise ValueError('benchmark_capability_export_fields_required')
+    _binding({'kind': 'step', 'step_id': 'result', 'path': specification['path']}, {'result'})
+    path = specification['container_path']
+    if (not isinstance(path, str) or not PurePosixPath(path).is_absolute()
+            or '\x00' in path or not path.strip('/') or path.endswith('/')
+            or path.split('/')[-1] in ('.', '..')):
+        raise ValueError('benchmark_capability_export_container_file_required')
+
+
+def _export_result(trial, executed, specification, directory):
+    record = {'origin': 'host_delivery_from_original_runtime_result', 'status': 'failed',
+              'source_receipt': executed['execution_ref'], 'source_path': specification['path'],
+              'container_path': specification['container_path'], 'operations': []}
+    try:
+        if not trial.prepared or trial.evaluated:
+            raise ValueError('benchmark_capability_task_not_active')
+        original = json.loads(verify(executed['execution_ref']))
+        selected = _bind({'kind': 'step', 'step_id': 'result', 'path': specification['path']}, {},
+                         {'result': original.get('result')})
+        if isinstance(selected, str):
+            payload, encoding = selected.encode('utf-8'), 'utf8'
+        else:
+            payload = json.dumps(selected, ensure_ascii=False, allow_nan=False,
+                                 sort_keys=True, separators=(',', ':')).encode('utf-8')
+            encoding = 'canonical_json_utf8'
+        artifact = directory / 'exported-result'
+        artifact.write_bytes(payload)
+        artifact.chmod(0o400)
+        record.update(artifact=file_ref(artifact), bytes=len(payload), encoding=encoding)
+        parent = str(PurePosixPath(specification['container_path']).parent)
+        prepared = trial._invoke(['docker', 'exec', trial.container, '/bin/mkdir', '-p', parent])
+        record['operations'].append(prepared.get('record'))
+        if prepared['returncode'] != 0:
+            raise ValueError('benchmark_capability_export_directory_failed')
+        if not trial.prepared or trial.evaluated:
+            raise ValueError('benchmark_capability_task_not_active')
+        target = trial._invoke(['docker', 'exec', trial.container, '/bin/test', '!', '-d', specification['container_path']])
+        record['operations'].append(target.get('record'))
+        if target['returncode'] != 0:
+            raise ValueError('benchmark_capability_export_target_is_directory')
+        if not trial.prepared or trial.evaluated:
+            raise ValueError('benchmark_capability_task_not_active')
+        copied = trial._invoke(['docker', 'cp', str(artifact), trial.container + ':' + specification['container_path']])
+        record['operations'].append(copied.get('record'))
+        if copied['returncode'] != 0:
+            raise ValueError('benchmark_capability_export_copy_failed')
+        checked = directory / 'exported-copy-check'
+        if not trial.prepared or trial.evaluated:
+            raise ValueError('benchmark_capability_task_not_active')
+        readback = trial._invoke(['docker', 'cp', trial.container + ':' + specification['container_path'], str(checked)])
+        record['operations'].append(readback.get('record'))
+        if readback['returncode'] != 0 or checked.is_symlink() or not checked.is_file() or checked.read_bytes() != payload:
+            raise ValueError('benchmark_capability_export_copy_unverified')
+        record.update(status='exported', sha256=record['artifact']['sha256'], copy_check=file_ref(checked))
+    except Exception as error:
+        record['error'] = type(error).__name__ + ':' + str(error)
+    save(directory / 'export.json', record)
+    return {**{key: record[key] for key in ('status', 'container_path', 'bytes', 'sha256', 'encoding', 'error') if key in record},
+            'record': file_ref(directory / 'export.json')}
+
+
 def benchmark_capability_tools(materials, trial, directory, task_id):
     """Return tools, a dispatcher and original Runtime-call records for this task."""
     if not isinstance(task_id, str) or not task_id.strip():
@@ -77,10 +140,15 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
          'Read that schema first; composition calls require value or input_binding rather than the file shorthand. '
          'input_binding uses the existing Binding over COMPLETE Runtime arguments, usually {value: ...} for a primitive. '
          'Use kind=step with step_id=an earlier successful call_id and path=output field names for result dependencies. '
-         'kind=object uses fields, kind=array uses items, and kind=literal uses value. kind=input has no source here.',
+         'kind=object uses fields, kind=array uses items, and kind=literal uses value. kind=input has no source here. '
+         'Optionally export_result selects a result field path and absolute container_path. Strings are written as UTF-8, '
+         'other values as compact sorted JSON. Export calls return file metadata and receipt instead of the large result.',
          'parameters': {'type': 'object', 'properties': {'capability_id': {'type': 'string'},
              'input_file': {'type': 'string'}, 'value': {}, 'input_binding': {'type': 'object',
-                 'description': 'Existing step/literal/object/array Binding for complete Runtime arguments; step_id refers to this task session call_id.'}},
+                 'description': 'Existing step/literal/object/array Binding for complete Runtime arguments; step_id refers to this task session call_id.'},
+             'export_result': {'type': 'object', 'properties': {
+                 'path': {'type': 'array', 'items': {'type': 'string'}}, 'container_path': {'type': 'string'}},
+                 'required': ['path', 'container_path'], 'additionalProperties': False}},
              'required': ['capability_id'], 'additionalProperties': False,
              'oneOf': [{'required': ['input_file']}, {'required': ['value']}, {'required': ['input_binding']}]}}]
 
@@ -105,7 +173,7 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
                 for reference in roots[offset:end]]}
         if name != 'capability_call':
             raise ValueError('benchmark_capability_tool_unknown')
-        if (set(arguments) - {'capability_id', 'input_file', 'value', 'input_binding'}
+        if (set(arguments) - {'capability_id', 'input_file', 'value', 'input_binding', 'export_result'}
                 or 'capability_id' not in arguments
                 or sum(key in arguments for key in ('input_file', 'value', 'input_binding')) != 1):
             raise ValueError('benchmark_capability_one_input_required')
@@ -124,6 +192,8 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
                'source_file': None, 'input_projection': 'actual_runtime_arguments_no_inferred_cross_call_dependency'}
         receipts.append(row)
         try:
+            if 'export_result' in arguments:
+                _validate_export(arguments['export_result'])
             composition = capabilities[reference['id']]['implementation']['kind'] == 'composition'
             if composition and 'input_file' in arguments:
                 required = capabilities[reference['id']]['contract']['input_schema'].get('required', [])
@@ -168,6 +238,17 @@ def benchmark_capability_tools(materials, trial, directory, task_id):
                        execution_ref=executed['execution_ref'], trace=trace)
             result = {'status': trace['status'], 'call_id': identifier,
                       'result': copy.deepcopy(trace.get('result')), 'receipt': executed['execution_ref']}
+            if 'export_result' in arguments:
+                if trace['status'] == 'succeeded':
+                    try:
+                        exported = _export_result(trial, executed, arguments['export_result'], output)
+                    except Exception as export_error:
+                        exported = {'status': 'failed', 'error': type(export_error).__name__ + ':' + str(export_error)}
+                else:
+                    exported = {'status': 'not_exported', 'reason': 'native_execution_not_succeeded'}
+                row['result_export'] = exported
+                result.pop('result')
+                result.update(result_omitted=True, exported_file=exported)
         except Exception as error:
             row.update(status='failed', error=type(error).__name__ + ':' + str(error))
             # Native Script failures can write their genuine trace before the

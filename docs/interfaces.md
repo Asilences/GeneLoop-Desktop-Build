@@ -1576,6 +1576,14 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 `node scripts/project.mjs python scripts/run-evolution-benchmark.py --help`提供trial、geneloop及skill-infinity三种隔离入口。真实调用需`--call-model`，费用沿原`--ledger-root`累计。根目录、公开来源版本、任务划分和输出目录必须显式提供。`--prewarm-dependencies`仅对精确匹配的原评分脚本准备公共依赖，时长和版本另存，原评分脚本及限时保留。论文复现差异见[基线记录](debug/skill-infinity-reproduction-20261105.md)。
 
+`--validation-split TASK=test`可将一个官方变体用于验证，最终题仍须保留未观察输入。`dataset_split`记录原数据划分，`evaluation_role`记录本次用途，输入内容摘要用于识别重复。历史观察不能重新标成独立最终评测。
+
+原生材料后端提供`evolution_example_files`分页查询可用于认证的执行前文件，返回合法文件ID、相对路径和来源观察，不默认发送文件正文。候选的格式、来源与权限预检通过后才计入实际候选构造次数。原始证据继续通过`evolution_read`按需读取。
+
+任务工具`capability_call.input_binding`沿用原Binding，将前次真实调用结果传入后继能力。可选`export_result={path:[结果字段],container_path:绝对容器路径}`把结果直接交付当前任务文件并返回摘要，普通调用继续返回结果。文件交接失败单独记录，保留原Runtime执行状态与参数流。见[交接记录](debug/benchmark-capability-result-export-20261105.md)。
+
+原评分器退出码1与官方0分同时出现时，只有完整原CTRF证实调用阶段质量断言失败，才记录`quality_rejected`并继续优化。环境失败、超时及不完整报告仍保留未知评分，原退出码和评分日志可追溯。
+
 模型任务结束后先冻结产物，再注入原评分器。超时保留部分产物和实际费用。真实能力调用轨迹可进入原Motif学习器及Store，后继行为与净收益需按实际结果判断。当前boundary与construction-strategy的benchmark宿主仍待接通，生产默认关闭。实施及失败记录见[今晚记录](debug/evolution-overnight-20261105.md)。
 
 ## 匿名双栏展示与审计绑定（2026-11-04）

@@ -33,12 +33,13 @@ timeout_sec = 30
 
 
 class DockerDiagnostic:
-    def __init__(self, *, reward='1', verifier_code=0, fail_at=None):
+    def __init__(self, *, reward='1', verifier_code=0, fail_at=None, ctrf=None):
         self.calls = []
         self.options = []
         self.reward = reward
         self.verifier_code = verifier_code
         self.fail_at = fail_at
+        self.ctrf = ctrf
 
     def __call__(self, argv, **kwargs):
         self.calls.append(argv)
@@ -51,6 +52,8 @@ class DockerDiagnostic:
         if argv[1] == 'cp' and ':/logs/verifier/.' in argv[2]:
             if self.reward is not None:
                 (Path(argv[3]) / 'reward.txt').write_text(self.reward, encoding='utf-8')
+            if self.ctrf is not None:
+                (Path(argv[3]) / 'ctrf.json').write_text(json.dumps(self.ctrf), encoding='utf-8')
         if argv[-1] == '/tests/test.sh':
             code = self.verifier_code
         stdout = 'diagnostic stdout'
@@ -178,6 +181,53 @@ def test_positive_reward_with_failed_verifier_is_not_a_pass(tmp_path):
     adapter.prepare()
     result = adapter.evaluate()
     assert result['status'] == 'verifier_failed' and result['passed'] is None
+
+
+def assertion_report():
+    return {'results': {'summary': {'tests': 3, 'passed': 2, 'failed': 1,
+                                    'skipped': 0, 'pending': 0, 'other': 0},
+        'tests': [{'status': 'passed'}, {'status': 'passed'},
+                  {'status': 'failed', 'raw_status': 'call_failed',
+                   'message': 'The test failed in the call phase due to an assertion error',
+                   'trace': 'E AssertionError: output geometry differs'}]}}
+
+
+@pytest.mark.parametrize('reward', ['0', '0.667'])
+def test_completed_assertion_rejection_remains_scored_with_original_nonzero_exit(tmp_path, reward):
+    adapter = trial(tmp_path, DockerDiagnostic(reward=reward, verifier_code=1, ctrf=assertion_report()))
+    adapter.prepare()
+    result = adapter.evaluate()
+    assert result['status'] == 'evaluated'
+    assert result['reward'] == float(reward)
+    assert result['passed'] is (float(reward) > 0)
+    assert result['verifier_outcome'] == 'quality_rejected'
+    assert result['quality_rejection_evidence']['path'].endswith('/verifier/ctrf.json')
+    operation = json.loads(Path(result['verification']['path']).read_text())
+    assert operation['returncode'] == 1
+
+
+@pytest.mark.parametrize('defect', ['missing_report', 'setup_error', 'import_error', 'incomplete', 'bad_counts', 'collection_exit'])
+def test_infrastructure_and_incomplete_reports_do_not_become_quality_zero(tmp_path, defect):
+    report = assertion_report()
+    code = 1
+    if defect == 'missing_report':
+        report = None
+    elif defect == 'setup_error':
+        report['results']['tests'][-1]['raw_status'] = 'setup_failed'
+    elif defect == 'import_error':
+        report['results']['tests'][-1].update(message='ImportError', trace='ModuleNotFoundError: missing_dependency')
+    elif defect == 'incomplete':
+        report['results']['tests'].pop()
+    elif defect == 'bad_counts':
+        report['results']['summary']['passed'] = 1
+    elif defect == 'collection_exit':
+        code = 2
+    adapter = trial(tmp_path, DockerDiagnostic(reward='0', verifier_code=code, ctrf=report))
+    adapter.prepare()
+    result = adapter.evaluate()
+    assert result['status'] == 'verifier_failed'
+    assert result['passed'] is None
+    assert result['reward'] == 0
 
 
 def test_missing_reward_keeps_unknown(tmp_path):

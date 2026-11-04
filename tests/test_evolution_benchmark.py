@@ -9,9 +9,9 @@ import pytest
 
 from src.adapters import evolution_benchmark as benchmark
 from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.skill_infinity_baseline import create_seed_task_skill
+from src.adapters.skill_infinity_baseline import create_seed_task_skill, create_seed_meta_skill, optimize_task_skill
 from src.adapters.skillsbench_trial import SkillsBenchTrial
-from tests.test_skillsbench_trial import DockerDiagnostic, source
+from tests.test_skillsbench_trial import DockerDiagnostic, source, assertion_report
 
 
 @pytest.fixture
@@ -25,7 +25,8 @@ def fixture(tmp_path, monkeypatch):
 
     def trial_factory(directory, output, **kwargs):
         adapter = SkillsBenchTrial(directory, output, run_command=DockerDiagnostic(
-            reward=agent_options['reward'], verifier_code=agent_options['verifier_code']), **kwargs)
+            reward=agent_options['reward'], verifier_code=agent_options['verifier_code'],
+            ctrf=agent_options.get('ctrf')), **kwargs)
         trials.append(adapter)
         return adapter
 
@@ -181,6 +182,30 @@ def test_missing_reward_is_explicit_and_preserves_original_trial(fixture):
     record = json.loads(verify(fixture.host.observations[0]))
     assert record['quality'] == 'unreviewed'
     assert record['decision_context']['outcome']['reward'] is None
+
+
+def test_completed_quality_rejection_reaches_skill_optimizer_with_zero_score(fixture):
+    fixture.options.update(reward='0', verifier_code=1, ctrf=assertion_report())
+    package = seed(fixture)
+    calls = []
+    def optimizer(request, dispatch):
+        calls.append(request)
+        archive = dispatch('inspect_archive', {})
+        assert archive['nodes'][0]['evaluation']['score'] == '0.0'
+        dispatch('select_parent', {'selected_node_id': 'seed', 'action': 'stop',
+                                  'reason': 'Diagnostic retained completed quality failure for later improvement'})
+        return {'diagnostic': True}
+    result = optimize_task_skill(package, fixture.root / 'optimization',
+        call_agent=optimizer, evaluate=fixture.host.evaluate_skill, review=lambda request: {},
+        task_context={'task_id': 'task-one'}, meta_skill=create_seed_meta_skill(fixture.root / 'meta'))
+    assert result['status'] == 'completed' and result['score'] == '0.0'
+    assert len(calls) == 1
+    observation = json.loads(verify(fixture.host.observations[0]))
+    assert observation['status'] == 'failed' and observation['quality'] == 'official_verifier'
+    trial_record = json.loads(verify(observation['evidence'][0]))
+    assert trial_record['evaluation']['verifier_outcome'] == 'quality_rejected'
+    operation = json.loads(verify(trial_record['evaluation']['verification']))
+    assert operation['returncode'] == 1
 
 
 def test_partial_reward_from_failed_verifier_is_preserved_but_unscored(fixture):

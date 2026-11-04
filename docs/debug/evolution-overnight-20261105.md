@@ -66,4 +66,4 @@ R7补公共接缝，不增加新的场景求解器：
 - 调查候选缺字段时返回具体missing／unexpected字段，保留原假设和证据选择；避免所有提交错误都被笼统解释成证据ID错误。
 - 费用gate兼容工具Schema中数组／对象形式的 `type`，真正媒体内容仍按原逻辑预留；触发的新库兼容更新详见[库记录](overnight-library-compat-20261105.md)。
 
-本地R7定向375项通过，候选字段诊断21项通过；日志分别为 `.local/overnight-20261105/r7-final-targeted.log` 与 `r7-field-diagnostics.log`。首轮全量的两项兼容测试配对错误已修正，最终全量仍在重跑，暂不记为通过。这些检查属于无付费机制诊断；其中显式绑定及C→D学习链只说明宿主能够保留并使用依赖，不证明模型自主选择、跨代创造或效率收益。R7真实模型实验结果另按冻结源码、运行ID、原评分和完整账本追加。
+本地R7定向375项通过，候选字段诊断21项通过；日志分别为 `.local/overnight-20261105/r7-final-targeted.log` 与 `r7-field-diagnostics.log`。首轮全量的两项兼容测试配对错误已修正；最终Python2856通过、261跳过，Node1662通过、23跳过。`smoke`、`motif:check`、`rsi:check`、`rsi:efficiency:check`、`rsi:rae:check` 均通过；日志为 `full-regression-r7-final.log` 与 `r7-mechanism-checks.log`。这些检查属于无付费机制诊断；其中显式绑定及C→D学习链只说明宿主能够保留并使用依赖，不证明模型自主选择、跨代创造或效率收益。R7真实模型实验结果另按冻结源码、运行ID、原评分和完整账本追加。

@@ -67,6 +67,14 @@ R3早期baseline仅暴露评分与不可读取的引用，优化器缺少原轨�
 
 该代码文件属于managed library的执行代码锁，后续需通过既有兼容导出产生新独立版本。旧证书与R6运行保持原状。
 
+## R7完整质量失败被误判为不可评分
+
+原运行`code-r7/.local/results/baseline-threejs-001`的seed验证完成5次请求，技能已加载。原Three.js评分器实际完成3项测试，2项通过，几何质量断言失败，写入官方reward 0并返回退出码1。原`operation-0013.json`、verifier stdout、`ctrf.json`与reward保留。此前适配器要求评分器退出码为0才允许任何分数，因此将该质量失败记为`verifier_failed`和`score=None`，inner优化器在读取seed评分时退出，尚未进入改进循环。
+
+修复复用原reward与CTRF，仅在评分器正常完成、退出码1、官方reward位于`[0,1)`、CTRF计数与记录完整一致且全部失败均为调用阶段断言失败时，记录`evaluated`和原分数，并附`verifier_outcome=quality_rejected`及原CTRF引用。原非0退出码与日志保持。缺报告、初始化／收集／导入错误、不完整计数和超时继续保留故障与未知评分。
+
+155项相关无模型诊断通过，包含原Trial经Host把seed质量失败0分传入Skill∞优化器并实际调用后续优化入口。该回归仅验证失败反馈能够继续流转，真实策略优化效果待后续实验。原R7结果没有追改，新增真实模型调用0。
+
 新增 `tests/test_research_harness.py` 的13项诊断通过，包含真实本机MCP2.2、原SDK、原生skill加载、工具回调、任务timeout及原累计费用账本。完整SDK诊断使用本机合成SSE Provider，原请求计数5→8，实际工具为`skill`和研究MCP工具，新增真实模型请求0。
 
 这批诊断发现并复核了资源读取激活误判、缺少请求证据、结束异常下费用归属恢复等问题。原生skill加载的内容摘要以注册时字节计算，避免将后续磁盘内容误记为已加载正文。

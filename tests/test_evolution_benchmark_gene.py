@@ -890,3 +890,87 @@ def test_strategy_errors_without_a_host_validation_keep_original_diagnostic(tmp_
     assert host.submissions[0]['status'] == 'rejected'
     assert 'strategy_proposal_invalid' in host.submissions[0]['reason']
     assert 'outcome' not in host.submissions[0]
+
+
+def test_native_example_lookup_pages_only_admissible_files_with_original_provenance(tmp_path):
+    host = NativeHost(tmp_path / 'trials')
+    original = host.agent
+    seen = []
+    def agent(request, dispatch):
+        assert 'evolution_example_files' in {tool['name'] for tool in request['tools']}
+        observations = dispatch('evolution_search', {'kind': 'experience'})['items']
+        ids = [row['id'] for row in observations]
+        first = dispatch('evolution_example_files', {'observation_ids': ids, 'query': 'artifact-input.json', 'limit': 1})
+        second = dispatch('evolution_example_files', {'observation_ids': ids, 'query': '.json',
+                                                     'offset': first['next_offset'], 'limit': 1})
+        assert first['total'] == second['total'] == 2
+        cards = [first['items'][0], second['items'][0]]
+        assert cards[0]['evidence_id'] != cards[1]['evidence_id']
+        assert len({source for card in cards for source in card['source_identities']}) == 2
+        for card in cards:
+            assert card['relative_path'] == 'artifact-input.json'
+            assert card['artifact_index_evidence_ids'] and card['observation_ids']
+            raw = dispatch('evolution_read', {'kind': 'evidence', 'id': card['evidence_id'], 'section': 'content'})
+            assert 'value' in json.loads(raw['content'])
+        unmatched = dispatch('evolution_example_files', {'query': 'result.json'})
+        assert unmatched['total'] == 0 and unmatched['available_files'] == 2
+        seen.extend(cards)
+        return original(request, dispatch)
+    host.agent = agent
+    result = run(tmp_path, host)
+    assert result['capability_acquisitions'][0]['status'] == 'registered'
+    assert len(seen) == 2
+    assert (tmp_path / 'generation/investigation/example-lookup-0.json').is_file()
+
+
+def test_invalid_native_proposal_metadata_does_not_consume_actual_candidate_evaluations(tmp_path):
+    host = NativeHost(tmp_path / 'trials')
+    original = host.agent
+    def agent(request, dispatch):
+        def tracking(name, arguments):
+            if name != 'evolution_submit':
+                return dispatch(name, arguments)
+            import copy
+            valid = copy.deepcopy(arguments)
+            missing = copy.deepcopy(valid)
+            missing['candidate']['proposal'].pop('example_evidence_ids')
+            first = dispatch(name, missing)
+            assert first['status'] == 'rejected' and first['remaining_candidate_evaluations'] == 2
+            assert first['diagnostic']['example_files_lookup']['tool'] == 'evolution_example_files'
+            assert 'example_evidence_ids' in first['diagnostic']['message']
+            wrong = copy.deepcopy(valid)
+            wrong['candidate']['proposal']['example_evidence_ids'] = ['evidence_operation_a', 'evidence_operation_b']
+            second = dispatch(name, wrong)
+            assert second['status'] == 'rejected' and second['remaining_candidate_evaluations'] == 2
+            assert 'selected_pre_verification_files' in second['diagnostic']['message']
+            assert 'artifact file IDs' in second['diagnostic']['example_id_scope']
+            assert host.materials.acquisitions == []
+            lookup = second['diagnostic']['example_files_lookup']
+            choices = dispatch(lookup['tool'], lookup['arguments'])
+            assert len(choices['items']) == 2
+            result = dispatch(name, valid)
+            assert result['remaining_candidate_evaluations'] == 1
+            return result
+        return original(request, tracking)
+    host.agent = agent
+    result = run(tmp_path, host)
+    assert len(result['investigation']['submissions']) == 3
+    assert len(host.materials.acquisitions) == 1
+    assert result['capability_acquisitions'][0]['status'] == 'registered'
+
+
+def test_native_example_lookup_does_not_expose_unselected_or_post_verifier_files(tmp_path):
+    from types import SimpleNamespace
+    from src.adapters.evolution_benchmark_gene import _example_file_cards
+    good = put(tmp_path / 'actual.json', {'actual': 1})
+    hidden = put(tmp_path / 'not-indexed.json', {'hidden': 1})
+    gold = put(tmp_path / 'gold.json', {'gold': 1})
+    index = put(tmp_path / 'artifact-index.json', {'format': 'skillsbench_artifact_index_v1',
+        'phase': 'pre_verification', 'files': {'actual.json': good, 'hidden.json': hidden}})
+    post = put(tmp_path / 'post-index.json', {'format': 'skillsbench_artifact_index_v1',
+        'phase': 'post_verification', 'files': {'gold.json': gold}})
+    context = {'observations': [{'id': 'one', 'source_identity': 'source-one', 'evidence': [index, good, post, gold]}]}
+    investigation = SimpleNamespace(evidence={'evidence_' + ref['sha256']: ref for ref in (good, hidden, gold)})
+    cards = _example_file_cards(context, investigation)
+    assert cards['total'] == 1 and cards['items'][0]['evidence_id'] == 'evidence_' + good['sha256']
+    assert cards['items'][0]['relative_path'] == 'actual.json'

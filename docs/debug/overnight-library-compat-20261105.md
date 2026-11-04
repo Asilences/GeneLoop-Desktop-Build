@@ -38,4 +38,4 @@ R7修复 `deepseek_cost_gate._image_count` 对合法JSON Schema的处理：`type
 
 复现沿原入口：`node scripts/project.mjs python scripts/reexport-ppt-managed-compat.py --tool-schema-media-compat --preview`；冻结源码后才使用 `--write --update-registry --validation-record docs/debug/overnight-library-compat-20261105.md`。私有预览与写入回执分别为 `.local/overnight-20261105/r7-compat-preview.json` 和 `r7-compat-written.json`。
 
-R7定向375项通过。首轮全量Python为2852通过、261跳过、2失败；两项失败来自兼容测试误把旧父子配对改成跨版本配对。已恢复原79→80及77→78，并另追加80→81及78→79，继续检查直接父证书及原IR不变。最终全量正在重跑，日志 `.local/overnight-20261105/full-regression-r7-final.log`，完成前不标记全量通过。此更新不表示远程CI通过或生产部署。
+R7定向375项通过。首轮全量Python为2852通过、261跳过、2失败；两项失败来自兼容测试误把旧父子配对改成跨版本配对。已恢复原79→80及77→78，并另追加80→81及78→79，继续检查直接父证书及原IR不变。最终全量Python2856通过、261跳过，Node1662通过、23跳过；日志 `.local/overnight-20261105/full-regression-r7-final.log`。`smoke`、`motif:check`、`rsi:check`、`rsi:efficiency:check`、`rsi:rae:check` 均通过，日志 `r7-mechanism-checks.log`。此更新不表示远程CI通过或生产部署。

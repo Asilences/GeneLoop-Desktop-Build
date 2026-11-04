@@ -15,7 +15,7 @@ from .capability_evolution_agent import strategy_handler
 from .capability_evolution_investigation import run_investigation
 from .capability_feedback import CapabilityFeedback, execution_cost, file_ref, verify
 from .capability_improvement import save
-from .capability_investigation import Investigation
+from .capability_investigation import Investigation, _page
 from .capability_strategy import strategy_context, strategy_ref
 from .evolution_benchmark import (
     benchmark_evaluation_role, inspect_benchmark, observation_input_fingerprint, validation_dataset_splits,
@@ -85,13 +85,8 @@ def _native_helper_proposal(proposal):
                      'interface=function_v1 are supplied by the host. Received fields=' + str(sorted(proposal)))
 
 
-def _example_files(candidate, context, investigation):
-    proposal = _native_helper_proposal(candidate['proposal'])
-    if (not isinstance(proposal['example_evidence_ids'], list)
-            or len(proposal['example_evidence_ids']) < 2
-            or any(not isinstance(value, str) for value in proposal['example_evidence_ids'])
-            or len(set(proposal['example_evidence_ids'])) != len(proposal['example_evidence_ids'])):
-        raise ValueError('gene_benchmark_capability_proposal_invalid')
+def _available_example_files(context, investigation):
+    """The same frozen artifact allowlist drives discovery and native admission."""
     available = {}
     for row in context['observations']:
         for reference in row['evidence']:
@@ -104,22 +99,62 @@ def _example_files(candidate, context, investigation):
             if (not isinstance(index, dict) or index.get('format') != 'skillsbench_artifact_index_v1'
                     or index.get('phase') != 'pre_verification'):
                 continue
-            for source in index.get('files', {}).values():
+            for name, source in index.get('files', {}).items():
                 identifier = 'evidence_' + source['sha256']
                 if source in row['evidence'] and identifier in investigation.evidence:
-                    verify(source)
-                    item = available.setdefault(identifier, {'reference': source, 'source_identities': set()})
+                    raw = verify(source)
+                    item = available.setdefault(identifier, {'reference': source, 'source_identities': set(),
+                        'paths': set(), 'observation_ids': set(), 'index_ids': set(), 'bytes': len(raw)})
                     item['source_identities'].add(row['source_identity'])
+                    item['paths'].add(name)
+                    if row.get('id') is not None:
+                        item['observation_ids'].add(row['id'])
+                    item['index_ids'].add('evidence_' + reference['sha256'])
+    return available
+
+
+def _example_file_cards(context, investigation, *, query='', offset=0, limit=10):
+    if not isinstance(query, str):
+        raise ValueError('gene_benchmark_example_query_invalid')
+    available = _available_example_files(context, investigation)
+    cards = []
+    for identifier, item in available.items():
+        paths = sorted(item['paths'], key=lambda name: (len(Path(name).parts), name))
+        matching = [name for name in paths if all(term in name.casefold() for term in query.casefold().split())]
+        if not matching:
+            continue
+        cards.append({'evidence_id': identifier, 'relative_path': matching[0],
+            'suffix': Path(matching[0]).suffix, 'bytes': item['bytes'],
+            'observation_ids': sorted(item['observation_ids']),
+            'source_identities': sorted(item['source_identities']),
+            'artifact_index_evidence_ids': sorted(item['index_ids'])})
+    cards.sort(key=lambda card: (len(Path(card['relative_path']).parts), card['relative_path'], card['evidence_id']))
+    return {'scope': 'host_admissible_pre_verification_artifact_files', 'query': query,
+            'available_files': len(available),
+            'unavailable_reason': None if available else 'no_admissible_pre_verification_files_in_selected_observations',
+            'selected_observation_ids': [row['id'] for row in context['observations'] if row.get('id')],
+            'read_tool': 'evolution_read(kind=evidence,id=evidence_id,section=content)',
+            **_page(cards, offset, limit)}
+
+
+def _example_files(candidate, context, investigation):
+    proposal = _native_helper_proposal(candidate['proposal'])
+    if (not isinstance(proposal['example_evidence_ids'], list)
+            or len(proposal['example_evidence_ids']) < 2
+            or any(not isinstance(value, str) for value in proposal['example_evidence_ids'])
+            or len(set(proposal['example_evidence_ids'])) != len(proposal['example_evidence_ids'])):
+        raise ValueError('gene_benchmark_capability_proposal_invalid: example_evidence_ids require at least two distinct artifact file IDs from evolution_example_files')
+    available = _available_example_files(context, investigation)
     selected = []
     for identifier in proposal['example_evidence_ids']:
         if identifier not in available:
-            raise ValueError('gene_benchmark_example_not_in_selected_pre_verification_files')
+            raise ValueError('gene_benchmark_example_not_in_selected_pre_verification_files: use a file evidence_id from evolution_example_files for the selected observations; received ' + identifier)
         item = available[identifier]
         selected.append({'evidence_id': identifier, 'reference': item['reference'],
                          'source_identities': sorted(item['source_identities'])})
     # The native learner certifies only the first two prepared inputs.
     if len({source for item in selected[:2] for source in item['source_identities']}) < 2:
-        raise ValueError('gene_benchmark_example_independent_sources_required')
+        raise ValueError('gene_benchmark_example_independent_sources_required: first two certification examples must have two independent observed sources')
     return selected
 
 
@@ -513,21 +548,58 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                 result['capability_acquisitions'].append(acquired)
                 return {**acquired, 'availability': 'next_task_material_snapshot',
                         'semantic_task_quality': 'pending_actual_independent_task_evaluation'}
+            def capability_preflight(candidate, context):
+                try:
+                    program = _native_helper_proposal(candidate['proposal'])['program']
+                    if (program.get('mode') != 'json' or program.get('interface') != 'function_v1'
+                            or not isinstance(program.get('source'), str) or not program['source'].strip()
+                            or not isinstance(program.get('description'), str) or not program['description'].strip()):
+                        raise ValueError('gene_benchmark_capability_program_invalid: source and description must be nonempty text; mode=json, interface=function_v1')
+                    _example_files(candidate, context, investigation)
+                except Exception as error:
+                    error.evolution_diagnostic = {'message': str(error),
+                        'example_files_lookup': {'tool': 'evolution_example_files',
+                            'arguments': {'observation_ids': [row['id'] for row in context['observations']], 'limit': 4}},
+                        'example_id_scope': 'proposal.example_evidence_ids use artifact file IDs from this lookup, not operation receipts or observation IDs.'}
+                    raise
+            capability.preflight = capability_preflight
             handlers['capability'] = capability
 
         def call_agent(request, dispatch):
+            lookups = 0
+            def lookup_dispatch(name, arguments):
+                nonlocal lookups
+                if name != 'evolution_example_files':
+                    return dispatch(name, arguments)
+                requested = dict(arguments)
+                identities = requested.pop('observation_ids', list(investigation.observations))
+                context = investigation.context(identities)
+                result = _example_file_cards(context, investigation, **requested)
+                save(directory / 'investigation' / ('example-lookup-' + str(lookups) + '.json'),
+                     {'arguments': arguments, 'result': result})
+                lookups += 1
+                return result
             if materials is not None:
                 request = {**request, 'prompt': request['prompt'] + '\nA native Python helper backend is available. '
                     'For kind capability, proposal is exactly {source:Python_source, '
                     'description:text, example_evidence_ids:[indexed_file_evidence_id,...]}. '
                     'The host supplies the fixed JSON/function_v1 protocol. Implement def run(value). '
+                    'Use evolution_example_files to page or search the actual host-admissible artifact file cards. '
+                    'Its evidence_id values are the only allowed example_evidence_ids; use evolution_read on these IDs '
+                    'to inspect selected file contents. Operation receipts and observation IDs are not input files. '
                     'Select at least two actual pre-verification artifact input files from independent '
                     'inspected experiences. Files are mechanically wrapped as {data:parsed_JSON} or '
                     '{text:UTF8_text}. The original Script compiler and sandbox independently check '
                     'source equivalence; later task quality is evaluated separately. '
                     'Newly registered abilities enter the next task snapshot; using their references '
-                    'in a strategy requires the next Evolution generation.'}
-            return host.agent(request, dispatch)
+                    'in a strategy requires the next Evolution generation.',
+                    'tools': [*request['tools'], {'name': 'evolution_example_files',
+                        'description': 'Page or search host-admissible artifact input files, with exact file evidence IDs, relative paths and provenance. Query filters paths only, not full contents.',
+                        'parameters': {'type': 'object', 'properties': {
+                            'observation_ids': {'type': 'array', 'items': {'type': 'string'}, 'minItems': 1},
+                            'query': {'type': 'string'}, 'offset': {'type': 'integer', 'minimum': 0},
+                            'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}}, 'additionalProperties': False}}]}
+            return host.agent(request, lookup_dispatch if materials is not None else dispatch)
 
         result['investigation'] = run_investigation(investigation, call_agent=call_agent,
             handlers=handlers, output=directory / 'investigation')
