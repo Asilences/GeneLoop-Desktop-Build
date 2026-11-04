@@ -15,4 +15,4 @@ npm run rsi:check
 
 A 的输出为 `control:2, treatment:1`，B 为 `poster:1, workshop:2`。改版本时显示 `evidence_invalidated`，撤销权限时显示 `permission_denied`，没有当前必要性时显示 `semantic_obligation_missing`；这些分支不派发程序。
 
-先读[简短说明与接口](../../docs/rsi-protocol-v1.md)，真实原生 Harness 结果见[本轮记录](../../docs/experiments/f02-protocol-local-20261024-v1.md)。生成的大 JSON 可由小生成器复核。新旧规则、Matcher 代码的生成分别由 F05/F08 实现；F02 先提供共同格式和校验接缝。
+先读[简短说明与接口](../../docs/rsi-protocol-v1.md)，真实原生 Harness 结果见[本轮记录](../../docs/debug/f02-protocol-local-20261024-v1.md)。生成的大 JSON 可由小生成器复核。新旧规则、Matcher 代码的生成分别由 F05/F08 实现；F02 先提供共同格式和校验接缝。

@@ -42,4 +42,4 @@ DSH 仍固定为 `0.1.5-rc.3`，锁文件变化仅为项目名称。benchmark �
 
 用户 Linux 服务器在 SSH 握手阶段返回 `Error reading SSH protocol banner`，原生 SSH 也被关闭连接，因此本轮该服务器的合并后验收未完成。Windows 本地结果不等于 Linux 已通过；需恢复连接后补跑公共与 benchmark 检查。之前在原底座完成的 Linux 实验保持原版本记录。
 
-本次 API 请求及模型费用为零。已发表的 143→62 次请求、0.72016560→0.61217400 元等结果仍属于 [v3.1 原实验](research-report-agent-v31-20261010.md)，不能追改为“最新 main 上重新完成的真实实验”。
+本次 API 请求及模型费用为零。已发表的 143→62 次请求、0.72016560→0.61217400 元等结果仍属于 [v3.1 原实验](../experiments/research-report-agent-v31-20261010.md)，不能追改为“最新 main 上重新完成的真实实验”。

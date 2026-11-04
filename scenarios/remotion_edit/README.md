@@ -6,7 +6,7 @@
 
 正式网页通过 `/video` 选择视频剪辑；场景命令按本条消息生效，连续视频修改也需在每条消息选择 `/video`，不带命令回普通 Chat。`web_server.py` 复用原 structured 工具，由原 DSH Agent 自行选择素材、编写和修改 Remotion TSX，实际渲染、探测、完整解码与读取画面。支持 MP4 右栏播放、鉴权下载与可编辑源码交付；同一会话增量修改优先读取实际工程，切换场景时传递已交付的 TSX。
 
-管理员部署固定 renderer 配置后，用标准 `prepare-release-scenes.py` 和 `npm run service` 生成快照与发布；未安装 renderer 时显示场景不可用。没有把 Docker socket、宿主凭据或任意挂载权限交给模型。视频目前为普通执行，未声称已启用认证 Motif；原独立实验、失败证据和算法保持保留。实现、实测及短视频容量边界见 [集成记录](../../docs/experiments/video-web-integration-20261101.md)。
+管理员部署固定 renderer 配置后，用标准 `prepare-release-scenes.py` 和 `npm run service` 生成快照与发布；未安装 renderer 时显示场景不可用。没有把 Docker socket、宿主凭据或任意挂载权限交给模型。视频目前为普通执行，未声称已启用认证 Motif；原独立实验、失败证据和算法保持保留。实现、实测及短视频容量边界见 [集成记录](../../docs/debug/video-web-integration-20261101.md)。
 
 ## 范围与输入
 

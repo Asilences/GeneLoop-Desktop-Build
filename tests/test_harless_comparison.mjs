@@ -541,3 +541,42 @@ test('A persisted unresolved report display is audited once at terminal recovery
   recovered.dispose();
  }finally{f.close();}
 });
+
+test('random display order is persisted across reads, retries and restart with true-lane feedback',async()=>{
+ let fail=true;
+ const f=fixture({submit:async id=>{const task=f.tasks.get(id);task.status=fail?'failed':'completed';}});
+ let restored;
+ try{
+  const sent=await f.send();const first=await f.wait(sent.comparison_id),order=[...first.display_order];
+  assert.deepEqual([...order].sort(),['baseline','motif']);
+  assert.deepEqual((await f.service.view('a',sent.comparison_id)).display_order,order);
+  fail=false;
+  await f.service.retry('a',sent.comparison_id,'baseline');await f.wait(sent.comparison_id);
+  await f.service.retry('a',sent.comparison_id,'motif');const done=await f.wait(sent.comparison_id);
+  assert.deepEqual(done.display_order,order);
+  await f.service.rate('a',sent.comparison_id,order[0],4,0,done.lanes[order[0]].output_sha256);
+  await f.service.feedback('a',sent.comparison_id,order[1],'up',done.lanes[order[1]].output_sha256);
+  const rating=JSON.parse(readFileSync(join(f.root,'comparison-ratings.jsonl'),'utf8').trim());
+  const feedback=JSON.parse(readFileSync(join(f.root,'comparison-feedback.jsonl'),'utf8').trim());
+  assert.equal(rating.lane,order[0]);assert.equal(rating.display_position,1);assert.deepEqual(rating.display_order,order);
+  assert.equal(feedback.lane,order[1]);assert.equal(feedback.display_position,2);
+  f.service.dispose();restored=createComparisonService(f.root,'account-a',f.host,{pollMs:1});
+  const recovered=await restored.view('a',sent.comparison_id);
+  assert.deepEqual(recovered.display_order,order);assert.equal(recovered.scores[order[0]],4);
+  assert.equal(recovered.lanes[order[1]].feedback,'up');
+ }finally{restored?.dispose();f.close();}
+});
+
+test('legacy display order is assigned once without losing prior results or ratings',async()=>{
+ const f=fixture();let resumed;
+ try{
+  const sent=await f.send();const done=await f.wait(sent.comparison_id);f.service.dispose();
+  const path=join(f.root,'comparisons.json'),saved=JSON.parse(readFileSync(path,'utf8'));
+  delete saved.turns[0].display_order;saved.turns[0].scores={motif:5};writeFileSync(path,JSON.stringify(saved));
+  resumed=createComparisonService(f.root,'account-a',f.host,{pollMs:1});
+  const view=await resumed.view('a',sent.comparison_id);
+  assert.deepEqual([...view.display_order].sort(),['baseline','motif']);assert.equal(view.scores.motif,5);
+  assert.deepEqual(JSON.parse(JSON.stringify(view.lanes)),JSON.parse(JSON.stringify(done.lanes)));
+  const persisted=JSON.parse(readFileSync(path,'utf8'));assert.deepEqual(persisted.turns[0].display_order,view.display_order);
+ }finally{resumed?.dispose();f.close();}
+});
