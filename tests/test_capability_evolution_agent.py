@@ -264,3 +264,13 @@ def test_host_admitted_capability_uses_existing_construction_queue(tmp_path):
     outcome = handle(value, {'owner': 'owner', 'scope': 'study', 'snapshot_sha256': snapshot['digest']}, tmp_path / 'candidate')
     assert seen == ['diagnostic new behavior']
     assert outcome['outcomes'][0]['status'] == 'published'
+
+
+def test_exact_external_prompt_has_final_capacity_gate(tmp_path):
+    from src.adapters.capability_goal_proposal import propose_json
+    gate = FiniteDiagnosticGate()
+    with pytest.raises(ValueError, match='context_capacity_exceeded'):
+        propose_json({'owner': 'owner', 'trigger_id': 'bounded'}, tmp_path / 'model', gate,
+                     system='x' * 200, prompt_request={}, max_prompt_bytes=100)
+    assert gate.current is None
+    assert not (tmp_path / 'model/requests.jsonl').exists()

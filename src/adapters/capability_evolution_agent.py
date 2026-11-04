@@ -292,7 +292,8 @@ def run(packet_ref, output, *, enabled=False, gate=None, inspector=inspect_graph
         save(out / 'model-context.json', visible)
         save(out / 'private-reference-map.json', mappings)
         response = propose_json(context, out / 'model', gate, system=SYSTEM,
-                                response_key='candidates', category='evolution_proposal', prompt_request=visible)
+                                response_key='candidates', category='evolution_proposal', prompt_request=visible,
+                                max_prompt_bytes=context['context_limit_utf8_bytes'])
         verify(packet_ref)
         if response['status'] != 'proposed':
             result = {'status': response['status'], 'proposal': response, 'decisions': []}

@@ -25,7 +25,7 @@ def propose(request, output, gate=None):
 
 
 def propose_json(request, output, gate=None, *, system=SYSTEM, response_key='goals',
-                 category='goal_discovery', prompt_request=None):
+                 category='goal_discovery', prompt_request=None, max_prompt_bytes=None):
     """Shared single-turn transport; the caller validates candidate semantics.
 
     System/response protocol are trusted code parameters, never model fields.
@@ -46,6 +46,9 @@ def propose_json(request, output, gate=None, *, system=SYSTEM, response_key='goa
     if gate.current is not None:raise ValueError('proposal_serial_attempt_required')
     visible = request if prompt_request is None else prompt_request
     prompt = system+'\nFROZEN TASK NEEDS AND CAPABILITIES:\n'+json.dumps(visible,ensure_ascii=False,allow_nan=False)
+    if max_prompt_bytes is not None and (type(max_prompt_bytes) is not int or max_prompt_bytes < 1
+            or len(prompt.encode('utf-8')) > max_prompt_bytes):
+        raise ValueError('proposal_context_capacity_exceeded')
     pilot.write(output/'prompt.md',prompt)
     pilot.write(output/'effective.json',{'model':pilot.MODEL,'reasoning_effort':'off','max_tokens':pilot.MAX_TOKENS,
         'tool_order':[],'research_budget_usd':str(limit),'system_sha256':pilot.sha(system),

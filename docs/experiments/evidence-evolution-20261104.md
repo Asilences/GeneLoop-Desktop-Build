@@ -42,9 +42,9 @@
 
 ## 复现与证据
 
-本轮回归：全量Python2318通过/241跳过，Node1587通过/21跳过；之后补充一项宿主队列准入诊断，最终相关63项在本地和Linux均通过。Smoke、motif:check、rsi:check、rsi:efficiency:check及续接策略生成物检查通过。Python有67条既有告警，未将跳过计为通过。首次正向接线测试使用不含文件版本的算术回执，被论文inspector拒绝；改由明确的算术测试宿主解释其整数输入，未放宽真实论文来源守卫。两类都是工程诊断，不计作模型效果。
+本轮回归：全量Python2318通过/241跳过，Node1587通过/21跳过；之后补充宿主队列准入与实际外发文本上限诊断，最终相关64项在本地和Linux均通过。Smoke、motif:check、rsi:check、rsi:efficiency:check及续接策略生成物检查通过。Python有67条既有告警，未将跳过计为通过。首次正向接线测试使用不含文件版本的算术回执，被论文inspector拒绝；改由明确的算术测试宿主解释其整数输入，未放宽真实论文来源守卫。两类都是工程诊断，不计作模型效果。
 
-Linux源码快照`evolution-code-004`复用真实复测的源码，只更新最终测试；实测63 passed/25.47秒。原模型快照002/003及其冻结文件保持不变。
+Linux最终源码快照`evolution-code-005`增加发送前的实际Prompt字节容量检查，实测64 passed/24.32秒；code-004此前63项通过。新检查不触发模型调用，原模型快照002/003及其冻结文件保持不变。
 
 入口：`scripts/run-evolution-agent.py --manifest <private-manifest.json> --output <new-.local-directory>` 默认预览。显式 `--call-model --budget-usd 3 --max-requests 1` 才发请求。脚本必须经已有项目 Python 环境运行；模型验收在Linux服务器原凭证入口执行。
 
