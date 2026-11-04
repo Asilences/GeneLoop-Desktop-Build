@@ -21,6 +21,27 @@ from src.adapters.capability_decision_evidence import inspect_decision
 from scenarios.paper_proofreading.frontier.budget import FrontierGate
 
 
+def ingest_usage(entries, owner, feedback):
+    """Feed verified task-policy observations into the original feedback store."""
+    from src.adapters.capability_strategy_usage import ingest_task_strategy_usage
+    results = []
+    for entry in entries:
+        # Rebuild original evidence before following its host-owned source path.
+        inspect_decision(entry['evidence'], owner)
+        record = json.loads(verify(entry['evidence']))
+        source = record['source']
+        if source['kind'] != 'web_task':
+            continue
+        try:
+            result = ingest_task_strategy_usage(source['directory'], owner, feedback)
+        except ValueError as error:
+            if str(error) != 'strategy_usage_host_admission_required':
+                raise
+            result = {'status': 'pending', 'reason': str(error)}
+        results.append(result)
+    return results
+
+
 def execute(manifest_ref, output, *, call_model=False, budget_usd='3'):
     config = json.loads(verify(manifest_ref))
     fields = {'snapshot', 'observations', 'scope', 'target', 'feedback_directory', 'ledger_root', 'host_adapter'}
@@ -69,6 +90,7 @@ def execute(manifest_ref, output, *, call_model=False, budget_usd='3'):
             verify(adapter_ref)
             return result
         feedback = CapabilityFeedback(config['feedback_directory'], snapshot['owner'])
+        report['usage_feedback'] = ingest_usage(config['observations'], snapshot['owner'], feedback)
         handler = strategy_handler(snapshot=snapshot, feedback=feedback, target=config['target'],
                                    scope=config['scope'], evaluate=evaluate,
                                    parent_selection=config.get('parent_selection'))

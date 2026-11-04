@@ -1,3 +1,4 @@
+import {freezeTaskStrategy, assertTaskStrategyPrompt, taskStrategyContext, writeTaskStrategyContext, writeTaskStrategyReceipt, type FrozenTaskStrategy, type ResearchTaskStrategy} from './harless_task_strategy.ts';
 import {installChunkedUpload} from './geneloop_chunked_upload.ts';
 import {FILE_MAX_BYTES} from './geneloop_upload_limits.ts';
 /** Dynamic business tasks on the official Harness Web/Session lifecycle. */
@@ -73,6 +74,7 @@ const conversationHost=(ctx:any)=>ctx.sessionController[cordisSymbols.original]?
 /** Internal same-host handoff: ownership is rechecked by the registered reader. */
 export async function publicConversationContext(ctx:object,sessionId:string){return conversationReaders.get(conversationHost(ctx))?.(sessionId);}
 type Policy = {
+  research_strategy?: ResearchTaskStrategy;
   learning_python?: string; output: string; user_id?: string; allowed_tools: string[]; endpoint: string; max_output_tokens: number | null;
   command_resources?: any;
   mode: ExecutionMode; budget_usd: number | null; request_limit?: number | null; run_budget_usd?: number | null; run_request_limit?: number | null; capability_profile: string;
@@ -91,6 +93,9 @@ type ModelOption = WebModelOption;
 type Task = {
   request: NormalizedWebTask; delivery: PromptPart[]; confirmation_digest: string;
   native_turn?: number;
+  research_strategy?: FrozenTaskStrategy;
+  strategy_disposers?: (() => void)[];
+  strategy_exposure?: 'prepared_only' | 'prompt_submitted';
   status: string; created_at: string; started_at?: string; finished_at?: string;
   failure: string | null; fallback_reason: string | null; answer: string;
   output: string; stats: Record<string, any>; interceptor?: any;
@@ -274,7 +279,11 @@ export function apply(ctx: any) {
     const allowed = new Set(allowedTools);
     const instructions = instructionsFor(scene, sourcePending);
     const disposers = [...bindProductPrompt(agent), agent.ctx.tools.restrict({ allow: allowedTools }),
-      agent.ctx.tools.guard((call: any) => allowed.has(call.name) ? commonToolDenial(call) : 'Tool is outside the configured capability profile')];
+      agent.ctx.tools.guard((call: any) => {
+        const task = forSession(agent.session.id) ?? delegation.taskForChild(agent.session.id);
+        if (task?.research_strategy && task.status === 'running') taskStrategyContext(task.research_strategy, principal);
+        return allowed.has(call.name) ? commonToolDenial(call) : 'Tool is outside the configured capability profile';
+      })];
     disposers.push(agent.ctx.systemPrompt.section({name:'geneloop:attachment-context-policy',order:10220,text:attachmentContextPolicy}));
     disposers.push(agent.ctx.systemPrompt.section({name:'geneloop:goal-policy',order:10225,text:GOAL_GUIDANCE}));
     if (instructions) {
@@ -287,6 +296,24 @@ export function apply(ctx: any) {
     guards.set(agent.session.id, disposers.filter(dispose => typeof dispose === 'function'));
     schemas.set(agent.session.id, agent.ctx.tools.schemas(scopeOf(agent.ctx)).sort((a: any, b: any) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     mountedScenes.set(agent.session.id, configuredScene.id); saveSettings();
+  }
+  function bindTaskStrategy(agent: any, task: Task) {
+    if (!task.research_strategy) return;
+    const inherited = taskStrategyContext(task.research_strategy, principal);
+    task.strategy_disposers ??= [];
+    task.strategy_disposers.push(
+      agent.ctx.systemPrompt.variable('geneloop_task_strategy_literal', () => inherited.text),
+      agent.ctx.systemPrompt.section({name: 'geneloop:task-strategy', order: 10230,
+        text: 'Host-admitted decision context for this task. Apply it when appropriate within current permissions and validation requirements.\n{{geneloop_task_strategy_literal}}'}));
+  }
+  function finalizeTaskStrategy(task: Task) {
+    if (!task.research_strategy) return;
+    try {
+      writeTaskStrategyReceipt(task.research_strategy, {owner: principal, task_id: task.request.task_id,
+        session_id: task.request.session_id, scene_id: task.scene.id, output: task.output,
+        task_status: task.status, trace_start_index: task.trace_start_index ?? 0,
+        exposure: task.strategy_exposure ?? 'prepared_only'});
+    } catch { task.failure = 'strategy_receipt_failed'; record(task); }
   }
   function settingsView(sessionId?: string) {
     if (sessionId) trash?.assertVisible(sessionId);
@@ -562,7 +589,7 @@ export function apply(ctx: any) {
     isActive:task=>task.status==='running'&&active.has(task.request.task_id),
     modelRoute:task=>({provider:task.model_option.provider,model:task.model_option.model,reasoningEffort:task.reasoning_effort,
       maxTokens:config.max_output_tokens??(task.model_option.provider==='deepseek-official'?WEB_DEEPSEEK_OUTPUT_CAPACITY:undefined)}),
-    onChild:(child,_root,task)=>bindScene(child,task.scene,task.source_pending),audit:(row,task)=>audit(task,row)});
+    onChild:(child,_root,task)=>{bindScene(child,task.scene,task.source_pending);bindTaskStrategy(child,task);},audit:(row,task)=>audit(task,row)});
   ctx.effect(()=>()=>delegation.close(),'geneloop-delegation-lifetime');
   const contextAdmission=createContextAdmission({policy:config,taskForSession:forSession,
     executionAgent:agent=>resolveExecutionAgent(ctx,agent),
@@ -623,6 +650,7 @@ export function apply(ctx: any) {
     return { task_id: request.task_id, session_id: request.session_id, request_id: request.request_id,
       capability_profile: request.capability_profile, scene: task.scene.id, scene_sha256: task.scene.config_sha256,
       user_id: principal, selected_mode: task.selection.mode, rsi: task.selection.rsi, mode: request.mode, budget_usd: request.budget_usd,
+      strategy_exposure: task.strategy_exposure,
       native_turn: task.native_turn, entrypoint: task.entrypoint, source_task_id: task.source_task_id, status: task.status, failure: task.failure, fallback_reason: task.fallback_reason,
       created_at: task.created_at, started_at: task.started_at, finished_at: task.finished_at,
       duration_ms:task.started_at?Math.max(0,Date.parse(task.finished_at??utc())-Date.parse(task.started_at)):0,
@@ -669,6 +697,8 @@ export function apply(ctx: any) {
       native_turn: state.native_turn, status: state.status, created_at: state.created_at, started_at: state.started_at,
       finished_at: state.finished_at, failure: state.failure, fallback_reason: state.fallback_reason,
       answer: '', output, trace_start_index:effective.trace_start_index, stats: state.stats, humans: new Map(), current_humans: new Set(),
+      research_strategy: effective.research_strategy,
+      strategy_exposure: effective.research_strategy ? state.strategy_exposure ?? 'prepared_only' : undefined,
       sources: state.sources, entrypoint: state.entrypoint, budget_session_id: route.budget_session_id,
       source_task_id: state.source_task_id ?? request.task_id,
       scene: { ...restoredScene,...(effective.learning_runtime??{}),learning_version:effective.learning_version??undefined,learning_phase:effective.learning_phase??undefined, config_sha256: effective.scene_sha256 ?? restoredScene.config_sha256,
@@ -724,6 +754,7 @@ export function apply(ctx: any) {
       task.closing = (async () => {
         await broker('/unbind', { session_id: request.session_id, budget_session_id: task.budget_session_id });
         await control('/tasks/cancel', { session_id: task.budget_session_id });
+        finalizeTaskStrategy(task);
       })().catch(error => { task.failure = 'budget_close_failed: ' + String(error); record(task); });
     }
   }
@@ -781,6 +812,8 @@ export function apply(ctx: any) {
     const cancellingOwner=status==='cancelled'?agents.get(task.request.session_id):undefined;
     if(cancellingOwner)closingTurns.arm(task,cancellingOwner);
     goals.disarmTask(task);
+    for (const dispose of task.strategy_disposers ?? []) dispose();
+    task.strategy_disposers = [];
     task.status = status; task.failure = failure; task.finished_at = utc();
     // Pin command bytes before another turn can edit the persistent workspace.
     if ((task.scene.adapter === 'workspace'||task.scene.ppt_execution_strategy==='ppt_master') && status === 'completed' && !comparisons?.isLane(task.request.session_id)) {
@@ -823,6 +856,7 @@ export function apply(ctx: any) {
         pptLearning.schedule();
       }
       active.delete(task.request.task_id);
+      finalizeTaskStrategy(task);
     })().catch((error) => { task.failure = 'budget_close_failed: ' + String(error); record(task); });
   }
   const controller = ctx.sessionController;
@@ -1343,6 +1377,8 @@ export function apply(ctx: any) {
       scene, trace_start_index:snapshot.events.length, selection: Object.freeze({ ...selection }), tools, workspace, scene_options: options, scene_inputs: sceneInputs, source_pending: sourcePending, scope_sha256: scopeDigest(workspace, scene),
       manifest_sha256: fileSha(scene.manifest), binding_sha256: fileSha(scene.task),
       paper_flow_shadow_sha256: fileSha(scene.paper_flow_shadow),
+      research_strategy: freezeTaskStrategy(config.research_strategy, {owner: principal, scene_id: scene.id, mode: request.mode, rsi: selection.rsi}),
+      strategy_exposure: 'prepared_only',
       entrypoint, created_at: utc(), failure: null, fallback_reason: null, answer: '', output,
       humans: priorHumans, current_humans: new Set(), sources,
       model_option: chosenModel, reasoning_effort: chosenReasoning, budget_session_id: budgetSessionId,
@@ -1361,6 +1397,7 @@ export function apply(ctx: any) {
     indexedTasks.push(taskId); saveTaskIndex(); return task;
   }
   function updateDraft(task: Task) {
+    if (task.research_strategy) writeTaskStrategyContext(task.research_strategy, principal, task.output);
     if(task.scene.binding_policy && task.scene.binding_policy!=='approved_uploaded_reads_v1' &&
         task.request.mode!=='baseline' && !task.source_pending && task.scene_inputs.length){
       const manifest=JSON.parse(readFileSync(task.scene.manifest!,'utf8'));
@@ -1388,10 +1425,10 @@ export function apply(ctx: any) {
       inherited_context_sha256:sha(task.inherited_context??''),inherited_evidence_sha256:digest(task.inherited_evidence??[]),
       inherited_images_sha256:digest(task.inherited_images??[]),
       provider_mode: config.provider_mode, max_output_tokens: config.max_output_tokens });
-    task.confirmation_digest = digest({ confirmation: task.confirmation_digest,
+    task.confirmation_digest = digest({ research_strategy: task.research_strategy ?? null, confirmation: task.confirmation_digest,
       provider: task.model_option.provider, model: task.model_option.model, reasoning_effort: task.reasoning_effort ?? null });
     json(join(task.output, 'task.json'), task.request);
-    json(join(task.output, 'effective-config.json'), { ...view(task), selection: task.selection, tools: task.tools,
+    json(join(task.output, 'effective-config.json'), { ...view(task), research_strategy: task.research_strategy ?? null, selection: task.selection, tools: task.tools,
       trace_start_index:task.trace_start_index??0,learning_version:task.scene.learning_version??null,
       ...(task.scene.learning_version?{learning_runtime:Object.fromEntries(['runtime_kind','runtime_mode','runtime_library','runtime_library_sha256','manifest','task','tool_schemas','certified_tool_schemas','certified_tool_schemas_sha256','matching_policy','binding_policy','certification_path','certification_sha256','certified_code_locks','certification_scope','quality_cost_promoted'].map(key=>[key,(task.scene as any)[key]]))}:{}),
       scenario: task.scene.scenario, scenario_version: task.scene.scenario_version,
@@ -1546,6 +1583,7 @@ export function apply(ctx: any) {
       if (scopeDigest(task.workspace, task.scene) !== task.scope_sha256)
         throw new TaskError('confirmation_changed', '附件内容已改变，请重新发送。', 409);
       configureMotif(task);
+      bindTaskStrategy(execution, task);
       const contextMessage = attachmentContextMessage(task, attachmentContext, task.inherited_context, task.inherited_evidence,priorImages,fileImages);
       if (contextMessage) agents.get(task.request.session_id).session.append('user/message', contextMessage, {surfaceOp:'append'});
       if(goalRequest){
@@ -2187,9 +2225,14 @@ export function apply(ctx: any) {
     }
   },{global:true});
   ctx.on('llm/stream', (request: any, next: any) => {
-    if(request.purpose==='compaction'){contextAdmission.assertAuthorized(request);return next();}
+    if(request.purpose==='compaction'){
+      contextAdmission.assertAuthorized(request);
+      const task = forSession(request.sessionId) ?? delegation.taskForChild(request.sessionId);
+      if (task?.research_strategy) taskStrategyContext(task.research_strategy, principal);
+      return next();
+    }
     const child=delegation.authorizeRequest(request);
-    if(child){child.task.stats.llm_decisions=Number(child.task.stats.llm_decisions)+1;record(child.task);return next();}
+    if(child){if(child.task.research_strategy)assertTaskStrategyPrompt(child.task.research_strategy,principal,request);child.task.stats.llm_decisions=Number(child.task.stats.llm_decisions)+1;record(child.task);return next();}
     const task = forSession(request.sessionId);
     if (!task || task.status !== 'running' || !active.has(task.request.task_id) ||
         request.provider !== task.model_option.provider || request.model !== task.model_option.model ||
@@ -2208,6 +2251,11 @@ export function apply(ctx: any) {
       application_output_cap:config.max_output_tokens,
       tools_order: requestedTools.map((tool: any) => tool.name), tools_sha256: digest(requestedTools),
       human_message_sha256: humans.map((message: any) => digest(message.content)), mode: task.request.mode });
+    if (task.research_strategy) {
+      const exposure = assertTaskStrategyPrompt(task.research_strategy, principal, request);
+      task.strategy_exposure = 'prompt_submitted';
+      audit(task, {kind: 'strategy_prompt_exposure', strategy: task.research_strategy.selection.strategy, ...exposure});
+    }
     task.stats.llm_decisions = Number(task.stats.llm_decisions) + 1; record(task);
     const live = progress.get(task.request.task_id) ?? createTaskProgress(); progress.set(task.request.task_id, live); live.beginAttempt();
     return (async function* () {

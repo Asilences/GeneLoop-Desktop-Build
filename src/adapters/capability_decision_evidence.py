@@ -93,11 +93,19 @@ def _web(directory, owner):
         if path.exists():
             evidence.append(file_ref(path))
     identity = capability_digest({'owner': owner, 'decision_root': root})
-    return {'task_id': trace['task_id'], 'source_identity': identity,
+    from .capability_strategy_usage import inspect_task_strategy_usage
+    usage = inspect_task_strategy_usage(directory, owner)
+    if usage is not None:
+        evidence = list({capability_digest(ref): ref for ref in [*evidence, *usage['evidence']]}.values())
+    row = {'task_id': trace['task_id'], 'source_identity': identity,
             'stage': 'execution', 'status': 'passed' if trace['status'] == 'completed' else 'failed',
             'quality': trace['quality'], 'counterexample': False,
             'evidence': evidence, 'interaction_evidence': interactions,
             'observed_cost_usd': None, 'cost_attribution': 'unknown; task terminal status is not a quality review'}
+    if usage is not None:
+        row['strategy_usage'] = {key: usage[key] for key in
+                                 ('subject', 'target', 'scope', 'exposure', 'task_status', 'semantic_adoption', 'quality_status')}
+    return row
 
 
 def _construction(records, task):
@@ -140,6 +148,8 @@ def inspect_decision(reference, owner):
     if row['evidence'] != record['source_evidence']:
         raise ValueError('decision_source_evidence_changed')
     context = _context(record['approved_context'], owner, row['evidence'], row['interaction_evidence'])
+    if row.get('strategy_usage') is not None:
+        context['strategy_usage'] = copy.deepcopy(row['strategy_usage'])
     row.update(relation=record['relation'], capabilities=record['capabilities'], steps=[],
                observation_level='host_approved_decision_context', model_decision_count=None,
                decision_context=context)
