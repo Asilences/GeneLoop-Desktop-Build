@@ -14,6 +14,7 @@ const BACKUP_SEMANTICS = 0x02000000;
 const DIRECTORY = 0x10;
 const REPARSE_POINT = 0x400;
 const NO_MORE_FILES = 18;
+const ALREADY_EXISTS = 183;
 const FILE_FULL_DIRECTORY_INFO = 14;
 const FILE_FULL_DIRECTORY_RESTART_INFO = 15;
 const FILE_DISPOSITION_INFO = 4;
@@ -23,6 +24,7 @@ const MAX_PATH_UNITS = 32768;
 
 const kernel = koffi.load('kernel32.dll');
 const createFile = kernel.func('intptr_t __stdcall CreateFileW(const char16_t *path, uint32_t access, uint32_t share, void *security, uint32_t disposition, uint32_t flags, void *templateFile)');
+const createDirectory = kernel.func('int __stdcall CreateDirectoryW(const char16_t *path, void *security)');
 const getInfo = kernel.func('int __stdcall GetFileInformationByHandle(intptr_t file, void *information)');
 const getPath = kernel.func('uint32_t __stdcall GetFinalPathNameByHandleW(intptr_t file, void *path, uint32_t length, uint32_t flags)');
 const readFile = kernel.func('int __stdcall ReadFile(intptr_t file, void *data, uint32_t length, _Out_ uint32_t *read, void *overlapped)');
@@ -118,7 +120,9 @@ function openRoot(directory, access) {
   try {
     if (!info(handle).directory) throw Error('工作区必须是目录。');
     const path = finalPath(handle);
-    if (!/^\\\\\?\\[A-Za-z]:\\/.test(path)) throw Error('无法验证本地盘符。');
+    if (childPrefix(path).toLowerCase() !== childPrefix(win32.toNamespacedPath(directory)).toLowerCase()) {
+      throw Error('工作区已指向其他位置。');
+    }
     return { handle, path };
   } catch (error) {
     closeHandle(handle);
@@ -174,21 +178,25 @@ export function openWorkspaceReader(directory) {
   };
 }
 
-export function openReportWriter(directory, sourceDirectory) {
+export function openReportWriter(sourceDirectory) {
   const source = openRoot(sourceDirectory, READ_ATTRIBUTES);
   let output;
-  try {
-    output = openRoot(directory, READ_ATTRIBUTES);
-    const from = childPrefix(source.path).toLowerCase();
-    const to = childPrefix(output.path).toLowerCase();
-    if (from.startsWith(to) || to.startsWith(from)) {
-      throw Error('报告目录必须与源工作区分离。');
+  const directory = childPrefix(source.path) + 'GeneLoop 输出';
+  function ensureOutput() {
+    if (output) return output;
+    if (!createDirectory(directory, null) && getLastError() !== ALREADY_EXISTS) {
+      throw Error('无法在工作区创建「GeneLoop 输出」文件夹。');
     }
-  } catch (error) {
-    if (output) closeHandle(output.handle);
-    throw error;
-  } finally {
-    closeHandle(source.handle);
+    const handle = open(directory, READ_ATTRIBUTES);
+    try {
+      if (!info(handle).directory || assertChild(handle, source.path).toLowerCase() !== directory.toLowerCase()) {
+        throw Error('无法验证工作区的输出文件夹。');
+      }
+      return output = { handle, path: directory };
+    } catch (error) {
+      closeHandle(handle);
+      throw error;
+    }
   }
 
   let closed = false;
@@ -199,9 +207,10 @@ export function openReportWriter(directory, sourceDirectory) {
       if (!length || length > MAX_BYTES) throw Error('报告必须为 1 至 256 KiB。');
       const bytes = Buffer.from(text, 'utf8');
       const name = 'GeneLoop-' + randomUUID() + '.md';
-      const handle = open(childPrefix(output.path) + name, WRITE_REPORT, CREATE_NEW, 0);
+      const { path } = ensureOutput();
+      const handle = open(childPrefix(path) + name, WRITE_REPORT, CREATE_NEW, 0);
       try {
-        assertChild(handle, output.path);
+        assertChild(handle, path);
         const written = [0];
         if (!writeFile(handle, bytes, bytes.length, written, null) || written[0] !== bytes.length || !flushFile(handle)) {
           throw Error('报告写入不完整。');
@@ -219,7 +228,8 @@ export function openReportWriter(directory, sourceDirectory) {
     close() {
       if (closed) return;
       closed = true;
-      closeHandle(output.handle);
+      if (output) closeHandle(output.handle);
+      closeHandle(source.handle);
     },
   };
 }

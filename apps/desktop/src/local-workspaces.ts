@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, relative, isAbsolute, sep } from 'node:path';
+import { basename, dirname } from 'node:path';
 
-export type LocalWorkspace = { id: string; name: string; directory: string; output?: string; updatedAt: number };
+export type WorkspaceBinding = { server: string; accountId: string; workspaceId: string };
+export type LocalWorkspace = { id: string; name: string; directory?: string; binding?: WorkspaceBinding; updatedAt: number };
 const localPath = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z]:[\\/]/.test(value) && !value.includes('\0');
 const samePath = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
@@ -19,14 +20,6 @@ export function reopenDirectory(path: string): string {
   return resolved;
 }
 
-export function checkReportDirectory(source: string, output: string): void {
-  const contains = (parent: string, child: string) => {
-    const rest = relative(parent.toLowerCase(), child.toLowerCase());
-    return !isAbsolute(rest) && rest !== '..' && !rest.startsWith('..' + sep);
-  };
-  if (contains(source, output) || contains(output, source)) throw Error('请选择与源文件夹分离的报告目录。');
-}
-
 export class LocalWorkspaceStore {
   private entries: LocalWorkspace[];
   constructor(private file: string) {
@@ -34,28 +27,36 @@ export class LocalWorkspaceStore {
       const data = JSON.parse(readFileSync(file, 'utf8'));
       if (data?.version !== 1 || !Array.isArray(data.items)) throw Error('Invalid workspace index');
       this.entries = data.items.filter((row: LocalWorkspace) => typeof row?.id === 'string' &&
-        typeof row.name === 'string' && localPath(row.directory) &&
-        (row.output === undefined || localPath(row.output)) && Number.isFinite(row.updatedAt));
+        typeof row.name === 'string' && (row.directory === undefined || localPath(row.directory)) &&
+        (row.binding === undefined || (typeof row.binding?.server === 'string' &&
+          typeof row.binding.accountId === 'string' && typeof row.binding.workspaceId === 'string')) &&
+        Number.isFinite(row.updatedAt)).map(({ id, name, directory, binding, updatedAt }: LocalWorkspace) =>
+          ({ id, name, directory, binding, updatedAt }));
     } catch { this.entries = []; }
   }
-  list(): LocalWorkspace[] { return this.entries.map(row => ({ ...row })); }
+  list(server: string, accountId: unknown): LocalWorkspace[] {
+    return this.entries.filter(row => !row.binding || (row.binding.server === server && row.binding.accountId === accountId));
+  }
+  findBinding(binding: WorkspaceBinding): LocalWorkspace | undefined {
+    return this.list(binding.server, binding.accountId).find(row => row.binding?.workspaceId === binding.workspaceId);
+  }
   get(id: string): LocalWorkspace {
     const row = this.entries.find(item => item.id === id);
     if (!row) throw Error('找不到该本机工作区。');
     return { ...row };
   }
   open(directory: string): LocalWorkspace {
-    return this.entries.find(row => samePath(row.directory, directory)) ??
+    return this.entries.find(row => !row.binding && row.directory && samePath(row.directory, directory)) ??
       this.save({ directory, name: basename(directory) || directory });
   }
-  save(value: { id?: string; name: string; directory: string; output?: string }): LocalWorkspace {
+  save(value: { id?: string; name: string; directory?: string; binding?: WorkspaceBinding }): LocalWorkspace {
     const name = value.name.trim();
     if (!name || name.length > 80) throw Error('工作区名称需为 1–80 字。');
-    const directory = authorizedDirectory(value.directory);
-    const output = value.output ? authorizedDirectory(value.output) : undefined;
-    if (output) checkReportDirectory(directory, output);
-    if (this.entries.some(row => row.id !== value.id && samePath(row.directory, directory))) throw Error('这个文件夹已经是一个本机工作区。');
-    const row = { id: value.id ?? randomUUID(), name, directory, output, updatedAt: Date.now() };
+    const directory = value.directory && reopenDirectory(value.directory);
+    if (!value.binding && directory && this.entries.some(row => !row.binding && row.id !== value.id && row.directory && samePath(row.directory, directory))) {
+      throw Error('这个文件夹已经是一个本机工作区。');
+    }
+    const row = { id: value.id ?? randomUUID(), name, directory, binding: value.binding, updatedAt: Date.now() };
     this.write(value.id ? this.entries.map(old => old.id === row.id ? row : old) : [...this.entries, row]);
     return row;
   }

@@ -10,7 +10,7 @@ export type LocalTaskUpdate =
   | { kind: 'done'; status: 'completed' | 'canceled' | 'error'; error?: string };
 
 export function startLocalWorker(options: {
-  executable: string; runtime: string; home: string; directory: string; reports?: string;
+  executable: string; runtime: string; home: string; directory: string;
   endpoint: string; token: string; model: string; prompt: string;
   onUpdate: (event: LocalTaskUpdate) => void;
 }) {
@@ -64,7 +64,7 @@ export function startLocalWorker(options: {
       booted = true;
       clearTimeout(timeout);
       if (canceled) return finish({ kind: 'done', status: 'canceled' });
-      send({ kind: 'run', directory: options.directory, reports: options.reports, model: options.model, prompt: options.prompt });
+      send({ kind: 'run', directory: options.directory, model: options.model, prompt: options.prompt });
     } else if (message.kind === 'done') finish(message);
     else if (message.kind === 'answer' || message.kind === 'report') options.onUpdate(message);
   });

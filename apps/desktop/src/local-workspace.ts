@@ -5,12 +5,12 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
 import type { LocalTaskUpdate } from './local-runtime.ts';
-import { authorizedDirectory, checkReportDirectory, reopenDirectory } from './local-workspaces.ts';
+import { reopenDirectory } from './local-workspaces.ts';
 import type { LocalWorkspace } from './local-workspaces.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const page = join(here, '../ui/local-workspace.html');
-const channels = ['state', 'output', 'start', 'cancel', 'reveal'];
+const channels = ['state', 'start', 'cancel', 'reveal'];
 const leasePath = '/api/harless/desktop-model/lease';
 
 export class LocalWorkspaceWindow {
@@ -20,12 +20,12 @@ export class LocalWorkspaceWindow {
   private closed = false;
   private controller?: ReturnType<typeof startLocalWorker>;
   private pending?: AbortController;
-  private output?: string;
   private reports = new Set<string>();
 
   constructor(private options: { parent: BrowserWindow; server: string; session: Session }) {}
 
   async open(workspace: LocalWorkspace): Promise<void> {
+    if (!workspace.directory) throw Error('请先为工作区添加本机文件夹。');
     if (this.child && !this.child.isDestroyed()) {
       if (this.workspaceId !== workspace.id) throw Error('请先关闭另一个工作区的任务窗口。');
       this.child.focus();
@@ -40,8 +40,7 @@ export class LocalWorkspaceWindow {
     this.busy = true;
     try {
       const directory = reopenDirectory(workspace.directory);
-      this.output = workspace.output && reopenDirectory(workspace.output);
-      if (this.output) checkReportDirectory(directory, this.output);
+      const output = join(directory, 'GeneLoop 输出');
       const child = this.child = new BrowserWindow({
         parent: this.options.parent, width: 760, height: 680, minWidth: 500, minHeight: 480, show: false,
         title: workspace.name + ' · GeneLoop Desktop', autoHideMenuBar: true,
@@ -61,18 +60,7 @@ export class LocalWorkspaceWindow {
       const emit = (event: LocalTaskUpdate) => {
         if (!child.isDestroyed()) child.webContents.send('geneloop-local:update', event);
       };
-      handle('state', () => ({ directory, output: this.output }));
-      handle('output', async () => {
-        if (this.pending) return this.output;
-        const picked = await dialog.showOpenDialog(child, { title: '选择独立的报告保存目录', properties: ['openDirectory', 'createDirectory'] });
-        if (!picked.canceled && !this.pending && !child.isDestroyed()) {
-          const next = authorizedDirectory(picked.filePaths[0]);
-          checkReportDirectory(directory, next);
-          this.output = next;
-          this.reports.clear();
-        }
-        return this.output;
-      });
+      handle('state', () => ({ directory, output }));
       handle('start', input => {
         if (this.pending) throw Error('已有本机任务正在运行。');
         if (typeof input !== 'string' || !input.trim()) throw Error('请输入任务内容。');
@@ -81,8 +69,8 @@ export class LocalWorkspaceWindow {
       });
       handle('cancel', () => { this.pending?.abort(); this.controller?.cancel(); });
       handle('reveal', name => {
-        if (typeof name === 'string' && this.output && this.reports.has(name)) {
-          shell.showItemInFolder(join(this.output, name));
+        if (typeof name === 'string' && this.reports.has(name)) {
+          shell.showItemInFolder(join(reopenDirectory(output), name));
         }
       });
       child.once('closed', () => {
@@ -91,7 +79,6 @@ export class LocalWorkspaceWindow {
         for (const channel of channels) ipcMain.removeHandler('geneloop-local:' + channel);
         this.child = undefined;
         this.workspaceId = undefined;
-        this.output = undefined;
         this.reports.clear();
       });
       try { await child.loadFile(page); child.show(); }
@@ -118,7 +105,7 @@ export class LocalWorkspaceWindow {
       abort.signal.throwIfAborted();
       this.controller = startLocalWorker({
         executable: process.execPath, runtime, home: join(app.getPath('userData'), 'local-workspace'),
-        directory, reports: this.output, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
+        directory, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
         token: lease.token, model: lease.model, prompt,
         onUpdate: event => {
           if (event.kind === 'done') { outcome = event; return; }
@@ -146,6 +133,12 @@ export class LocalWorkspaceWindow {
       this.pending = undefined;
       emit(outcome ?? { kind: 'done', status: abort.signal.aborted ? 'canceled' : 'error' });
     }
+  }
+
+  releaseWorkspace(id: string): void {
+    if (id !== this.workspaceId) return;
+    if (this.pending) throw Error('请先结束当前本机任务，再修改文件夹。');
+    this.child?.destroy();
   }
 
   dispose(): void {

@@ -133,7 +133,7 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     const more=button(icon('more'),event=>{event.stopPropagation();openSessionMenu(row.sessionId,{anchor:more});},'session-more icon');more.title='管理对话';more.setAttribute('aria-label','管理对话：'+titleOf(row));more.setAttribute('aria-haspopup','menu');
     element.append(label,more);element.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();openSessionMenu(row.sessionId,{x:event.clientX,y:event.clientY,anchor:label});});return element;
   };
-  for(const item of sorted([...localWorkspaces]).filter(row=>!query||row.name.toLowerCase().includes(query))){
+  for(const item of sorted(localWorkspaces.filter(row=>!row.binding&&(!query||row.name.toLowerCase().includes(query))))){
     const label=button([icon('folder'),node('span',{},item.name),node('small',{class:'workspace-tag'},'本机')],()=>openLocalWorkspace(item.id),'workspace-row');
     label.dataset.localWorkspaceId=item.id;
     if(localWorkspaceId===item.id)label.setAttribute('aria-current','true');
@@ -210,7 +210,10 @@ function workspaceMenu(group,position){
 }
 async function refreshLocalWorkspaces(){
   if(!localBridge)return;
-  localWorkspaces=await localBridge.list();
+  const user=state.user;
+  const rows=await localBridge.list(user?.id);
+  if(state.user!==user)return;
+  localWorkspaces=rows;
   renderSidebar();
   if(localWorkspaceId)renderConversation();
 }
@@ -223,23 +226,23 @@ function openLocalWorkspace(id){
   renderSidebar();renderConversation();$('history').scrollTop=0;
 }
 function runLocalTask(id){localBridge.run(id).catch(fail);}
+function cloudFolder(group){return localWorkspaces.find(row=>row.binding?.workspaceId===group.workspaceId&&row.binding.accountId===state.user?.id);}
 function localWorkspaceHome(row){
   return node('section',{class:'workspace-home local-workspace-home','aria-label':'本机工作区首页'},
     node('div',{class:'local-home-heading'},icon('folder-open'),node('div',{},
       node('h2',{},row.name),node('p',{},'本机工作区 · 文件管理'))),
     node('section',{class:'local-folder-card'},
-      node('span',{class:'delivery-kicker'},'源文件夹'),node('p',{},row.directory),
-      node('span',{class:'delivery-kicker'},'报告目录'),node('p',{},row.output||'未选择，仅授予读取权限')),
+      node('span',{class:'delivery-kicker'},'本机文件夹'),node('p',{},row.directory||'尚未添加文件夹')),
     node('div',{class:'workspace-editor-actions'},
-      button('在资源管理器中打开',()=>localBridge.reveal(row.id).catch(fail),'secondary'),
+      row.directory?button('在资源管理器中打开',()=>localBridge.reveal(row.id).catch(fail),'secondary'):null,
       button('编辑工作区',()=>workspaceEditor({local:row}),'secondary'),
-      button('新建任务',()=>runLocalTask(row.id),'primary')),
-    node('p',{class:'workspace-editor-hint'},'打开工作区后可先查看目录。运行任务时，任务描述和必要文件片段会发给所连接的云端模型。'));
+      row.directory?button('新建任务',()=>runLocalTask(row.id),'primary'):null),
+    node('p',{class:'workspace-editor-hint'},'生成的报告保存在工作区的「GeneLoop 输出」文件夹。运行任务时，任务描述和必要文件片段会发给所连接的云端模型。'));
 }
 function localWorkspaceMenu(row,position){
   popupMenu([
     {id:'local-open',label:'打开工作区',icon:'folder',action:()=>openLocalWorkspace(row.id)},
-    {id:'local-reveal',label:'在资源管理器中打开',icon:'folder-open',action:()=>localBridge.reveal(row.id).catch(fail)},
+    ...(row.directory?[{id:'local-reveal',label:'在资源管理器中打开',icon:'folder-open',action:()=>localBridge.reveal(row.id).catch(fail)}]:[]),
     {id:'local-edit',label:'编辑工作区',icon:'edit',action:()=>workspaceEditor({local:row})},
     {separator:true},
     {id:'local-remove',label:'移除本机工作区',icon:'trash',danger:true,action:()=>confirmRemoveLocal(row)},
@@ -259,63 +262,84 @@ function confirmRemoveLocal(row){
 }
 function workspaceEditor({local,cloud}={}){
   const editing=Boolean(local||cloud);
-  let saving=false;
+  const accountId=state.user?.id;
+  let saving=false,picking=false;
   let type=local?'local':cloud||!localBridge?'cloud':'local';
-  let source=local?.directory,output=local?.output,sourceTicket,outputTicket;
+  let source=local?.directory||(cloud&&cloudFolder(cloud)?.directory),sourceTicket,cloudTitle=cloud?.title;
   const name=node('input',{value:local?.name||cloud?.title||'',maxlength:'80',placeholder:'工作区名称',required:true});
   const hint=node('p',{class:'workspace-editor-hint'});
   const error=node('p',{class:'error',role:'alert',hidden:true});
   const sourceLabel=node('span',{class:'workspace-folder-path'});
-  const outputLabel=node('span',{class:'workspace-folder-path'});
-  const choose=(kind)=>async()=>{
+  const sourceName=node('span',{class:'workspace-folder-name'});
+  const choose=async()=>{
+    picking=true;render();
     try{
-      const picked=await localBridge.pick(kind);
+      const picked=await localBridge.pick();
       if(!picked||!modal.open)return;
-      if(kind==='source'){
-        source=picked.path;sourceTicket=picked.token;
-        if(!name.value.trim())name.value=source.split(/[\\/]/).filter(Boolean).at(-1)||source;
-      }else{output=picked.path;outputTicket=picked.token;}
-      error.hidden=true;render();
+      source=picked.path;sourceTicket=picked.token;
+      if(!name.value.trim())name.value=source.split(/[\\/]/).filter(Boolean).at(-1)||source;
+      error.hidden=true;
     }catch(cause){error.textContent=errorText(cause);error.hidden=false;}
+    finally{picking=false;render();}
   };
-  const clearOutput=button('移除',()=>{output=undefined;outputTicket=null;render();},'link');
-  const folders=node('div',{class:'workspace-editor-folders'},
-    node('div',{class:'workspace-folder'},node('strong',{},'源文件夹'),sourceLabel,button('选择文件夹…',choose('source'),'secondary')),
-    node('div',{class:'workspace-folder'},node('strong',{},'报告目录 · 可选'),outputLabel,
-      node('div',{class:'workspace-folder-actions'},clearOutput,button('选择目录…',choose('output'),'secondary'))));
+  const clearSource=button(icon('close'),()=>{source=undefined;sourceTicket=null;render();},'icon workspace-folder-clear');
+  clearSource.title='解除文件夹绑定';clearSource.setAttribute('aria-label',clearSource.title);
+  const sourceRow=node('div',{class:'workspace-folder-row'},icon('folder'),
+    node('div',{class:'workspace-folder-details'},sourceName,sourceLabel),clearSource);
+  const pickSource=button([icon('folder-open'),node('span',{})],choose,'workspace-folder-pick');
+  const folders=node('section',{class:'workspace-folder', 'aria-label':'本机文件夹'},
+    node('strong',{},'本机文件夹'),node('div',{class:'workspace-editor-folders'},sourceRow,pickSource));
   const localType=button('本机工作区',()=>{type='local';render();},'secondary');
   const cloudType=button('云端工作区',()=>{type='cloud';render();},'secondary');
   const types=editing||!localBridge?null:node('div',{class:'workspace-type',role:'group','aria-label':'工作区类型'},localType,cloudType);
-  const form=node('form',{class:'workspace-editor-form'},types,node('label',{},'工作区名称',name),folders,hint,error);
+  const form=node('form',{class:'workspace-editor-form'},types,node('label',{},'工作区名称',
+    node('span',{class:'workspace-name-field'},icon('folder'),name)),folders,hint,error);
   const save=node('button',{type:'submit',class:'primary'},editing?'保存':'创建工作区');
   const cancel=button('取消',()=>modal.close(),'secondary');
-  form.append(node('div',{class:'workspace-editor-actions'},cancel,save));
+  const remove=local?button('移除本机工作区',()=>{modal.close();confirmRemoveLocal(local);},'workspace-remove-link'):null;
+  form.append(node('div',{class:'workspace-editor-actions'},remove,cancel,save));
   const modal=dialog(editing?'编辑工作区':'新建工作区',form);modal.classList.add('workspace-editor');
   function render(){
-    folders.hidden=type!=='local';
-    sourceLabel.textContent=source||'添加本机文件夹';sourceLabel.title=source||'';
-    outputLabel.textContent=output||'未选择 · 仅可读取';outputLabel.title=output||'';
-    clearOutput.hidden=!output;
+    folders.hidden=!localBridge||(type!=='local'&&!cloud);
+    sourceRow.hidden=!source;
+    sourceName.textContent=source?.split(/[\\/]/).filter(Boolean).at(-1)||source||'';
+    sourceLabel.textContent=source||'';sourceLabel.title=source||'';
+    pickSource.lastElementChild.textContent=source?'更换文件夹…':'添加文件夹…';
     localType.setAttribute('aria-pressed',String(type==='local'));cloudType.setAttribute('aria-pressed',String(type==='cloud'));
-    hint.textContent=type==='local'?'文件夹和工作区设置保存在本机。可以先创建，之后再运行任务。':'云端工作区与网页版共用，会话和任务在服务器执行。';
-    save.disabled=saving||!name.value.trim()||(type==='local'&&!source);
-    name.disabled=localType.disabled=cloudType.disabled=cancel.disabled=saving;
-    for(const control of folders.querySelectorAll('button'))control.disabled=saving;
+    hint.textContent=type==='local'?'报告会自动保存到文件夹下的「GeneLoop 输出」。':
+      cloud&&localBridge?'本机文件夹用于本机任务。云端会话仍在服务器执行。':'云端工作区与网页版共用。';
+    save.disabled=saving||picking||!name.value.trim()||(type==='local'&&!editing&&!source);
+    name.disabled=localType.disabled=cloudType.disabled=cancel.disabled=saving||picking;
+    if(remove)remove.disabled=saving||picking;
+    clearSource.disabled=pickSource.disabled=saving||picking;
   }
   name.oninput=render;render();
   form.onsubmit=async event=>{
     event.preventDefault();if(save.disabled)return;saving=true;render();error.hidden=true;
     try{
+      if(cloud&&accountId!==state.user?.id)throw Error('账户已切换，请重新打开工作区编辑。');
       if(type==='local'){
-        const row=await localBridge.save({id:local?.id,name:name.value,source:sourceTicket,output:outputTicket});
+        const row=await localBridge.save({id:local?.id,name:name.value,source:sourceTicket});
         await refreshLocalWorkspaces();openLocalWorkspace(row.id);
       }else{
         const title=name.value.trim();
-        const {workspace}=cloud?await rpc('workspace/rename',{workspaceId:cloud.workspaceId,title}):
-          await post('/api/harless/workspaces',{name:title,request_id:crypto.randomUUID()});
-        const at=state.workspaces.findIndex(row=>row.workspaceId===workspace.workspaceId);
-        if(at<0)state.workspaces.push(workspace);else state.workspaces[at]=workspace;
-        if(cloud){renderSidebar();renderConversation();}else openWorkspace(workspace.workspaceId);
+        if(!cloud||title!==cloudTitle){
+          const {workspace}=cloud?await rpc('workspace/rename',{workspaceId:cloud.workspaceId,title}):
+            await post('/api/harless/workspaces',{name:title,request_id:crypto.randomUUID()});
+          cloudTitle=workspace.title;
+          const at=state.workspaces.findIndex(row=>row.workspaceId===workspace.workspaceId);
+          if(at<0)state.workspaces.push(workspace);else state.workspaces[at]=workspace;
+          if(!cloud)openWorkspace(workspace.workspaceId);
+        }
+        if(cloud){
+          if(sourceTicket!==undefined){
+            if(accountId!==state.user?.id)throw Error('账户已切换，请重新打开工作区编辑。');
+            await localBridge.save({name:title,source:sourceTicket,cloud:{workspaceId:cloud.workspaceId,accountId}});
+            sourceTicket=undefined;
+            await refreshLocalWorkspaces();
+          }
+          renderSidebar();renderConversation();
+        }
       }
       modal.close();
     }catch(cause){error.textContent=errorText(cause);error.hidden=false;}
@@ -603,7 +627,11 @@ function workspaceHome(group){
     }
     section.append(list);
   }
-  return node('div',{class:'workspace-home'},summary,resume,section);
+  const bound=cloudFolder(group);
+  const local=bound?.directory?node('section',{class:'local-folder-card'},
+    node('span',{class:'delivery-kicker'},'本机文件夹'),node('p',{},bound.directory),
+    button('运行本机任务',()=>runLocalTask(bound.id),'secondary')):null;
+  return node('div',{class:'workspace-home'},summary,resume,local,section);
 }
 function renderConversation(){
   const history=$('history'),previousTop=history.scrollTop,nearBottom=history.scrollHeight-previousTop-history.clientHeight<140;

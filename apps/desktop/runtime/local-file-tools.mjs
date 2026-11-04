@@ -41,10 +41,9 @@ export function registerLocalFileTools(scope, reader, writer, onReport) {
       },
     }),
   ];
-  if (writer) {
-    tools.push(defineTool({
+  tools.push(defineTool({
       name: 'local_save_report',
-      description: '在独立授权的报告目录中创建一份 Markdown 文件，返回文件名。请在报告中附上来源相对路径。',
+      description: '在本机工作区的「GeneLoop 输出」文件夹中创建一份 Markdown 文件，返回文件名。请在报告中附上来源相对路径。',
       parameters: { markdown: string },
       output: jsonOutput,
       async execute({ markdown }) {
@@ -52,8 +51,7 @@ export function registerLocalFileTools(scope, reader, writer, onReport) {
         onReport?.(report);
         return report;
       },
-    }));
-  }
+  }));
   const allowed = new Set(tools.map(tool => tool.name));
   scope.tools.guard(call => allowed.has(call.name) ? undefined : '工具不在本机文件管理权限内。');
   for (const tool of tools) scope.tools.register(tool);

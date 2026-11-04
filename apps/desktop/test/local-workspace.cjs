@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { app, BrowserWindow, dialog, session, webContents } = require('electron');
+const { app, BrowserWindow, session, webContents } = require('electron');
 const { existsSync } = require('node:fs');
 const { join } = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -19,9 +19,6 @@ app.whenReady().then(async () => {
   const profile = session.fromPartition('local-workspace-test');
   await profile.cookies.set({ url: fixture.origin, name: 'harless_sess', value: fixture.cookie });
   const parent = new BrowserWindow({ show: false });
-  // Replace only the operating-system chooser. The renderer, IPC, cookie,
-  // worker, file handles, upstream HTTP and final file use production paths.
-  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [fixture.reports] });
   const local = new LocalWorkspaceWindow({ parent, server: fixture.origin + '/', session: profile });
   try {
     await local.open({ id: 'workspace', name: '本机诊断', directory: fixture.source, updatedAt: Date.now() });
@@ -31,8 +28,9 @@ app.whenReady().then(async () => {
     const evaluate = code => view.executeJavaScript(code);
     await until(() => evaluate(`document.getElementById('directory').textContent.length>0`), '本机目录展示');
     assert.equal(await evaluate(`document.getElementById('directory').textContent`), fixture.source);
-    await evaluate(`document.getElementById('choose-output').click()`);
-    await until(() => evaluate(`document.getElementById('output').textContent===${JSON.stringify(fixture.reports)}`), '报告目录展示');
+    assert.equal(await evaluate(`document.getElementById('output').textContent`), fixture.reports);
+    assert.equal(await evaluate(`!!document.getElementById('choose-output')`), false);
+    assert.equal(existsSync(fixture.reports), false, '打开工作区不提前创建输出目录');
     await evaluate(`document.getElementById('prompt').value='读取资料并写报告';document.getElementById('task').requestSubmit()`);
     await until(() => evaluate(`document.getElementById('status').textContent==='任务已完成。'||!document.getElementById('send').disabled`), '本机任务结束');
     assert.equal(await evaluate(`document.getElementById('status').textContent`), '任务已完成。');

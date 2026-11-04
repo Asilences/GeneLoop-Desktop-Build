@@ -40,7 +40,7 @@ async function probe(local) {
   return {
     pid: process.pid, localRead: true, rejectedTraversalAndJunction: true,
     rejectedHardlinkOversizeAndDevice: true, revocation: true, shellUnavailable: true,
-    reportDirectorySeparated: true, enumerationBounded: true, turnCanceled: true, realModelRequests: 0,
+    reportOutputJunctionRejected: true, enumerationBounded: true, turnCanceled: true, realModelRequests: 0,
   };
 }
 
@@ -50,7 +50,6 @@ export function apply(ctx) {
     let outcome;
     try {
       const directory = process.cwd();
-      const reports = process.env.GENELOOP_PROBE_REPORTS;
       const reader = openWorkspaceReader(directory);
       try {
         assert.deepEqual(reader.list('空目录'), { entries: [], truncated: false });
@@ -62,14 +61,15 @@ export function apply(ctx) {
         reader.close();
       }
       assert.throws(() => reader.readText('资料.txt'), /授权已关闭/);
-      assert.throws(() => openReportWriter(directory, directory), /必须与源工作区分离/);
-      assert.throws(() => openReportWriter(resolve(directory, '空目录'), directory), /必须与源工作区分离/);
-      const writer = openReportWriter(reports, directory);
+      const blocked = openReportWriter(resolve(directory, '../重解析测试'));
+      try { assert.throws(() => blocked.writeMarkdown('禁止越界写入'), /重解析点/); }
+      finally { blocked.close(); }
+      const writer = openReportWriter(directory);
       writer.close();
       assert.throws(() => writer.writeMarkdown('已撤销'), /授权已关闭/);
 
       local = await openLocalFileAgent(ctx, {
-        directory, reports,
+        directory,
         model: { provider: 'deepseek-official', model: 'deepseek-flash', reasoningEffort: 'off' },
       });
       outcome = await probe(local);

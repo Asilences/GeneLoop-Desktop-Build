@@ -131,10 +131,10 @@ export class DesktopWorkspace {
 
   private async localWorkspaceAction(command: unknown, value: unknown) {
     if (process.platform !== 'win32' || this.disposed) throw Error('本机工作区仅支持 Windows。');
-    if (command === 'list') return this.localWorkspaces.list();
+    if (command === 'list') return this.localWorkspaces.list(this.stateValue.server, value);
     if (command === 'pick') {
       const generation = this.generation;
-      const path = await this.pickWorkspaceDirectory(value === 'output' ? '选择独立的报告目录' : '选择本机工作区文件夹');
+      const path = await this.pickWorkspaceDirectory('选择本机工作区文件夹');
       if (!path || generation !== this.generation) return null;
       const token = randomUUID();
       if (this.folderTickets.size >= 16) this.folderTickets.delete(this.folderTickets.keys().next().value!);
@@ -142,24 +142,39 @@ export class DesktopWorkspace {
       return { path, token };
     }
     if (command === 'save' && value && typeof value === 'object') {
-      const input = value as { id?: unknown; name?: unknown; source?: unknown; output?: unknown };
-      const old = typeof input.id === 'string' ? this.localWorkspaces.get(input.id) : undefined;
+      const input = value as { id?: unknown; name?: unknown; source?: unknown; cloud?: { workspaceId?: unknown; accountId?: unknown } };
+      let binding;
+      if (input.cloud) {
+        const { workspaceId, accountId } = input.cloud;
+        if (typeof workspaceId !== 'string' || !workspaceId || typeof accountId !== 'string' || !accountId) throw Error('无效的云端工作区。');
+        binding = { server: this.stateValue.server, workspaceId, accountId };
+      }
+      const old = binding ? this.localWorkspaces.findBinding(binding) :
+        typeof input.id === 'string' ? this.localWorkspaces.get(input.id) : undefined;
+      if (!binding && old?.binding) throw Error('请在所属工作区修改绑定。');
       const ticket = (token: unknown) => {
         const path = typeof token === 'string' ? this.folderTickets.get(token) : undefined;
         if (!path) throw Error('请重新选择文件夹。');
         return reopenDirectory(path);
       };
-      const directory = input.source !== undefined ? ticket(input.source) : old && reopenDirectory(old.directory);
-      const output = input.output === null ? undefined : input.output !== undefined ? ticket(input.output) :
-        old?.output && reopenDirectory(old.output);
-      if (typeof input.name !== 'string' || !directory) throw Error('请填写名称并选择源文件夹。');
-      const saved = this.localWorkspaces.save({ id: old?.id, name: input.name, directory, output });
-      for (const token of [input.source, input.output]) if (typeof token === 'string') this.folderTickets.delete(token);
+      const directory = input.source === null ? undefined : input.source !== undefined ? ticket(input.source) : old?.directory;
+      if (old && old.directory !== directory) this.localWorkspace?.releaseWorkspace(old.id);
+      if (binding && !directory) {
+        if (old) this.localWorkspaces.remove(old.id);
+        return null;
+      }
+      if (typeof input.name !== 'string' || (!old && !directory)) throw Error('请填写名称并选择源文件夹。');
+      const saved = this.localWorkspaces.save({ id: old?.id, name: input.name, directory, binding });
+      if (typeof input.source === 'string') this.folderTickets.delete(input.source);
       return saved;
     }
     if (typeof value !== 'string') throw Error('无效的本机工作区。');
     const row = this.localWorkspaces.get(value);
-    if (command === 'remove') return this.localWorkspaces.remove(row.id);
+    if (command === 'remove') {
+      this.localWorkspace?.releaseWorkspace(row.id);
+      return this.localWorkspaces.remove(row.id);
+    }
+    if (!row.directory) throw Error('请先为工作区添加本机文件夹。');
     if (command === 'reveal') {
       const result = await shell.openPath(reopenDirectory(row.directory));
       if (result) throw Error('无法在资源管理器中打开这个文件夹。');

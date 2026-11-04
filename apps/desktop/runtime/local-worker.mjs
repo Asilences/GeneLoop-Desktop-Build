@@ -13,7 +13,7 @@ export function apply(ctx) {
     let off, end;
     try {
       local = await openLocalFileAgent(ctx, {
-        directory: task.directory, reports: task.reports, signal: cancellation.signal,
+        directory: task.directory, signal: cancellation.signal,
         model: { provider: 'deepseek-official', model: task.model, reasoningEffort: 'off' },
         onReport: report => send({ kind: 'report', report }),
       });

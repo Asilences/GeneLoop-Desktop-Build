@@ -1,21 +1,15 @@
 const bridge = window.localWorkspace;
 const byId = id => document.getElementById(id);
 const results = byId('results');
-const updateOutput = path => { byId('output').textContent = path || '未选择，仅可读取'; };
 const setBusy = busy => {
   byId('send').disabled = busy;
-  byId('choose-output').disabled = busy;
   byId('cancel').hidden = !busy;
   if (busy) byId('cancel').disabled = false;
 };
 bridge.state().then(state => {
   byId('directory').textContent = state.directory;
-  updateOutput(state.output);
+  byId('output').textContent = state.output;
 });
-byId('choose-output').onclick = async () => {
-  try { updateOutput(await bridge.chooseOutput()); }
-  catch { byId('status').textContent = '无法选择报告目录。'; }
-};
 byId('task').onsubmit = async event => {
   event.preventDefault();
   const text = byId('prompt').value.trim();

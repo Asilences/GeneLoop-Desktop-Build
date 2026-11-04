@@ -22,12 +22,13 @@ const root = mkdtempSync(join(tmpdir(), 'GeneLoop 本机探针 '));
 const install = runInstalled ? packed : join(root, 'GeneLoop Desktop');
 const workspace = join(root, '工作区');
 const home = join(root, 'home');
-const reports = join(root, '报告');
+const reports = join(workspace, 'GeneLoop 输出');
+const blocked = join(root, '重解析测试');
 const outside = join(root, 'outside');
 const result = join(root, 'result.json');
 const sample = randomUUID();
 const modelPending = join(root, 'model-pending');
-for (const directory of [workspace, home, outside, reports, join(workspace, '空目录'), join(workspace, '大量文件')]) mkdirSync(directory);
+for (const directory of [workspace, home, outside, blocked, join(workspace, '空目录'), join(workspace, '大量文件')]) mkdirSync(directory);
 for (let index = 0; index < 201; index++) writeFileSync(join(workspace, '大量文件', index + '.txt'), '');
 const report = '# 本机文件盘点\n\n- 来源：资料.txt（第 1 行）\n';
 writeFileSync(join(workspace, '资料.txt'), sample);
@@ -35,6 +36,7 @@ writeFileSync(join(outside, 'secret.txt'), 'synthetic');
 linkSync(join(outside, 'secret.txt'), join(workspace, '硬链接.txt'));
 writeFileSync(join(workspace, '超长.txt'), Buffer.alloc(256 * 1024 + 1));
 symlinkSync(outside, join(workspace, '越界'), 'junction');
+symlinkSync(outside, join(blocked, 'GeneLoop 输出'), 'junction');
 console.log('隔离诊断目录：' + root);
 if (!runInstalled) cpSync(packed, install, { recursive: true });
 
@@ -105,6 +107,7 @@ const fixture = createServer(async (request, response) => {
     assert.equal(receipt.bytes, Buffer.byteLength(report));
     assert.deepEqual(readdirSync(reports), [receipt.name]);
     assert.equal(readFileSync(join(reports, receipt.name), 'utf8'), report);
+    assert.deepEqual(readdirSync(outside), ['secret.txt']);
     assert.equal(readFileSync(join(workspace, '资料.txt'), 'utf8'), sample);
     response.on('close', () => { streamAborted = !response.writableEnded; });
     response.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -124,7 +127,7 @@ const child = spawn(executable, [cli, '--profile', 'sdk-minimal', '--patch', pat
     TEMP: root, TMP: root, USERPROFILE: home, HOME: home, APPDATA: home, LOCALAPPDATA: home,
     DSH_HOME: join(home, 'dsh'),
     ELECTRON_RUN_AS_NODE: '1',
-    GENELOOP_PROBE_REPORTS: reports, GENELOOP_PROBE_RESULT: result, GENELOOP_PROBE_TEXT: sample, GENELOOP_PROBE_MODEL_PENDING: modelPending,
+    GENELOOP_PROBE_RESULT: result, GENELOOP_PROBE_TEXT: sample, GENELOOP_PROBE_MODEL_PENDING: modelPending,
     DEEPSEEK_BASE_URL: 'http://127.0.0.1:' + fixture.address().port,
     DEEPSEEK_API_KEY: 'geneloop-probe-offline',
   },

@@ -229,6 +229,7 @@ app.whenReady().then(async()=>{
  await deleteWorkspace();
  assert.equal(await evaluate(`document.querySelectorAll('.workspace-delete-list input').length===2&&!document.querySelector('.workspace-delete-list input:checked')`),true);
  await evaluate(`document.querySelector('dialog footer .secondary').click()`);
+ await until(()=>evaluate(`!document.querySelector('dialog')`),'取消后关闭第一次确认框');
  assert.equal(await evaluate(`!!document.querySelector('section[aria-label="诊断工作区"]')`),true);
  await deleteWorkspace();
  await evaluate(`document.querySelector('.workspace-delete-list input[value="menu-fixture"]').click();document.querySelector('dialog footer .primary').click()`);
@@ -245,24 +246,29 @@ app.whenReady().then(async()=>{
    {group:'flat',sort:'workspace',archive:'archived'});
  check('工作区视图支持对话单列表、已归档筛选和本机保存');
  if(process.platform==='win32'){
-   const source=join(fixture.output,'本机源文件夹');
+   const source=join(fixture.output,'本机源文件夹'),replacement=join(fixture.output,'更换后的文件夹');
    mkdirSync(source);
+   mkdirSync(replacement);
    const originalPicker=dialog.showOpenDialog;
-   dialog.showOpenDialog=async()=>({canceled:false,filePaths:[source]});
+   let selected=source;
+   dialog.showOpenDialog=async()=>({canceled:false,filePaths:[selected]});
    const localRow='[data-local-workspace-id]';
    try{
      await evaluate(`document.getElementById('new-workspace').click()`);
      assert.equal(await evaluate(`document.querySelector('dialog [aria-pressed=true]').textContent`),'本机工作区');
-     await evaluate(`document.querySelector('.workspace-folder button').click()`);
+     await evaluate(`document.querySelector('.workspace-folder-pick').click()`);
      await until(()=>evaluate(`document.querySelector('dialog input').value==='本机源文件夹'`),'选择本机目录后填入默认名称');
      await evaluate(`document.querySelector('.workspace-editor-form').requestSubmit()`);
      await until(()=>evaluate(`!!document.querySelector('.local-workspace-home')&&!document.querySelector('dialog')`),'创建后在主窗口打开工作区');
      assert.equal(BrowserWindow.getAllWindows().length,1);
      const id=await evaluate(`document.querySelector('${localRow}').dataset.localWorkspaceId`);
-     await evaluate(`document.querySelector('${localRow}').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}));document.querySelector('[data-action=local-edit]').click();document.querySelector('dialog input').value='更名后的本机工作区';document.querySelector('.workspace-editor-form').requestSubmit()`);
+     selected=replacement;
+     await evaluate(`document.querySelector('${localRow}').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}));document.querySelector('[data-action=local-edit]').click();document.querySelector('dialog input').value='更名后的本机工作区';document.querySelector('.workspace-folder-pick').click()`);
+     await until(()=>evaluate(`document.querySelector('.workspace-folder-name')?.textContent==='更换后的文件夹'`),'更换源文件夹');
+     await evaluate(`document.querySelector('.workspace-editor-form').requestSubmit()`);
      await until(()=>evaluate(`document.querySelector('.local-workspace-home h2')?.textContent==='更名后的本机工作区'&&!document.querySelector('dialog')`),'右键修改本机工作区');
      const registry=()=>JSON.parse(readFileSync(join(fixture.output,'local-workspaces.json'),'utf8')).items;
-     assert.deepEqual(registry().map(row=>[row.id,row.name]),[[id,'更名后的本机工作区']]);
+     assert.deepEqual(registry().map(row=>[row.id,row.name,row.directory]),[[id,'更名后的本机工作区',replacement]]);
      await until(async()=>!(await desktop.state().modalOpen),'主窗口恢复菜单');
      await desktop.openLocalWorkspace();
      assert.equal(registry().length,1);
@@ -271,7 +277,23 @@ app.whenReady().then(async()=>{
      await until(()=>evaluate(`!document.querySelector('${localRow}')&&!document.querySelector('dialog')`),'移除本机工作区记录');
      assert.deepEqual(registry(),[]);
      assert.equal(require('node:fs').statSync(source).isDirectory(),true);
-     check('本机工作区可创建、快捷打开、右键编辑及移除，源目录保留且打开无需运行任务');
+     check('本机工作区可创建、快捷打开、右键更换文件夹及移除，源目录保留');
+     await evaluate(`document.getElementById('workspace-view').click();document.querySelector('[data-action=view-group-workspace]').click()`);
+     const cloudRow='section[aria-label="空工作区"]';
+     const editCloud=()=>evaluate(`document.querySelector('${cloudRow} .workspace-more').click();document.querySelector('[data-action=workspace-rename]').click()`);
+     await evaluate(`document.querySelector('${cloudRow} .workspace-row').click()`);
+     await editCloud();
+     await evaluate(`document.querySelector('.workspace-folder-pick').click()`);
+     await until(()=>evaluate(`document.querySelector('.workspace-folder-name')?.textContent==='更换后的文件夹'`),'云端工作区添加本机文件夹');
+     await evaluate(`document.querySelector('.workspace-editor-form').requestSubmit()`);
+     await until(()=>evaluate(`!document.querySelector('dialog')&&document.querySelector('.workspace-home .local-folder-card')?.textContent.includes('运行本机任务')`),'云端首页显示本机任务入口');
+     assert.equal(registry()[0].binding.workspaceId,'empty-workspace');
+     assert.equal(await evaluate(`!!document.querySelector('${localRow}')`),false);
+     await editCloud();
+     await evaluate(`document.querySelector('.workspace-folder-clear').click();document.querySelector('.workspace-editor-form').requestSubmit()`);
+     await until(()=>evaluate(`!document.querySelector('dialog')&&!document.querySelector('.workspace-home .local-folder-card')`),'云端工作区解除文件夹绑定');
+     assert.deepEqual(registry(),[]);
+     check('云端工作区支持添加和解除本机文件夹绑定，云端会话入口保留');
    }finally{dialog.showOpenDialog=originalPicker;}
  }
  report.ok=true;
