@@ -233,6 +233,7 @@ app.whenReady().then(async()=>{
  await deleteWorkspace();
  await evaluate(`document.querySelector('.workspace-delete-list input[value="menu-fixture"]').click();document.querySelector('dialog footer .primary').click()`);
  await until(()=>evaluate(`!document.querySelector('section[aria-label="诊断工作区"]')&&!!document.querySelector('[data-session-id="history"]')&&!document.querySelector('[data-session-id="menu-fixture"]')`),'删除分组，仅将勾选对话移入最近删除');
+ await until(()=>evaluate(`!document.querySelector('dialog')`),'删除工作区确认框关闭');
  check('工作区删除须确认，可保留未勾选对话');
  await evaluate(`document.getElementById('workspace-view').click();document.querySelector('[data-action=view-group-flat]').click()`);
  assert.equal(await evaluate(`!!document.querySelector('#workspace-list > [data-session-id="history"]')`),true);
