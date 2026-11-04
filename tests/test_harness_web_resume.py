@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 import pytest
@@ -21,7 +22,7 @@ def prepare(tmp_path):
     args=SimpleNamespace(resume=True,run_id='a'*32,user_id='owner',real_model=True)
     return out,args
 
-@pytest.mark.skipif(os.name=='nt',reason='Linux-only process proof')
+@pytest.mark.skipif(sys.platform!='linux',reason='Linux-only process proof')
 def test_resume_preserves_home_output_trace_cost_and_private_history(tmp_path):
     out,args=prepare(tmp_path);startup=web.prepare_run_directory(args,out)
     assert startup.name.startswith('startup-resume-')
@@ -69,7 +70,7 @@ def test_preset_accepts_windows_short_root_alias(tmp_path):
     assert preset==root.resolve()/'presets/sss-task'
 
 
-@pytest.mark.skipif(os.name=='nt',reason='Linux-only process proof')
+@pytest.mark.skipif(sys.platform!='linux',reason='Linux-only process proof')
 def test_resume_reuses_preset_after_preserving_previous_config(tmp_path):
     out,args=prepare(tmp_path);preset=out/'presets/sss-task';preset.mkdir(parents=True)
     (preset/'agent.cordis.yml').write_text('old agent config')
@@ -81,6 +82,16 @@ def test_resume_reuses_preset_after_preserving_previous_config(tmp_path):
     assert (history/'preset-preset.yml').read_text()=='old preset config'
     args.resume=False
     with pytest.raises(FileExistsError):web.prepare_preset_directory(args,out)
+
+
+@pytest.mark.skipif(sys.platform!='darwin',reason='macOS resume remains unsupported')
+def test_macos_resume_rejects_before_touching_history_or_budget(tmp_path):
+    out,args=prepare(tmp_path)
+    with pytest.raises(ValueError,match='verified on Linux only'):
+        web.prepare_run_directory(args,out)
+    assert (out/'access-url.txt').is_file()
+    assert (out/'ledger.jsonl').read_text()=='existing cost\n'
+    assert not (out/'resume-history').exists()
 
 
 @pytest.mark.skipif(os.name=='nt',reason='Linux link guards')

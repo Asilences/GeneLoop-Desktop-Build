@@ -2,6 +2,7 @@
 """Bind managed PPT delivery and learning to main's published read libraries."""
 from pathlib import Path
 import importlib.util
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('ppt_managed_exporter', ROOT / 'scripts/reexport-native-capabilities-compat.py')
@@ -43,6 +44,7 @@ compat.ADDITIONAL_LOCKS |= {
     'src/adapters/ppt_learning_evidence.ts', 'src/adapters/ppt_page_learning.py',
     'src/adapters/ppt_preparation_runner.py', 'src/adapters/ppt_program_broker.ts',
     'src/adapters/ppt_program_learning.py', 'src/adapters/ppt_program_learning.ts',
+    'src/adapters/ppt_capability_broker.ts',
     'src/adapters/rsi_quality.py', 'src/adapters/rsi_quality.ts',
     'src/adapters/rsi_protocol.py', 'src/adapters/rsi_protocol.ts',
     'schemas/rsi-protocol-v1.schema.json', 'scenarios/ppt_master/design-profiles.json',
@@ -68,4 +70,18 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
+    if '--member-transport-fix' in sys.argv:
+        sys.argv.remove('--member-transport-fix')
+        reviewed = {
+            'scripts/reexport-ppt-managed-compat.py', 'scripts/run-artifact-capability.mjs',
+            'src/adapters/artifact_capability_runtime.ts', 'src/adapters/artifact_motif_runtime.ts',
+            'src/adapters/artifact_motif_transport.ts', 'src/adapters/ppt_capability_budget.py',
+            'src/adapters/ppt_component_learning.py', 'src/adapters/ppt_program_broker.ts',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v74', 'ppt-master-v75', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v76', 'paper-web-v77', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
     compat.main()

@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {commandLayout} from './geneloop_shell.ts';
 import {artifactInvocation,loadArtifactLibrary,registerArtifactContext,hash} from './artifact_motif_runtime.ts';
+import {publicPptValidationTask} from './ppt_capability_broker.ts';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const inside=(base:string,path:string)=>{const rel=relative(base,path);return rel!==''&&!rel.startsWith('..')&&!isAbsolute(rel);};
 
@@ -23,6 +24,13 @@ export function preparePptProgramJob(options:any,value:any){
   const st=lstatSync(path);if(!st.isFile()||st.isSymbolicLink()||st.nlink!==1||st.size>4_000_000)throw Error('program job is not a bounded private file');
   return JSON.parse(readFileSync(path,'utf8'));
  };
+ if(value?.operation==='capability'){
+  if(Object.keys(value).sort().join(',')!=='file,operation')throw Error('invalid public validation request');
+  const task=publicPptValidationTask(output,value.file,options.python);
+  return {argv:[options.node,'--experimental-strip-types',join(root,'scripts/run-artifact-capability.mjs'),
+   '--member-public',task.manifestPath,output],
+   env:{SSS_PYTHON:options.python,GENELOOP_ARTIFACT_RESOURCES:JSON.stringify(options.resources??{})}};
+ }
  if(value?.operation==='run'){
   if(Object.keys(value).sort().join(',')!=='file,operation,session'||!/^session-[a-f0-9-]{36}$/.test(value.session))throw Error('invalid program owner');
   const layout=commandLayout(output,value.session),jobPath=map(value.file);

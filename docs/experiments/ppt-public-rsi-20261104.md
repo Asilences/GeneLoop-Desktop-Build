@@ -1,5 +1,23 @@
 # PPT 公共 RSI 接入与 PR131 回归
 
+## 合并前审阅修复（2026-11-04追加）
+
+基线`7ced3b0`，修复分支`codex/pr131-member-fixes-20261104`，交付仍为[PR131](https://github.com/jingyio/GeneLoop/pull/131)。用户授权修复、验证后合并；本轮未部署或修改正式服务。
+
+两个反例保存在私有`.local/pr131-audit-20261104/`：成员页面学习使用未绑定的预算Session，真实本地账户网关返回403；独立Capability验证误用在线任务命令入口，原Runtime加真实命令代理执行失败。
+
+修复一复用`PptCapabilityBudget`，请求前将模型Session绑定到原账户预算任务，成功/失败后取消并解绑；未知费用、`null`预算和原费用归属保留。新增测试实际经过原scoped gateway，覆盖成功、上游失败和解绑后的拒绝；供应商回复是明确的本地诊断，没有付费调用。
+
+修复二在既有Artifact代理增加`operation=capability`，只接受账户私有学习器下validation/followup的固定manifest。宿主核对账户/scope、当前原生认证材料、冻结grant、参数摘要、registry及独立工作区；执行期间继续核验撤回和原始manifest。原在线run的Session、Task、工作区限制保留。继续使用原Runtime、Artifact沙箱、Store及PPT检查器。
+
+Linux隔离快照实际完成经命令代理的validate→publish→reload→followup，两项相关测试通过、0跳过。使用明确的合成程序与认证夹具，只证明传输/权限/生命周期，不是模型创造、视觉质量或效率收益实验。最初探针误用旧Linux上不存在的`/usr/bin/true`导致跳过，已改用实际存在的程序，原日志保留。
+
+本机全量Python2300通过/261跳过，Node1607通过/23跳过；smoke、motif:check、rsi:check、rsi:efficiency:check通过。全量首先发现两个Linux专用恢复测试在macOS误执行，现按真实平台限定，新增macOS拒绝恢复且历史/账本不变检查；没有开放macOS恢复功能。
+
+原兼容导出器显式`--member-transport-fix`生成PPT75/Paper77，保留原74/76；Graph序列化IR、online manifest、来源证据及MCP schema逐项保持，只更新审阅过的源码锁。0新增训练、0模型请求。私有页面库如因源码锁失效，仍走原回退/重新认证，没有重写旧证书。
+
+本地证据`.local/pr131-fix-20261104/`；服务器既有研究根的`pr131-fix-code-001/002`及`pr131-member-linux-002.log`保留隔离验收。0真实模型请求、0供应商费用。远程CI和合并按修复后PR131最新head核验。
+
 ## 问题与实施范围
 
 PR131的Windows检查发现临时目录短路径误拒绝与Markdown测试换行差异。已保留目录链接守卫，将批准根目录规范化；回执测试分别覆盖LF/CRLF原始字节，原文读取仍保留全部内容。Windows本机还复现宿主配置子进程按GBK解码UTF-8的问题，调用已指定UTF-8。

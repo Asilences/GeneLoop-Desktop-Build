@@ -4,7 +4,7 @@ import {dirname,join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {artifactLocks,artifactInvocation,loadArtifactLibrary,registerArtifactContext} from './artifact_motif_runtime.ts';
-import {executeArtifactJob} from './artifact_motif_transport.ts';
+import {executeArtifactJob,executePublicArtifactTask} from './artifact_motif_transport.ts';
 import {componentContractSchema} from './ppt_component_schema.ts';
 import {capabilityDigest,capabilityIdentity,capabilityRef,createCapability,createCapabilitySnapshot,
  mapLegacyLibrary,validateCapabilitySnapshot,type CapabilitySnapshot} from './capability_contract.ts';
@@ -47,14 +47,31 @@ function executorDigest(){
  * Every dispatch rechecks native code, library bytes, permissions and evidence.
  */
 export async function runArtifactCapability(manifestPath:string,snapshotValue:CapabilitySnapshot,args:unknown,
- options:{signal?:AbortSignal}={}){
- const manifest=read(manifestPath),snapshot=validateCapabilitySnapshot(snapshotValue,manifest.owner),grant=manifest.grant;
+ options:{signal?:AbortSignal;resolvePath?:(path:string)=>string;resources?:any;assertAuthority?:()=>void}={}){
+ const readManifest=()=>{
+  const value=read(manifestPath);
+  if(options.resolvePath){
+   value.workspace=options.resolvePath(value.workspace);
+   value.registry_path=options.resolvePath(value.registry_path);
+   value.libraries=value.libraries.map((ref:any)=>({...ref,path:options.resolvePath!(ref.path)}));
+   value.evidence=(value.evidence??[]).map((ref:any)=>({...ref,path:options.resolvePath!(ref.path)}));
+   value.resources=options.resources??{};
+  }
+  return value;
+ };
+ const manifest=readManifest(),snapshot=validateCapabilitySnapshot(snapshotValue,manifest.owner),grant=manifest.grant;
  check(manifest.format==='artifact_capability_task_v1'&&typeof manifest.task_id==='string'&&manifest.task_id.length>0,
   'artifact_capability_manifest_invalid');
  const argumentsSha256=capabilityDigest(args),selected=grant?.root;
  check(grant&&grant.task_id===manifest.task_id&&grant.snapshot_sha256===snapshot.digest&&grant.arguments_sha256===argumentsSha256&&
   ['validate','execute'].includes(grant.mode)&&same(grant.effects,['workspace_write'])&&grant.revoked===false,
   'artifact_capability_grant_invalid');
+ if(process.env.GENELOOP_COMMAND_SOCKET&&!manifest.session_id&&!options.resolvePath){
+  const result=await executePublicArtifactTask(manifestPath,options.signal);
+  check(result.owner===manifest.owner&&result.task_id===manifest.task_id&&result.snapshot_sha256===snapshot.digest&&
+   result.arguments_sha256===argumentsSha256&&same(result.root,selected),'artifact_capability_transport_changed');
+  return result;
+ }
  const workspace=realpathSync(manifest.workspace);
  check(statSync(workspace).isDirectory()&&Array.isArray(manifest.libraries)&&manifest.libraries.length>0,'artifact_capability_workspace_invalid');
  const inputs=manifest.inputs??[];
@@ -79,7 +96,7 @@ export async function runArtifactCapability(manifestPath:string,snapshotValue:Ca
   matcher:{id:'artifact-native-runtime',sha256:executor}};
  const original=capabilityDigest({...manifest,grant:{...grant,revoked:false}});
  function current(){
-  const value=read(manifestPath);
+  const value=readManifest();
   check(typeof value.grant?.revoked==='boolean'&&capabilityDigest({...value,grant:{...value.grant,revoked:false}})===original,
    'artifact_capability_manifest_changed');
   return value;
@@ -101,6 +118,7 @@ export async function runArtifactCapability(manifestPath:string,snapshotValue:Ca
   host.currentCodeSha256.set(capability.id,executor);host.grant.operations.push(operation);
  }
  function readHost(){
+  options.assertAuthority?.();
   host.grant.revoked=current().grant.revoked;
   for(const ref of manifest.evidence??[])check(bytesSha256(readFileSync(ref.path))===ref.sha256,'artifact_capability_evidence_changed');
   check(executorDigest()===executor,'artifact_capability_executor_changed');

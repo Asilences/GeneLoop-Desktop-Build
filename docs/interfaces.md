@@ -1,5 +1,11 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## 成员PPT学习/验证传输（2026-11-04修复）
+
+页面参数化提案复用`PptCapabilityBudget`：成员模型`session-UUID`在发送前绑定原账户`turn-任务ID`，结束时取消预算任务并解绑，保留null预算与unknown用量。Owner无账户前缀时沿原直连身份。
+
+Artifact命令代理新增`{operation:"capability",file:"私有学习器的manifest.json"}`，仅接受`learning/ppt-账户scope摘要/capability/improvements/代际/机会/attempt-N/publication/{validation,followup}/manifest.json`。宿主核对当前原生材料、账户/scope、grant和独立工作区，再运行原`run-artifact-capability.mjs --member-public`。账户路径由宿主映射，资源沿原宿主配置，持续重读撤回与manifest。在线run入口权限不变。此入口不接收源码、验证器或任意执行参数。
+
 ## PPT 受控制作与正常页面学习（2026-11-04）
 
 PPT Generate 原生工具增加 `prepare_ppt({project})`。项目在 `/work/projects/`，先写好 `spec_lock.md` 与 `design_spec.md`。宿主执行锁定上游的角色校准，返回常规/粗体测量表、实际字体文件及版本依赖；相同规范、计划文字与环境复用 `validation/host-typography.json`。原生 Skill 与 MCP `read_skill_entry.runtime_policy` 使用同一 `runtime-policy.md`，上游原文与完整性校验保留。

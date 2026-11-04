@@ -104,5 +104,8 @@ def test_page_compiler_uses_owning_account_budget_identity_and_keeps_the_cap(tmp
     assert registered['task_id'].startswith('12345678') and len(registered['task_id']) == 32
     assert registered['session_id'] == 'turn-' + registered['task_id']
     assert registered['budget_usd'] == cap
-    assert calls[-1][1]['session_id'] == registered['session_id']
+    assert calls[-2][0].endswith('/tasks/cancel') and calls[-2][1]['session_id'] == registered['session_id']
+    assert calls[-1][0].endswith('/unbind') and calls[-1][1]['budget_session_id'] == registered['session_id']
+    assert calls[2][0].endswith('/bind') and calls[2][1]['session_id'].startswith('session-')
+    assert calls[-1][1] == calls[2][1]
     assert json.loads((tmp_path / 'proposal/attribution.json').read_text())['included_in_B_O_execution'] is False

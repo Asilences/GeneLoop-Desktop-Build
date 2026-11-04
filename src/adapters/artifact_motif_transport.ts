@@ -16,8 +16,18 @@ export function artifactJobArgv(job:any,session:string){
 }
 
 export async function executeArtifactJob(job:any,session:string,signal?:AbortSignal){
+ return executeArtifactTransport(artifactJobArgv(job,session),signal);
+}
+
+export async function executePublicArtifactTask(manifest:string,signal?:AbortSignal){
+ const socket=process.env.GENELOOP_COMMAND_SOCKET;
+ if(!socket)throw Error('public_validation_command_broker_required');
+ return executeArtifactTransport([process.execPath,fileURLToPath(new URL('./geneloop_command_client.mjs',import.meta.url)),socket,
+  Buffer.from(JSON.stringify({operation:'capability',file:manifest})).toString('base64url'),'/artifact'],signal);
+}
+
+async function executeArtifactTransport(argv:string[],signal?:AbortSignal){
  signal?.throwIfAborted();
- const argv=artifactJobArgv(job,session);
  return await new Promise<any>((resolve,reject)=>{
   const child=spawn(argv[0],argv.slice(1),{signal,stdio:['ignore','pipe','pipe']});
   let stdout='',stderr='',overflow=false;

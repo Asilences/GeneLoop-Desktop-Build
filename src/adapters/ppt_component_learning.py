@@ -296,34 +296,24 @@ def decode_component_proposal(answer, *, independent=False):
 
 def propose_component(witness, policy_path, directory, *, font_repair=False, readability_repair=False, independent=None):
     """One metered compiler call using the existing cumulative budget service."""
-    policy = read_json(policy_path)
+    from .ppt_capability_budget import PptCapabilityBudget
+    gate = PptCapabilityBudget(policy_path, directory)
+    policy = gate.policy
     key = os.environ.get('DEEPSEEK_API_KEY')
     if not key:
         raise ValueError('component_learning_private_credential_required')
-    if any(urlsplit(policy[name]).hostname not in ('127.0.0.1', 'localhost') for name in ('endpoint', 'control_endpoint')):
-        raise ValueError('component_learning_requires_private_budget_service')
     directory = Path(directory)
+    gate.register_attempt(directory, 'ppt_component_source_learning')
     directory.mkdir(parents=True, exist_ok=False, mode=0o700)
-    prefix = policy.get('budget_task_prefix', '')
-    if not re.fullmatch(r'(?:[a-f0-9]{8})?', prefix):
-        raise ValueError('component_learning_account_prefix_invalid')
-    task_id = prefix + uuid4().hex[len(prefix):]
-    session = 'turn-' + task_id
-
-    def control(route, value):
-        request = urllib.request.Request(policy['control_endpoint'].rstrip('/') + route,
-                  data=json.dumps(value).encode(), headers={'Content-Type': 'application/json', 'X-SSS-Control-Token': policy['control_token']})
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return json.load(response)
-
-    control('/tasks/register', {'task_id': task_id, 'session_id': session, 'budget_usd': policy.get('budget_usd'), 'model': 'deepseek-flash'})
-    control('/tasks/activate', {'session_id': session})
-    payload = proposal_request(witness, font_repair=font_repair, readability_repair=readability_repair, independent=independent)
-    write_json(directory / 'request.json', payload)
-    write_json(directory / 'attribution.json', {'task_id': task_id, 'session_id': session,
-               'phase': 'component_source_learning', 'included_in_B_O_execution': False,
-               'source_sha256': witness['source_sha256'], 'cumulative_ledger_reset': False})
     try:
+        session = gate.session_id(directory, phase='component_source_learning')
+        binding = gate.sessions[str(directory)]
+        payload = proposal_request(witness, font_repair=font_repair, readability_repair=readability_repair, independent=independent)
+        write_json(directory / 'request.json', payload)
+        write_json(directory / 'attribution.json', {'task_id': binding['task_id'], 'session_id': session,
+                   'budget_session_id': binding['budget_session_id'],
+                   'phase': 'component_source_learning', 'included_in_B_O_execution': False,
+                   'source_sha256': witness['source_sha256'], 'cumulative_ledger_reset': False})
         request = urllib.request.Request(policy['endpoint'].rstrip('/') + '/chat/completions',
                   data=json.dumps(payload, ensure_ascii=False).encode(), headers={
                       'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key,
@@ -338,7 +328,7 @@ def propose_component(witness, policy_path, directory, *, font_repair=False, rea
         write_json(directory / 'failure.json', {'type': type(error).__name__, 'completed': False})
         raise
     finally:
-        write_json(directory / 'budget-terminal.json', control('/tasks/cancel', {'session_id': session}))
+        write_json(directory / 'model-costs.json', gate.costs(directory))
 
 
 def validate_proposal(proposal):

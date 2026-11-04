@@ -1,5 +1,13 @@
 # 科研 PPT 当前交接
 
+## 2026-11-04：PR131成员学习与独立认证修复
+
+- 用户已授权修复并在最新CI通过后合并PR131，不部署。基线`7ced3b0`，修复分支`codex/pr131-member-fixes-20261104`，推送目标仍是PR131的`feature/research-ppt-agent`；提交/合并SHA由该PR与Git历史定位。
+- 页面学习改用既有账户预算绑定，原代理增加受限的独立Capability验证入口。普通在线run权限、原认证、账户隔离及未知费用保留；失败/撤回仍拒绝。
+- 本地全量2300 Python/1607 Node通过（261/23跳过），smoke/Motif/RSI/效率检查通过。Linux真实命令代理→独立验证→Store发布→reload→后继执行通过，相关2项0跳过。均为明确诊断，无真实模型请求或新效果结论。
+- PPT75/Paper77兼容导出保持原Graph IR、来源及MCP schema，旧目录保留。默认库改动未部署；旧私有原生库仍依源码锁回退和重新认证。
+- 问题、修复与证据见[追加记录](../experiments/ppt-public-rsi-20261104.md)。接手核对PR131修复head及合并状态；正式发布另走统一service流程，不能根据本轮合并自动重启服务。
+
 ## 2026-11-04 公共RSI接入，PR131草稿完善
 
 - 目标与范围。按用户要求将PR131转为草稿，整合main `931d1bc`和远端`2358245`的Windows修复，新增公共RSI与PPT原生学习/交付桥接。代码在独立`codex/ppt-managed-learning-20261104`副本整理，交付分支仍为`feature/research-ppt-agent`。

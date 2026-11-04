@@ -27,6 +27,8 @@ artifactLocks.push('src/adapters/ppt_design_preflight.py','scenarios/ppt_master/
 artifactLocks.push('src/adapters/ppt_delivery_pipeline.ts','src/adapters/ppt_delivery_runner.py');
 artifactLocks.push('src/adapters/ppt_delivery_learning.py');
 artifactLocks.push('src/adapters/ppt_delivery_state.ts');
+artifactLocks.push('src/adapters/ppt_capability_broker.ts','src/adapters/artifact_capability_runtime.ts',
+ 'scripts/run-artifact-capability.mjs');
 const inside=(base:string,path:string)=>{const r=relative(base,path);return !r.startsWith('..')&&!isAbsolute(r);};
 const contexts=new Map<string,any>();
 export function identity(p:any){return Object.fromEntries(['version','source','inputs','dependencies','input_argument_indices','output_argument_index','argument_count','language','execution_policy'].map(k=>[k,p[k]]));}

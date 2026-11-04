@@ -30,7 +30,7 @@ class PptCapabilityBudget:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.load(response)
 
-    def session_id(self, output):
+    def session_id(self, output, *, phase='ppt_public_capability_construction'):
         prefix = self.policy.get('budget_task_prefix', '')
         if not re.fullmatch(r'(?:[a-f0-9]{8})?', prefix):
             raise ValueError('ppt_capability_account_prefix_invalid')
@@ -45,7 +45,7 @@ class PptCapabilityBudget:
         if prefix:
             self.control('/bind', binding)
             self.sessions[str(output)]['bound'] = True
-        Path(output, 'budget-attribution.json').write_text(json.dumps({'phase': 'ppt_public_capability_construction',
+        Path(output, 'budget-attribution.json').write_text(json.dumps({'phase': phase,
             'task_id': task_id, **binding, 'included_in_B_O_execution': False, 'cumulative_ledger_reset': False}), encoding='utf-8')
         return model_session
 
