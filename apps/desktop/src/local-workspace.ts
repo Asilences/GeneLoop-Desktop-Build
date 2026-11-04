@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { IpcMainInvokeEvent, Session } from 'electron';
-import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
@@ -12,6 +13,20 @@ const here = dirname(fileURLToPath(import.meta.url));
 const page = join(here, '../ui/local-workspace.html');
 const channels = ['state', 'start', 'cancel', 'reveal'];
 const leasePath = '/api/harless/desktop-model/lease';
+type SavedTask = {
+  prompt: string;
+  at: number;
+  updates: Extract<LocalTaskUpdate, { kind: 'answer' | 'report' | 'done' }>[];
+};
+const reportName = /^GeneLoop-[a-f0-9-]{36}\.md$/;
+
+function loadTasks(path: string): SavedTask[] {
+  try {
+    const rows: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    return Array.isArray(rows) ? rows.filter(row => typeof row?.prompt === 'string' && Number.isFinite(row.at) &&
+      Array.isArray(row.updates)).slice(0, 30) : [];
+  } catch { return []; }
+}
 
 export class LocalWorkspaceWindow {
   private child?: BrowserWindow;
@@ -41,6 +56,14 @@ export class LocalWorkspaceWindow {
     try {
       const directory = reopenDirectory(workspace.directory);
       const output = join(directory, 'GeneLoop 输出');
+      const historyKey = createHash('sha256').update(workspace.id).update('\0').update(directory.toLowerCase()).digest('hex');
+      const history = join(app.getPath('userData'), 'local-workspace', 'history', historyKey + '.json');
+      const tasks = loadTasks(history);
+      for (const task of tasks) {
+        for (const update of task.updates) {
+          if (update?.kind === 'report' && reportName.test(update.report?.name)) this.reports.add(update.report.name);
+        }
+      }
       const child = this.child = new BrowserWindow({
         parent: this.options.parent, width: 760, height: 680, minWidth: 500, minHeight: 480, show: false,
         title: workspace.name + ' · GeneLoop Desktop', autoHideMenuBar: true,
@@ -60,12 +83,27 @@ export class LocalWorkspaceWindow {
       const emit = (event: LocalTaskUpdate) => {
         if (!child.isDestroyed()) child.webContents.send('geneloop-local:update', event);
       };
-      handle('state', () => ({ directory, output }));
+      handle('state', () => ({ directory, output, tasks }));
       handle('start', input => {
         if (this.pending) throw Error('已有本机任务正在运行。');
         if (typeof input !== 'string' || !input.trim()) throw Error('请输入任务内容。');
         const abort = this.pending = new AbortController();
-        return this.run(runtime, directory, input, abort, emit);
+        const task: SavedTask = { prompt: input, at: Date.now(), updates: [] };
+        return this.run(runtime, directory, input, abort, update => {
+          if (update.kind !== 'ready') task.updates.push(update);
+          if (update.kind !== 'done') { emit(update); return; }
+          tasks.unshift(task);
+          tasks.splice(30);
+          try {
+            mkdirSync(dirname(history), { recursive: true });
+            writeFileSync(history + '.tmp', JSON.stringify(tasks) + '\n', { mode: 0o600 });
+            renameSync(history + '.tmp', history);
+          } catch {
+            emit({ ...update, error: '本机任务历史未能保存。' });
+            return;
+          }
+          emit(update);
+        });
       });
       handle('cancel', () => { this.pending?.abort(); this.controller?.cancel(); });
       handle('reveal', name => {
@@ -110,7 +148,7 @@ export class LocalWorkspaceWindow {
         onUpdate: event => {
           if (event.kind === 'done') { outcome = event; return; }
           if (event.kind === 'report') {
-            if (!/^GeneLoop-[a-f0-9-]{36}\.md$/.test(event.report.name)) return;
+            if (!reportName.test(event.report.name)) return;
             this.reports.add(event.report.name);
           }
           emit(event);

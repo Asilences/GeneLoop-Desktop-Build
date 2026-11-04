@@ -21,7 +21,8 @@ app.whenReady().then(async () => {
   const parent = new BrowserWindow({ show: false });
   const local = new LocalWorkspaceWindow({ parent, server: fixture.origin + '/', session: profile });
   try {
-    await local.open({ id: 'workspace', name: '本机诊断', directory: fixture.source, updatedAt: Date.now() });
+    const workspace = { id: 'workspace', name: '本机诊断', directory: fixture.source, updatedAt: Date.now() };
+    await local.open(workspace);
     const view = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
     assert.ok(view);
     view.setBackgroundThrottling(false);
@@ -40,6 +41,14 @@ app.whenReady().then(async () => {
     await until(() => existsSync(fixture.waiting), '上游模型处于等待');
     await evaluate(`document.getElementById('cancel').click()`);
     await until(() => evaluate(`document.getElementById('status').textContent==='任务已停止。'`), '取消任务并结算');
+    BrowserWindow.fromWebContents(view).destroy();
+    await local.open(workspace);
+    const reopened = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
+    assert.ok(reopened && reopened !== view);
+    await until(() => reopened.executeJavaScript(`document.querySelectorAll('#history-list button').length===2`), '重新打开工作区后恢复历史任务');
+    await reopened.executeJavaScript(`document.querySelector('#history-list li:last-child button').click()`);
+    assert.equal(await reopened.executeJavaScript(`document.getElementById('prompt').value`), '读取资料并写报告');
+    assert.match(await reopened.executeJavaScript(`document.querySelector('#results button').textContent`), /\.md/);
 
   } finally { local.dispose(); parent.destroy(); }
   app.exit(0);

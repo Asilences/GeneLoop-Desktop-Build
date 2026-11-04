@@ -14,6 +14,10 @@ dd { min-width: 0; flex: 1; margin: 0; overflow-wrap: anywhere; }
 button, textarea { font: inherit; color: inherit; }
 button { flex-shrink: 0; padding: 7px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); cursor: pointer; }
 button:disabled { opacity: .55; cursor: default; }
+#history { padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; }
+#history summary { cursor: pointer; color: var(--muted); }
+#history-list { display: grid; gap: 5px; max-height: 160px; overflow: auto; list-style: none; padding: 0; margin: 8px 0 0; }
+#history-list button { display: block; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 textarea { width: 100%; min-height: 82px; resize: vertical; padding: 10px; border: 1px solid var(--line); background: var(--panel); border-radius: 9px; }
 #results { display: grid; gap: 8px; margin: 14px 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 36vh; overflow: auto; }
 #results p { margin: 0; padding: 10px; border-radius: 9px; background: var(--panel); }

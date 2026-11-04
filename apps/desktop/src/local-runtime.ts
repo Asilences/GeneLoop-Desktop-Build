@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export type LocalTaskUpdate =
+  | { kind: 'ready' }
   | { kind: 'answer'; text: string }
   | { kind: 'report'; report: { name: string; bytes: number } }
   | { kind: 'done'; status: 'completed' | 'canceled' | 'error'; error?: string };
@@ -64,6 +65,7 @@ export function startLocalWorker(options: {
       booted = true;
       clearTimeout(timeout);
       if (canceled) return finish({ kind: 'done', status: 'canceled' });
+      options.onUpdate({ kind: 'ready' });
       send({ kind: 'run', directory: options.directory, model: options.model, prompt: options.prompt });
     } else if (message.kind === 'done') finish(message);
     else if (message.kind === 'answer' || message.kind === 'report') options.onUpdate(message);
