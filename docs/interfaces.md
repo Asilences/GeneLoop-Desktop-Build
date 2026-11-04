@@ -1407,4 +1407,4 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 ## RSI 学习数据投影
 
-Web 结算诊断、离线导入和 Paper/PPT 账号内学习共用同一投影器。入口、版本化契约、授权范围及验收见 [RSI 数据边界盘点](rsi-data-privacy.md)。
+Web 结算诊断、离线导入和 Paper/PPT 账号内学习共用同一投影器。隔离 Web 和离线导入可显式选择 v3，使用本地 Presidio 和 Gitleaks 处理当前任务指令。现有账号内结构编译使用 v2。入口、依赖和授权范围见 [RSI 数据边界盘点](rsi-data-privacy.md)。

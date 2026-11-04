@@ -9,9 +9,19 @@
     "nodes",
     "bindings"
   ],
+  "if": {
+    "properties": {"format": {"const": "geneloop.rsi-learning-trace/v3"}}
+  },
+  "then": {"required": ["task_intent"]},
+  "else": {"not": {"required": ["task_intent"]}},
   "properties": {
     "format": {
-      "const": "geneloop.rsi-learning-trace/v2"
+      "enum": ["geneloop.rsi-learning-trace/v2", "geneloop.rsi-learning-trace/v3"]
+    },
+    "task_intent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
     },
     "scene": {
       "enum": [

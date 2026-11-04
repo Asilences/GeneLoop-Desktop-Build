@@ -2985,19 +2985,25 @@ test('large native images pass paired task preview without base64 or scene quota
  }finally{await f.close();}
 });
 
-for (const [scene, tools] of [
+const rsiIntentCases = JSON.parse(readFileSync(new URL('./fixtures/rsi_task_intent.json', import.meta.url), 'utf8'));
+for (const semantic of [false, true]) for (const [scene, tools] of [
   ['paper-proofreading', ['mcp__paper_checks__pin_document', 'mcp__paper_checks__read_pinned_document']],
   ['ppt', ['mcp__ppt_master__pin_source', 'mcp__ppt_master__convert_source', 'mcp__ppt_master__read_converted_source']],
-]) test(`RSI privacy: ${scene} Web settlement and offline import agree`, options, async () => {
+]) test(`RSI privacy: ${scene} ${semantic ? 'semantic' : 'structural'} Web settlement and offline import agree`, {
+  skip: options.skip || (semantic && !process.env.SSS_RSI_GITLEAKS),
+}, async () => {
   const python = process.env.SSS_PYTHON ?? 'python';
   const previous = process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;
+  const previousSemantic = process.env.SSS_RSI_PRIVACY_SEMANTIC;
   process.env.SSS_RSI_PRIVACY_DIAGNOSTIC = '1';
+  process.env.SSS_RSI_PRIVACY_SEMANTIC = semantic ? '1' : '0';
   const schemas = tools.map(name => ({...toolSchemas[0], name}));
   const f = await fixture({scenes: [{id: scene, label: scene, preset: 'sss-task', adapter: 'workspace',
     mcp_rows: [], allowed_tools: tools}], capability_profile: scene, fixtureSchemas: schemas, learning_python: python});
   try {
     const secret = '私有标题_MARKER_person@example.invalid';
-    const task = await f.preview({instruction: secret});
+    const intent = rsiIntentCases.find(row => row.scene === scene);
+    const task = await f.preview({instruction: semantic ? intent.text : secret});
     assert.equal((await f.submit(task)).status, 200);
     const session = f.agents.get(task.session_id).session;
     const source = 'source-' + 'a'.repeat(32), converted = 'result-' + 'b'.repeat(32);
@@ -3022,13 +3028,21 @@ for (const [scene, tools] of [
     const start = JSON.parse(readFileSync(join(output, 'effective-config.json'), 'utf8')).trace_start_index;
     const args = ['-m', 'src.adapters.rsi_learning_trace', '--input', eventsPath, '--scene', scene,
       '--status', 'completed', '--start', String(start)];
-    const offline = execFileSync(python, [...args, '--authorized'], {encoding: 'utf8'});
+    const offline = execFileSync(python, [...args, '--authorized', ...(semantic ? ['--include-task-intent'] : [])],
+      {encoding: 'utf8'});
     assert.deepEqual(JSON.parse(web), JSON.parse(offline));
     assert.ok(readFileSync(eventsPath, 'utf8').includes(secret));
     for (const value of [secret, source, converted, '/private/secret', task.task_id]) {
       assert.ok(!web.includes(value));
     }
     const sample = JSON.parse(web);
+    assert.equal(sample.format, `geneloop.rsi-learning-trace/${semantic ? 'v3' : 'v2'}`);
+    if (semantic) {
+      for (const span of intent.private) assert.ok(!sample.task_intent.includes(span), span);
+      for (const span of intent.keep) assert.ok(sample.task_intent.includes(span), span);
+    } else {
+      assert.ok(!('task_intent' in sample));
+    }
     assert.deepEqual(sample.nodes.map(node => node.tool), [...tools, null]);
     assert.deepEqual(sample.bindings, tools.slice(1).map((_, index) => ({
       from: index, to: index + 1, field: index === 0 ? 'source_id' : 'converted_id',
@@ -3039,5 +3053,7 @@ for (const [scene, tools] of [
     await f.close();
     if (previous === undefined) delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;
     else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC = previous;
+    if (previousSemantic === undefined) delete process.env.SSS_RSI_PRIVACY_SEMANTIC;
+    else process.env.SSS_RSI_PRIVACY_SEMANTIC = previousSemantic;
   }
 });

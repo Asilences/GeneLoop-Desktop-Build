@@ -12,9 +12,9 @@
 | 导出与发布 | export-online-motif-manifest.py、export-operation-library.py、export-efficiency-rsi-registry.py、export-capability-construction-library.mjs，场景发布器与科研实验产物 | 后续检查回执、脚本常量、描述、证据索引和研究共享权限 |
 | 展示、诊断与运维 | harless_public_output.ts、下载/预览、原生 journal、worker 日志、预算代理、服务日志 | 展示投影与学习契约分别管理；预算账本保留权威记录 |
 
-复用现有 Python jsonschema 和 DSH 轨迹提取、来源核验逻辑。结构字段直接白名单投影，首版没有自由文本字段。Presidio 留作有明确文本需求时的自托管检测器。OpenTelemetry Redaction 可用于后续运维出口，云 DLP 对比只使用合成数据。
+复用现有 Python jsonschema 和 DSH 轨迹提取、来源核验逻辑。v2 结构字段直接白名单投影。隔离 Web 和离线入口可显式选择 v3，额外生成经过本地 Presidio 和 Gitleaks 处理的任务指令。
 
-独立 Web 采集诊断需要 mock Provider、显式环境开关和指定 Python。已有账户学习在其原来的权限和调度范围内通过同一个 Python 投影器处理入选证据。离线导入需要显式授权标志，只导入操作员选定的文件。两端调用同一个离线投影器。采集结果没有账号 ID、任务 ID、源路径、原始哈希、提示词、参数值、正文或时间戳。边使用样本内的节点序号，未知工具只记固定拒绝码。该结构样本依然是账号私有数据。正式用户授权、撤回和共享准入分别后续实施。没有启动历史批量回填。
+独立 Web 采集诊断需要 mock Provider、显式环境开关和指定 Python。已有账户学习在其原来的权限和调度范围内通过同一个 Python 投影器处理入选证据。离线导入需要显式授权标志，只导入操作员选定的文件。v2 采集结果没有账号 ID、任务 ID、源路径、原始哈希、提示词、参数值、正文或时间戳。边使用样本内的节点序号，未知工具只记固定拒绝码。样本依然是账号私有数据。正式用户授权、撤回和共享准入分别后续实施。
 
 ## 隔离验证
 
@@ -32,6 +32,25 @@ python -m src.adapters.rsi_learning_trace --authorized --input .local/example/ev
 ```
 
 Web 仅在 `provider_mode=mock` 且 `SSS_RSI_PRIVACY_DIAGNOSTIC=1` 时运行。通过 `SSS_PYTHON` 或任务策略的 `learning_python` 指向安装仓库 Python 依赖的解释器。结果保存至任务私有目录的 `rsi-learning-trace.json`，拒绝只留下固定标志。诊断数据不提供模型、计费和质量评估。
+
+### v3 任务语义诊断
+
+v3 的 `task_intent` 来自指定任务事件段内第一条原生用户消息的文字部分，输入限 2048 字符。模型回答、工具参数和结果、附件本体、插件注入的附件文字以及后续对话均在此字段之外。Presidio 同时处理英文和中文实体，并通过其模式识别器处理常见文件引用和带标签的凭证。Gitleaks 在独立空目录从标准输入扫描处理前后的文字，命中凭证或任一步失败均拒绝整份语义样本。扫描报告不落盘。v3 仍是受限学习数据，任务指令可能含有未发表研究或可关联线索，正式学习和跨账号共享需要独立授权与准入规则。
+
+在装有仓库基础依赖的隔离解释器中安装 `requirements-rsi-privacy.txt`。清单固定中英文 spaCy 模型的发布版本和 SHA256。使用 [Gitleaks 8.30.0](https://github.com/gitleaks/gitleaks/releases/tag/v8.30.0)，安装前核对发布校验表。运行时从已安装模型加载，邮件识别复用 Presidio 的模式并跳过远程域名后缀查询。
+
+```sh
+umask 077
+export SSS_RSI_GITLEAKS=/absolute/path/to/gitleaks
+export SSS_PYTHON=/absolute/path/to/isolated/python
+"$SSS_PYTHON" -m pip install -r requirements-rsi-privacy.txt
+"$SSS_PYTHON" -m pytest -q tests/test_rsi_learning_trace.py
+node --test --test-name-pattern='RSI privacy' tests/test_dsh_web_tasks.mjs
+"$SSS_PYTHON" -m src.adapters.rsi_learning_trace --authorized --include-task-intent \
+  --input .local/example/events.jsonl --scene paper-proofreading --status completed --start 0
+```
+
+隔离 Web 额外设置 `SSS_RSI_PRIVACY_SEMANTIC=1`。Web 与离线导入调用相同投影器和本地工具。Paper/PPT 现有结构编译仍读取 v2 样本，正式账号学习尚未启用语义字段。
 
 ## 账户学习与证书兼容
 

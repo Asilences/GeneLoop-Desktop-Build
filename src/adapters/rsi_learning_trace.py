@@ -1,4 +1,4 @@
-"""Project a private native event journal into a bounded RSI structure sample."""
+"""Project a private native event journal into a bounded RSI learning sample."""
 
 import argparse
 import hashlib
@@ -26,7 +26,7 @@ MAX_EVENTS = 20_000
 MAX_BYTES = 32 * 1024 * 1024
 
 
-def project(events, scene, status):
+def project(events, scene, status, *, include_task_intent=False):
     contracts = parse_tool_contracts(json.loads((ROOT / CONTRACTS[scene]).read_text(encoding="utf-8")))
     calls, results = {}, set()
     ordered = []
@@ -69,11 +69,35 @@ def project(events, scene, status):
                                  "field": ref["from_field"], "parameter": param})
     sample = {"format": "geneloop.rsi-learning-trace/v2", "scene": scene, "status": status,
               "nodes": nodes, "bindings": bindings}
+    if include_task_intent:
+        from .rsi_text_privacy import redact_task_intent
+
+        sample["format"] = "geneloop.rsi-learning-trace/v3"
+        sample["task_intent"] = redact_task_intent(_task_instruction(ordered))
     SCHEMA.validate(sample)
     return sample
 
 
-def import_trace(path, scene, status, start):
+def _task_instruction(events):
+    for event in events:
+        if event.get("type") != "user/message" or event.get("surfaceOp") not in (None, "append"):
+            continue
+        data = event.get("data")
+        if not isinstance(data, dict) or data.get("harless_branch_context"):
+            continue
+        source = data.get("source")
+        if not isinstance(source, dict) or source.get("kind") != "user":
+            continue
+        content = data.get("content")
+        if not isinstance(content, list):
+            break
+        return "\n".join(part["text"] for part in content
+                         if isinstance(part, dict) and part.get("type") == "text"
+                         and isinstance(part.get("text"), str))
+    raise ValueError("missing_task_instruction")
+
+
+def import_trace(path, scene, status, start, *, include_task_intent=False):
     if not stat.S_ISREG(path.lstat().st_mode) or path.resolve() != path.absolute():
         raise ValueError("regular_private_input_required")
     with path.open("rb") as stream:
@@ -86,7 +110,7 @@ def import_trace(path, scene, status, start):
     events = [json.loads(line) for line in lines[start:] if line.strip()]
     if any(not isinstance(event, dict) for event in events):
         raise ValueError("invalid_event")
-    return project(events, scene, status)
+    return project(events, scene, status, include_task_intent=include_task_intent)
 
 
 def export_projected_identity(out, sample, *, task_id, decision_id, question, local_root, write):
@@ -112,7 +136,8 @@ def compilation_trace(sample, contracts, *, scene, trace_id, fingerprint):
     Synthetic values only encode already witnessed bindings. Unbound fields
     carry no values from the task, and blocked calls stay barriers.
     """
-    if not SCHEMA.is_valid(sample) or sample["scene"] != scene or sample["status"] != "completed":
+    if (not SCHEMA.is_valid(sample) or sample["format"] != "geneloop.rsi-learning-trace/v2"
+            or sample["scene"] != scene or sample["status"] != "completed"):
         raise ValueError("invalid_learning_projection")
     rows = sample["nodes"]
     args, observations, sources = [], [], []
@@ -157,9 +182,12 @@ def main():
     parser.add_argument("--scene", choices=CONTRACTS, required=True)
     parser.add_argument("--status", choices=("completed", "failed", "cancelled"), required=True)
     parser.add_argument("--start", type=int, required=True, help="zero-based line offset of the task")
+    parser.add_argument("--include-task-intent", action="store_true",
+                        help="also authorize local de-identification of this task's first user instruction")
     args = parser.parse_args()
     try:
-        sample = import_trace(args.input, args.scene, args.status, args.start)
+        sample = import_trace(args.input, args.scene, args.status, args.start,
+                              include_task_intent=args.include_task_intent)
     except Exception:
         # Validation and parser exceptions can contain raw values and paths.
         parser.exit(1, "rsi_learning_trace_rejected\n")
