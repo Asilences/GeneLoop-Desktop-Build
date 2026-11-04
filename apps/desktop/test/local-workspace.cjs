@@ -19,13 +19,12 @@ app.whenReady().then(async () => {
   const profile = session.fromPartition('local-workspace-test');
   await profile.cookies.set({ url: fixture.origin, name: 'harless_sess', value: fixture.cookie });
   const parent = new BrowserWindow({ show: false });
-  const directories = [fixture.source, fixture.reports];
   // Replace only the operating-system chooser. The renderer, IPC, cookie,
   // worker, file handles, upstream HTTP and final file use production paths.
-  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directories.shift()] });
+  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [fixture.reports] });
   const local = new LocalWorkspaceWindow({ parent, server: fixture.origin + '/', session: profile });
   try {
-    await local.open();
+    await local.open({ id: 'workspace', name: '本机诊断', directory: fixture.source, updatedAt: Date.now() });
     const view = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
     assert.ok(view);
     view.setBackgroundThrottling(false);

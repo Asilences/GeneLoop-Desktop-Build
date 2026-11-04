@@ -185,3 +185,25 @@ body:has(#sidebar-divider.dragging){cursor:col-resize;user-select:none}
 body[data-ds-dark-theme] .scene-command-symbol{color:color-mix(in srgb,var(--scene-accent,var(--muted)) 72%,white)}
 
 .workspace-delete-list{max-height:32vh;overflow:auto;overflow-wrap:anywhere}
+
+.workspace-tools{display:flex;align-items:center;gap:2px}
+.workspace-tools .icon{color:var(--muted)}
+.workspace-tag{color:var(--muted);font-size:10px;font-weight:400;margin-left:6px;white-space:nowrap}
+.workspace-editor{width:min(510px,calc(100vw - 40px))}
+.workspace-editor>footer:empty{display:none}
+.workspace-editor-form input{width:100%}
+.workspace-type,.workspace-folder-actions,.workspace-editor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.workspace-type button[aria-pressed=true]{background:var(--selection);color:var(--blue);border-color:var(--blue)}
+.workspace-editor-folders,.local-folder-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.workspace-folder{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.workspace-folder+.workspace-folder{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+.workspace-folder strong{grid-column:1/-1;font-weight:550}
+.workspace-folder-path,.local-folder-card p{overflow-wrap:anywhere;color:var(--muted)}
+.workspace-editor-actions{justify-content:flex-end;margin-top:14px}
+.workspace-editor-hint,.local-home-heading p{color:var(--muted);font-size:12px}
+.local-home-heading{display:flex;align-items:center;gap:12px}
+.local-home-heading svg{width:26px;height:26px;color:var(--blue)}
+.local-home-heading h2,.local-home-heading p{margin:0}
+.local-folder-card{margin-top:18px}
+.local-folder-card p{margin:3px 0 12px}
+.local-folder-card p:last-child{margin-bottom:0}

@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
 // 隔离世界观察页面外观和模态状态。
 window.addEventListener('DOMContentLoaded', () => {
@@ -34,3 +34,14 @@ window.addEventListener('DOMContentLoaded', () => {
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
   publish();
 });
+
+contextBridge.exposeInMainWorld('desktopWorkspaces', Object.freeze({
+  available: process.platform === 'win32',
+  list: () => ipcRenderer.invoke('geneloop:local-workspaces', 'list'),
+  pick: (kind: 'source' | 'output') => ipcRenderer.invoke('geneloop:local-workspaces', 'pick', kind),
+  save: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'save', value),
+  run: (id: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'run', id),
+  reveal: (id: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'reveal', id),
+  remove: (id: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'remove', id),
+  onSelected: (callback: (id: string) => void) => ipcRenderer.on('geneloop:workspace-selected', (_event, id: string) => callback(id)),
+}));

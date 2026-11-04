@@ -5,6 +5,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
 import type { LocalTaskUpdate } from './local-runtime.ts';
+import { authorizedDirectory, checkReportDirectory, reopenDirectory } from './local-workspaces.ts';
+import type { LocalWorkspace } from './local-workspaces.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const page = join(here, '../ui/local-workspace.html');
@@ -13,6 +15,7 @@ const leasePath = '/api/harless/desktop-model/lease';
 
 export class LocalWorkspaceWindow {
   private child?: BrowserWindow;
+  private workspaceId?: string;
   private busy = false;
   private closed = false;
   private controller?: ReturnType<typeof startLocalWorker>;
@@ -22,8 +25,12 @@ export class LocalWorkspaceWindow {
 
   constructor(private options: { parent: BrowserWindow; server: string; session: Session }) {}
 
-  async open(): Promise<void> {
-    if (this.child && !this.child.isDestroyed()) { this.child.focus(); return; }
+  async open(workspace: LocalWorkspace): Promise<void> {
+    if (this.child && !this.child.isDestroyed()) {
+      if (this.workspaceId !== workspace.id) throw Error('请先关闭另一个工作区的任务窗口。');
+      this.child.focus();
+      return;
+    }
     if (this.busy || this.closed || this.pending) return;
     const runtime = app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime') : join(here, '../runtime-bundle');
     if (process.platform !== 'win32' || !existsSync(join(runtime, 'local-worker.mjs'))) {
@@ -32,14 +39,15 @@ export class LocalWorkspaceWindow {
     }
     this.busy = true;
     try {
-      const selected = await dialog.showOpenDialog(this.options.parent, { title: '选择要授权读取的本机文件夹', properties: ['openDirectory'] });
-      if (selected.canceled || this.closed || this.options.parent.isDestroyed()) return;
-      const directory = selected.filePaths[0];
+      const directory = reopenDirectory(workspace.directory);
+      this.output = workspace.output && reopenDirectory(workspace.output);
+      if (this.output) checkReportDirectory(directory, this.output);
       const child = this.child = new BrowserWindow({
         parent: this.options.parent, width: 760, height: 680, minWidth: 500, minHeight: 480, show: false,
-        title: '本机工作区 · GeneLoop Desktop', autoHideMenuBar: true,
+        title: workspace.name + ' · GeneLoop Desktop', autoHideMenuBar: true,
         webPreferences: { preload: join(here, 'local-preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
       });
+      this.workspaceId = workspace.id;
       child.setMenu(null);
       child.webContents.on('will-navigate', event => event.preventDefault());
       child.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -58,7 +66,9 @@ export class LocalWorkspaceWindow {
         if (this.pending) return this.output;
         const picked = await dialog.showOpenDialog(child, { title: '选择独立的报告保存目录', properties: ['openDirectory', 'createDirectory'] });
         if (!picked.canceled && !this.pending && !child.isDestroyed()) {
-          this.output = picked.filePaths[0];
+          const next = authorizedDirectory(picked.filePaths[0]);
+          checkReportDirectory(directory, next);
+          this.output = next;
           this.reports.clear();
         }
         return this.output;
@@ -80,6 +90,7 @@ export class LocalWorkspaceWindow {
         this.controller?.cancel();
         for (const channel of channels) ipcMain.removeHandler('geneloop-local:' + channel);
         this.child = undefined;
+        this.workspaceId = undefined;
         this.output = undefined;
         this.reports.clear();
       });

@@ -1,5 +1,5 @@
-const {app}=require('electron'),assert=require('node:assert/strict');
-const {readFileSync,writeFileSync}=require('node:fs'),{join,resolve}=require('node:path'),{pathToFileURL}=require('node:url');
+const {app,dialog,BrowserWindow}=require('electron'),assert=require('node:assert/strict');
+const {mkdirSync,readFileSync,writeFileSync}=require('node:fs'),{join,resolve}=require('node:path'),{pathToFileURL}=require('node:url');
 const fixture=JSON.parse(readFileSync(process.env.GENELOOP_RENDERER_FIXTURE,'utf8'));assert.equal(fixture.diagnostic,true);assert.equal(new URL(fixture.server).hostname,'127.0.0.1');
 app.setPath('userData',join(fixture.output,'profile'));app.disableHardwareAcceleration();let desktop;
 const report={kind:'synthetic-renderer-protocol-diagnostic',real_model_requests:0,checks:[],console_errors:[]};
@@ -234,5 +234,44 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('.workspace-delete-list input[value="menu-fixture"]').click();document.querySelector('dialog footer .primary').click()`);
  await until(()=>evaluate(`!document.querySelector('section[aria-label="诊断工作区"]')&&!!document.querySelector('[data-session-id="history"]')&&!document.querySelector('[data-session-id="menu-fixture"]')`),'删除分组，仅将勾选对话移入最近删除');
  check('工作区删除须确认，可保留未勾选对话');
+ await evaluate(`document.getElementById('workspace-view').click();document.querySelector('[data-action=view-group-flat]').click()`);
+ assert.equal(await evaluate(`!!document.querySelector('#workspace-list > [data-session-id="history"]')`),true);
+ await evaluate(`document.getElementById('workspace-view').click();document.querySelector('[data-action=view-archive-archived]').click()`);
+ assert.equal(await evaluate(`document.querySelector('[data-session-id="history"]')===null`),true);
+ assert.equal(await externalTrash('archive'),true);
+ await until(()=>evaluate(`document.querySelector('[data-session-id="history"] small')?.textContent==='已归档'`),'仅显示已归档对话');
+ assert.deepEqual(await evaluate(`JSON.parse(localStorage.getItem('geneloop.desktop.workspace-view'))`),
+   {group:'flat',sort:'workspace',archive:'archived'});
+ check('工作区视图支持对话单列表、已归档筛选和本机保存');
+ if(process.platform==='win32'){
+   const source=join(fixture.output,'本机源文件夹');
+   mkdirSync(source);
+   const originalPicker=dialog.showOpenDialog;
+   dialog.showOpenDialog=async()=>({canceled:false,filePaths:[source]});
+   const localRow='[data-local-workspace-id]';
+   try{
+     await evaluate(`document.getElementById('new-workspace').click()`);
+     assert.equal(await evaluate(`document.querySelector('dialog [aria-pressed=true]').textContent`),'本机工作区');
+     await evaluate(`document.querySelector('.workspace-folder button').click()`);
+     await until(()=>evaluate(`document.querySelector('dialog input').value==='本机源文件夹'`),'选择本机目录后填入默认名称');
+     await evaluate(`document.querySelector('.workspace-editor-form').requestSubmit()`);
+     await until(()=>evaluate(`!!document.querySelector('.local-workspace-home')&&!document.querySelector('dialog')`),'创建后在主窗口打开工作区');
+     assert.equal(BrowserWindow.getAllWindows().length,1);
+     const id=await evaluate(`document.querySelector('${localRow}').dataset.localWorkspaceId`);
+     await evaluate(`document.querySelector('${localRow}').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}));document.querySelector('[data-action=local-edit]').click();document.querySelector('dialog input').value='更名后的本机工作区';document.querySelector('.workspace-editor-form').requestSubmit()`);
+     await until(()=>evaluate(`document.querySelector('.local-workspace-home h2')?.textContent==='更名后的本机工作区'&&!document.querySelector('dialog')`),'右键修改本机工作区');
+     const registry=()=>JSON.parse(readFileSync(join(fixture.output,'local-workspaces.json'),'utf8')).items;
+     assert.deepEqual(registry().map(row=>[row.id,row.name]),[[id,'更名后的本机工作区']]);
+     await until(async()=>!(await desktop.state().modalOpen),'主窗口恢复菜单');
+     await desktop.openLocalWorkspace();
+     assert.equal(registry().length,1);
+     assert.equal(BrowserWindow.getAllWindows().length,1);
+     await evaluate(`document.querySelector('${localRow} + .workspace-more').click();document.querySelector('[data-action=local-remove]').click();[...document.querySelectorAll('dialog button')].find(item=>item.textContent==='移除').click()`);
+     await until(()=>evaluate(`!document.querySelector('${localRow}')&&!document.querySelector('dialog')`),'移除本机工作区记录');
+     assert.deepEqual(registry(),[]);
+     assert.equal(require('node:fs').statSync(source).isDirectory(),true);
+     check('本机工作区可创建、快捷打开、右键编辑及移除，源目录保留且打开无需运行任务');
+   }finally{dialog.showOpenDialog=originalPicker;}
+ }
  report.ok=true;
 }).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');}catch{}console.error(error);}).finally(()=>{writeFileSync(join(fixture.output,'summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));desktop?.permitClose();app.quit();});

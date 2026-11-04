@@ -1,11 +1,12 @@
 import { BrowserWindow, WebContentsView, dialog, ipcMain, session, shell, Menu, nativeTheme } from 'electron';
 import type { IpcMainInvokeEvent, Session, Event, DownloadItem, WebContents } from 'electron';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { downloadName, externalWebUrl, ownedDownload, sameServer, serverOrigin } from './policy.ts';
 import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
+import { authorizedDirectory, LocalWorkspaceStore, reopenDirectory } from './local-workspaces.ts';
 import { LocalWorkspaceWindow } from './local-workspace.ts';
 import { LocalFrontendHost } from './frontend.ts';
 import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
@@ -22,6 +23,8 @@ export class DesktopWorkspace {
   readonly ready: Promise<void>;
   private currentSession?: Session;
   private localWorkspace?: LocalWorkspaceWindow;
+  private readonly localWorkspaces: LocalWorkspaceStore;
+  private readonly folderTickets = new Map<string, string>();
   private downloadListener?: DownloadListener;
   private pageReady = false;
   private stateValue: DesktopState;
@@ -33,6 +36,7 @@ export class DesktopWorkspace {
 
   constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean; closeToTray?: boolean }) {
     const { settings } = options;
+    this.localWorkspaces = new LocalWorkspaceStore(join(dirname(options.settingsFile), 'local-workspaces.json'));
     const appearance = nativeTheme.shouldUseDarkColors ? DARK_APPEARANCE : LIGHT_APPEARANCE;
     this.stateValue = { phase: 'connecting', server: settings.server, message: '', version: options.version, appearance, workspaceVisible: false, modalOpen: false };
     this.window = new BrowserWindow({
@@ -55,6 +59,15 @@ export class DesktopWorkspace {
       else this.dispose();
     });
     this.window.on('closed', () => this.dispose());
+    ipcMain.handle('geneloop:local-workspaces', (event, command: unknown, value: unknown) => {
+      const view = this.workspace?.webContents;
+      if (!view || event.sender !== view || event.senderFrame !== view.mainFrame ||
+          !sameServer(event.senderFrame.url, this.stateValue.server) ||
+          !['/', '/login', '/register', '/account', '/starting'].includes(new URL(event.senderFrame.url).pathname)) {
+        throw Error('Invalid workspace sender');
+      }
+      return this.localWorkspaceAction(command, value);
+    });
     ipcMain.handle('geneloop:state', event => { this.requireShell(event); return this.state(); });
     ipcMain.handle('geneloop:menu', (event, name: unknown) => {
       this.requireShell(event);
@@ -98,10 +111,65 @@ export class DesktopWorkspace {
   }
 
   async openLocalWorkspace(): Promise<void> {
-    if (!this.currentSession || this.window.isDestroyed()) return;
-    this.localWorkspace ??= new LocalWorkspaceWindow({ parent: this.window, server: this.stateValue.server, session: this.currentSession });
-    try { await this.localWorkspace.open(); }
-    catch { if (!this.window.isDestroyed()) dialog.showErrorBox('本机工作区', '无法打开本机工作区。'); }
+    if (this.stateValue.phase !== 'connected' || this.stateValue.modalOpen) return;
+    const generation = this.generation;
+    try {
+      const picked = await this.pickWorkspaceDirectory('选择本机工作区文件夹');
+      const view = this.workspace?.webContents;
+      if (picked && generation === this.generation && view && !view.isDestroyed()) {
+        const row = this.localWorkspaces.open(picked);
+        view.send('geneloop:workspace-selected', row.id);
+      }
+    } catch { if (!this.window.isDestroyed()) dialog.showErrorBox('本机工作区', '无法打开这个本机文件夹。'); }
+  }
+
+  private async pickWorkspaceDirectory(title: string): Promise<string | undefined> {
+    if (process.platform !== 'win32' || this.disposed) return;
+    const result = await dialog.showOpenDialog(this.window, { title, properties: ['openDirectory'] });
+    if (!result.canceled && !this.disposed) return authorizedDirectory(result.filePaths[0]);
+  }
+
+  private async localWorkspaceAction(command: unknown, value: unknown) {
+    if (process.platform !== 'win32' || this.disposed) throw Error('本机工作区仅支持 Windows。');
+    if (command === 'list') return this.localWorkspaces.list();
+    if (command === 'pick') {
+      const generation = this.generation;
+      const path = await this.pickWorkspaceDirectory(value === 'output' ? '选择独立的报告目录' : '选择本机工作区文件夹');
+      if (!path || generation !== this.generation) return null;
+      const token = randomUUID();
+      if (this.folderTickets.size >= 16) this.folderTickets.delete(this.folderTickets.keys().next().value!);
+      this.folderTickets.set(token, path);
+      return { path, token };
+    }
+    if (command === 'save' && value && typeof value === 'object') {
+      const input = value as { id?: unknown; name?: unknown; source?: unknown; output?: unknown };
+      const old = typeof input.id === 'string' ? this.localWorkspaces.get(input.id) : undefined;
+      const ticket = (token: unknown) => {
+        const path = typeof token === 'string' ? this.folderTickets.get(token) : undefined;
+        if (!path) throw Error('请重新选择文件夹。');
+        return reopenDirectory(path);
+      };
+      const directory = input.source !== undefined ? ticket(input.source) : old && reopenDirectory(old.directory);
+      const output = input.output === null ? undefined : input.output !== undefined ? ticket(input.output) :
+        old?.output && reopenDirectory(old.output);
+      if (typeof input.name !== 'string' || !directory) throw Error('请填写名称并选择源文件夹。');
+      const saved = this.localWorkspaces.save({ id: old?.id, name: input.name, directory, output });
+      for (const token of [input.source, input.output]) if (typeof token === 'string') this.folderTickets.delete(token);
+      return saved;
+    }
+    if (typeof value !== 'string') throw Error('无效的本机工作区。');
+    const row = this.localWorkspaces.get(value);
+    if (command === 'remove') return this.localWorkspaces.remove(row.id);
+    if (command === 'reveal') {
+      const result = await shell.openPath(reopenDirectory(row.directory));
+      if (result) throw Error('无法在资源管理器中打开这个文件夹。');
+      return;
+    }
+    if (command === 'run' && this.currentSession) {
+      this.localWorkspace ??= new LocalWorkspaceWindow({ parent: this.window, server: this.stateValue.server, session: this.currentSession });
+      return this.localWorkspace.open(row);
+    }
+    throw Error('无效的本机工作区操作。');
   }
 
   private requireShell(event: IpcMainInvokeEvent): void {
@@ -153,6 +221,7 @@ export class DesktopWorkspace {
     const attempt = ++this.generation;
     this.localWorkspace?.dispose();
     this.localWorkspace = undefined;
+    this.folderTickets.clear();
     this.removeWorkspace();
     this.pageReady = false;
     this.stateValue.workspaceVisible = false;
@@ -275,6 +344,6 @@ export class DesktopWorkspace {
     this.localWorkspace?.dispose();
     ++this.generation;
     this.removeWorkspace();
-    for (const channel of ['geneloop:state', 'geneloop:retry', 'geneloop:connect', 'geneloop:menu', 'geneloop:settings']) ipcMain.removeHandler(channel);
+    for (const channel of ['geneloop:local-workspaces', 'geneloop:state', 'geneloop:retry', 'geneloop:connect', 'geneloop:menu', 'geneloop:settings']) ipcMain.removeHandler(channel);
   }
 }
