@@ -2,7 +2,7 @@
 
 ## 范围与基线
 
-本轮从 `b2329664` 开始，计划提交为 `fcd0e762`，机制与验收提交为 `1b92ccac`（本地、未推送），分支 `codex/rae-stage1-real-20261104`。此前已验证远程 main 为 `5d73a4b9`；本轮 Git 凭证不可用，不能声称再次核对了最新远程 main。未合并、未部署、未切换生产服务。
+本轮从 `b2329664` 开始，计划提交为 `fcd0e762`，机制与验收提交为 `1b92ccac`（已推送），分支 `codex/rae-stage1-real-20261104`。此前已验证远程 main 为 `5d73a4b9`；本轮 Git 凭证不可用，不能声称再次核对了最新远程 main。未合并、未部署、未切换生产服务。
 
 按原规格 T0–T8，再按补充规格 Gate 0–4 顺序执行。真实 Builder 自应用未观察到之前，不把第二阶段反馈学习策略列为完成。
 
@@ -83,4 +83,4 @@ node scripts/project.mjs python examples/capability-scenes/run-rae-real-acceptan
 node scripts/project.mjs python scripts/validate-recursive-paper-candidate.py --manifest MANIFEST --output .local/NEW_PREVIEW
 ```
 
-需要显式 `--call-model` / `--execute` 才执行。模型只在已配置 Linux 服务器、沿原账本调用。关闭研究配置即保留原生产行为；回退不删除旧库、旧证据或累计账本。远程认证恢复前 PR/CI 状态保持未完成，不用本地测试替代远程结论。
+需要显式 `--call-model` / `--execute` 才执行。模型只在已配置 Linux 服务器、沿原账本调用。关闭研究配置即保留原生产行为；回退不删除旧库、旧证据或累计账本。2026-11-04本机认证恢复后已核对远程 main `690d2340`，合并预演无冲突；已从Mac推送并创建[PR #132](https://github.com/jingyio/GeneLoop/pull/132)。远程Linux/Windows检查运行中，不用本地测试替代远程通过结论。

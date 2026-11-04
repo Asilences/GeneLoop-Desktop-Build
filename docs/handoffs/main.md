@@ -3,15 +3,15 @@
 ## 2026-11-04：RAE 连续研发
 
 - 更新时间与交接人：2026-11-04，Codex；本轮默认关闭，不合并、不部署。
-- 目标与范围：[原规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，机制/验收提交 `1b92ccac`（未推送），分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，本轮凭证失败不能称重新核对最新 main。
+- 目标与范围：[原规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，机制/验收提交 `1b92ccac`、结果交接 `be89b159`（已从Mac推送），分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，认证恢复后已核对远程 main `690d2340`，合并预演无冲突。
 - 已完成：真实 Script 组合回执恢复、嵌套类型投影、原学习器发现局部候选、冻结验收器发布及后继调用；真实模型研究薄入口。Builder helper 训练材料前缀已接原两处 scene/Frontier 路径，默认关闭；独立审计修复相同输入重排冒充独立样本的问题。
 - 已验证：本轮独立历史候选 Linux 发布与 followup 通过；新模型构造发布成功。本地2301 Python/1587 Node通过（241/21跳过），Linux RAE102 Python+35 Node、最后适配/原生66项及smoke/Motif/RSI检查通过，详见[连续研发证据](../experiments/rae-followup-20261104.md)。此前 RAE 诊断 2256 Python、1587 Node 及专项成绩只代表之前源码，不能替代本次结果。
 - 实验结论：历史真实 `C,C,report` 保留完整重复拒绝，原 miner 自动学出 `C→report`；独立历史输入上发布/后继成功。新模型8次请求后选完整 paths 程序成功，C调用0，无Builder前缀。T6真实自应用未观察到，Gate0尚不通过，第二阶段Gate1/2不计完成；无本轮净收益结论。
 - 审计纠正：原 `BuilderConstructionSession` 只有诊断驱动实例化，宿主编译器没有原生认证后端；不可将其测试证书移入真实配置。现改用已有Script训练输入准备子过程，但不得凭接线测试宣称真实自主进化。
 - 配置与数据：入口、开关和最短命令见[接口](../interfaces.md#recursive-abstraction-evolution2026-11-04)。两端 `.local/rae-followup-20261104/` 保留成功和失败，另有本地模型审计目录；原日志/私有论文/凭证均不入Git。原累计账本沿用，未清零。
 - 权限与预算：11个真实请求，代理计量 USD0.047161500（含3个旧接口失败）；本批额度USD3。未核供应商账单；总经济成本未知。阶段内 `max_repairs=2` 是每个固定材料池修复段，成功获取材料后仍可续构，非总3请求限制。
-- 未完成与阻塞：真实任务流未产生可学习的Builder前缀，不能用人工轨迹补齐Gate0。Git HTTPS凭证不可用，现有SSH key无目标仓库权限；PR未创建，远程CI未验证；原其他分支及 `reference/` 保留。
-- 接手下一步：1. 恢复Git访问后推送独立提交、建PR并核对远程CI；2. 在真实后续任务中显式采集构造前缀，有独立样本后经同一learner/Store认证并实际用于后继Builder；3. Gate0通过后再启动反馈演化与ABC策略对照，不能强制C或只挑成功轨迹。
+- 未完成与阻塞：真实任务流未产生可学习的Builder前缀，不能用人工轨迹补齐Gate0。本机认证已恢复，已创建[PR #132](https://github.com/jingyio/GeneLoop/pull/132)，远程CI正在运行，尚未形成通过结论；原其他分支及 `reference/` 保留。
+- 接手下一步：1. 审阅PR #132并核对远程Linux/Windows CI；2. 在真实后续任务中显式采集构造前缀，有独立样本后经同一learner/Store认证并实际用于后继Builder；3. Gate0通过后再启动反馈演化与ABC策略对照，不能强制C或只挑成功轨迹。
 - 回退与风险：不启用 `recursive_abstraction.builder_learning` 即原路径；旧库、原回执、累计账本和生产服务未覆盖。研究提交可以独立回退，不删除私有证据。
 
 ## 2026-11-03：Creation Efficiency 构造反馈与重新选择
