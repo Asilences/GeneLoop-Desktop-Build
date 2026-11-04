@@ -1,5 +1,13 @@
 # GeneLoop Desktop 当前交接
 
+## 2026-11-04 Windows 本机执行探针
+
+- 基线为已从 GitHub 拉取的 main `eda9409`，在 `codex/desktop-local-runtime` 独立开发。0.2.40 试用源码固定在本地标签 `geneloop-desktop-v0.2.40-baseline`（`35985e4`）。原安装包与桌面源码归档在私有 `.local/desktop-releases/0.2.40-baseline-35985e4/`，含 SHA256 校验。更早的基线标签及版本提交保留。
+- Windows x64 探针已通过。把打包后的 Electron 和锁定的 Harness 依赖复制到源码树之外的独立安装布局，使用隔离 Home、中文工作区路径和原生 SDK 握手。Harness 实际调用受限读取工具，回环响应进入等待后，原 Agent 取消使轮次回到 idle、连接中断，Harness 随后正常退出。两次回环请求只做协议故障注入，真实模型请求为 0。
+- 文件管理第一步为 `apps/desktop/runtime/local-files.mjs`。在授权目录上保留 Win32 句柄，逐级打开子目录与文件，读取前验证句柄实际位置。诊断覆盖中文路径、绝对路径、路径穿越、junction、硬链接、设备名、备用数据流、超限文件及撤销授权。首批范围是小型 UTF-8 文本读取。
+- 复现：先在 Windows x64 准备桌面依赖并生成 `apps/desktop/release/win-unpacked`，然后从仓库根运行 `node apps/desktop/scripts/probe-local-runtime.mjs`。也可依次传入打包目录和对应的桌面依赖目录。探针只验证独立布局，不执行 NSIS 安装；运行时依赖由探针临时放入，不是当前安装包的正式载荷。
+- 下一步：接入原生目录选择及本机工作区状态，增加清单、搜索、独立报告输出。为本机任务设计短期模型凭证，沿用服务端计量与任务归属；当前 `scripts/harless_gateway.mjs` 的 scoped budget 路由只接受已登记的服务端轮次。完成后用隔离账号实测本机 Agent、云端模型和 Windows 安装包。当前未开放本机工作区 UI，云端工作区和部署保持现状。
+
 - 0.2.40 本地试用：工作区右键和三点菜单支持删除分组，确认时可勾选对话移入最近删除，默认保留全部对话。复用服务端工作区和对话接口。
 
 - 0.2.39 本地试用：加载已有对话期间，发送按钮显示等待图标并禁用发送。
