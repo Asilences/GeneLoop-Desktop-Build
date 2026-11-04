@@ -19,6 +19,36 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def source_read_response(value):
+    """Keep full model-visible text and a separate, compact MCP receipt.
+
+    DSH may append a spill-file notice to the displayed text. The MCP
+    structured channel remains execution-local authority for the version
+    guard; the display is not parsed or shortened to reconstruct a receipt.
+    This function is called only after ConvertedSources.read revalidates the
+    original source permission, derivative tree and Markdown bytes.
+    """
+    from mcp.types import CallToolResult, TextContent
+    text = value['text'].encode('utf-8')
+    metadata = {
+        'version_sha256': value['version_sha256'],
+        'name': value['name'],
+        'markdown_path': value['markdown_path'],
+        'directory': value['directory'],
+        'markdown_sha256': digest(text),
+        'markdown_bytes': len(text),
+        'file_count': len(value['files']),
+        'full_text_in_content': True,
+        'truncated': value['truncated'],
+        'visual_checked': value['visual_checked'],
+        'coverage': value['coverage'],
+    }
+    return CallToolResult(
+        content=[TextContent(type='text', text=json.dumps(value, ensure_ascii=False, indent=2))],
+        structured_content=metadata,
+    )
+
+
 class ConvertedSources:
     def __init__(self, sources, skill):
         self.sources, self.skill = sources, skill

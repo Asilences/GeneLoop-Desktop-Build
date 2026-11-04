@@ -23,6 +23,29 @@ test('PPT learning worker failure cannot break chat or escape an already removed
  try{await manager.idle();}finally{rmSync(output,{recursive:true,force:true});}
 });
 
+test('Single-task completion captures immutable evidence and schedules certification without comparison records',{skip:!enabled},async()=>{
+ const output=join(root,'.local/node-ppt-learning',randomUUID());mkdirSync(output,{recursive:true});
+ try{
+  const ids=[],manager=createPptLearning({output,user,scope,python,taskIds:()=>ids});
+  for(let n=1;n<=3;n++){
+   const script=`from pathlib import Path\nimport json\nfrom tests.test_web_ppt_learning import task,single,save\nout=Path(${JSON.stringify(output)})\nstore=Path(${JSON.stringify(storeFor(output))})\nstore.mkdir(parents=True,exist_ok=True)\np=store/'request.json'\nif not p.exists():save(p,{'schema_version':1,'output':str(out),'user':'diagnostic-user','scope':'a'*64,'task_ids':[],'automatic_structural_learning':True})\nd=task((out,store,p),${n})\nr=single((out,store,p),d)\n(d/'ppt-learning-delivery.json').unlink()\nprint(json.dumps({'task_id':d.name,'session_id':r['session_id'],'artifacts':r['artifacts']}))`;
+   const data=JSON.parse(execFileSync(python,['-c',script],{cwd:root,env:{...process.env,PYTHONUTF8:'1'},encoding:'utf8'}));
+   ids.push(data.task_id);
+   const task={request:{task_id:data.task_id,session_id:data.session_id,mode:'baseline'},scene:{id:'ppt',ppt_execution_strategy:'ppt_master'},
+    output:join(output,'tasks',data.task_id),status:'completed'};
+   manager.captureSingle(task,data.artifacts);manager.captureSingle(task,data.artifacts);
+   assert.throws(()=>manager.captureSingle(task,[]),/delivery_changed/);
+  }
+  assert.equal(existsSync(join(output,'comparisons.json')),false);
+  manager.schedule();await manager.idle();
+  const scene={id:'ppt',ppt_execution_strategy:'ppt_master',config_sha256:'single-original',instructions:'same',allowed_tools:[]};
+  assert.equal(manager.resolve(scene).learning_phase,'probation');
+  assert.equal(existsSync(join(output,'comparisons.json')),false);
+  assert.equal(read(join(storeFor(output),'status.json')).extra_provider_requests,0);
+  assert.equal(createPptLearning({output,user:'other',scope,python,taskIds:()=>ids}).resolve(scene),scene);
+ }finally{rmSync(output,{recursive:true,force:true});}
+});
+
 test('PPT lifecycle: automatic certification, future-only probation, promotion, restart, veto and integrity guards',{skip:!enabled},async()=>{
  const output=join(root,'.local/node-ppt-learning',randomUUID());mkdirSync(output,{recursive:true});
  try{
@@ -34,6 +57,13 @@ test('PPT lifecycle: automatic certification, future-only probation, promotion, 
   const one=manager.resolve(base);assert.equal(one.learning_version,'round-0001');assert.equal(one.learning_phase,'probation');
   assert.equal(one.runtime_kind,'ppt_master_v2');assert.equal(one.instructions,'unchanged');assert.deepEqual(one.allowed_tools,['unchanged']);
   assert.equal(base.learning_version,undefined);
+  // Real API reads refresh these projections after certification. They are
+  // neither source-version changes nor new execution evidence.
+  const statePath=join(output,'tasks',ids[0],'task-state.json'),state=read(statePath);
+  state.progress={text:'refreshed'};state.stats.global_upstream_requests=99999;state.stats.global_estimated_cost_usd=123;
+  writeFileSync(statePath,JSON.stringify(state));assert.equal(manager.resolve(base).learning_phase,'probation');
+  state.failure='late_failure';writeFileSync(statePath,JSON.stringify(state));assert.equal(manager.resolve(base),base);
+  delete state.failure;writeFileSync(statePath,JSON.stringify(state));assert.equal(manager.resolve(base).learning_phase,'probation');
   assert.equal(createPptLearning({...config,user:'other'}).resolve(base),base);
   assert.equal(createPptLearning({...config,scope:'b'.repeat(64)}).resolve(base),base);
   assert.equal(manager.resolve({...base,id:'paper-proofreading'}).learning_version,undefined);

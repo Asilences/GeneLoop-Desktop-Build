@@ -2,6 +2,10 @@
 
 2026-11-04，新增默认关闭的 [Recursive Abstraction Evolution 研究机制](docs/rae-implementation.md)：真实 Capability 调用可进入原 Motif 学习器，学出的后代仍经原 Store 独立验收；反馈可改变下一轮抽象边界，Builder 的实际解析/绑定轨迹可走同一流程。`npm run rsi:rae:check` 保留机制执行证据，`npm run rsi:rae:learn -- --help` 查看离线入口。当前验收为确定性任务上的实际执行闭环，不等于真实模型自主创造或持续收益；生产路径不变。
 
+PPT新增公共RSI接线。合格单路轨迹与原生认证页面程序自动进入账户材料池，宿主显式配置公共计划后复用Builder、独立验证、Store发布及后继目录。真实模型候选已完成发布、换输入执行与原`create_ppt_page`→`finalize_ppt`交付，学习1请求约USD0.00091104，后继执行新增模型请求0。科研质量、额外净降本和生产部署继续独立验收。配置、失败与恢复见[本轮记录](docs/experiments/ppt-public-rsi-20261104.md)。
+
+GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
+
 离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
 
 新增默认关闭的[能力变化后机会重新评价](docs/capability-aware-opportunities-v1.md)：独立发布成功后，结合仍未满足的真实需求提出候选，宿主提供冻结验收条件，再交原Builder。保留全部候选、筛选和结果，区分预期、编译与执行依赖。当前仅机制诊断，不包含节余再投资，不自动开启生产或付费探索。
@@ -15,6 +19,16 @@
 2026-11-03，论文书目公共 Capability 完成首个受控真实验收：正常任务学习、缺口补材料、模型组合，经显式工程恢复后通过 27 条验证和 29 条后继，发布能力进入下一 Builder。尚未接管聊天或证明新增机制降本；范围、费用与失败见[真实记录](docs/experiments/paper-capability-real-20261102.md)。
 
 2026-11-02，离线 Capability 机制新增原生 Script 后端与论文盘点适配器，复用已有编译、沙箱及公共发布流程；旧库采用来源/执行分离和精确兼容白名单。入口见[场景协议](docs/capability-scenes-v1.md#论文-script-接入2026-11-02续)，[原生诊断记录](docs/experiments/efficiency-rsi-script-20261102.md)不作为新增模型或效率收益证据，默认聊天不接管。
+
+PPT受管制作候选已接通字体校准、统一Office交付、版本化组件改页及正常页面自动参数化。两条正常轨迹产生的程序经认证后用于独立ResNet成品，来源漏记经单独副本复核；该题费用低18.92%，稳定同质降本仍待验证。服务器Python1807/最终Node1492通过，202/4跳过。24项真实API材料任务已启动，学习费用单列，当前验收范围见记录。见[结果、负例与成品位置](docs/experiments/ppt-managed-learning-20261104-results.md)。
+
+PPT交付修复候选已加入字体/对比预检、自动输出目录、共同`finalize_ppt`、版本缓存与成品来源核验。服务器完整回归通过，完成六次真实生成并审阅10页。首轮两题优化组估费高25.67%，最后单对复核低26.75%但未调用学习组件，且质量等价待确认，RSI稳定降费尚未通过。当前未提交或部署。实现、完整投入及成品位置见[本轮记录](docs/experiments/ppt-component-delivery-repair-20261104-results.md)。
+
+此前PPT历史页面程序已接入原生 `create_ppt_page` 入口，并完成真实后继试执行。79 个历史页面进入隔离候选材料池，组件成功执行后因预览缺字和配色问题被模型弃用，最终手写重做。该次费用比普通组高 30.97%，成品层面的复用、降本与严格题面验收尚未通过，未部署。范围、负例与成品位置见[页面组件实验](docs/experiments/ppt-component-learning-20261103.md)。
+
+PPT候选现将完整原文展示与MCP版本回执分离，避免长输出提示使已认证读取边回退；真实长论文读取诊断完成两次已验证请求旁路，尚不代表完整PPT降费或正式上线。修复、测试及同伴RSI机制接入边界见[回执修复记录](docs/experiments/ppt-read-receipt-fix-20261103.md)。
+
+PPT 真实任务的账户内学习新增共享质量证据与独立程序复用接线：正常单路通过宿主不可变成品receipt自动准入，学习/认证/后续试用不依赖配对降费证据；复用已有 Artifact 编译/沙箱认证器，后续质量与完整费用另行评估，无明确科研/视觉评审时保持未知。新附件改稿优先继承 PPTX/PDF，避免预览 PNG 挤掉原稿。当前验证和未部署边界见[接线记录](docs/experiments/ppt-rsi-reuse-integration-20261102.md)及[单路准入与12题重启](docs/experiments/ppt-single-12tasks-20261103.md)。旧版12题生成已结束，费用下降与质量未完成的边界见[汇报分析](docs/experiments/ppt-real-12tasks-20261102-analysis.md)。
 
 新增[RSI 共享质量证据与复用形式整合](docs/experiments/rsi-meta-overnight-20261030.md)：F02 统一记录任务/产物/评价标准和逐项证据，视频形式更新复用共同版本核验与发布回执。Python/TypeScript 都能核对新记录；视频帧/音频检查仍由场景提供。已完成一次真实发布、后继TS加载和下一学习/认证/反思；六对限定质量通过任务44→33请求、前向代理估费降约21%，后继两题仍有基线质量失败与候选重渲染开销，未证明持续净收益。完整证据与边界见实验记录，未部署正式服务。
 2026-11-02：已合并服务器运行版本与 GitHub main，并新增网页 `/video` 视频剪辑入口；每条视频任务需选择该场景，不带场景命令的消息仍按普通 Chat 执行。实现与验收范围见 [视频场景集成记录](docs/experiments/video-web-integration-20261101.md)。视频已接入原实验中通过发布校验的程序库，恢复 Baseline / Motif 双路执行；本轮部署与验收见[视频双路记录](docs/experiments/video-paired-motif-20261102.md)。

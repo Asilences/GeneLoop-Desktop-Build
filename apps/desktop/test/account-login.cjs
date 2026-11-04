@@ -1,0 +1,60 @@
+const {app, BrowserWindow, session}=require('electron');
+const assert=require('node:assert/strict');
+const {readFileSync, writeFileSync}=require('node:fs');
+const {join, resolve}=require('node:path');
+const {pathToFileURL}=require('node:url');
+const {once}=require('node:events');
+const fixture=JSON.parse(readFileSync(process.env.GENELOOP_DESKTOP_ACCOUNT_FIXTURE,'utf8'));
+assert.equal(fixture.diagnostic,true);
+assert.equal(new URL(fixture.server).hostname,'127.0.0.1');
+assert.equal(new URL(fixture.server).protocol,'http:');
+app.setPath('userData',join(fixture.output,'profile'));
+app.disableHardwareAcceleration();
+const report={kind:'desktop-real-gateway-synthetic-account',model_requests:0,checks:[]};
+let window,host;
+const check=name=>{report.checks.push(name);console.log('通过：'+name);};
+async function until(fn,label){const deadline=Date.now()+15_000;while(Date.now()<deadline){if(await fn())return;await new Promise(done=>setTimeout(done,50));}throw Error('等待超时：'+label);}
+app.whenReady().then(async()=>{
+  assert.equal(app.isPackaged,false);
+  const {LocalFrontendHost}=await import(pathToFileURL(resolve(__dirname,'../dist/frontend.js')).href);
+  const remote=session.fromPartition('persist:account-diagnostic');
+  host=new LocalFrontendHost({session:remote,server:fixture.server+'/',assets:resolve(__dirname,'../assets'),ui:resolve(__dirname,'../ui/desktop'),fail:assert.fail});
+  host.install();
+  window=new BrowserWindow({show:false,webPreferences:{session:remote,nodeIntegration:false,contextIsolation:true,sandbox:true}});
+  await window.loadURL(fixture.server+'/login?next=%2Faccount');
+  const evaluate=code=>window.webContents.executeJavaScript(code);
+  if(process.env.GENELOOP_DESKTOP_ACCOUNT_RESTART==='1'){
+    assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user?.username)"),fixture.username);
+    check('完整退出 Electron 并重启后，无需重新输入密码');
+    await evaluate("fetch('/api/account/logout',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(()=>location.reload())");
+    await until(()=>evaluate('!document.getElementById("auth").hidden'),'退出后独立登录界面');
+    assert.equal((await remote.cookies.get({url:fixture.server,name:'harless_sess'})).length,0);
+    assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user)"),null);
+    assert.deepEqual(await evaluate("[document.getElementById('login-user').value,document.getElementById('login-pass').value]"),[fixture.username,'']);
+    check('主动退出清除会话，只预填记住的用户名');
+    report.ok=true;
+    return;
+  }
+  await until(()=>evaluate('!document.getElementById("auth").hidden'),'独立桌面登录表单');
+  assert.equal(await evaluate("document.getElementById('auth-server').textContent === '连接到 ' + location.origin && !document.getElementById('auth-server').hidden"),true);
+  const submit=async password=>evaluate(`document.getElementById('login-user').value=${JSON.stringify(fixture.username)};document.getElementById('login-pass').value=${JSON.stringify(password)};document.getElementById('login-form').requestSubmit();`);
+  await submit('diagnostic-wrong-password');
+  await until(()=>evaluate('document.getElementById("login-error").textContent.includes("用户名或密码不正确")'),'真实网关完成密码校验');
+  assert.equal((await remote.cookies.get({url:fixture.server,name:'harless_sess'})).length,0);
+  check('本地原生表单POST通过网关来源校验，错误密码仍被拒绝');
+  await submit(fixture.password);
+  await until(()=>evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user?.username==="+JSON.stringify(fixture.username)+")"),'原网关认证成功');
+  const cookies=await remote.cookies.get({url:fixture.server,name:'harless_sess'});
+  assert.equal(cookies.length,1);assert.equal(cookies[0].httpOnly,true);
+  assert.equal(cookies[0].session,false);
+  assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user.username)"),fixture.username);
+  check('正确的临时账号可登录，HttpOnly Cookie生效并读取同一网关账户');
+  const reloaded=once(window.webContents,'did-finish-load');window.webContents.reload();await reloaded;
+  assert.equal(await evaluate("fetch('/api/account/me').then(r=>r.json()).then(r=>r.user.username)"),fixture.username);
+  check('刷新独立页面后，服务器HttpOnly登录状态仍保持（本夹具未启动Agent工作空间）');
+  report.ok=true;
+}).catch(error=>{report.ok=false;report.error=String(error.stack);console.error(error);}).finally(()=>{
+  if(window&&!window.isDestroyed())window.destroy();host?.dispose();
+  writeFileSync(join(fixture.output,process.env.GENELOOP_DESKTOP_ACCOUNT_RESTART==='1'?'restart-summary.json':'account-summary.json'),JSON.stringify(report,null,2)+'\n');
+  console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));app.exit(report.ok?0:1);
+});

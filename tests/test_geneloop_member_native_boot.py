@@ -26,6 +26,7 @@ def test_native_host_loads_verified_skill_in_member_namespace(tmp_path):
     node=Path(node).resolve();python=Path(sys.executable).resolve()
     fixture=tmp_path.resolve();project=fixture/'public-project';project.mkdir()
     (project/'scenarios/ppt_master').mkdir(parents=True)
+    shutil.copyfile(ROOT/'scenarios/ppt_master/runtime-policy.md', project/'scenarios/ppt_master/runtime-policy.md')
     skill=fixture/'public-skill';skill.mkdir()
     raw=b'---\nname: ppt-master\ndescription: Public namespace diagnostic skill.\n---\nRead public diagnostic resources.\n'
     (skill/'SKILL.md').write_bytes(raw)

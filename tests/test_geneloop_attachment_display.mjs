@@ -60,6 +60,8 @@ test('normal user and queued steering renderers pass through the authoritative p
   const raw=wrappers[i].component({...owner,node:{...owner.node,data:{content}}});
   assert.equal(raw.props.node.data.content,content,'valid pasted JSON is not deleted by either native wrapper');
   assert.equal(wrappers[i].component({...owner,node:{source:{kind:'plugin',plugin:'geneloop-attachment-context'},data:{content:[]}}}),null);
+  for(const plugin of ['ppt-program-library','artifact-motif'])
+   assert.equal(wrappers[i].component({...owner,node:{source:{kind:'plugin',plugin},data:{content:[{type:'text',text:'private program catalog'}]}}}),null);
  }
  assert.equal(content.length,3);
 });
