@@ -3,7 +3,7 @@
 ## 2026-11-04：RAE 连续研发
 
 - 更新时间与交接人：2026-11-04，Codex；本轮默认关闭，不合并、不部署。
-- 目标与范围：[原规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，本轮凭证失败不能称重新核对最新 main。
+- 目标与范围：[原规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，机制/验收提交 `1b92ccac`（未推送），分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，本轮凭证失败不能称重新核对最新 main。
 - 已完成：真实 Script 组合回执恢复、嵌套类型投影、原学习器发现局部候选、冻结验收器发布及后继调用；真实模型研究薄入口。Builder helper 训练材料前缀已接原两处 scene/Frontier 路径，默认关闭；独立审计修复相同输入重排冒充独立样本的问题。
 - 已验证：本轮独立历史候选 Linux 发布与 followup 通过；新模型构造发布成功。本地2301 Python/1587 Node通过（241/21跳过），Linux RAE102 Python+35 Node、最后适配/原生66项及smoke/Motif/RSI检查通过，详见[连续研发证据](../experiments/rae-followup-20261104.md)。此前 RAE 诊断 2256 Python、1587 Node 及专项成绩只代表之前源码，不能替代本次结果。
 - 实验结论：历史真实 `C,C,report` 保留完整重复拒绝，原 miner 自动学出 `C→report`；独立历史输入上发布/后继成功。新模型8次请求后选完整 paths 程序成功，C调用0，无Builder前缀。T6真实自应用未观察到，Gate0尚不通过，第二阶段Gate1/2不计完成；无本轮净收益结论。
