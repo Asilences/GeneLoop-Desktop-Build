@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using Forms = System.Windows.Forms;
 
@@ -204,12 +205,29 @@ internal sealed class InstallerWindow : Window
         install.IsEnabled = close.IsEnabled = details.IsEnabled = false;
         if (options.Visibility == Visibility.Visible) details.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         install.Content = "正在安装…";
-        status.Text = "正在准备安装文件…";
+        string phase = "正在准备安装文件";
+        var elapsed = Stopwatch.StartNew();
+        Action updateStatus = () =>
+        {
+            var seconds = (int)elapsed.Elapsed.TotalSeconds;
+            status.Text = seconds < 60 ? phase + "…" :
+                phase + " · 已用 " + (seconds / 60) + " 分 " + (seconds % 60) + " 秒";
+        };
+        var clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        clock.Tick += delegate { updateStatus(); };
+        var phases = new Progress<string>(value =>
+        {
+            if (!busy || completed) return;
+            phase = value;
+            updateStatus();
+        });
+        updateStatus();
+        clock.Start();
         progress.Visibility = Visibility.Visible;
         progress.IsIndeterminate = true;
         try
         {
-            int result = await Task.Run(() => InstallEngine.Run(target, null));
+            int result = await Task.Run(() => InstallEngine.Run(target, null, phases));
             if (result == 1618) throw new InvalidOperationException("GeneLoop Desktop 仍在运行，请从托盘退出后重试。");
             if (result != 0) throw new InvalidOperationException("安装未完成，错误代码 " + result + "。");
             var installed = Path.Combine(target.Path, "GeneLoop Desktop.exe");
@@ -226,6 +244,7 @@ internal sealed class InstallerWindow : Window
         catch (Exception error) { status.Text = error.Message; }
         finally
         {
+            clock.Stop();
             busy = false;
             progress.IsIndeterminate = false;
             progress.Visibility = Visibility.Collapsed;
@@ -321,7 +340,7 @@ internal static class InstallEngine
         desktop.Document.Application.ShellExecute(path, "", target.Path, "open", 1);
     }
 
-    public static int Run(InstallTarget target, string arguments)
+    public static int Run(InstallTarget target, string arguments, IProgress<string> phases = null)
     {
         string directory = Path.Combine(Path.GetTempPath(), "GeneLoop-Setup-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -338,6 +357,7 @@ internal static class InstallEngine
             using (var lockFile = new FileStream(engine, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var process = Process.Start(new ProcessStartInfo(engine, flags) { UseShellExecute = true, Verb = elevate && !IsElevated() ? "runas" : "" }))
             {
+                if (phases != null) phases.Report("正在解压并写入安装目录");
                 process.WaitForExit();
                 return process.ExitCode;
             }

@@ -15,7 +15,10 @@ export function stageRuntime(app, destination, dependencies = app) {
         staged.add(key);
         cpSync(source, join(destination, key), {
           recursive: true,
-          filter: path => path === source || path.split(/[\\/]/).at(-1) !== 'node_modules',
+          // The file-only SDK profile does not consume source maps or TypeScript declarations.
+          filter: path => path === source || (
+            path.split(/[\\/]/).at(-1) !== 'node_modules' && !/\.(?:map|d\.(?:ts|cts|mts))$/i.test(path)
+          ),
         });
         for (const dep of Object.keys(entry.dependencies || {})) stage(dep, key);
         for (const dep of Object.keys(entry.optionalDependencies || {})) stage(dep, key, true);
