@@ -75,6 +75,66 @@ def _witnesses_source(text, source):
     return False
 
 
+def _native_failure_feedback(directory, error):
+    """Project existing trusted native records; referenced files stay unchanged."""
+    native = Path(directory) / 'native'
+    names = ('executed-source.py', 'entrypoint.json', 'observations.json', 'certification.json',
+             'library.json', 'certifier-stdout.log', 'certifier-stderr.log',
+             'source/admission-error.json', 'heldout/admission-error.json',
+             'source/source-stdout.txt', 'source/source-stderr.txt',
+             'heldout/source-stdout.txt', 'heldout/source-stderr.txt')
+    paths = [Path(directory) / 'request.json', Path(directory) / 'preparation.json',
+             *[native / name for name in names]]
+    paths.extend(sorted(native.glob('compile-[0-9]*/admission-error.json')))
+    references = []
+    diagnostics = []
+    parse_errors = []
+    for path in paths:
+        if not path.is_file() or path.is_symlink():
+            continue
+        reference = file_ref(path)
+        references.append(reference)
+        if path.name not in ('admission-error.json', 'certification.json'):
+            continue
+        try:
+            value = json.loads(verify(reference))
+            if not isinstance(value, dict):
+                raise ValueError('native_diagnostic_object_required')
+            rows = value.get('rejected', []) if path.name == 'certification.json' else [value]
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                detail = row.get('diagnostic', row)
+                if not isinstance(detail, dict):
+                    detail = row
+                diagnostics.append(({'error': row.get('reason', detail.get('error')), **detail}, reference))
+        except (ValueError, UnicodeDecodeError) as failure:
+            parse_errors.append({'evidence_id': 'evidence_' + reference['sha256'],
+                                 'error': type(failure).__name__ + ':' + str(failure)})
+    located = getattr(error, 'script_diagnostics', None)
+    if isinstance(located, dict) and not any(value == located for value, _ in diagnostics):
+        diagnostics.append((located, None))
+    cards = []
+    for value, reference in diagnostics[:4]:
+        card = {key: value[key] for key in ('kind', 'error', 'source_space', 'line', 'column') if key in value}
+        source_line = value.get('source_line')
+        if isinstance(source_line, str):
+            card.update(source_line=source_line[:240], source_line_characters=len(source_line))
+        if reference is not None:
+            card['evidence_id'] = 'evidence_' + reference['sha256']
+        cards.append(card)
+    return ({'message': 'Native Script construction was rejected. Inspect the recorded native diagnostics '
+                       'and source coordinates before revising the candidate. Independent admission and '
+                       'input-dependence requirements remain authoritative.',
+             'stage': 'native_script_construction', 'native_error': str(error)[:300],
+             'native_diagnostics': cards, 'native_diagnostic_count': len(diagnostics),
+             'native_records': [{'name': str(Path(ref['path']).relative_to(directory)),
+                                 'evidence_id': 'evidence_' + ref['sha256']} for ref in references],
+             'diagnostic_read_errors': parse_errors,
+             'read_tool': 'evolution_read(kind=evidence,id=evidence_id,section=content); JSON records support json_path'},
+            references)
+
+
 class BenchmarkScriptMaterials:
     """A thin owner-scoped adapter around CapabilityMaterials and native Script."""
 
@@ -161,7 +221,15 @@ class BenchmarkScriptMaterials:
             if result_path.exists():
                 previous = json.loads(result_path.read_text(encoding='utf-8'))
                 if previous['status'] != 'registered':
-                    return previous
+                    prior_error = ValueError(previous.get('error', 'previous_native_acquisition_failed'))
+                    if isinstance(previous.get('script_diagnostics'), dict):
+                        prior_error.script_diagnostics = previous['script_diagnostics']
+                    diagnostic, references = _native_failure_feedback(directory, prior_error)
+                    result_ref = file_ref(result_path)
+                    diagnostic['result_evidence_id'] = 'evidence_' + result_ref['sha256']
+                    resumed = {**previous, 'diagnostic': diagnostic, 'evidence_refs': [*references, result_ref]}
+                    resumed.pop('script_diagnostics', None)
+                    return resumed
                 combined = self.catalog()
                 return {**previous, 'catalog': combined, 'snapshot': combined['snapshot']}
             save(directory / 'request.json', {'program': program, 'examples': list(examples),
@@ -173,6 +241,7 @@ class BenchmarkScriptMaterials:
                        'scope': 'source_equivalence_not_semantic_quality',
                        'model_requests': 0, 'measured_net_benefit': None,
                        'request': file_ref(directory / 'request.json')}
+            failure = None
             try:
                 cases = []
                 preparations = []
@@ -211,10 +280,22 @@ class BenchmarkScriptMaterials:
                     value_refs=[ref for ref in snapshot['roots'] if ref['id'] in value_ids],
                     native_evidence=refs)
             except Exception as error:
-                outcome['error'] = type(error).__name__ + ':' + str(error)
+                failure = error
+                diagnostic, references = _native_failure_feedback(directory, error)
+                outcome.update(error=type(error).__name__ + ':' + str(error),
+                               diagnostic=diagnostic, evidence_refs=references)
+                if isinstance(getattr(error, 'script_diagnostics', None), dict):
+                    outcome['script_diagnostics'] = copy.deepcopy(error.script_diagnostics)
+                prior_diagnostic = getattr(error, 'evolution_diagnostic', None)
+                error.evolution_diagnostic = {**diagnostic, **(prior_diagnostic if isinstance(prior_diagnostic, dict) else {})}
+                error.evolution_evidence_refs = references
                 raise
             finally:
                 save(result_path, outcome)
+                if failure is not None:
+                    result_ref = file_ref(result_path)
+                    failure.evolution_evidence_refs = [*failure.evolution_evidence_refs, result_ref]
+                    failure.evolution_diagnostic['result_evidence_id'] = 'evidence_' + result_ref['sha256']
             return outcome
 
     def execute(self, cap_ref, inputvalue, directory, task_id):

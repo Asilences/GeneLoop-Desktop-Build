@@ -352,3 +352,65 @@ def test_host_preflight_failures_do_not_spend_native_evaluation_slots(tmp_path, 
     result = run_investigation(make(tmp_path, data), call_agent=agent,
         handlers={'construction_strategy': handler}, output=tmp_path / 'run')
     assert len(called) == 2 and len(result['submissions']) == 5
+
+
+def test_native_exception_records_are_readable_for_revision_in_the_same_session(tmp_path, data):
+    calls = []
+    native = {'kind': 'script_admission', 'error': 'unbound_path_literal',
+              'source_space': 'parameterized_template', 'line': 4, 'column': 10,
+              'source_line': 'literal = "// header"'}
+    path = tmp_path / 'native/admission-error.json'
+    path.parent.mkdir()
+    path.write_text(json.dumps(native))
+    reference = file_ref(path)
+    def handler(proposal, context, directory):
+        calls.append(proposal)
+        if len(calls) == 1:
+            error = ValueError('unbound_path_literal')
+            error.evolution_diagnostic = {'message': 'Original native source admission rejected this candidate.',
+                'native_diagnostics': [{**native, 'evidence_id': 'evidence_' + reference['sha256']}]}
+            error.evolution_evidence_refs = [reference]
+            raise error
+        return {'status': 'evaluated'}
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        first = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        assert first['status'] == 'rejected' and first['remaining_candidate_evaluations'] == 1
+        assert first['diagnostic']['message'].startswith('Original native')
+        assert first['diagnostic']['native_diagnostics'][0]['line'] == 4
+        assert first['diagnostic']['available_evidence_count'] == 1
+        diagnostic_id = first['diagnostic']['native_diagnostics'][0]['evidence_id']
+        record = dispatch('evolution_read', {'kind': 'evidence', 'id': diagnostic_id,
+                                           'section': 'content', 'json_path': ['source_line']})
+        assert json.loads(record['content']) == native['source_line']
+        revised = candidate(ids)
+        revised['proposal']['decision_policy'] = 'Diagnostic revised proposal after reading original host evidence'
+        second = dispatch('evolution_submit', {'candidate': revised, 'observation_ids': ids})
+        assert second['outcome']['status'] == 'evaluated' and second['remaining_candidate_evaluations'] == 0
+        dispatch('evolution_finish', {'reason': 'Keep actual rejection and subsequent host evaluation'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+                              handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert result['submissions'][0]['evidence_refs'] == [reference]
+    assert len(calls) == 2 and json.loads(path.read_text()) == native
+
+
+def test_changed_native_exception_evidence_is_reported_without_hiding_original_rejection(tmp_path, data):
+    path = tmp_path / 'native.json'
+    path.write_text('{"diagnostic":true}')
+    reference = file_ref(path)
+    path.write_text('{}')
+    def handler(*args):
+        error = ValueError('original_native_rejection')
+        error.evolution_evidence_refs = [reference]
+        raise error
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        reply = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        assert reply['status'] == 'rejected' and 'original_native_rejection' in reply['reason']
+        assert 'evidence_changed' in reply['diagnostic']['evidence_error']
+        dispatch('evolution_finish', {'reason': 'Native record integrity is unresolved'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert result['submissions'][0]['evidence_refs'] == [reference]

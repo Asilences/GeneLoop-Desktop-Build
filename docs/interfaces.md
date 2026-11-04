@@ -1582,6 +1582,8 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 任务工具`capability_call.input_binding`沿用原Binding，将前次真实调用结果传入后继能力。可选`export_result={path:[结果字段],container_path:绝对容器路径}`把结果直接交付当前任务文件并返回摘要，普通调用继续返回结果。文件交接失败单独记录，保留原Runtime执行状态与参数流。见[交接记录](debug/benchmark-capability-result-export-20261105.md)。
 
+跨代学习逐条按原快照检查真实轨迹，再以实际执行的能力和递归依赖版本形成学习输入。无关能力新增不会拆散同版本图，发布前仍按当前catalog独立重核。原快照和回执完整保留。原生认证拒绝的行列、短片段及诊断FileRef会返回同轮调查，原文件可按需读取，见[闭包诊断](debug/recursive-snapshot-closure-20261105.md)。
+
 原评分器退出码1与官方0分同时出现时，只有完整原CTRF证实调用阶段质量断言失败，才记录`quality_rejected`并继续优化。环境失败、超时及不完整报告仍保留未知评分，原退出码和评分日志可追溯。
 
 模型任务结束后先冻结产物，再注入原评分器。超时保留部分产物和实际费用。真实能力调用轨迹可进入原Motif学习器及Store，后继行为与净收益需按实际结果判断。当前boundary与construction-strategy的benchmark宿主仍待接通，生产默认关闭。实施及失败记录见[今晚记录](debug/evolution-overnight-20261105.md)。

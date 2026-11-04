@@ -160,6 +160,8 @@ def _example_files(candidate, context, investigation):
 
 def _recursive_learning(runs, directory, *, materials=None, publish=None, prior_observations=()):
     from .capability_motif_learning import _checked
+    from .benchmark_capability_publication import learning_dependency_snapshot
+    available = materials.catalog()['snapshot'] if materials is not None else None
     groups = {}
     invalid_sources = []
     duplicates = []
@@ -217,8 +219,11 @@ def _recursive_learning(runs, directory, *, materials=None, publish=None, prior_
                     raise ValueError('recursive_original_owner_changed')
                 if row.get('capability_trajectory') != reference:
                     raise ValueError('recursive_observation_trajectory_changed')
-            group = groups.setdefault(trace['snapshot']['digest'], {
+            learning_snapshot = learning_dependency_snapshot([trace], available)
+            group = groups.setdefault(learning_snapshot['digest'], {
+                'snapshot': learning_snapshot, 'original_snapshots': set(),
                 'training': [], 'heldout': [], 'evidence': [], 'sources': set(), 'fingerprints': set(), 'refs': {}, 'historical': [], 'historical_heldout': []})
+            group['original_snapshots'].add(trace['snapshot']['digest'])
             split = 'heldout' if benchmark_evaluation_role(trial) == 'final' else 'training'
             source_key = 'input:' + fingerprint if fingerprint else 'legacy-source:' + source
             if source_key in group['sources'] or trace['task_fingerprint'] in group['fingerprints']:
@@ -242,11 +247,13 @@ def _recursive_learning(runs, directory, *, materials=None, publish=None, prior_
         return {'status': 'pending', 'reason': 'two_training_and_one_heldout_native_call_traces_required',
                 'invalid_sources': invalid_sources, 'duplicates': duplicates,
                 'groups': [{'snapshot_sha256': digest, 'training': len(group['training']),
-                            'heldout': len(group['heldout'])} for digest, group in groups.items()]}
+                            'heldout': len(group['heldout']),
+                            'original_snapshot_sha256s': sorted(group['original_snapshots'])}
+                           for digest, group in groups.items()]}
     outcomes = []
-    for group in sorted(eligible, key=lambda item: item['training'][0]['snapshot']['digest']):
+    for group in sorted(eligible, key=lambda item: item['snapshot']['digest']):
         folder = Path(directory) if len(eligible) == 1 else Path(directory) / (
-            'recursive-group-' + group['training'][0]['snapshot']['digest'])
+            'recursive-group-' + group['snapshot']['digest'])
         folder.mkdir(parents=True, exist_ok=True)
         outcomes.append(_learn_recursive_group(group, folder, materials=materials, publish=publish))
     if len(outcomes) == 1:
@@ -260,12 +267,14 @@ def _recursive_learning(runs, directory, *, materials=None, publish=None, prior_
 def _learn_recursive_group(group, directory, *, materials, publish):
     from .capability_motif_learning import learn_capability_motifs
     try:
-        learned = learn_capability_motifs(group['training'], group['heldout'], group['training'][0]['snapshot'])
+        learned = learn_capability_motifs(group['training'], group['heldout'], group['snapshot'])
         save(directory / 'recursive-learning.json', learned)
         result = {'status': 'candidates' if learned['candidates'] else 'no_candidates',
                 'result': file_ref(directory / 'recursive-learning.json'), 'evidence': group['evidence'],
                 'publication': 'pending_independent_original_store_publication',
-                'snapshot_sha256': group['training'][0]['snapshot']['digest'],
+                'snapshot_sha256': group['snapshot']['digest'],
+                'snapshot_scope': 'exact_executed_roots_and_dependency_closure',
+                'original_snapshot_sha256s': sorted(group['original_snapshots']),
                 'certification_scope': 'historical_source_equivalence' if group['historical'] else 'source_equivalence',
                 'independent_quality': 'pending_fresh_semantic_task_evaluation',
                 'historical_evidence': group['historical'],

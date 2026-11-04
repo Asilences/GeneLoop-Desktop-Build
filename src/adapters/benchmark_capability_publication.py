@@ -16,7 +16,7 @@ import time
 
 from jsonschema import Draft202012Validator
 
-from .capability_contract import capability_digest, capability_ref, validate_capability_snapshot
+from .capability_contract import capability_digest, capability_ref, create_capability_snapshot, validate_capability_snapshot
 from .capability_feedback import file_ref, verify
 from .capability_improvement import save
 from .capability_motif_learning import _at, _bind, _checked, learn_capability_motifs
@@ -50,6 +50,51 @@ def original_store_catalog(seed, store_directory):
         return {'snapshot': seed, 'head': None, 'catalog': [], 'publications': []}
     return _bridge({'action': 'catalog', 'owner': seed['owner'],
                     'store_directory': str(directory), 'seed': seed})
+
+
+def learning_dependency_snapshot(traces, available_snapshot=None):
+    """Select exact executed versions without rebinding any original trace.
+
+    Each receipt is checked against its own original snapshot. The returned
+    snapshot is a separate compiler input containing only executed roots and
+    their transitive dependencies. Current catalog admission is required when
+    supplied; without a catalog this is historical offline learning only.
+    """
+    if not traces:
+        raise ValueError('benchmark_learning_traces_required')
+    owner = traces[0]['owner']
+    available = (validate_capability_snapshot(available_snapshot, owner)
+                 if available_snapshot is not None else None)
+    current = {cap['id']: cap for cap in available['capabilities']} if available is not None else None
+    roots = {}; closure = {}
+    for original in traces:
+        trace = _checked(original, owner)
+        historical = {cap['id']: cap for cap in trace['snapshot']['capabilities']}
+        pending = []
+        for step in trace['steps']:
+            ref = step['capability']
+            if available is not None and ref not in available['roots']:
+                raise ValueError('benchmark_learning_dependency_unavailable')
+            roots[ref['id']] = ref
+            pending.append(ref)
+        visited = set()
+        while pending:
+            ref = pending.pop()
+            if ref['id'] in visited:
+                continue
+            visited.add(ref['id'])
+            witnessed = historical.get(ref['id'])
+            cap = current.get(ref['id']) if current is not None else witnessed
+            if (witnessed is None or capability_ref(witnessed) != ref
+                    or cap is None or capability_ref(cap) != ref):
+                raise ValueError('benchmark_learning_dependency_changed')
+            if cap['certification'] != 'certified' or cap['lifecycle'] != 'active':
+                raise ValueError('benchmark_learning_dependency_inactive')
+            if ref['id'] in closure and closure[ref['id']] != cap:
+                raise ValueError('benchmark_learning_dependency_changed')
+            closure[ref['id']] = cap
+            pending.extend(cap['dependencies'])
+    return create_capability_snapshot(owner, list(roots.values()), list(closure.values()))
 
 
 def _occurrence(proposal, trace):
@@ -107,9 +152,7 @@ def prepare_recursive_publication(candidate, trace_refs, materials):
     heldout = [by_digest[digest] for digest in provenance['heldout']]
     if len(training) < 2 or not heldout:
         raise ValueError('benchmark_store_learning_split_required')
-    snapshot = training[0]['snapshot']
-    if any(trace['snapshot']['digest'] != snapshot['digest'] for trace in traces):
-        raise ValueError('benchmark_store_learning_snapshot_changed')
+    snapshot = learning_dependency_snapshot(traces, catalog['snapshot'])
     learned = learn_capability_motifs(training, heldout, snapshot, regions=provenance.get('regions'))
     if not any(capability_digest(row) == capability_digest(candidate) for row in learned['candidates']):
         raise ValueError('benchmark_store_original_learner_candidate_required')

@@ -267,3 +267,64 @@ def test_unsafe_json_number_is_not_silently_rounded(tmp_path, data):
     with pytest.raises(ValueError, match='number_out_of_range'):
         service.acquire(program, examples, source, 'large-number')
     assert calls['learn'] == []
+
+
+def test_original_script_admission_location_is_preserved_and_exposed_compactly(tmp_path, data):
+    from src.adapters.capability_script_learning import executable_source
+    from src.adapters.script_motif_compiler import compile_script, file_contract
+    service, _, examples, _, _ = data
+    program = {'source': 'def run(value):\n    return "//' + 'header' * 100 + '" + str(value["data"]["items"])\n',
+               'description': 'Synthetic comment-string admission diagnostic', 'mode': 'json', 'interface': 'function_v1'}
+    source = put(tmp_path / 'comment-proposal.json', {'program': program})
+    calls = []
+    def reject(program, cases, directory, source_evidence, **options):
+        calls.append(program)
+        directory.mkdir()
+        text = executable_source(program, cases)
+        (directory / 'executed-source.py').write_text(text, encoding='utf-8')
+        try:
+            compile_script(text, {'/work/inputs/value.json': file_contract(cases[0]['inputs'][0]['source']['path'])})
+        except ValueError as error:
+            put(directory / 'compile-0/admission-error.json', error.script_diagnostics)
+            raise
+        raise AssertionError('Original guard should reject the comment-prefixed string')
+    service._learn = reject
+    with pytest.raises(ValueError, match='unbound_path_literal') as caught:
+        service.acquire(program, examples, source, 'located-admission')
+    error = caught.value
+    summary = error.evolution_diagnostic
+    assert summary['stage'] == 'native_script_construction'
+    assert summary['native_diagnostics'][0]['source_space'] == 'parameterized_template'
+    assert summary['native_diagnostics'][0]['line'] > 0 and summary['native_diagnostics'][0]['column'] >= 0
+    assert len(summary['native_diagnostics'][0]['source_line']) <= 240
+    assert summary['native_diagnostics'][0]['source_line_characters'] > 240
+    refs = error.evolution_evidence_refs
+    original = next(ref for ref in refs if Path(ref['path']).name == 'admission-error.json')
+    raw = json.loads(verify(original))
+    assert raw == error.script_diagnostics
+    assert raw['error'] == 'unbound_path_literal'
+    assert summary['native_diagnostics'][0]['evidence_id'] == 'evidence_' + original['sha256']
+    result = next(ref for ref in refs if Path(ref['path']).name == 'result.json')
+    before = verify(result)
+    assert json.loads(before)['script_diagnostics'] == raw
+    resumed = service.acquire(program, examples, source, 'located-admission')
+    assert len(calls) == 1 and resumed['status'] == 'failed'
+    assert resumed['diagnostic']['native_diagnostics'][0]['error'] == 'unbound_path_literal'
+    assert result in resumed['evidence_refs'] and 'script_diagnostics' not in resumed
+    assert verify(result) == before and service.materials.records() == []
+
+
+def test_original_certifier_input_dependence_rejection_is_reported_without_fake_location(tmp_path, data):
+    service, program, examples, source, _ = data
+    def reject(program, cases, directory, source_evidence, **options):
+        put(directory / 'certification.json', {'published': 0, 'rejected': [
+            {'id': 'diagnostic-program', 'reason': 'input_dependency_not_demonstrated'}]})
+        raise ValueError('frontier_native_no_certified_program')
+    service._learn = reject
+    with pytest.raises(ValueError, match='no_certified_program') as caught:
+        service.acquire(program, examples, source, 'input-dependence')
+    card = caught.value.evolution_diagnostic['native_diagnostics'][0]
+    assert card['error'] == 'input_dependency_not_demonstrated'
+    assert 'line' not in card and 'column' not in card
+    assert any(Path(ref['path']).name == 'certification.json' for ref in caught.value.evolution_evidence_refs)
+    assert service.materials.records() == []

@@ -146,6 +146,14 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                             'more_observations_tool': 'evolution_search(kind=experience)'})
                     if isinstance(getattr(error, 'evolution_diagnostic', None), dict):
                         submitted['diagnostic'].update(error.evolution_diagnostic)
+                    references = getattr(error, 'evolution_evidence_refs', [])
+                    if references:
+                        submitted['evidence_refs'] = copy.deepcopy(references)
+                        try:
+                            investigation._index_evidence(references)
+                            submitted['diagnostic']['available_evidence_count'] = len(references)
+                        except Exception as evidence_error:
+                            submitted['diagnostic']['evidence_error'] = type(evidence_error).__name__ + ':' + str(evidence_error)
                 save(directory / ('submission-' + str(submitted['index']) + '.json'), submitted)
                 reference = file_ref(directory / ('submission-' + str(submitted['index']) + '.json'))
                 investigation._index_evidence([reference])

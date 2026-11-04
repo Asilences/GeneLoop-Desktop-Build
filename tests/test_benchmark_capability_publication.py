@@ -10,12 +10,14 @@ import json
 import pytest
 
 from src.adapters.benchmark_capability_publication import (
-    original_store_catalog, prepare_witnessed_case, publish_recursive_candidate,
+    learning_dependency_snapshot, original_store_catalog, prepare_recursive_publication,
+    prepare_witnessed_case, publish_recursive_candidate,
 )
 from src.adapters.capability_builder import compile_proposal
 from src.adapters.capability_contract import capability_ref, create_capability_snapshot
 from src.adapters.capability_feedback import verify
 from tests.test_benchmark_script_materials import data, acquire
+from tests.test_capability_motif_learning import corpus, call_trace, put
 
 
 def projected():
@@ -143,3 +145,51 @@ def test_composition_slots_are_not_misclassified_as_leaf_paths(tmp_path, data):
     assert calls['execute'][0]['root'] == reference
     assert calls['execute'][0]['args'] == arguments
     assert 'paths' not in calls['execute'][0]['args']
+
+
+def test_mixed_snapshots_rebuild_original_candidate_before_native_backend_guard(tmp_path, corpus):
+    """Synthetic artifact receipts prove validation order, not Script publication."""
+    from types import SimpleNamespace
+    from src.adapters.capability_motif_learning import learn_capability_motifs
+    _, current, _, _, original = corpus
+    closure = learning_dependency_snapshot(original, current)
+    assert closure['digest'] != current['digest']
+    roots = [step['capability'] for step in original[0]['steps']]
+    training = [call_trace(tmp_path / 'smaller-library', closure, roots, 'closure-' + str(i), 20 + i)
+                for i in range(2)]
+    traces = [*training, original[2]]
+    references = [put(tmp_path / ('original-' + str(i) + '.json'), trace) for i, trace in enumerate(traces)]
+    before = [verify(ref) for ref in references]
+    candidate = learn_capability_motifs(training, original[2:], closure)['candidates'][0]
+    materials = SimpleNamespace(owner=current['owner'], catalog=lambda: {'snapshot': current, 'libraries': []})
+    # Reproduce the candidate across M1/M2, then retain the synthetic-backend rejection.
+    with pytest.raises(ValueError, match='benchmark_store_native_script_backend_required'):
+        prepare_recursive_publication(candidate, references, materials)
+    assert [verify(ref) for ref in references] == before
+    changed = copy.deepcopy(candidate)
+    changed['provenance']['scope'] = 'invented-quality'
+    with pytest.raises(ValueError, match='benchmark_store_original_learner_candidate_required'):
+        prepare_recursive_publication(changed, references, materials)
+
+
+@pytest.mark.parametrize('target', ['root', 'transitive'])
+def test_learning_closure_rejects_withdrawn_current_dependencies(corpus, target):
+    _, snapshot, c_ref, operations, traces = corpus
+    caps = copy.deepcopy(snapshot['capabilities'])
+    identifier = c_ref['id'] if target == 'root' else operations['increment']['id']
+    next(cap for cap in caps if cap['id'] == identifier)['lifecycle'] = 'archived'
+    current = create_capability_snapshot(snapshot['owner'], snapshot['roots'], caps)
+    with pytest.raises(ValueError, match='benchmark_learning_dependency_inactive'):
+        learning_dependency_snapshot(traces, current)
+
+
+def test_learning_closure_keeps_original_receipt_and_owner_guards(corpus):
+    _, snapshot, _, _, traces = corpus
+    changed = copy.deepcopy(traces)
+    changed[0]['steps'][0]['result']['value'] = -100
+    with pytest.raises(ValueError, match='trace_changed'):
+        learning_dependency_snapshot(changed, snapshot)
+    foreign = create_capability_snapshot('another-owner', [], [])
+    with pytest.raises(ValueError, match='foreign_owner'):
+        learning_dependency_snapshot(traces, foreign)
+    assert learning_dependency_snapshot(traces)['digest'] == learning_dependency_snapshot(traces, snapshot)['digest']

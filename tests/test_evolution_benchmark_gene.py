@@ -543,7 +543,8 @@ def test_original_store_publication_receives_original_learning_sources(tmp_path,
              'capability_trajectory': put(tmp_path / ('trace-' + str(index) + '.json'), trace)}
             for index, trace in enumerate(traces)]
     calls = []
-    materials = object()
+    from types import SimpleNamespace
+    materials = SimpleNamespace(catalog=lambda: {'snapshot': traces[0]['snapshot']})
     def publish(candidate, trace_refs, *, materials, output):
         calls.append((candidate, trace_refs, materials, output))
         return {'status': status, 'followup': 'pending_independent_task_consumption'}
@@ -723,7 +724,7 @@ def test_changed_history_projection_cannot_replace_runtime_arguments(tmp_path, c
     assert 'original_projection_changed' in result['invalid_sources'][0]['reason']
 
 
-def test_new_snapshot_does_not_rebind_or_starve_original_snapshot_group(tmp_path, corpus, monkeypatch):
+def test_unrelated_snapshot_changes_share_executed_closure_without_rebinding(tmp_path, corpus, monkeypatch):
     import src.adapters.evolution_benchmark_gene as gene
     from tests.test_capability_motif_learning import call_trace
     _, snapshot, _, _, traces = corpus
@@ -746,23 +747,70 @@ def test_new_snapshot_does_not_rebind_or_starve_original_snapshot_group(tmp_path
     current = [{'split': 'training' if i < 2 else 'test',
                 'capability_trajectory': put(tmp_path / ('new-' + str(i) + '.json'), trace)}
                for i, trace in enumerate(newer)]
-    incomplete = gene._recursive_learning(current[:1], tmp_path / 'incomplete', prior_observations=prior[:1] + prior[2:])
-    assert incomplete['status'] == 'pending'
-    assert len(incomplete['groups']) == 2
+    original_bytes = {ref['path']: Path(ref['path']).read_bytes() for ref in
+                      [*prior, *[run['capability_trajectory'] for run in current]]}
+    mixed = gene._recursive_learning(current[:1], tmp_path / 'mixed', prior_observations=prior[:1] + prior[2:])
+    assert mixed['status'] == 'candidates'
+    assert mixed['snapshot_sha256'] == next_snapshot['digest']
+    assert set(mixed['original_snapshot_sha256s']) == {snapshot['digest'], next_snapshot['digest']}
+    learned = json.loads(verify(mixed['result']))['candidates'][0]
+    assert learned['provenance']['training'] == [traces[0]['digest'], newer[0]['digest']]
+    assert learned['provenance']['heldout'] == [traces[2]['digest']]
+    growth = gene._recursive_learning(current[:2], tmp_path / 'growth', prior_observations=prior[2:])
+    assert growth['status'] == 'candidates'  # Two training M1, final M2 with unrelated extra roots.
+    growth_candidate = json.loads(verify(growth['result']))['candidates'][0]
+    assert growth_candidate['provenance']['training'] == [trace['digest'] for trace in newer[:2]]
+    assert growth_candidate['provenance']['heldout'] == [traces[2]['digest']]
     result = gene._recursive_learning(current, tmp_path / 'complete', prior_observations=prior)
     assert result['status'] == 'candidates'
-    assert len(result['groups']) == 2
-    assert {group['snapshot_sha256'] for group in result['groups']} == {snapshot['digest'], next_snapshot['digest']}
-    assert all(group['status'] == 'candidates' for group in result['groups'])
+    assert result['snapshot_sha256'] == next_snapshot['digest']
+    assert all(Path(path).read_bytes() == raw for path, raw in original_bytes.items())
     calls = []
     def publish(candidate, references, *, materials, output):
         calls.append(candidate)
-        return {'status': 'failed' if traces[0]['digest'] in candidate['provenance']['training'] else 'pending'}
+        return {'status': 'pending'}
+    from types import SimpleNamespace
     outcomes = gene._recursive_learning(current, tmp_path / 'publication', prior_observations=prior,
-                                        materials=object(), publish=publish)
-    assert len(calls) == 2
-    assert {group['status'] for group in outcomes['groups']} == {'failed', 'pending'}
+        materials=SimpleNamespace(catalog=lambda: {'snapshot': snapshot}), publish=publish)
+    assert len(calls) == 1
     assert outcomes['status'] == 'pending'
+
+
+def test_distinct_executed_versions_do_not_complete_each_others_learning_group(tmp_path, corpus):
+    import src.adapters.evolution_benchmark_gene as gene
+    from tests.test_capability_motif_learning import call_trace
+    from src.adapters.capability_contract import capability_ref
+    _, snapshot, _, operations, traces = corpus
+    different = call_trace(tmp_path / 'different', snapshot,
+        [capability_ref(operations['subtract']), capability_ref(operations['double'])], 'other-version', 30)
+    runs = [{'split': 'training' if i < 2 else 'test',
+             'capability_trajectory': put(tmp_path / ('version-' + str(i) + '.json'), trace)}
+            for i, trace in enumerate([*traces[:2], different])]
+    result = gene._recursive_learning(runs, tmp_path / 'learning')
+    assert result['status'] == 'pending'
+    assert sorted((g['training'], g['heldout']) for g in result['groups']) == [(0, 1), (2, 0)]
+
+
+@pytest.mark.parametrize('state', ['removed', 'archived'])
+def test_recursive_learning_checks_current_catalog_admission(tmp_path, corpus, state):
+    import copy
+    import src.adapters.evolution_benchmark_gene as gene
+    from types import SimpleNamespace
+    _, snapshot, c_ref, _, traces = corpus
+    if state == 'removed':
+        current = create_capability_snapshot(snapshot['owner'], [], [])
+    else:
+        caps = copy.deepcopy(snapshot['capabilities'])
+        next(cap for cap in caps if cap['id'] == c_ref['id'])['lifecycle'] = 'archived'
+        current = create_capability_snapshot(snapshot['owner'], snapshot['roots'], caps)
+    runs = [{'split': 'training' if i < 2 else 'test',
+             'capability_trajectory': put(tmp_path / ('admission-' + str(i) + '.json'), trace)}
+            for i, trace in enumerate(traces)]
+    result = gene._recursive_learning(runs, tmp_path / 'learning',
+        materials=SimpleNamespace(catalog=lambda: {'snapshot': current}))
+    assert result['status'] == 'pending' and result['groups'] == []
+    assert len(result['invalid_sources']) == 3
+    assert all('benchmark_learning_dependency_' in row['reason'] for row in result['invalid_sources'])
 
 
 def test_r3_history_recovers_only_already_indexed_original_projection(tmp_path, corpus, monkeypatch):
