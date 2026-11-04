@@ -78,7 +78,7 @@ process.stdout.write(JSON.stringify({resources:result.native_resources,mounts:re
     diagnostic=user/'config/ready.mjs'
     diagnostic.write_text("""
 import {readFileSync,existsSync} from 'node:fs';
-import {createScope,scopeOf} from '@deepseek-ai/dsh-scope';
+import {createScope,scopeOf} from 'file:///app/node_modules/@deepseek-ai/dsh-scope/lib/index.js';
 import {geneLoopMounts} from 'file:///app/src/adapters/geneloop_fs.ts';
 import {registerApprovedSkill} from 'file:///app/src/adapters/geneloop_native_work.ts';
 export const name='member-namespace-readiness';export const inject=['connection','skills','fs','subprocess'];

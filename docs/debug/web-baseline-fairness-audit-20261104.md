@@ -237,3 +237,6 @@ Video 的额外四工具是已发布的学习程序接口，属于现有方法�
 现将测试更新为 `test_native_host_scopes_verified_skill_in_member_namespace`。保留真实成员命名空间启动、只读资源挂载、Skill原始字节、私有宿主路径不可见、文件系统/子进程替换与零任务断言，同时增加五个作用域检查。Chat宿主初始目录为空，PPT作用域可见并加载受管Skill，同级Chat和宿主目录仍为空，释放后PPT目录也为空。测试调用生产 `registerApprovedSkill` 与原生 `createScope`，正常PPT双栏入口继续由既有 `test_dsh_web_tasks.mjs` 覆盖。
 
 本地相关原生Skill诊断6/6通过，Python及生成的诊断JavaScript语法检查通过。Linux原生测试在macOS按原平台条件跳过，远程最终结果以修复提交的Linux/Windows四项完整CI为准。此次仅修改测试和交接记录，新增模型请求0，远端Web未重启或部署。
+
+
+修正提交 `90397661` 的Ubuntu再次失败，错误为诊断插件从 `/user/config/ready.mjs` 无法解析包名 `@deepseek-ai/dsh-scope`。现按该namespace现有挂载显式从 `/app/node_modules/@deepseek-ai/dsh-scope/lib/index.js` 导入，与生产适配器解析到同一原生模块。生成诊断插件的实际模块导入已在本地通过。独立Linux副本上传因服务器磁盘空间不足停止，本次创建的部分副本已清理，现有服务未操作；完整验证继续交给GitHub CI。

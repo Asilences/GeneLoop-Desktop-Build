@@ -7,8 +7,8 @@
 - 初始提示去重通过公开 assembly 钩子实现；受管 PPT Skill 仅随 PPT 场景注册并按作用域释放。八对历史首请求的离线重建与具体边界见[集中调试记录](../debug/web-baseline-fairness-audit-20261104.md)，后续执行自然展开。
 - 已迁移 88 份历史调试/工程联调 Markdown 到 `docs/debug/`，更新引用并提供[历史路径索引](../debug/README.md)。正式科研实验继续按 AGENTS.md 的分类规范保存。私有原始材料、诊断脚本与测试输出集中在 `.local/debug/web-baseline-fairness-audit-20261104/`。
 - 原读取库兼容重导出为 PPT77/Paper79，原 IR、工具 schema 和来源证据逐字节保留。最终Python2405通过/261跳过，Node1649通过/23跳过，smoke及motif:check通过。测试环境失败与复跑、最终PR和提交状态见调试记录，本次新增真实API请求0，质量收益未评测。
-- Ubuntu CI随后发现Linux/bubblewrap专属原生启动测试仍要求Chat全局加载PPT Skill，Windows两项已过。现更新该测试以同时验证Chat为空、PPT可加载、同级隔离和解绑释放，原成员命名空间与文件安全检查保留。本地原生Skill6项通过，最终远程结果随PR修复head定位。
-- 提交状态为源码 `1f416a87` 已推送并创建[PR #134](https://github.com/jingyio/GeneLoop/pull/134)，文档补记见PR最新head，尚未合并或部署，Linux/Windows CI正在运行。
+- Ubuntu CI随后发现Linux/bubblewrap专属原生启动测试仍要求Chat全局加载PPT Skill，Windows两项已过。现更新该测试以同时验证Chat为空、PPT可加载、同级隔离和解绑释放，原成员命名空间与文件安全检查保留。本地原生Skill6项通过，并修正了namespace诊断插件从/user加载时的模块导入路径，实际生成插件本地导入成功。最终远程结果随PR修复head定位。
+- 提交状态为源码 `1f416a87` 已推送并创建[PR #134](https://github.com/jingyio/GeneLoop/pull/134)，文档补记见PR最新head，尚未合并或部署，Linux/Windows最终CI按PR最新head核对。
 - 接手审阅匿名顺序与真实 lane 的绑定、首请求提示和记录迁移；验收通过后再安排维护发布。前端匿名处理应用生成的标识，模型自行生成的正文与产物保留原内容，开发 API 继续承载真实 lane 用于追查。
 
 ## 2026-11-04：PR132 同步 PR131 合并后的 main
