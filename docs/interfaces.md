@@ -74,7 +74,7 @@ PPT已通过`scenarios/ppt_master/capability_adapter.py`接入公共`CapabilityI
 
 `mcp__ppt_master__read_converted_source(converted_id)`保留既有工具schema及完整正文`content`，新增显式MCP `structuredContent`作为执行观察：`version_sha256`、`markdown_sha256`、`markdown_bytes`、`markdown_path`、`directory`、`name`、`file_count`及读取范围标记。结构化部分不重复长正文；它只能在来源授权、源版本和派生字节核验后产生。DSH展示层附加spill提示不改变该执行回执。普通文本中的伪造JSON、失败结果及错误版本不能成为回执。
 
-`ppt-master-v48`兼容导出保留v47的已学习IR、MCP schema和来源证据，旧包不改、没有新学习或模型调用。真实读取诊断和未部署边界见[修复记录](experiments/ppt-read-receipt-fix-20261103.md)。此变更不保证完整PPT降本，也不表示已接入通用参数化排版学习。
+`ppt-master-v48`兼容导出保留v47的已学习IR、MCP schema和来源证据，旧包不改、没有新学习或模型调用。真实读取诊断和未部署边界见[修复记录](debug/ppt-read-receipt-fix-20261103.md)。此变更不保证完整PPT降本，也不表示已接入通用参数化排版学习。
 
 ## PPT 历史页面组件接口（2026-11-04，实验候选）
 
@@ -165,7 +165,7 @@ File 公共种子的历史 `runtime_source` 作为来源记录保留，安装不
 
 File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原state_root和pool。持久FileJob的budget_usd、max_requests、max_steps、max_repairs支持null；数值零预算仍不允许付费。null不参与减法、min、累计上界或数值比较。SDK输出使用393216，原验收、权限、不可变任务、账本和取消继续生效；共享文件工作区的写冲突保护保留。有限历史实验不被追改为不限额，旧证书不重新写哈希；File v7按新源码真实重新认证。
 
-上线与测试限制见[本轮记录](experiments/provider-output-20261020.md)。
+上线与测试限制见[本轮记录](debug/provider-output-20261020.md)。
 
 ## 附件与多轮上下文（2026-10-19）
 
@@ -204,7 +204,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 
 ## 网页 Paper 默认 Execute（2026-10-17）
 
-公共 Registry 的 `/ppt`、`/paper`、`/data` Motif 均默认 Execute。产品种类 `paper_document_read_v1` 当前使用 `paper-web-v3`（自动学习接线的兼容重编，原 v1/v2 保留），完整 24 工具不变；只授权模型已观察到的 `pin_document` 结果续接同源默认 `read_pinned_document(source_id, page=1)`。绑定检查完整上传许可、实际 Schema、独立轨迹证据、来源版本和代码锁；通过既有 `closedContinuation` 插件钩子，不修改核心或训练模型权重。未命中仍回到模型，Shadow 历史和管理员研究入口保持原协议。学习证据见 [原始记录](experiments/all-scene-motif-execute-20261017-v1.md)，最新接线见[自动学习验收](experiments/web-paper-auto-learning-20261017-v1.md)。
+公共 Registry 的 `/ppt`、`/paper`、`/data` Motif 均默认 Execute。产品种类 `paper_document_read_v1` 当前使用 `paper-web-v3`（自动学习接线的兼容重编，原 v1/v2 保留），完整 24 工具不变；只授权模型已观察到的 `pin_document` 结果续接同源默认 `read_pinned_document(source_id, page=1)`。绑定检查完整上传许可、实际 Schema、独立轨迹证据、来源版本和代码锁；通过既有 `closedContinuation` 插件钩子，不修改核心或训练模型权重。未命中仍回到模型，Shadow 历史和管理员研究入口保持原协议。学习证据见 [原始记录](debug/all-scene-motif-execute-20261017-v1.md)，最新接线见[自动学习验收](experiments/web-paper-auto-learning-20261017-v1.md)。
 
 ## Paper 自动学习接线
 
@@ -257,7 +257,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 - `paper_checks.export_review_report` 与 `research_report.export_input_review` 接受 `title`、`sections:[{heading,paragraphs:[string]}]`、完整 `source_versions` 文件名/摘要映射。后者只在无可分析数值表时开放，不能替代统计。成功生成经布局检查的 PDF/Markdown 后发布到本会话 `outputs/documents/<id>/`，receipt 绑定实际字节及来源；不声称科学或文献真实性认证。
 - 数据比较侧回收资料核对报告必须有本次任务成功的工具事件、相同来源版本和文件摘要；不能扫描别轮文件冒充本轮交付。成员环境映射同时为三个场景提供已验证的解析器路径及论文报告字体。新建对话只复用当前窗口的空输入框，避免取走另一窗口仍被标记为空的会话。
 
-依赖、端到端记录和原分支差异见 [修复验收](experiments/geneloop-scene-delivery-repair-20261016-v1.md)。普通 Word 指 DOCX，PDF 表格支持可提取单元格，不代表已支持扫描 OCR、任意复杂表格或长论文全部版式校验。
+依赖、端到端记录和原分支差异见 [修复验收](debug/geneloop-scene-delivery-repair-20261016-v1.md)。普通 Word 指 DOCX，PDF 表格支持可提取单元格，不代表已支持扫描 OCR、任意复杂表格或长论文全部版式校验。
 
 ## 输入默认场景、模型目录与页面加载（2026-10-15）
 
@@ -269,13 +269,15 @@ Web 每次发送从本轮序列化文本的前导 `/data`、`/ppt`、`/paper` �
 
 设置复用公开 `settings.section` 与原生 shell；同 id 模型页只显示一个导航项，归档、最近删除、账户表单在右栏切换。加载遮罩依赖公开 sessions list、`openState`、视图布局提交和当前页对照快照读取；不等待任务完成，不抓取更早分页。读取错误即时释放遮罩，异常长等待显示已加载内容与重试提示，减少动画偏好受支持。
 
-2026-10-14 四分支兼容：`offeredSchemaMatches` 保留第四参数的冻结 Schema 摘要校验；`proposeReadyBatch.closedContinuation` 仅补充论文的闭合结构判定，授权计划仍由独立的 `approvedContinuation` 检查，失效权限不能被论文回调或相似度救回。成员场景的 `/app/.local/web/sessions` 只有在部署根与 `/user/tasks` 的设备/inode 完全相同时才进入原生文件允许范围。详情及验收层级见 [整合记录](experiments/four-scenario-main-integration-20261014-v1.md)。
+2026-10-14 四分支兼容：`offeredSchemaMatches` 保留第四参数的冻结 Schema 摘要校验；`proposeReadyBatch.closedContinuation` 仅补充论文的闭合结构判定，授权计划仍由独立的 `approvedContinuation` 检查，失效权限不能被论文回调或相似度救回。成员场景的 `/app/.local/web/sessions` 只有在部署根与 `/user/tasks` 的设备/inode 完全相同时才进入原生文件允许范围。详情及验收层级见 [整合记录](debug/four-scenario-main-integration-20261014-v1.md)。
 
 成员账号的文件与工作区 API 在独立 `bubblewrap` 后端中额外校验：`workspaceFiles/{read,readAll,readBytes,readRelated,stat,list}` 经公开 Fetch 路由限制到 header 派生的会话工作区；`workspace/create` 与 `directoryPicker/{list,createDirectory}` 限制到该账号的 workspace/sessions 目录。路径按 realpath 校验，拒绝父目录与符号链接越界；失败以原生 RPC envelope 的 `gateway/forbidden` 返回。公开 `workspaceFileScope` Lookup 限制包括 WebSocket changes feed 在内的根目录，未知/跨账号 Session 不得到 scope。详见 [账号网关](harless-account-gateway.md)。
 
 ## GeneLoop Web 产品身份与消息展示（2026-10-15）
 
 `config/geneloop-persona.json` 是 Web 产品身份的共同配置，包含 `prefix`、`suffix` 和固定为 `false` 的 `includeRuntimeContext`。Python Web 启动器、场景 registry 与 TypeScript 会话 preset 使用同一配置；`prepare_scenario(..., web_deployment=False)` 默认保持研究 CLI 的原提示。运行中的 Web Agent 通过公开 `systemPrompt.section` 与 `suppressRuntimeContext()` 绑定产品规则，旧 preset 恢复后也应用，退出作用域时释放。该绑定不更换场景工具、原有证据规则或权限；真实模型与提供商名称仍据实际配置显示。
+
+2026-11-04 提示清理候选通过公开 `system-prompt/assemble` 钩子移除与产品身份重复的 preset persona 段，使 Web 身份和隐私规则各保留一份。已锁定的 `ppt-master` Skill 随 `ppt` 场景绑定到该执行 Agent 的原生 skills 作用域，解绑时释放；普通 Chat、Paper、Data 和 Video 的初始目录由各自作用域决定。对应兼容库为 PPT77/Paper79，首请求审计与诊断记录见[调试记录](debug/web-baseline-fairness-audit-20261104.md)。
 
 `harless_public_output.ts` 为浏览器生成分离的展示对象：覆盖 Session controller 的 `page`、`follow`、`list`、`search` 和 `control` 的相关返回值，以及任务/对照 JSON 与 SSE 快照。它处理已知框架标识和常见主机绝对路径，系统提示只显示应用设置的通知；公开 header/summary 省略 `cwd`，工作区分组继续依赖 `workspaceId` 与 `sessionIds`。原始 journal、执行所用 `inspect()`、用户来源消息、排队用户输入和附件/交付文件字节不因此改写。评分标识、输出 SHA、事件序号、游标与下载回执保持原协议。
 
@@ -285,17 +287,17 @@ Web 每次发送从本轮序列化文本的前导 `/data`、`/ppt`、`/paper` �
 
 普通聊天通过公开 `conversation.chat.node` 插槽汇总每个回合的过程，默认仅显示最终回答；生成中显示当前真实回答和状态。工具、上下文、早期消息与推理文字按需展开，可再次收起，新会话/回合默认折叠。最终正文复用已注册的原生 assistant renderer，保留 Markdown、图片、授权文件入口；`turn-tail` 复制、评分和分支操作未被替换，错误与中断提示保留。上游 Compact 的回答边界决定承载节点，避免旧节点被外层隐藏。轨迹页通过公开 `conversation.view` 插槽、trajectory/chat 快照统一按用户消息 `seq` 与任务 `anchorSeq` 连续分轮，不能沿用旧任务中重复的 native turn 编号；加载全部历史后显示最终轮号。普通及单路任务一列，真正的双路任务左右展示 Baseline/Motif，上方每轮独立选侧、查看事件时间分布；优化标记仅使用实际 `optimized` / `verified_skip`。保留原 inject 的分页/图片加载能力，授权图片镜像到独立 child slot；使用 composer overlay 标记与原生高度变量，保证图表固定、正文可滚动。不修改上游源码。对照标题只改展示名称 Baseline / Motif，协议仍使用 `baseline`、`execute`、`shadow`。
 
-PPT 的本轮兼容锁仅更新共享 `harless_task_scope.ts` 产品身份组合所需代码 SHA 及其 `runtime-bindings.json` 登记摘要；原学习边、上传来源归属与字节摘要、job 绑定、工具参数和完整 MCP schema 不变，不是新训练证书。检查结果与尚待补充的真实/UI/发布验收见 [本轮记录](experiments/geneloop-message-privacy-20261015-v1.md)。
+PPT 的本轮兼容锁仅更新共享 `harless_task_scope.ts` 产品身份组合所需代码 SHA 及其 `runtime-bindings.json` 登记摘要；原学习边、上传来源归属与字节摘要、job 绑定、工具参数和完整 MCP schema 不变，不是新训练证书。检查结果与尚待补充的真实/UI/发布验收见 [本轮记录](debug/geneloop-message-privacy-20261015-v1.md)。
 
 ## 官方 Web 与统一任务接口（0.1.5-rc.3）
 
 `npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`；浏览器通过 `src/adapters/harless_web_client/` 装饰原生 `/harless` 命令，选择场景/模式/RSI。独立 `/tasks`、`/sss` 与 `/harless` 页面已移除，旧地址跳转聊天首页；任务 API 保留，历史代码/环境变量标识保持兼容。
 
-后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。官方聊天真实任务发送后直接执行；任务 API 仍支持显式 preview/submit，SDK 入口仍先预览。两者均保留原有预算代理。用户已授权此测试用途，Web 当前默认不限费用，外部副作用仍须另行授权；独立 SDK 实验按各自有效配置执行。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](experiments/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
+后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。官方聊天真实任务发送后直接执行；任务 API 仍支持显式 preview/submit，SDK 入口仍先预览。两者均保留原有预算代理。用户已授权此测试用途，Web 当前默认不限费用，外部副作用仍须另行授权；独立 SDK 实验按各自有效配置执行。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](debug/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
 
 ### 前端提交与任务生命周期
 
-官方真实聊天的 `session/prompt` 登记 `entrypoint=native_chat` 的任务，随后在服务端校验输入、场景/工具版本并激活双层预算，再派发给官方 `Controller.prompt`。无需额外点击确认；相同请求 ID 幂等，不会重复调用模型。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。旧版确认流程的[实验记录](experiments/native-chat-confirm-20261009-v1.md)仅作历史依据，当前直接发送的浏览器交互仍待验收。
+官方真实聊天的 `session/prompt` 登记 `entrypoint=native_chat` 的任务，随后在服务端校验输入、场景/工具版本并激活双层预算，再派发给官方 `Controller.prompt`。无需额外点击确认；相同请求 ID 幂等，不会重复调用模型。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。旧版确认流程的[实验记录](debug/native-chat-confirm-20261009-v1.md)仅作历史依据，当前直接发送的浏览器交互仍待验收。
 
 先打开本次私有 `access-url.txt` 的官方认证地址，用根路径 token 交换 HttpOnly/SameSite cookie。`/api/harless/tasks` 复用官方连接认证；不是可匿名访问的 API，也未开放其他前端域名的 CORS。不要在 URL/header 中另传认证 token。旧 `/api/sss/tasks` 保留同语义兼容路由，新调用统一使用产品路由。
 
@@ -381,17 +383,17 @@ library/在线 manifest 新增可选 `certification_scope`（`independent_decisi
 
 `dsh_online_motif.mjs` 导出共享 `installOnlineMotif`，原 `apply` 行为不变。新 `dsh_paper_motif.ts` 显式 opt-in `SSS_PAPER_MOTIF_DIAGNOSTIC=1`，只允许上述诊断 scope，并复用共享 Runtime；需要语义排名时返回真实模型，不调用 embedding、不强行接管。shadow 只记候选，execute 返回标准工具 stream，由 Harness 执行并逐结果复核，整个 batch 成功后才计 verified skip。任务/Session/题面、参数来源、工具可见性、权限及版本守卫仍然有效。
 
-实验入口 `scripts/paper-motif-experiment.py` 默认预览，付费阶段显式 `--call-model`，累计原论文账本并保留 1 美元上限、不设请求次数上限；这不是 Web 产品入口或跨平台通用运行器。协议、依赖和复现边界见[场景说明](../scenarios/paper-submission/README.md)，实际结果见[实验记录](experiments/paper-motif-shadow-execute-20261009-v1.md)。
+实验入口 `scripts/paper-motif-experiment.py` 默认预览，付费阶段显式 `--call-model`，累计原论文账本并保留 1 美元上限、不设请求次数上限；这不是 Web 产品入口或跨平台通用运行器。协议、依赖和复现边界见[场景说明](../scenarios/paper-submission/README.md)，实际结果见[实验记录](debug/paper-motif-shadow-execute-20261009-v1.md)。
 
 ## 官方 Web 与统一任务接口（0.1.5-rc.3）
 
 `npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`，DeepSeek Harless 界面为同源 `/tasks`。旧 `/sss` 是兼容别名，历史代码/环境变量标识保持不变。
 
-后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。前者仍通过工作台预览确认任务，后者直接执行预算预览后的一次场景；均保留原有预算代理。用户已授权此测试用途；当前共享服务器按 2026-10-16 授权取消任务、对照每侧及累计费用上限；Web 不额外限制单次文字输入或输出长度，其余独立入口按有效配置执行。外部副作用仍须另行授权。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](experiments/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
+后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。前者仍通过工作台预览确认任务，后者直接执行预算预览后的一次场景；均保留原有预算代理。用户已授权此测试用途；当前共享服务器按 2026-10-16 授权取消任务、对照每侧及累计费用上限；Web 不额外限制单次文字输入或输出长度，其余独立入口按有效配置执行。外部副作用仍须另行授权。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](debug/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
 
 ### 前端提交与任务生命周期
 
-官方真实聊天的 `session/prompt` 首次提交登记 `entrypoint=native_chat` 的待确认任务，返回 accepted，不直接调用模型。公开 Web `tapIndex` 注入题面/预算确认框，显式确认通过下述 submit API 才派发原消息；相同请求 ID 幂等，取消零模型调用。工作台 `?task_id=...` 和任务卡可以恢复同一待确认预览。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。实际接口验收见[记录](experiments/native-chat-confirm-20261009-v1.md)，真实浏览器点击待确认。
+官方真实聊天的 `session/prompt` 首次提交登记 `entrypoint=native_chat` 的待确认任务，返回 accepted，不直接调用模型。公开 Web `tapIndex` 注入题面/预算确认框，显式确认通过下述 submit API 才派发原消息；相同请求 ID 幂等，取消零模型调用。工作台 `?task_id=...` 和任务卡可以恢复同一待确认预览。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。实际接口验收见[记录](debug/native-chat-confirm-20261009-v1.md)，真实浏览器点击待确认。
 
 先打开本次私有 `access-url.txt` 的官方认证地址，用根路径 token 交换 HttpOnly/SameSite cookie。工作台及 `/api/harless/tasks` 复用官方连接认证；不是可匿名访问的 API，也未开放其他前端域名的 CORS。不要在 URL/header 中另传认证 token。旧 `/api/sss/tasks` 保留同语义兼容路由，新调用统一使用产品路由。
 
@@ -482,7 +484,7 @@ Harness 原生 `SessionPromptRequest.content` 的实际格式为：
 
 ### 旧固定入口与验收范围
 
-`npm run web -- --frozen` 保留原 `dsh_web_policy.ts`：一个启动周期一个固定题面/session，题面仅两端空白规范化，内部字符必须一致。服务器最终验收通过 146 项 Python、44 项 Node、`web:check` 的 11 组冻结协议、`web:tasks:check` 的 13 组动态 HTTP/MCP，以及 18 题/83 来源 smoke；Motif 样例闭环已通过，新增实际付费为零。详细条件与限制见[动态任务验收](experiments/dynamic-web-tasks-20261009-v1.md)和[Web 交接](handoffs/harness-web.md)。原生会话 unary `/api/session/<method>` 使用官方 client-request envelope，队列/事件流使用 `/api/remote.mux`；DeepSeek Harless 不替换 Agent 循环。
+`npm run web -- --frozen` 保留原 `dsh_web_policy.ts`：一个启动周期一个固定题面/session，题面仅两端空白规范化，内部字符必须一致。服务器最终验收通过 146 项 Python、44 项 Node、`web:check` 的 11 组冻结协议、`web:tasks:check` 的 13 组动态 HTTP/MCP，以及 18 题/83 来源 smoke；Motif 样例闭环已通过，新增实际付费为零。详细条件与限制见[动态任务验收](debug/dynamic-web-tasks-20261009-v1.md)和[Web 交接](handoffs/harness-web.md)。原生会话 unary `/api/session/<method>` 使用官方 client-request envelope，队列/事件流使用 `/api/remote.mux`；DeepSeek Harless 不替换 Agent 循环。
 
 HTTP 检查不能代替实际浏览器和科研质量验收。安全边界仍是单操作人服务器联调：没有多账号、跨启动恢复或论文流程，认证浏览器的官方文件能力也不是多人文件沙箱。上游包只读，升级必须复核 Controller、Gateway、附件、事件与 preset 接缝。详见 [Web 交接](handoffs/harness-web.md)。
 
@@ -746,7 +748,7 @@ V11.2 的 `evidence-focus` 几何选择增加原图面积下限 `min(10平方英
 
 Web 会话归属使用持久 `DSH_HOME` 与可信 `principal` 作为 scope，记录在该 Home 的 `harless-web-ownership-*.json`，不再随代码部署的 `output` 变化。未提供 Home 时保留旧 output scope。记录中的 `sessions/bound` 保持原义，新增可选 `chat_only_sessions` 必须是 `sessions` 的子集；任务索引与模型选择仍使用原运行 scope，不迁移预算或重放任务。
 
-私有 policy 可选 `ownership_legacy_outputs:string[]`，只接受管理员配置的绝对路径。自动迁移当前 output，另只导入与同一个 Home 匹配的旧 scope；不能按客户端 session ID 或标题认领。成员启动器将此列表清空。跨旧 output 导入的已锁定会话以无工具文字模式恢复，`GET /api/harless/settings` 返回 `conversation_only:true`，附件请求返回 `409 new_session_required`。没有逐轮预算 broker 的入口不因此获得多任务复用权限。操作说明见 [账号网关](harless-account-gateway.md)，验证见 [恢复实验](experiments/chat-session-recovery-20261014-v1.md)。
+私有 policy 可选 `ownership_legacy_outputs:string[]`，只接受管理员配置的绝对路径。自动迁移当前 output，另只导入与同一个 Home 匹配的旧 scope；不能按客户端 session ID 或标题认领。成员启动器将此列表清空。跨旧 output 导入的已锁定会话以无工具文字模式恢复，`GET /api/harless/settings` 返回 `conversation_only:true`，附件请求返回 `409 new_session_required`。没有逐轮预算 broker 的入口不因此获得多任务复用权限。操作说明见 [账号网关](harless-account-gateway.md)，验证见 [恢复实验](debug/chat-session-recovery-20261014-v1.md)。
 
 ### 场景快捷词、绑定和工作区（2026-10-14）
 
@@ -755,7 +757,7 @@ Web 会话归属使用持久 `DSH_HOME` 与可信 `principal` 作为 scope，记
 启用 `comparison_scenes` 与逐轮预算 broker 的账号，`select` 可修改已完成父会话的后续场景，不改写已有任务 preset；下一次发送由新私有子会话执行。运行中返回 `409 session_busy`，未知/跨账号会话仍先拒绝。未启用路由的固定任务才保留 `409 scene_requires_new_session`。`new_session` 是明确的新建操作，支持可选 selection 覆盖；inherit_session 必须属于当前账号，新会话继承其工作区。`scene_locked` 保留冻结范围的兼容标识，客户端不能仅凭它新建聊天。
 
 原生会话创建不再同时给出 workspaceId 和 cwd；网关中的工作区 ID 交给同账号注册表核验。MCP workspace/input/job 仍是服务器分配的私有路径。同场景、同来源文字续聊保留对应子会话；切换场景或新上传会轮换私有执行子会话，保留父聊天和旧结果。已冻结输出/页数等 scene_options 的直接变更仍受单独检查，不能更改旧任务权限。详见 [控制协议](harless-controls.md)。
-用户边界沿用账号网关的独立 Harness/bwrap 与预算代理；启动器接受可信 `--user-id`，客户端不能指定 cwd/工作区、库或命令。上传收据经官方 Agent scope 解析，确认时检查字节摘要；任务 `approved-inputs.json` 同时约束后端 pin/read，不允许重新 pin 接受确认后漂移的文件。两成员真实环境部署诊断见 [上线准备记录](experiments/harless-launch-readiness-20261014-v1.md)。
+用户边界沿用账号网关的独立 Harness/bwrap 与预算代理；启动器接受可信 `--user-id`，客户端不能指定 cwd/工作区、库或命令。上传收据经官方 Agent scope 解析，确认时检查字节摘要；任务 `approved-inputs.json` 同时约束后端 pin/read，不允许重新 pin 接受确认后漂移的文件。两成员真实环境部署诊断见 [上线准备记录](debug/harless-launch-readiness-20261014-v1.md)。
 
 ### 2026-10-14 场景选项、认证与成员部署
 
@@ -877,7 +879,7 @@ Python 从正常基线编译 `source_bound_readonly_batch_shadow` v1：当前任
 
 ## 跨平台实验／学习互斥锁
 
-`src/adapters/file_lock.py::exclusive_lock(path)`提供非阻塞独占进程锁：POSIX沿用历史flock，Windows用msvcrt锁同一固定文件的字节0；竞争者拒绝，异常后释放，不删除锁文件或重置账本。只在取得锁时加载平台模块，免费预览、编译及测试导入不依赖fcntl。调用方仍负责授权、累计账本和预算限制；此模块不替代预算代理。新生成任务将其纳入代码hash注册，旧manifest不可改，见[Windows修复记录](experiments/windows-rsi-lock-20261012-v1.md)。
+`src/adapters/file_lock.py::exclusive_lock(path)`提供非阻塞独占进程锁：POSIX沿用历史flock，Windows用msvcrt锁同一固定文件的字节0；竞争者拒绝，异常后释放，不删除锁文件或重置账本。只在取得锁时加载平台模块，免费预览、编译及测试导入不依赖fcntl。调用方仍负责授权、累计账本和预算限制；此模块不替代预算代理。新生成任务将其纳入代码hash注册，旧manifest不可改，见[Windows修复记录](debug/windows-rsi-lock-20261012-v1.md)。
 
 `src/adapters/trace_paths.py::relative_trace_path(value, roots)`按轨迹路径自身风格做词法绑定，输出正斜杠依赖键；Windows编译机可解析Linux历史轨迹，POSIX编译机可检查Windows绝对路径。外部根/盘符、上级跳转或盘符相对路径不绑定；真实文件/来源/版本守卫仍是授权必要条件。native参数中的file_path/workdir只有成功根绑定才替换为`${WORK}`，不能通过相似目录前缀伪造依赖。预算授权path用正斜杠作为跨平台协议字段。
 
@@ -1312,7 +1314,7 @@ TypeScript Runtime 在首次模型请求前验证当前任务ID、输出授权�
 
 `/compact`处理当前真实上下文，`/plan [off|内容]`选择原生计划协作；目标仅通过`/goal --rounds <正整数> <目标>`显式开始。目标控制及子Agent继承原任务计量，原生Goal mutation RPC不直接开放；没有新增平台费用/请求/输出额度。独立File SDK模式与原任务恢复沿其自身入口，主聊天模式命令不会假成功。
 
-候选配置使用`node scripts/prepare-native-host.mjs --plan ABS --root ABS`预览，核对后`--apply`仅更新隔离候选host组合；正式启停仍统一`npm run service -- ...`。部署和验证状态以[本轮记录](experiments/dsh-native-capabilities-20261021.md)为准，源码存在不等于生产已发布。
+候选配置使用`node scripts/prepare-native-host.mjs --plan ABS --root ABS`预览，核对后`--apply`仅更新隔离候选host组合；正式启停仍统一`npm run service -- ...`。部署和验证状态以[本轮记录](debug/dsh-native-capabilities-20261021.md)为准，源码存在不等于生产已发布。
 
 ### File公开费用元数据（2026-10-21）
 
@@ -1338,7 +1340,7 @@ TypeScript runtime 核对账号／Task、输入类型和版本、输出授权及
 
 独立脚本认证器新增可选 `certification.receipt_protocol: "bounded_zlib_v1"`。当前来源及独立输入均须通过明文／压缩完整回执一致性校验。Runtime 只在 `compactContext:true` 与该认证标记同时成立时使用 `script_motif_envelope`，`encoding: "zlib_base64_v1"`、base64 `payload` 和解码字节 `sha256`；字段集合严格校验，payload最多48,000字符、解码最多256,000字节，原stdout16,000字节上限不变。
 
-该信封只用于传输。解码后仍检查当前call、session授权、nonce、程序、输入版本和输出摘要；模型收到完整可读stdout，不能为了缩短上下文保留base64。旧明文回执仍支持；既有代码锁不得跳过，冻结库迁移须重新执行认证。显式cache及HTTP demand协议不变。不包含中间集合或关系学习，不产生语义质量证明。见[独立修复记录](experiments/script-receipt-transport-20261023-v1.md)。
+该信封只用于传输。解码后仍检查当前call、session授权、nonce、程序、输入版本和输出摘要；模型收到完整可读stdout，不能为了缩短上下文保留base64。旧明文回执仍支持；既有代码锁不得跳过，冻结库迁移须重新执行认证。显式cache及HTTP demand协议不变。不包含中间集合或关系学习，不产生语义质量证明。见[独立修复记录](debug/script-receipt-transport-20261023-v1.md)。
 # 参数化程序与复用形式外环（实验入口）
 
 `source_program_compiler.py`输出 `parameterized_source_program_v1` 与 `source_program_library_v1`。模板只有一个JSON参数插入点；程序身份覆盖语言、模板和参数schema，另存正常模型调用及来源渲染证据。`source_program_runtime.ts`是实例化和任务开始时策略解析入口；MCP复用现有场景的沙箱/写入/渲染，不执行任意模板求值，也不返回旧产物。此实验的MCP桥接仍依赖Python。
@@ -1567,3 +1569,11 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 ## 条件化策略演化（2026-11-04）
 
 版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。
+
+## 匿名双栏展示与审计绑定（2026-11-04）
+
+`/api/harless/comparisons` 在 paired 结果中新增 `display_order`，为 `baseline`、`motif` 的一次随机排列。服务器在本轮准入时保存排列，GET、SSE、重试与重启恢复沿用同一值；旧记录首次读取其 store 时补齐并持久化。single 的排列为 `['baseline']`。
+
+网页按该排列展示，结果卡片仅显示状态和原始结果；评分、赞踩、复制、下载、分支及轨迹选择使用匿名位置，提交时仍绑定原 lane 和 `output_sha256`。后台原任务与 lane 键继续保存；新增评分/赞踩事件含 `display_order` 和从 1 起计的 `display_position`。排序不参与模型输入、执行准入、预算与任务调度。
+
+结果卡片隐藏方法名称、机制计数和回退标识。原始模型正文、工具内容和交付文件保留，开发 API 也保留真实字段；此接口提供产品界面的匿名比较，证据和版本归属仍可追查。

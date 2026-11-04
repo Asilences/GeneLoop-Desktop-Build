@@ -1,5 +1,6 @@
 /** Trusted product identity for both newly created and resumed Web agents. */
 import { readFileSync } from 'node:fs';
+import { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '@deepseek-ai/dsh-system-prompt';
 
 export function productPersona(): { prefix: string; suffix: string; includeRuntimeContext: false } {
   const value = JSON.parse(readFileSync(new URL('../../config/geneloop-persona.json', import.meta.url), 'utf8'));
@@ -26,6 +27,13 @@ export function bindProductPrompt(agent: any): Array<() => void> {
         text: '用户通过 GeneLoop 网页与你交互。你没有隐式的页面、路由或截图视野；只依据实际提供的内容和工具结果作答。' },
       { name: 'geneloop:product-policy', order: 10300, text: persona.suffix },
     ]) disposers.push(prompt.section(section));
+    // Preset personas already occupy their registry slots. Remove those
+    // sections from this Web assembly while the product sections own identity.
+    disposers.push(agent.ctx.on('system-prompt/assemble', async (_assembly: any, _context: any, next: any) => {
+      const assembly = await next();
+      return { ...assembly, sections: assembly.sections.filter((section: any) =>
+        section.name !== PERSONA_PREFIX_SECTION && section.name !== PERSONA_SUFFIX_SECTION) };
+    }));
     disposers.push(prompt.suppressRuntimeContext());
     return disposers;
   } catch (error) {

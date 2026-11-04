@@ -1,6 +1,6 @@
 # 论文检查：只读证据与 Motif 诊断入口
 
-当前已跑通真实 Harness → MCP → 轨迹挖掘 → shadow/execute。相同题面、相同六个 MCP 工具的对照中，execute 将模型请求从 3 次变为 2 次；费用与耗时没有下降。见[实验记录](../../docs/experiments/paper-motif-shadow-execute-20261009-v1.md)。这只是结构协议诊断，不是论文检查质量验收或生产认证。
+当前已跑通真实 Harness → MCP → 轨迹挖掘 → shadow/execute。相同题面、相同六个 MCP 工具的对照中，execute 将模型请求从 3 次变为 2 次；费用与耗时没有下降。见[实验记录](../../docs/debug/paper-motif-shadow-execute-20261009-v1.md)。这只是结构协议诊断，不是论文检查质量验收或生产认证。
 
 ## 工具与权限
 

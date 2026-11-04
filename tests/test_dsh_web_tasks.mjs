@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import {execFileSync} from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, utimesSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, utimesSync, realpathSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { randomUUID, createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -22,6 +22,7 @@ import { TypertGatewayService } from '@deepseek-ai/dsh-api-gateway';
 import {SessionStore} from '@deepseek-ai/dsh-session';
 import {SessionProjectionRegistry} from '@deepseek-ai/dsh-session-projection';
 import {SystemPrompt} from '@deepseek-ai/dsh-system-prompt';
+import {SkillRegistry} from '@deepseek-ai/dsh-skill';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
 import {pptDeliveryTool,pptPreparationTool} from '../src/adapters/ppt_delivery_pipeline.ts';
 import {SubagentRuntime} from '@deepseek-ai/dsh-subagent';
@@ -113,7 +114,7 @@ async function fixture({ broker = false, dshHome = false, visionReply, statsRepl
       const dispose = on(name, listener, ...options);
       return () => { const index=rows.indexOf(listener);if(index>=0)rows.splice(index,1);dispose(); };
     };
-    new SessionStore(context);new SessionProjectionRegistry(context);new SystemPrompt(context,{});
+    new SessionStore(context);new SessionProjectionRegistry(context);new SystemPrompt(context,{});new SkillRegistry(context);
     new ToolRuntime(context,{});new SubagentRuntime(context);nativeSpawn(context,{providerName:'spawn'});
     new CommandRuntime(context);
     const register=context.commands.register;
@@ -1261,6 +1262,39 @@ const productScenes = [
   { id: 'paper-proofreading', label: 'Paper Proofreading', preset: 'sss-paper', allowed_tools: [], unavailable_reason: 'paper_backend_missing' },
   { id: 'research-data-analysis', label: 'Research Data Analysis', preset: 'sss-data', allowed_tools: [], unavailable_reason: 'data_backend_missing' },
 ];
+
+test('PPT scene binding publishes its approved Skill only to its execution agents',options,async()=>{
+ const root=realpathSync(mkdtempSync(join(tmpdir(),'sss-scoped-skill-'))),skillRoot=join(root,'skill');
+ mkdirSync(skillRoot);mkdirSync(join(root,'scenarios/ppt_master'),{recursive:true});
+ const skill='---\nname: ppt-master\ndescription: Build presentations\n---\n# Locked instructions\n';
+ writeFileSync(join(skillRoot,'SKILL.md'),skill);
+ const files={'SKILL.md':createHash('sha256').update(skill).digest('hex')};
+ writeFileSync(join(root,'scenarios/ppt_master/skill-lock.json'),JSON.stringify({schema_version:1,version:'6.6.0',files,
+  package_sha256:createHash('sha256').update(JSON.stringify(files)).digest('hex')}));
+ const scenes=[{...multiScenes[0],id:'new-scene',adapter:'workspace',mcp_rows:[]},
+  {...multiScenes[0],id:'ppt',preset:'sss-ppt',adapter:'workspace',mcp_rows:[],ppt_execution_strategy:'ppt_master'}];
+ let f;
+ try{
+  f=await fixture({broker:true,scenes,capability_profile:'new-scene',comparison_scenes:['ppt'],
+   command_resources:{projectRoot:root,pptMasterRoot:skillRoot}});
+  const {sessionId}=await f.ctx.sessionController.create({});
+  assert.deepEqual(await f.ctx.skills.list({scope:f.agents.get(sessionId)}),[]);
+  const sent=await f.ctx.sessionController.prompt({sessionId,requestId:'scoped-ppt-skill',mode:'queue',
+   content:[{type:'text',text:'/ppt Make a presentation'}]},new AbortController().signal);
+  let turn;
+  for(let i=0;i<100;i++){
+   turn=JSON.parse(readFileSync(join(f.directory,'comparisons.json'))).turns.find(row=>row.id===sent.comparison_id);
+   if(Object.values(turn.lanes).every(row=>row.task_id))break;
+   await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  for(const lane of Object.values(turn.lanes)){
+   assert.ok(lane.task_id);
+   assert.deepEqual((await f.ctx.skills.list({scope:f.agents.get(lane.session_id)})).map(row=>row.name),['ppt-master']);
+  }
+  assert.deepEqual(await f.ctx.skills.list({scope:f.agents.get(sessionId)}),[]);
+  assert.deepEqual(await f.ctx.skills.list(),[]);
+ }finally{await f?.close();rmSync(root,{recursive:true,force:true});}
+});
 
 // Only a free protocol fixture: the real learned release/evidence is checked by
 // test_harless_paper_product_bundle.py. No provider or embedding request is made.

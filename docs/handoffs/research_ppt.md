@@ -71,7 +71,7 @@
 - 目标与范围：在原候选上修复读取Motif因DSH长输出附注而回退的问题；保留完整原文和旧实验，不扩展新程序学习或重跑12题。分支`codex/ppt-rsi-transfer-20261102`，基线`0bd1e3b`，工作区仍含此前接线改动。
 - 已完成：`converted_source.py:source_read_response`将完整展示与紧凑MCP`structuredContent`版本回执分开；`server.py`显式返回`CallToolResult`，不改上游Harness或共享观察器。新增协议/守卫回归及`reexport-ppt-receipt-compat.py`；默认候选PPT48/Paper50，旧五份学习载荷逐字节保持，不称新Motif。
 - 已验证：服务器20Python/11Node定向通过；最终`npm test`1765Python/1468Node通过（202/4跳过、0失败），smoke/motif通过。首轮3项环境失败与17通过/1跳过复验日志均保留。真实Flash/off读取任务`3f27986342ae4fd99c59f3e079fa000a`completed，2次verified skip，read边核验成功，0工具错误/0未验证回退；未生成新PPT，不推断整体降费。
-- 费用与证据：独立诊断34真实请求/代理估费$0.05755053（含附件预处理，未知0），不计旧B/O，也不伪称学习费。RSI学习/生成/认证及Judge继续单列，用户任务内重试恢复仍计各自B/O。原冻结实验189项SHA保持，本机/服务器15项候选文件一致；23份证据已下载逐SHA核验，位于本机`.local/evaluations/ppt-receipt-fix-20261103/server-evidence/`。详见[修复报告](../experiments/ppt-read-receipt-fix-20261103.md)。
+- 费用与证据：独立诊断34真实请求/代理估费$0.05755053（含附件预处理，未知0），不计旧B/O，也不伪称学习费。RSI学习/生成/认证及Judge继续单列，用户任务内重试恢复仍计各自B/O。原冻结实验189项SHA保持，本机/服务器15项候选文件一致；23份证据已下载逐SHA核验，位于本机`.local/evaluations/ppt-receipt-fix-20261103/server-evidence/`。详见[修复报告](../debug/ppt-read-receipt-fix-20261103.md)。
 - 未完成与下一步：当前Code入口仍未从本批heredoc/组合Bash学到通用程序；同伴File循环、视频主动参数化、Paper新function构造入口未接PPT。先从合格稿源码生成参数化候选，再独立认证/后继任务验证；不能把已有目录注入或兼容导出说成该能力已生效。
 - 权限与回退：未提交、推送或正式部署；独立诊断服务已关闭，未动正式网站/原实验。正式服务仅可走统一service入口。保留v47及配套源码，回退必须成套恢复注册表与源码锁，不删私有库、失败证据或账本。
 
@@ -113,7 +113,7 @@
 
 - `codex/integrate-file-ppt-rsi` / 源码 `6603d7d` 已推送 [PR93](https://github.com/jingyio/GeneLoop/pull/93)，保留 PR88 原提交祖先关系，未合并/部署。
 - 保留 PR92 附件阅读索引、主线私有上下文/进度/取消，叠加 PPT 后台学习与否决机制；当前集成库为 `ppt-master-v12` / `paper-web-v17`，从 main 已发布 v11/v16 重新核验相同序列化 IR 与证据，新学习边界进入源码锁。旧发布目录不改。
-- PR92 之后 71 Python/112 Node 定向通过，包含独立认证、未来任务选库、晋级、重启、负反馈与完整性守卫；最终 Linux 全量1415 Python/1073 Node通过，各3跳过；CI 以[实验记录](../experiments/file-ppt-integration-20261019.md)为准。未重新购买完整 PPT 制作评测，不扩展原质量/收益主张。
+- PR92 之后 71 Python/112 Node 定向通过，包含独立认证、未来任务选库、晋级、重启、负反馈与完整性守卫；最终 Linux 全量1415 Python/1073 Node通过，各3跳过；CI 以[实验记录](../debug/file-ppt-integration-20261019.md)为准。未重新购买完整 PPT 制作评测，不扩展原质量/收益主张。
 - 上线仍需原账户对照配置、可用 Python 和持久学习目录；原失败/费用/私有候选保留，失配不重签，回普通 Harness 后按新正常轨迹学习。合入后只通过统一 service 入口另行发布与真实账号验收。
 
 
@@ -194,11 +194,11 @@ PR #73 已合并/部署 `0c20986`。上线读取探针揭示首次 MCP 转换先
 - 已取回的独立正常轨迹2训练/1留出经原编译器与实际完整19Schema认证，`deployment-v3/runtime`仅五个在线文件，只读闭合pin/read；逐任务用批准上传SHA绑定，不继承历史source_id。认证不是质量/费用晋级。旧证据保留，部署代码锁更新生成新包。
 - 真实合成只读任务成功2HTTP/1Verified Skip；先前预算失败1HTTP/1局部skip单列。两成员实际bwrap/MCP、各一页中文PPTX/PDF/PNG机械交付通过，0模型，科学质量未评审。CPU转换及task内validation与checkpoint路径兼容修复；跨任务/软链接仍拒绝。
 - 最短部署：安装/构建场景依赖，配置私有三个 `HARLESS_PPT_*` 变量及网关 `memberSceneDeployment`，运行 `node scripts/project.mjs python scripts/check-harless-members.py --render-ppt`；库准入与输出依赖失败明确拒绝。用户菜单可选页数/模板/新副本权限，默认只读。
-- 结果、失败、环境、累计预算与版本边界见 [上线准备记录](../experiments/harless-launch-readiness-20261014-v1.md)。下一步与Session负责人联合公网验收，再以真实论文生成任务独立人评。原V15研究结论不改，以下为历史交接。
+- 结果、失败、环境、累计预算与版本边界见 [上线准备记录](../debug/harless-launch-readiness-20261014-v1.md)。下一步与Session负责人联合公网验收，再以真实论文生成任务独立人评。原V15研究结论不改，以下为历史交接。
 
 ## 2026-10-14 私有库迁移补记
 
-Codex 按用户授权从旧部署取回 12 份 PPT Manifest 及 322 个库/认证依赖文件，同步到 V100 `.local/imports/ppt-library-transfer-20261014/`；本机同名私有目录也保留备份。两端逐项 SHA256 核验通过。4 份完整证据锁匹配旧部署，当前 Runtime 格式检查接受 10/12、拒绝 2/12；当前代码相较旧证据仍有版本变化，尚未认证迁移或绑定 Web Execute。此次模型调用 0，未改变预算、权限或历史证据。详情与接手步骤见 [迁移记录](../experiments/ppt-library-transfer-20261014-v1.md)。以下保留原场景发布交接；原本机 `H:/DeepSeekHarness` 路径属于原负责人环境，不能当作本次 macOS 已存在的文件。
+Codex 按用户授权从旧部署取回 12 份 PPT Manifest 及 322 个库/认证依赖文件，同步到 V100 `.local/imports/ppt-library-transfer-20261014/`；本机同名私有目录也保留备份。两端逐项 SHA256 核验通过。4 份完整证据锁匹配旧部署，当前 Runtime 格式检查接受 10/12、拒绝 2/12；当前代码相较旧证据仍有版本变化，尚未认证迁移或绑定 Web Execute。此次模型调用 0，未改变预算、权限或历史证据。详情与接手步骤见 [迁移记录](../debug/ppt-library-transfer-20261014-v1.md)。以下保留原场景发布交接；原本机 `H:/DeepSeekHarness` 路径属于原负责人环境，不能当作本次 macOS 已存在的文件。
 
 - 更新时间与交接人：2026-10-13，Codex。
 - 目标与本次范围：停止扩展研究机制，收敛课题组试用。保留接口，朴素组会稿、双路生成/记账、版本安全修订、显式反馈与受控学习；结果见 `docs/experiments/research-ppt-v15-deployment-20261013.md`，历轮索引见 `docs/experiments/research-ppt-reports/README.md`；20 份 PDF 留在团队私有归档，不进入 main。

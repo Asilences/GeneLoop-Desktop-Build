@@ -90,6 +90,36 @@ if __name__ == '__main__':
             'src/adapters/capability_goal_proposal.py',
             'scripts/run-strategy-evolution.py',
         }
+    elif '--prompt-scope-fix' in sys.argv:
+        sys.argv.remove('--prompt-scope-fix')
+        reviewed = {
+            'scripts/reexport-attachment-context-compat.py',
+            'scripts/reexport-attachment-reading-compat.py',
+            'scripts/reexport-cold-parent-compat.py',
+            'scripts/reexport-delivery-compat.py',
+            'scripts/reexport-file-chat-continuation-compat.py',
+            'scripts/reexport-gateway-polling-compat.py',
+            'scripts/reexport-multiuser-page-compat.py',
+            'scripts/reexport-native-capabilities-compat.py',
+            'scripts/reexport-ppt-learning-compat.py',
+            'scripts/reexport-ppt-managed-compat.py',
+            'scripts/reexport-provider-default-compat.py',
+            'scripts/reexport-provider-output-compat.py',
+            'scripts/reexport-sandbox-mount-compat.py',
+            'scripts/reexport-surface-context-compat.py',
+            'src/adapters/dsh_web_tasks.ts',
+            'src/adapters/geneloop_native_work.ts',
+            'src/adapters/harless_comparison.ts',
+            'src/adapters/harless_web_client/client.js',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v76', 'ppt-master-v77', 'ppt',
+             'scenarios/ppt_master/contracts.json', reviewed | {'scripts/reexport-ppt-render-workflow-compat.py', 'scripts/reexport-ppt-preview-boundary-compat.py'}),
+            ('paper-web-v78', 'paper-web-v79', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed | {'scenarios/paper-submission/README.md'}),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS.add('src/adapters/harless_product_prompt.ts')
     elif '--rae-integration' in sys.argv:
         sys.argv.remove('--rae-integration')
         reviewed = {

@@ -7,6 +7,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash,randomUUID} from 'node:crypto';
 import {Context} from '@deepseek-ai/cordis';
+import {createScope,scopeOf} from '@deepseek-ai/dsh-scope';
 import {AgentRegistry} from '@deepseek-ai/dsh-agent';
 import {AgentLoop} from '@deepseek-ai/dsh-agent-loop';
 import {SessionStore} from '@deepseek-ai/dsh-session';
@@ -66,6 +67,17 @@ test('only locked administrator ppt-master is published through the actual nativ
   dispose();assert.deepEqual(await f.ctx.skills.list(),[]);
   writeFileSync(join(resources.pptMasterRoot,'SKILL.md'),'changed');assert.throws(()=>registerApprovedSkill(f.ctx,resources),/bytes changed/);
  }finally{await f.close();}
+});
+
+test('approved PPT skill is scoped and disappears when its scene binding is disposed',async()=>{
+ const f=await fixture(),ppt=createScope(f.ctx,{}),chat=createScope(f.ctx,{});
+ try{
+  const dispose=registerApprovedSkill(ppt.ctx,packageFixture(f.root));
+  assert.deepEqual((await f.ctx.skills.list({scope:scopeOf(ppt.ctx)})).map(row=>row.name),['ppt-master']);
+  assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(chat.ctx)}),[]);
+  assert.deepEqual(await f.ctx.skills.list(),[]);
+  dispose();assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(ppt.ctx)}),[]);
+ }finally{await ppt.dispose();await chat.dispose();await f.close();}
 });
 
 test('native todo_write permits parallel work and projects the latest list without inventing completion',async()=>{

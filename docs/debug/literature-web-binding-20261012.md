@@ -54,4 +54,4 @@ npm run web:literature -- --real-model --papers-dir ./testpdf
 
 密钥复用已有`.local/deepseek.env`或环境变量，不复制进公共配置；认证地址仅私有access-url.txt，日志/论文不提交。SDK与8765旧工作台保留，Web新增路径没有接入旧工作台的结果缓存/增量更新全套功能。`/tasks`为临时前端，最终自研前端复用同一认证任务API。
 
-下一步先冻结质量和预算条件，建立普通Harness/普通脚本/learned Motif的可重复对照；没有当前web认证库之前不强开旧库。后端仍固定off，思考模式对照待实现，不能用前端按钮代替真实参数。参见[对照协议](literature-web-comparison-protocol.md)。
+下一步先冻结质量和预算条件，建立普通Harness/普通脚本/learned Motif的可重复对照；没有当前web认证库之前不强开旧库。后端仍固定off，思考模式对照待实现，不能用前端按钮代替真实参数。参见[对照协议](../experiments/literature-web-comparison-protocol.md)。

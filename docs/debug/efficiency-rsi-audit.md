@@ -6,7 +6,7 @@
 
 ## A 计量修复状态（2026-11-02，最新）
 
-F1/F2/F4/F5 已补实现及免费反例回归：全 cell 费用判断预算，首成功获取成本计算条件节省；registry v2 固定 request→owner/cell/category，拒绝费用移位；无界/未知/未关闭结果不再计作有限预算能力增益；十进制累计修复金额边界，并严格守恒分摊。新增宿主 booking journal 与现有提案网关可选接线，导出不从 observations 反推，也不改原累计账本。详见[计量修复记录](experiments/efficiency-rsi-measurement-20261102.md)和[评价协议](efficiency-rsi-evaluation.md)。
+F1/F2/F4/F5 已补实现及免费反例回归：全 cell 费用判断预算，首成功获取成本计算条件节省；registry v2 固定 request→owner/cell/category，拒绝费用移位；无界/未知/未关闭结果不再计作有限预算能力增益；十进制累计修复金额边界，并严格守恒分摊。新增宿主 booking journal 与现有提案网关可选接线，导出不从 observations 反推，也不改原累计账本。详见[计量修复记录](efficiency-rsi-measurement-20261102.md)和[评价协议](../efficiency-rsi-evaluation.md)。
 
 这些修复不等于 G5 全平台 runner/预算执行已完成，不证明新增效率收益。Paper 真实端到端验收由 B 分支推进；任意崩溃恢复、跨代 C→D 及 F8 等仍按原研究边界保留。下面各表及“仍未关闭”为同日较早审计时点，保留原始复现，当前状态以上述最新说明及交接为准。
 
@@ -18,11 +18,11 @@ G3 的旧 Source 路径已补任务字节冻结、原生摘要校验、实际消
 
 **仍未关闭**：G1/G2 的新 CapabilityBackend/真实输出契约，G3 的场景回执→Capability 父调用关联，G4 Docker 取消与恢复，以及模型构造、独立认证和保存后采用。真实 TS 消费旧库字节已验证；场景渲染失败和回执测试使用诊断替身，未执行真实 Docker 渲染。F1/F2/F4/F5 评价器问题及 F8 深谱系问题仍保留。当前统一检查不代表这些已解决，也不用于效率结论。
 
-修复验证与准确的当前测试结果见[当前交接](handoffs/efficiency-rsi.md)。本轮没有模型请求或生产发布。
+修复验证与准确的当前测试结果见[当前交接](../handoffs/efficiency-rsi.md)。本轮没有模型请求或生产发布。
 
 ## Source闭环后续状态（同日）
 
-Source的G1/G2/G3接线现已实际运行；G6真实Compose提案、G7本地实验Store独立验收/发布/后继加载已接通。两次任务各23项媒体检查通过，最终代码再消费同样通过；G4正常取消路径实际检查通过。范围和失败保留见[真实闭环记录](experiments/efficiency-rsi-source-loop-20261102.md)。这些是原审计之后的新证据，下面表格保留初次发现状态。
+Source的G1/G2/G3接线现已实际运行；G6真实Compose提案、G7本地实验Store独立验收/发布/后继加载已接通。两次任务各23项媒体检查通过，最终代码再消费同样通过；G4正常取消路径实际检查通过。范围和失败保留见[真实闭环记录](../experiments/efficiency-rsi-source-loop-20261102.md)。这些是原审计之后的新证据，下面表格保留初次发现状态。
 
 仍未覆盖Artifact、Specialize、跨代C构造D、生产路由/账户库、任意崩溃恢复和完整双价值策略。F1/F2/F4/F5、F8以及丰富研究验证仍未关闭；本轮没有用存在问题的测量器生成收益报告。
 
