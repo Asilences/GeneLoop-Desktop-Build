@@ -38,7 +38,11 @@
     "directories": { "output": "release", "buildResources": "assets" },
     "files": ["dist/**/*", "ui/**/*", "assets/**/*", "!assets/installer*.bmp", "package.json"],
     "publish": null,
-    "extraResources": [{ "from": "runtime-bundle", "to": "geneloop-runtime" }],
+    "extraResources": [
+      { "from": "runtime-bundle", "to": "geneloop-runtime" },
+      { "from": "runtime-bundle/node_modules", "to": "geneloop-runtime/node_modules" }
+    ],
+    "afterPack": "./scripts/check-runtime-payload.cjs",
     "win": { "target": ["nsis"], "icon": "assets/icon.ico" },
     "nsis": {
       "include": "installer.nsh",

@@ -1524,3 +1524,9 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 0.1.3桌面协议转发按Electron/Chromium提供的可信 `initiatorOrigin` 核对服务器同源，再恢复转发中的 `Origin`；不从页面可控的referrer推断、不允许跨源或不透明源冒用服务器来源。未携带任何来源的有副作用请求同样拒绝，显式 `credentials:omit` 仍被尊重。原服务器网关的Origin检查不修改；网页登录与桌面登录使用同一账号API和服务器配置，Cookie各自保存。`npm --prefix apps/desktop run smoke:account` 用本机临时合成账号验证表单登录、密码拒绝、刷新与退出，不代替正式账号验收。
 
 当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](desktop.md)。
+
+## 桌面本机模型授权
+
+本机 Agent 使用独立的 HTTPS 模型入口。账号网关默认关闭该入口，仅在隔离候选配置显式设置 `desktopLocalModel.accountIds` 时开放。桌面主进程通过已登录的同源 Cookie 向 `POST /api/harless/desktop-model/lease` 发送空 JSON 对象，获得 `{token, model, expiresAt}`。凭证限一个账号的当前任务和十分钟，供应商密钥保留在网关。
+
+`POST /api/harless/desktop-model/v1/chat/completions` 只接收对应 Bearer 凭证和文本文件管理请求，使用现有模型传输容量。请求登记到原预算控制，网关替换计量绑定和上游认证，模型凭证不能调用控制接口。`DELETE /api/harless/desktop-model/lease` 撤销凭证并结束绑定。账号退出或凭证过期同样结束路由。Windows 上的本机工具、授权目录和报告均由桌面进程管理。配置与验收见[桌面说明](desktop.md#本机工作区-windows-预览)。
