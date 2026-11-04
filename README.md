@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-04，新增默认关闭的 [Evidence-Grounded Evolution Agent 离线原型](docs/evidence-grounded-evolution-agent.md)：单个跨任务证据包、一次有界模型提案，复用原边界学习与宿主构造/认证入口。运行 `node scripts/project.mjs python scripts/run-evolution-agent.py --help`。两轮真实提案最终为 `no_change`，未产生新认证能力或收益；上下文、失败和费用见[实验记录](docs/experiments/evidence-evolution-20261104.md)。
+
 2026-11-04，新增默认关闭的 [Recursive Abstraction Evolution 研究机制](docs/rae-implementation.md)：真实 Capability 调用可进入原 Motif 学习器，学出的后代仍经原 Store 独立验收；反馈可改变下一轮抽象边界，Builder 的实际解析/绑定轨迹可走同一流程。`npm run rsi:rae:check` 保留机制执行证据，`npm run rsi:rae:learn -- --help` 查看离线入口。当前验收为确定性任务上的实际执行闭环，不等于真实模型自主创造或持续收益；生产路径不变。
 
 离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
