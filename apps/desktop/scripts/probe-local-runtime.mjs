@@ -13,10 +13,13 @@ import { stageRuntime } from './runtime-bundle.mjs';
 assert.equal(process.platform, 'win32', '探针仅面向 Windows x64');
 assert.equal(process.arch, 'x64');
 const app = fileURLToPath(new URL('../', import.meta.url));
-const packed = resolve(process.argv[2] || join(app, 'release/win-unpacked'));
-const dependencies = resolve(process.argv[3] || app);
+const args = process.argv.slice(2);
+const runInstalled = args[0] === '--installed';
+if (runInstalled) args.shift();
+const packed = resolve(args[0] || join(app, 'release/win-unpacked'));
+const dependencies = resolve(args[1] || app);
 const root = mkdtempSync(join(tmpdir(), 'GeneLoop 本机探针 '));
-const install = join(root, 'GeneLoop Desktop');
+const install = runInstalled ? packed : join(root, 'GeneLoop Desktop');
 const workspace = join(root, '工作区');
 const home = join(root, 'home');
 const reports = join(root, '报告');
@@ -33,16 +36,21 @@ linkSync(join(outside, 'secret.txt'), join(workspace, '硬链接.txt'));
 writeFileSync(join(workspace, '超长.txt'), Buffer.alloc(256 * 1024 + 1));
 symlinkSync(outside, join(workspace, '越界'), 'junction');
 console.log('隔离诊断目录：' + root);
-cpSync(packed, install, { recursive: true });
+if (!runInstalled) cpSync(packed, install, { recursive: true });
 
-const bundled = join(install, 'resources/geneloop-runtime');
-const packagedRuntime = existsSync(join(bundled, 'local-worker.mjs'));
+const archive = join(install, 'resources/geneloop-runtime.asar');
+const packagedAsar = existsSync(archive);
+const bundled = packagedAsar ? archive : join(install, 'resources/geneloop-runtime');
+const packagedRuntime = packagedAsar || existsSync(join(bundled, 'local-worker.mjs'));
+assert.ok(!runInstalled || packagedRuntime, '实际安装目录必须包含运行时');
 const runtime = packagedRuntime ? bundled : join(install, 'resources/runtime');
 const staged = packagedRuntime ? 0 : stageRuntime(app, runtime, dependencies);
 const executable = join(install, 'GeneLoop Desktop.exe');
 const cli = join(runtime, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
-const plugin = join(runtime, 'local-runtime-probe.mjs');
-cpSync(join(app, 'test/local-runtime-probe.mjs'), plugin);
+const plugin = join(root, 'local-runtime-probe.mjs');
+const fixtureModule = readFileSync(join(app, 'test/local-runtime-probe.mjs'), 'utf8');
+writeFileSync(plugin, fixtureModule.replace(/'\.\/(local-files|local-agent)\.mjs'/g, (_, name) =>
+  JSON.stringify(pathToFileURL(join(runtime, name + '.mjs')).href)));
 const patch = join(root, 'probe.patch.yml');
 writeFileSync(patch, JSON.stringify([
   { id: 'persistent-pwsh', disabled: true },
@@ -160,7 +168,7 @@ try {
   await rpc(2, 'shutdown');
   child.stdin.end();
   assert.deepEqual(await closed, [0, null]);
-  console.log(JSON.stringify({ kind: 'packaged_windows_harness_probe', ...outcome, inventorySearchReport: true, initialized: true, gracefulShutdown: true, packagedRuntime, stagedDependencies: staged, fixtureRequests, streamAborted, realModelRequests: 0 }));
+  console.log(JSON.stringify({ kind: 'packaged_windows_harness_probe', ...outcome, inventorySearchReport: true, initialized: true, gracefulShutdown: true, packagedRuntime, packagedAsar, runInstalled, stagedDependencies: staged, fixtureRequests, streamAborted, realModelRequests: 0 }));
 } catch (error) {
   if (stderr) console.error(stderr);
   throw error;

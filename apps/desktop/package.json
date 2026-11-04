@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.3",
+  "version": "0.3.0-preview.4",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -38,11 +38,7 @@
     "directories": { "output": "release", "buildResources": "assets" },
     "files": ["dist/**/*", "ui/**/*", "assets/**/*", "!assets/installer*.bmp", "package.json"],
     "publish": null,
-    "extraResources": [
-      { "from": "runtime-bundle", "to": "geneloop-runtime" },
-      { "from": "runtime-bundle/node_modules", "to": "geneloop-runtime/node_modules" }
-    ],
-    "afterPack": "./scripts/check-runtime-payload.cjs",
+    "afterPack": "./scripts/pack-runtime.cjs",
     "win": { "target": ["nsis"], "icon": "assets/icon.ico" },
     "nsis": {
       "include": "installer.nsh",

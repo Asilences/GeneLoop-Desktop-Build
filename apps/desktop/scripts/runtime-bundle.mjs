@@ -16,9 +16,16 @@ export function stageRuntime(app, destination, dependencies = app) {
         cpSync(source, join(destination, key), {
           recursive: true,
           // The file-only SDK profile does not consume source maps or TypeScript declarations.
-          filter: path => path === source || (
-            path.split(/[\\/]/).at(-1) !== 'node_modules' && !/\.(?:map|d\.(?:ts|cts|mts))$/i.test(path)
-          ),
+          filter: path => {
+            if (path === source) return true;
+            const parts = path.slice(source.length + 1).split(/[\\/]/);
+            if (parts.at(-1) === 'node_modules' || /\.(?:map|d\.(?:ts|cts|mts))$/i.test(path)) return false;
+            if (name === 'node-pty' && parts[0] === 'prebuilds' && parts.length === 2) {
+              return parts[1] === 'win32-x64';
+            }
+            if (name === 'node-pty' && parts[0] === 'third_party' && parts.at(-1) === 'win10-arm64') return false;
+            return true;
+          },
         });
         for (const dep of Object.keys(entry.dependencies || {})) stage(dep, key);
         for (const dep of Object.keys(entry.optionalDependencies || {})) stage(dep, key, true);

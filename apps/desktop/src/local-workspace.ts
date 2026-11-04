@@ -32,7 +32,7 @@ export class LocalWorkspaceWindow {
       return;
     }
     if (this.busy || this.closed || this.pending) return;
-    const runtime = app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime') : join(here, '../runtime-bundle');
+    const runtime = app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime.asar') : join(here, '../runtime-bundle');
     if (process.platform !== 'win32' || !existsSync(join(runtime, 'local-worker.mjs'))) {
       await dialog.showMessageBox(this.options.parent, { type: 'info', message: '本机工作区需要带运行时的 Windows 预览版。' });
       return;
