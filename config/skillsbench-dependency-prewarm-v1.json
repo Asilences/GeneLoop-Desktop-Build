@@ -27,6 +27,19 @@
           "timeout_seconds": 180
         }
       ]
+    },
+    "9ae0392ee876bf71e3aebbe33fd51b2235e4972b1b3b9469a4aa8a49b99482c3": {
+      "id": "apt-curl-uv097-pytest841-ctrf035-openpyxl315",
+      "versions": {
+        "openpyxl": "3.1.5"
+      },
+      "steps": [
+        {
+          "id": "pytest-environment",
+          "command": "set -euo pipefail; source \"$HOME/.local/bin/env\"; uvx --with pytest==8.4.1 --with pytest-json-ctrf==0.3.5 --with openpyxl==3.1.5 pytest --version --version",
+          "timeout_seconds": 180
+        }
+      ]
     }
   },
   "steps": [
