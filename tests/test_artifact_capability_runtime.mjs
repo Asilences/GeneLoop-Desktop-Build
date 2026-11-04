@@ -9,7 +9,7 @@ import {artifactLocks,identity,hash} from '../src/adapters/artifact_motif_runtim
 import {digest} from '../src/motif_core/online_skill_runtime.mjs';
 import {buildArtifactCapabilities,runArtifactCapability} from '../src/adapters/artifact_capability_runtime.ts';
 import {capabilityDigest,capabilityRef} from '../src/adapters/capability_contract.ts';
-import {pptPublicCapabilities} from '../src/adapters/ppt_capability_online.ts';
+import {pptPublicCapabilities,pptPublicCatalog} from '../src/adapters/ppt_capability_online.ts';
 const root=resolve(import.meta.dirname,'..');
 const save=(path,value)=>writeFileSync(path,JSON.stringify(value));
 function fixture(){
@@ -75,4 +75,13 @@ test('current parameter grant is evidence even without uploaded files, while fil
  assert.equal(result.receipts[0].dispatched,true);
  assert.match(result.receipts[0].reason,/input_not_granted/);
  assert.ok(result.receipts[0].events.length>0);
+});
+test('public wrapper catalog references the existing native schema instead of duplicating it',()=>{
+ const schema={type:'object',properties:{title:{type:'string'}},required:['title']};
+ const native={id:'native-cap',implementation:{kind:'legacy',legacy_ref:{backend:'artifact_motif',object_id:'page-program'}}};
+ const cap={id:'public-cap',dependencies:[{id:native.id}],contract:{input_schema:{properties:{parameters:schema}}}};
+ const state={roots:[cap],snapshot:{capabilities:[native,cap]}},library={programs:[{id:'page-program',component:{parameters_schema:schema}}]};
+ assert.deepEqual(pptPublicCatalog(state,library),[{id:'public-cap',parameters_from_program:'page-program'}]);
+ cap.contract.input_schema.properties.parameters={type:'object'};
+ assert.deepEqual(pptPublicCatalog(state,library),[{id:'public-cap',parameters_schema:{type:'object'}}]);
 });

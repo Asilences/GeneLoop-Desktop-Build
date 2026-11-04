@@ -28,6 +28,8 @@ PPT已通过`scenarios/ppt_master/capability_adapter.py`接入公共`CapabilityI
 
 公共付费构造由宿主`GENELOOP_PPT_CAPABILITY_PLAN`显式配置。计划沿公共`capability_improvement_plan_v1`，用原字节引用指定PPT适配器与`scene_dependencies`，发布输入使用`ppt_capability_publication_inputs_v1`，字段由适配器验证。worker按原生库版本和冻结计划摘要确定构造轮次，相同代际任务复用尝试记录；新材料可进入下一轮。未配置计划时继续自动采集和登记材料，公共构造保持关闭。
 
+公共页面目录以`parameters_from_program`引用已提供的原生参数契约。依赖和参数契约一致时省去重复schema；新接口继续提供自身契约，运行时参数容量和版本校验照常执行。
+
 真实Web使用`PptCapabilityBudget`委托既有账户预算服务，学习任务独立记账；成员模式保留账户前缀和原生Session绑定。公共`propose_once`增加可选宿主session分配接缝，其他场景保持原行为。纯参数调用以当前批准参数形成执行证据；文件绑定另核对实际来源版本。原生候选撤回或代际替换时同步撤回旧公共选择，历史材料和失败保留。
 
 已真实构造一个依赖既有页面原语的公共根，通过独立源页文字/像素检查、发布后换输入执行，并在新任务通过原页面工具与Office导出得到PPTX/PDF/PNG。该根只有一个原语步骤。学习1请求、估费约USD0.00091104，构造后的执行新增模型请求0。初始化失败与解释器恢复保留，科学质量和新增公共机制的净收益另评。见[接入与验收](experiments/ppt-public-rsi-20261104.md)。

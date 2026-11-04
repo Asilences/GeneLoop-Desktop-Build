@@ -5,6 +5,19 @@ import {randomUUID} from 'node:crypto';
 import {capabilityDigest,capabilityRef,validateCapabilitySnapshot} from './capability_contract.ts';
 import {bytesSha256} from './rsi_protocol.ts';
 import {runArtifactCapability} from './artifact_capability_runtime.ts';
+import {componentContractSchema} from './ppt_component_schema.ts';
+
+/** A published wrapper can reuse the native parameter description already sent. */
+export function pptPublicCatalog(state:any,library:any){
+ return state.roots.map((cap:any)=>{
+  const schema=cap.contract.input_schema.properties.parameters;
+  const native=cap.dependencies.map((ref:any)=>state.snapshot.capabilities.find((leaf:any)=>leaf.id===ref.id))
+   .filter((leaf:any)=>leaf?.implementation.kind==='legacy'&&leaf.implementation.legacy_ref.backend==='artifact_motif')
+   .map((leaf:any)=>library.programs.find((program:any)=>program.id===leaf.implementation.legacy_ref.object_id))
+   .find((program:any)=>program?.component&&capabilityDigest(componentContractSchema(program.component.parameters_schema))===capabilityDigest(schema));
+  return native?{id:cap.id,parameters_from_program:native.id}:{id:cap.id,parameters_schema:schema};
+ });
+}
 
 export function pptPublicCapabilities(selection:any){
  const selected=selection.public_capabilities;
