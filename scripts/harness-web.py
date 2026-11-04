@@ -81,6 +81,11 @@ def prepare_run_directory(args,output):
 
 
 def prepare_preset_directory(args,output):
+    if any(path.is_symlink() or getattr(path,'is_junction',lambda:False)() for path in (output,*output.parents)):
+        raise ValueError('preset directory is redirected')
+    # Windows TEMP may use its 8.3 alias. Resolve the approved root before
+    # comparing child paths, while keeping symbolic-link/junction guards.
+    output=output.resolve(strict=True)
     preset=output/'presets/sss-task'
     if any(path.is_symlink() for path in (preset.parent,preset)):
         raise ValueError('preset directory is redirected')
@@ -272,7 +277,7 @@ def prepare(args, output, endpoint):
             {'id': 'geneloop-web-search', 'name': (ROOT / 'src/adapters/geneloop_web_search.ts').as_uri()}]})
         composed = subprocess.run(['node', str(ROOT / 'src/adapters/geneloop_native_host.mjs'),
             '--source-dir', str(ROOT / 'src')], input=json.dumps(patch), text=True,
-            capture_output=True, check=True)
+            encoding='utf-8', capture_output=True, check=True)
         patch = json.loads(composed.stdout)
     save(output / 'host.patch.yml', patch)
     (output / 'prompt.md').write_text(prepared['prompt'], encoding='utf-8'); (output / 'prompt.md').chmod(0o600)

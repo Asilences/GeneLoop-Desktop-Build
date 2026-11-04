@@ -8,6 +8,7 @@ import {appendFileSync,existsSync,readFileSync,writeFileSync,renameSync,unlinkSy
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {pptWorkspacePath} from './ppt_delivery_pipeline.ts';
+import {runPptPublicPage} from './ppt_capability_online.ts';
 const pageFile=/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,127}\.svg$/u;
 const pageJobs=new Set<string>();
 
@@ -80,9 +81,12 @@ export function registerPptComponentTool(ctx:any,current:(session:string)=>any){
    try{
     target=pageTarget(task,args);
     if(target){if(pageJobs.has(target))throw Error('component_page_revision_running');pageJobs.add(target);locked=true;}
-    const job=artifactInvocation(session,'geneloop-component '+JSON.stringify({id:request.id,parameters:request.parameters,output:request.output}));
-    const result=await executeArtifactJob(job,session,execution?.signal);
-    const installed=installComponentPage(task,{...request,original_arguments:args},result,execution.callId);
+    const publicRoot=value.publicCapabilities?.roots.some((cap:any)=>cap.id===request.id);
+    const result=publicRoot?await runPptPublicPage(value,request,execution):await executeArtifactJob(
+     artifactInvocation(session,'geneloop-component '+JSON.stringify({id:request.id,parameters:request.parameters,output:request.output})),session,execution?.signal);
+    const receipt=result.receipt??result;
+    const delivered=publicRoot?{...request,id:receipt.program_id,output:receipt.output_directory}:request;
+    const installed=installComponentPage(task,{...delivered,original_arguments:args},result,execution.callId);
     audit({kind:'component_executed',program_id:args.id,output_directory:request.output,receipt:result.receipt??result});
     return {...result,installed_page:installed?.native_path??null,installed_page_sha256:installed?.sha256??null,
      next_action:installed?'write_page_notes_then_finalize_ppt':'install_svg_and_write_page_notes_then_finalize_ppt'};

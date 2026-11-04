@@ -97,15 +97,16 @@ def test_new_derivative_hardlink_is_rejected(source):
     with pytest.raises(ValueError,match='hardlink'):api.read(converted['converted_id'])
 
 
-def test_mcp_read_keeps_long_unicode_text_and_bounded_structured_receipt(source, monkeypatch):
+@pytest.mark.parametrize('newline', ['\n', '\r\n'])
+def test_mcp_read_keeps_long_unicode_text_and_bounded_structured_receipt(source, monkeypatch, newline):
     from mcp.server.mcpserver.exceptions import ToolError
     from scenarios.ppt_master import server
     root, reader, api, pin, pdf = source
     converted = api.convert(pin['source_id'])
     receipt = converted['converted_id']
     source_id, version, name, directory, _ = api.receipts[receipt]
-    text = ('科研原文 αβ — ![](image.png)\n' * 6000)
-    (directory/'source.md').write_text(text, encoding='utf-8')
+    text = (('科研原文 αβ — ![](image.png)' + newline) * 6000)
+    (directory/'source.md').write_bytes(text.encode('utf-8'))
     api.receipts[receipt] = (source_id, version, name, directory, api._files(directory))
     monkeypatch.setattr(server, 'SkillReader', lambda: api.skill)
     monkeypatch.setattr(server, 'ConvertedSources', lambda *args: api)

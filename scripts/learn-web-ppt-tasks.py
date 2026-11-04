@@ -296,6 +296,13 @@ def advance(request_path):
         except (ValueError,KeyError,OSError,TypeError,subprocess.SubprocessError) as error:
             save(store/'program-status.json',{'status':'failed','reason':str(error)[:200],'extra_provider_requests':0})
             save(store/'program-suspended.json',{'reason':'program_worker_failed'})
+        try:
+            from src.adapters.ppt_capability_learning import sync_ppt_capabilities
+            sync_ppt_capabilities(output,store,request,infos,turns,reviewed,delivery=delivery,positive=positive)
+        except (ValueError,KeyError,OSError,TypeError,subprocess.SubprocessError) as error:
+            (store/'capability').mkdir(exist_ok=True,mode=0o700)
+            save(store/'capability/status.json',{'status':'failed','reason':str(error)[:200],'learning_cost_in_execution':False})
+            (store/'capability/selected.json').unlink(missing_ok=True)
         selected_path=store/'selected.json';candidate_path=store/'candidate.json'
         candidate=read(candidate_path) if candidate_path.exists() else None
         if candidate:

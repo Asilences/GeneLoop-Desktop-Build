@@ -30,7 +30,7 @@ export function createPptLearning(config:{output:string;user:string;scope:string
     ensure();write(join(store,'request.json'),{schema_version:1,output,user:config.user,scope:config.scope,task_ids:config.taskIds(),automatic_structural_learning:true,command_resources:config.resources??{}});
     await new Promise<void>((done,fail)=>{
       const env:any={PATH:process.env.PATH,SSS_PYTHON:config.python,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8'};
-      for(const name of ['SYSTEMROOT','WINDIR','TMP','TEMP','TMPDIR','GENELOOP_COMMAND_SOCKET'])if(process.env[name])env[name]=process.env[name];
+      for(const name of ['SYSTEMROOT','WINDIR','TMP','TEMP','TMPDIR','GENELOOP_COMMAND_SOCKET','GENELOOP_PPT_CAPABILITY_PLAN'])if(process.env[name])env[name]=process.env[name];
       const learningPolicy=process.env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY??process.env.SSS_WEB_POLICY;
       if(learningPolicy){
         env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY=learningPolicy;
@@ -86,7 +86,24 @@ export function createPptLearning(config:{output:string;user:string;scope:string
             }
           }
         }
-        return {...pointer,library};
+        let publicCapabilities:any=null;
+        const publicPath=join(store,'capability','selected.json');
+        if(existsSync(publicPath)){
+          try{
+            const value=read(checked(store,publicPath));
+            if(value.owner!==config.user||value.scope!==config.scope||value.native_library_sha256!==pointer.library_sha256||
+               value.native_library_digest!==pointer.library_digest)throw Error('ppt_public_capability_scope_changed');
+            const snapshot=checked(store,value.snapshot.path);
+            if(hash(readFileSync(snapshot))!==value.snapshot.sha256)throw Error('ppt_public_capability_snapshot_changed');
+            for(const ref of value.evidence){
+              const path=checked(output,ref.path);
+              if(hash(readFileSync(path))!==ref.sha256)throw Error('ppt_public_capability_evidence_changed');
+              verifyPptStateBinding(output,path);
+            }
+            publicCapabilities=value;
+          }catch{/* Native certified programs remain available when public adoption fails. */}
+        }
+        return {...pointer,library,public_capabilities:publicCapabilities};
       }catch{return null;}
     },
     deliveryFontRules(){

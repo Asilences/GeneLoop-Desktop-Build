@@ -56,6 +56,19 @@ def test_shutdown_uses_budget_alias_and_preserves_unknown_external_counters(tmp_
     assert original['stats']['upstream_requests']==81
 
 
+@pytest.mark.skipif(os.name!='nt',reason='Windows 8.3 path alias regression')
+def test_preset_accepts_windows_short_root_alias(tmp_path):
+    import ctypes
+    root=tmp_path/'Long temporary output directory';root.mkdir()
+    buffer=ctypes.create_unicode_buffer(32768)
+    size=ctypes.windll.kernel32.GetShortPathNameW(str(root),buffer,len(buffer))
+    assert size and size<len(buffer)
+    alias=Path(buffer.value)
+    if str(alias).lower()==str(root).lower():pytest.skip('8.3 aliases disabled on this volume')
+    preset=web.prepare_preset_directory(SimpleNamespace(resume=False),alias)
+    assert preset==root.resolve()/'presets/sss-task'
+
+
 @pytest.mark.skipif(os.name=='nt',reason='Linux-only process proof')
 def test_resume_reuses_preset_after_preserving_previous_config(tmp_path):
     out,args=prepare(tmp_path);preset=out/'presets/sss-task';preset.mkdir(parents=True)

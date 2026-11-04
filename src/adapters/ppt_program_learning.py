@@ -52,6 +52,10 @@ def program_implementation_signature():
         'src/adapters/ppt_delivery_pipeline.ts', 'src/adapters/ppt_delivery_runner.py',
         'src/adapters/ppt_design_preflight.py', 'scenarios/ppt_master/runtime-policy.md',
         'src/adapters/artifact_motif_runtime.ts', 'src/adapters/artifact_motif_compiler.py',
+        'src/adapters/ppt_capability_learning.py', 'src/adapters/ppt_capability_online.ts',
+        'src/adapters/artifact_capability_runtime.ts', 'scenarios/ppt_master/capability_adapter.py',
+        'src/adapters/ppt_capability_budget.py', 'src/adapters/capability_proposal.py',
+        'scenarios/ppt_master/publish_capability.mjs',
         'scripts/certify-artifact-motifs.mjs')})
 
 

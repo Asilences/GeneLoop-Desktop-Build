@@ -50,6 +50,8 @@ function projected(schema:any):any{
  return result;
 }
 export function assertComponentSchema(schema:any){assertSupportedJsonSchema(projected(normalizeComponentSchema(schema)));}
+/** Public contracts use the Harness subset; native execution retains capacity checks. */
+export function componentContractSchema(schema:any){return projected(normalizeComponentSchema(schema));}
 /** Structural constants can be bound without copying historical scientific text. */
 export function bindComponentConstants(schema:any,value:any){
  if(!value||typeof value!=='object'||Array.isArray(value))return value;

@@ -8,6 +8,7 @@ import {artifactProgramPath,loadArtifactLibrary,provideArtifactPrograms,register
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
 import {registerPptComponentTool} from './ppt_component_tool.ts';
 import {registerPptDeliveryTool} from './ppt_delivery_pipeline.ts';
+import {pptPublicCapabilities} from './ppt_capability_online.ts';
 
 export function installPptProgramLearning(ctx:any,host:{current:(session:string)=>any;resolve:()=>any;resources:any;reused:(task:any,count:number)=>void;deliveryFontRules?:()=>any[]}){
  const tasks=new Map<string,any>();
@@ -45,6 +46,16 @@ export function installPptProgramLearning(ctx:any,host:{current:(session:string)
        outputs:p.certification.output_extensions})))+'\n';
      writeFileSync(join(task.output,'ppt-program-snapshot.json'),JSON.stringify(selected),{mode:0o600,flag:'wx'});
      audit({kind:'ppt_program_library_loaded',library_digest:library.digest,phase:selected.phase});
+     value.selection=selected;
+     try{
+      value.publicCapabilities=pptPublicCapabilities(selected);
+      if(value.publicCapabilities?.roots.length){
+       value.catalog+='\n公共RSI已独立发布的页面能力，可通过同一create_ppt_page传入下列id与parameters调用。\n'+
+        JSON.stringify(value.publicCapabilities.roots.map((cap:any)=>({id:cap.id,parameters_schema:cap.contract.input_schema.properties.parameters})))+'\n';
+       audit({kind:'ppt_public_capability_loaded',snapshot_sha256:value.publicCapabilities.snapshot.digest,
+        roots:value.publicCapabilities.roots.map((cap:any)=>cap.id)});
+      }
+     }catch(error:any){value.publicCapabilities=null;audit({kind:'ppt_public_capability_fallback',reason:error.message});}
     }
    }catch(error:any){registerArtifactContext(session,null);value.context=null;value.catalog='';audit({kind:'ppt_program_fallback',reason:error.message});}
   }

@@ -59,6 +59,11 @@ def code_paths():
         'src/adapters/ppt_component_tool.ts','src/adapters/ppt_delivery_pipeline.ts','src/adapters/ppt_preparation_runner.py',
         'src/adapters/ppt_delivery_runner.py','src/adapters/ppt_design_preflight.py','src/adapters/ppt_annotation_repair.py',
         'src/adapters/ppt_component_literals.py','src/adapters/geneloop_native_work.ts')]
+    files += [ROOT/p for p in ('src/adapters/ppt_capability_learning.py','src/adapters/ppt_capability_online.ts',
+        'src/adapters/artifact_capability_runtime.ts','src/adapters/capability_materials.ts',
+        'src/adapters/capability_scene.py','src/adapters/capability_runtime.ts','src/adapters/capability_cycle.ts',
+        'src/adapters/capability_store.ts','src/adapters/capability_improvement.py')]
+    files += [ROOT/p for p in ('src/adapters/ppt_capability_budget.py','src/adapters/capability_proposal.py')]
     return sorted(set(files+[Path(__file__).resolve()]))
 
 
