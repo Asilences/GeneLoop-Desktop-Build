@@ -1597,3 +1597,13 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 网页按该排列展示，结果卡片仅显示状态和原始结果；评分、赞踩、复制、下载、分支及轨迹选择使用匿名位置，提交时仍绑定原 lane 和 `output_sha256`。后台原任务与 lane 键继续保存；新增评分/赞踩事件含 `display_order` 和从 1 起计的 `display_position`。排序不参与模型输入、执行准入、预算与任务调度。
 
 结果卡片隐藏方法名称、机制计数和回退标识。原始模型正文、工具内容和交付文件保留，开发 API 也保留真实字段；此接口提供产品界面的匿名比较，证据和版本归属仍可追查。
+
+## 离线语义质量反馈与Evolution调查
+
+`rsi_quality.review_quality`接受宿主固定的任务、工件、评分标准与来源FileRef，通过宿主提供的`call_judge`调用原模型和账本，生成已有`quality_evaluation`协议记录。模型只填写检查结果、观察与已提供的证据ID，任务、工件和标准摘要由宿主绑定。请求、原回复及失败保存到研究目录，不授予能力认证。真实裁判仍须独立校准。
+
+`record_web_decision`和`record_construction_decision`新增可选`quality_review`。该对象包含`evaluation`、`rubric`、`artifact`、`required_checks`、`evidence_root`及`role`。前三项为FileRef；artifact必须属于原始任务或构造证据。role为`discovery`或`evaluation`。旧记录不提供该字段时，原行为保留，缺失质量仍为未知或未评审。
+
+`inspect_decision`复核原RSI质量记录及来源字节，保留执行status与独立quality的区别，提供逐项`quality_findings`和按需原始证据引用。评价记录不声明语义判断必然正确。
+
+原`evolution_search`新增quality过滤，原`evolution_read`新增`section="quality"`的分页检查结果和来源ID。只有主动读取才返回局部发现与原文；默认概览仍为统计。标为evaluation的经历不能进入原Investigation或单轮packet的发现输入。旧策略CLI沿原inspect_decision接收这些反馈，无新增Registry、IR或Agent循环。

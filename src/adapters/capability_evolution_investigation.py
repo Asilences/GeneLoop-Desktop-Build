@@ -18,6 +18,9 @@ Existing reliable abstractions are both objects of improvement and materials for
 future construction. Diagnose repeated solving, interface friction or useful
 new combinations. Repetition alone does not prove waste. Runtime-internal steps
 are not model decisions. Preserve unknown quality, unknown costs and cost scope.
+Inspect independent quality findings with evolution_read(section="quality").
+Recurring errors can motivate better evidence gathering or decision methods even
+when execution is inexpensive. Separate task completion from semantic quality.
 Do not assume reusing a capability is always better than direct implementation.
 
 Use evolution_submit to propose a concrete capability, boundary change, task

@@ -25,6 +25,9 @@ Runtime-internal steps are not repeated model decisions. A graph already covered
 by an existing container capability is not a missing composite. Do not propose
 that same container again. Use the supplied observation level and known coverage;
 if no remaining burden is evidenced, no_change is preferable to inventing one.
+Independent quality failures can reveal remaining judgments even when execution
+is cheap. Propose changes to evidence gathering, reasoning or abstractions only
+when the supplied findings support them. Successful execution is not quality.
 Propose at most two falsifiable improvements, or return {"candidates":[]} (no_change).
 Return exactly {"candidates":[...]} with each candidate containing exactly:
 kind: "boundary", "capability", "construction_strategy", or "task_strategy";
@@ -99,6 +102,8 @@ def packet(entries, snapshot, scope, directory, *, inspector=inspect_graph,
         if set(entry) != {'split', 'scope', 'evidence'} or entry['split'] != 'training' or entry['scope'] != scope:
             raise ValueError('evolution_discovery_split_or_scope_changed')
         row = inspector(entry['evidence'], snapshot['owner'])
+        if row.get('evaluation_role') == 'evaluation':
+            raise ValueError('evolution_discovery_evaluation_source_excluded')
         for ref in row['evidence']:
             verify(ref)
         if (not row['source_identity'] or not row['task_id'] or not row['relation'] or
@@ -127,7 +132,8 @@ def packet(entries, snapshot, scope, directory, *, inspector=inspect_graph,
     supported.sort(key=lambda item: (-len({r['source_identity'] for r in item[1]}), item[0]))
     key, rows = supported[0]
     # Keep a failure/counterexample first, then maximize independent sources.
-    ordered = sorted(rows, key=lambda r: (not r['counterexample'], r['status'] != 'failed', r['id']))
+    ordered = sorted(rows, key=lambda r: (not r['counterexample'],
+        r.get('quality') != 'failed', r['status'] != 'failed', r['id']))
     chosen = []; identities = set()
     for row in ordered:
         if row['source_identity'] not in identities:
@@ -252,11 +258,19 @@ def model_view(context):
             # Only an explicitly selected trusted inspector supplies this
             # approved projection. Original private records stay in the index.
             observation['decision_context'] = copy.deepcopy(row['decision_context'])
+        if 'quality_findings' in row:
+            observation['quality_findings'] = [{
+                'id': check['id'], 'status': check['status'], 'observation': check['observation'],
+                'evidence_hashes': [ref['sha256'] for ref in check['evidence']]}
+                for check in row['quality_findings']]
+            observation['quality_review'] = copy.deepcopy(row['quality_review'])
         observation.update(task_id=task, evidence_hashes=[ref['sha256'] for ref in row['evidence']],
             steps=[{'call_id': calls[s['call_id']], 'capability': s['capability'],
                     'input_binding': binding(s.get('input_binding')), 'status': s['status']} for s in row['steps']])
         visible['observations'].append(observation)
-    visible['limitations'] = 'Structural projection only; exact values, descriptions and stronger schema constraints withheld. Host rechecks full originals.'
+    visible['limitations'] = ('Host-approved decision and quality projections; raw materials remain separately referenced.'
+        if any('decision_context' in row for row in context['observations']) else
+        'Structural projection only; exact values, descriptions and stronger schema constraints withheld. Host rechecks full originals.')
     return visible, mappings
 
 

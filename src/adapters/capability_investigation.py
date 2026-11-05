@@ -68,6 +68,8 @@ class Investigation:
                 raise ValueError('investigation_split_or_scope_changed')
             verify(entry['evidence'])
             row = copy.deepcopy(inspector(entry['evidence'], self.snapshot['owner']))
+            if row.get('evaluation_role') == 'evaluation':
+                raise ValueError('investigation_evaluation_source_excluded')
             if (not row.get('source_identity') or not row.get('task_id') or not row.get('relation')
                     or row.get('stage') not in ('execution', 'construction', 'capability')
                     or row.get('status') not in ('passed', 'failed', 'unknown')):
@@ -187,7 +189,7 @@ class Investigation:
                     if latest else None,
                 'tools': [tool['name'] for tool in self.tools()]}
 
-    def search(self, kind, query='', *, offset=0, limit=10, stage=None, status=None, capability=None):
+    def search(self, kind, query='', *, offset=0, limit=10, stage=None, status=None, capability=None, quality=None):
         if not isinstance(query, str):
             raise ValueError('investigation_query_invalid')
         if kind == 'experience':
@@ -196,6 +198,8 @@ class Investigation:
                 rows = [row for row in rows if row['stage'] == stage]
             if status is not None:
                 rows = [row for row in rows if row['status'] == status]
+            if quality is not None:
+                rows = [row for row in rows if row['quality'] == quality]
             if capability is not None:
                 rows = [row for row in rows if any(ref['id'] == capability for ref in row['capabilities'])]
             searchable = {row['id']: json.dumps(self.observations[row['id']], ensure_ascii=False).casefold()
@@ -238,6 +242,13 @@ class Investigation:
                 return {'id': id, **_page(row.get('steps', []), offset, limit)}
             if section == 'diagnostics':
                 return {'id': id, **_page(row.get('construction_outcomes', []), offset, limit)}
+            if section == 'quality':
+                findings = [{**copy.deepcopy(check), 'evidence': [
+                    {'id': 'evidence_' + ref['sha256'], 'sha256': ref['sha256']}
+                    for ref in check['evidence']]} for check in row.get('quality_findings', [])]
+                return {'id': id, 'quality': row.get('quality', 'unreviewed'),
+                        'review': copy.deepcopy(row.get('quality_review')),
+                        **_page(findings, offset, limit)}
             if section == 'actions':
                 return {'id': id, 'scope': row.get('action_scope'),
                         **_page(row.get('action_overview', []), offset, limit)}
@@ -343,13 +354,14 @@ class Investigation:
              {'kind': {'enum': ['capability', 'experience', 'history']}, 'query': text,
               'stage': {'enum': ['execution', 'construction', 'capability']},
               'status': {'enum': ['passed', 'failed', 'unknown']}, 'capability': text,
+              'quality': {'type': 'string', 'description': 'Filter quality separately from execution status, e.g. failed or unreviewed.'},
               'offset': page, 'limit': size}, ['kind']),
             ('evolution_read', 'Read a selected interface, trace or evidence. History summary returns a compact card. '
              'History/evidence content uses 512-character page units with offset/limit and next_offset. '
              'For JSON content, select a local subtree with json_path, for example ["tool_calls",0,"result"], '
              'then follow its next_offset. Omit json_path to read original text.',
              {'kind': {'enum': ['capability', 'experience', 'history', 'evidence']}, 'id': text,
-              'section': {'enum': ['summary', 'context', 'steps', 'diagnostics', 'actions', 'evidence',
+              'section': {'enum': ['summary', 'context', 'steps', 'diagnostics', 'quality', 'actions', 'evidence',
                                    'interface', 'implementation', 'content']},
               'offset': page, 'limit': size,
               'json_path': {'type': 'array', 'items': {'oneOf': [text, page]},

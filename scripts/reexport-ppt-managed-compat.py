@@ -70,7 +70,18 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
-    if '--execution-evidence-envelope-compat' in sys.argv:
+    if '--decision-quality-feedback-compat' in sys.argv:
+        sys.argv.remove('--decision-quality-feedback-compat')
+        reviewed = {'src/adapters/capability_decision_evidence.py',
+                    'src/adapters/capability_evolution_agent.py', 'src/adapters/rsi_quality.py',
+                    'scripts/reexport-ppt-managed-compat.py'}
+        compat.RELEASES = [
+            ('ppt-master-v80', 'ppt-master-v81', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v82', 'paper-web-v83', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+    elif '--execution-evidence-envelope-compat' in sys.argv:
         sys.argv.remove('--execution-evidence-envelope-compat')
         reviewed = {'src/adapters/capability_motif_learning.py', 'scripts/reexport-ppt-managed-compat.py'}
         compat.RELEASES = [

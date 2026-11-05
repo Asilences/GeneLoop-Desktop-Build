@@ -51,3 +51,25 @@ Linux最终源码快照`evolution-code-005`增加发送前的实际Prompt字节�
 manifest绑定 snapshot、training、heldout、prior_candidate、scope、旧 acceptance 与原 ledger_root；论文工具/输入/验收标准仍来自已有记录。有效来源 SHA 与代码 SHA 在各批次 `frozen.json`，请求体/原答/用量在 `agent/model/`，原累计账本引用在 `research-requests.jsonl`。
 
 服务器私有研究根 `.local/rae-followup-20261104/evolution-code-{001,002,003}/`；主要结果为 code-002 的 `.local/real-001` 和 code-003 的 `.local/real-002`，离线复核为 code-003 的 `.local/offline-response-replay.json`。本地回归与同步证据在 `.local/evolution-agent-20261104/`。原始数据不提交。
+
+## 2026-11-05 历史轨迹复核与瓶颈定位
+
+用户要求先查旧轨迹，避免重复运行论文演化实验。本次只读核对本地同步的原模型上下文、原回复、构造方法认证和既有语义修复报告，新增模型请求与费用均为0。原始记录未修改，未启动新实验或改变生产配置。
+
+两轮Evolution输入的inventory均为observations=2、failed=0、counterexamples=0、unknown_cost=2。第一轮原答将Runtime内部三个节点解释为模型每次分别编排的负担，提出再次组合和固定构造模板。第二轮明确标注`observation_level=runtime_internal`、已有容器`already_packaged_by`及未知的`model_decision_count`，两份质量均为`unreviewed`；原答为`{"candidates":[]}`。原始数据支持本例的观察层级混淆和证据不足，未形成语义性能演化的评价结果。
+
+另核对`.local/construction-method-20261103/server-evidence/`。四次真实请求、代理计量USD0.019072728后，没有方法发布和后继采用。初次模型试图将无关检查能力绑定到`applicable/guidance`接口，后续生成状态解析与建议程序；恢复轮原认证以`input_dependency_not_demonstrated`拒绝，两个训练状态返回相同通用建议。该检查发生于实际Builder效果验证之前；相同建议本身不足以判断策略效用，后续仍应以行为、质量与完整成本评价。当前已有条件策略机制，不能把重建旧指导程序作为下一阶段默认任务。
+
+语义性能的相关前史见[逐论断修复](claim-repair-20261010.md)。旧记录报告截断否定、扩大结果范围和缺少作者目标支持三类错误；补相邻上下文后仍接受错误，最后主要依靠保守拒绝阻止部分错误交付。该实验未学习新Motif。其完整原始事件未在本次复核中重新取得，语义结论沿用原报告；未据此宣称独立LLM judge驱动的完整Evolution对照已经完成。[Paper/Data对照](paper-data-benchmark-20261018.md)中的92.5/93.5是同一评估者的参考核验，非独立盲评。
+
+当前定位是，已解决的Runtime工作进入了演化发现输入，而真正未解决的语义错误与相应决策、来源和质量反馈尚未在上述真实Evolution批次中形成同一条证据链。下一步先从旧资料恢复可核对的语义失败及对应执行判断，确认不同论文中的问题关系和已有能力边界，再决定新的候选学习与留出评价。新任务的收益、候选形式和后继目标保持未定。
+
+原始摘要如下，均为本地私有同步记录的SHA256。
+
+| 私有相对位置 | SHA256 |
+| --- | --- |
+| `evolution-agent-20261104/server-real-001/agent/model-context.json` | `2cfdd6b7f6c3f3e2a27ad126a015e0632d011970a4eb58aff147e223714cde71` |
+| `evolution-agent-20261104/server-real-001/agent/model/answer.txt` | `d88541e401da05daaf39f46af11213a7e79e06a4ed6d4aa4914b4cf09826d394` |
+| `evolution-agent-20261104/server-real-002/agent/model-context.json` | `9e4434a279598c5cfb2efe7e2942adca947aea03c655a5536aa049e1ae4a8fda` |
+| `evolution-agent-20261104/server-real-002/agent/model/answer.txt` | `1cdacf60b6a3fc50d2cc990d9b8c94ab37ee0fb47d7c36e95146aa695553e887` |
+| `construction-method-20261103/server-evidence/evidence-summary.json` | `c2e5daaa1ed80f4348f7e945cd2aa42488fd245f1b0b1411ac77ce0edc20d9a8` |
