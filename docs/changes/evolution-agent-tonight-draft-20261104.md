@@ -225,7 +225,7 @@ A1、A2 可在接口确定后并行。每阶段先做针对性诊断，再做真
 
 本草案聚焦研究模式的核心纵切。生产接管、前端与新场景扩展另排后续工作。
 
-背景审计见[演化机制全链审计](strategy-evolution-audit-20261104.md)。原机制依据见[Evidence-Grounded Evolution Agent](../evidence-grounded-evolution-agent.md)与[条件化策略协议](../strategy-evolution-v1.md)。
+背景审计见[演化机制全链审计](strategy-evolution-audit-20261104.md)。原机制依据见[Evidence-Grounded Evolution Agent](../research/evolution/evidence-grounded-evolution-agent.md)与[条件化策略协议](../research/evolution/strategy-evolution-v1.md)。
 
 ## 10. Benchmark与baseline
 

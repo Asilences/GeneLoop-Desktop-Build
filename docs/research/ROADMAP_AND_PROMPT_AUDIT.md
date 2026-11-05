@@ -1,14 +1,14 @@
 # GeneLoop｜共享 Roadmap 与 Vibe Coding Prompt 审计
 
-> **建议仓库路径**：`docs/ROADMAP_AND_PROMPT_AUDIT.md`<br>
+> **建议仓库路径**：`docs/research/ROADMAP_AND_PROMPT_AUDIT.md`<br>
 > **版本**：v1.2 整合候选（2026-10-24，v1.1 原稿＋会话补充）｜**维护者**：A（@jingyio）、B（@peilin6）两人<br>
 > **定位**：面向 AI Agent 方法论文/预印本的研究—开发路线图，同时保留两人协作、产品迭代与 Prompt 审计。<br>
-> **约束**：本文件为待评审的计划，不代表代码完成、实验通过、Issue 已创建或 Reviewer 已批准。以 `docs/research-contract.md`（F00）为研究主张的权威来源，本文件负责执行计划。
+> **约束**：本文件为待评审的计划，不代表代码完成、实验通过、Issue 已创建或 Reviewer 已批准。以 `docs/research/research-contract.md`（F00）为研究主张的权威来源，本文件负责执行计划。
 > **v1.1 调整**：对齐 F00 的 C1 代码级全链路 RSI、C2 开放代码 Operator 抽象、C3 LLM Work 消减；AppWorld 优先；Motif–Matcher 联合演化为论文最小研究闭环；`θ0→θ1→θ2` 仅在声明递归优化器时强制。
 
 ## 0. 十分钟使用说明
 
-2026-10-24 F02 审核入口：先看[通俗结果与同例演示](rsi-protocol-v1.md)，再看[实际提示审计](debug/prompt-audits/F02.md)和[实验记录](debug/f02-protocol-local-20261024-v1.md)。#108–#113 已采用“拿到什么 → 同例 → 验收”的首页，原技术要求折叠保留；新任务可用仓库 Issue 模板。此为最小协议候选，不将后续学习或 Matcher 更新模板记为已执行。
+2026-10-24 F02 审核入口：先看[通俗结果与同例演示](rsi/rsi-protocol-v1.md)，再看[实际提示审计](../debug/prompt-audits/F02.md)和[实验记录](../debug/f02-protocol-local-20261024-v1.md)。#108–#113 已采用“拿到什么 → 同例 → 验收”的首页，原技术要求折叠保留；新任务可用仓库 Issue 模板。此为最小协议候选，不将后续学习或 Matcher 更新模板记为已执行。
 
 **同时保留两种工具，职责不同：**
 
@@ -50,7 +50,7 @@
 - **ModularRSI / HarnessX / HarnessPro**：已有 Harness 组件的策略/代码级改进，不能声称对方“只改 Prompt”；我们以可执行经验及其**匹配、抽取和执行控制算法共同演化**为主要方法对象，以 LLM Work 而不是单一得分作核心评价。
 - **Ledger / Script Cache**：已有任务状态与代码/结果/工作流复用；须检验跨任务学到的新能力及不断调整的 Runtime 控制相对于合理组合基线的额外价值。
 
-具体证据、相关工作与引用以 `docs/research-contract.md` 为准，F07 中用实验验证差异；不把叙事差异直接等同于完成创新性验证。
+具体证据、相关工作与引用以 `docs/research/research-contract.md` 为准，F07 中用实验验证差异；不把叙事差异直接等同于完成创新性验证。
 
 ### 1.3 产品目标（与首篇研究解耦）
 
@@ -99,7 +99,7 @@ Web/Desktop 共享可信 Runtime；Motif 可版本化、授权共享，用户文
 
 | ID      | 功能包（Issue 标题建议）                     | Owner | 前置依赖                            | 完成定义（摘要）                                             | Gate       |
 | ------- | -------------------------------------------- | ----- | ----------------------------------- | ------------------------------------------------------------ | ---------- |
-| **F00** | 精简研究契约：C1/C2/C3 与可验证差异          | A     | 无                                  | `docs/research-contract.md`；3 项候选贡献、最接近工作、主 Benchmark/核心消融；Reviewer 审核 | G0         |
+| **F00** | 精简研究契约：C1/C2/C3 与可验证差异          | A     | 无                                  | `docs/research/research-contract.md`；3 项候选贡献、最接近工作、主 Benchmark/核心消融；Reviewer 审核 | G0         |
 | **F01** | 仓库基线、Vibe Coding 规约与分层 CI          | B     | 无                                  | 现有代码/实验归档、README/AGENTS、CI 和两人 PR 规则；不大规模改算法 | G0         |
 | **F02** | 统一 RSI Protocol v1 + Operator/Runtime 接口 | A     | F00                                 | Execution Event、Operator/Motif、Evidence、Runtime Decision、RSI Update；Python/TS Fixture 与旧路径兼容 | G1         |
 | **F03** | AppWorld Benchmark Runner + Baseline + 计量  | B     | F00、F01                            | AppWorld 轨迹采集/原生 Agent/评分/费用；split 冻结；缓存/Skill 强基线；评估 Terminal-Bench 可行性 | G1         |
@@ -312,11 +312,11 @@ F08 可以在 F03 的冻结 Dev Fixture 上提前做 Matcher 代码更新，不�
 ### P-F00-001 模板｜A：研究契约，不动生产代码
 
 ```text
-你负责 GeneLoop F00。先阅读 docs/research-contract.md 的 G0 评审稿、README.md、AGENTS.md、docs/interfaces.md 与已有实验。不得将待验证贡献写成现有事实。
+你负责 GeneLoop F00。先阅读 docs/research/research-contract.md 的 G0 评审稿、README.md、AGENTS.md、docs/interfaces.md 与已有实验。不得将待验证贡献写成现有事实。
 
 目标：将 F00 统一为 AI Agent 方法研究契约，以 C1 Full-Stack Runtime RSI（重点为 Motif 与 Matcher 算法/代码联合演化）、C2 Learned Operator Abstraction（MCP/Bash/Python）、C3 Efficiency-Oriented Evolution（减少真实 LLM Work）为候选贡献。相近研究中 ModularRSI 已涉及 Harness 代码修改，Skill-DisCo/NSI 已包含参数化技能与分支；须说明我们的待验证增量，不以“他们只改 Prompt”或“他们无 Runtime”作为差异。
 
-交付：只调整 docs/research-contract.md（如已满足则只列审阅意见），短文明确 3 个假设、最近工作区别、AppWorld→Terminal-Bench 2.0 的优先顺序、最小 Frozen/Motif-only/Matcher-only/Independent/Joint 基线和同质量 LLM Work 计量。
+交付：只调整 docs/research/research-contract.md（如已满足则只列审阅意见），短文明确 3 个假设、最近工作区别、AppWorld→Terminal-Bench 2.0 的优先顺序、最小 Frozen/Motif-only/Matcher-only/Independent/Joint 基线和同质量 LLM Work 计量。
 
 F00 只冻结研究问题与评估逻辑，不冻结匹配算法；不要求现在完成实验、θ0→θ1→θ2、全模块自改、多用户产品，也不改生产代码。将未决问题与相应 F02/F03 任务列出，留给 Reviewer 做 G0 决定。
 ```
@@ -343,7 +343,7 @@ F00 只冻结研究问题与评估逻辑，不冻结匹配算法；不要求现�
 ```text
 功能包 F02：在已有 TypeScript 在线 Runtime + Python 离线认证基础上建立 RSI Protocol v1，不另造 Agent Loop、不大规模删除旧实现。
 
-先核查 docs/research-contract.md、docs/interfaces.md、src/motif_core/online_skill_runtime.mjs、src/motif_core/offline/、src/adapters/script_execution_frontier.ts、src/adapters/artifact_motif_compiler.py 以及实际 Schema 和测试。交付一个短 RFC、版本化 Execution Event / Operator+Motif / Evidence / Runtime Decision / RSI Update 合约，以及 2–3 个真实 Tool、Bash、Python 的跨语言 Fixtures。
+先核查 docs/research/research-contract.md、docs/interfaces.md、src/motif_core/online_skill_runtime.mjs、src/motif_core/offline/、src/adapters/script_execution_frontier.ts、src/adapters/artifact_motif_compiler.py 以及实际 Schema 和测试。交付一个短 RFC、版本化 Execution Event / Operator+Motif / Evidence / Runtime Decision / RSI Update 合约，以及 2–3 个真实 Tool、Bash、Python 的跨语言 Fixtures。
 
 至少将 Motif 和 Matcher 定义为可独立版本化并参与 RSI 的对象，明确真实匹配代码/规则版本、修改范围、审查与回滚接口；为未来 Miner/Updater/Context/Cost Policy 的更新保留兼容扩展位。不要求 F02 直接实现代码自改，那是 F08 的算法实验。分清语义相似匹配与直接执行资格；模型候选不能跳过证据/权限/来源/版本校验。
 
@@ -413,8 +413,8 @@ F00 只冻结研究问题与评估逻辑，不冻结匹配算法；不要求现�
 
 ## 10. 当前起点 / 下一个动作
 
-- [ ] A/B 审核 `docs/research-contract.md` 的 C1/C2/C3，并审议本文件 **D-0003（待评审）**；先更新真实 Issue 描述，再改变 Board 状态。
-- [ ] B 将本更新稿拟提交到 `docs/ROADMAP_AND_PROMPT_AUDIT.md`；如仓库已有更晚记录，应按 Diff 合并，**不得覆盖真实 Prompt 审计历史、Issue/PR 链接或新的状态**。
+- [ ] A/B 审核 `docs/research/research-contract.md` 的 C1/C2/C3，并审议本文件 **D-0003（待评审）**；先更新真实 Issue 描述，再改变 Board 状态。
+- [ ] B 将本更新稿拟提交到 `docs/research/ROADMAP_AND_PROMPT_AUDIT.md`；如仓库已有更晚记录，应按 Diff 合并，**不得覆盖真实 Prompt 审计历史、Issue/PR 链接或新的状态**。
 - [ ] B 启动 F03：核查 AppWorld 官方环境/评测/轨迹并跑一个小型 Dev Native；A 完成 F02 RFC/Fixture，重点保留 Matcher 代码可版本化接口。
 - [ ] G1 后优先打通真实代码轨迹 Operator 和 Motif→Matcher 联合更新（F05/F08），B 持续建设 F07 消融；Terminal-Bench 作为后续外部验证。
 - [ ] 准备 F11 预印本时，以实际 C1–C3 证据决定主张范围；共享存储、双端与规模化可继续并行，但不阻塞研究稿件。
@@ -440,7 +440,7 @@ A = @jingyio，B = @peilin6；按功能分工、交叉审核。Issue 提出者�
 本批在 F01–F03 后，根据用户 v1.2 与动态迁移补充，追加 F05/F08；F04/F06/F07/F09/F10/F11 暂留 Roadmap、未创建。先 F00 审核/F01 基线，再 F02、F05、F08；F03 可同步进行不受依赖影响的环境/计量盘点。每人最多一个 Doing，认领多项不代表同时开工。
 
 - 代码起点：远端 main `ec72908755ea6df1771ec962b40e3b27be381ebb`；本轮不包含本机旧检出的未提交代码。
-- 已完成：候选契约、v1.1 与本轮 v1.2/动态迁移补充的整合 Roadmap、本批 Issue；发布/审计边界见 [F00 审计](debug/prompt-audits/F00.md)。
+- 已完成：候选契约、v1.1 与本轮 v1.2/动态迁移补充的整合 Roadmap、本批 Issue；发布/审计边界见 [F00 审计](../debug/prompt-audits/F00.md)。
 - 已验证：文档/引用检查、Issue/Assignee/Project 网页回读；未进行算法、Benchmark 或付费模型验收。
 - 未完成：另一位合作者的 G0 审核、PR 合并、各功能实现；未重新核验附件中的相关论文数字，不据此声称成果。
 - 接手下一步：①审核契约和 D-0003；②B 推进 F01、A 准备 F02 RFC；③F03 固定环境/计量后，以真实反例和固定库对照推进 F05/F08。

@@ -1,3 +1,12 @@
+# 主线当前交接
+
+## 2026-11-05：PR156 整合 main 候选
+
+- 以 PR156 `8e697e51` 为起点，合入 #158 后的 main `a71e30ce`；在隔离检出处理冲突，共享工作区与原研究检出的未提交改动未覆盖。保留 main 的精简 AGENTS、文档分类与 README 布局，Evolution 研究进展仍在 docs。
+- PPT78/Paper80 两组同名库的 IR、online manifest、来源、工具 schema 和任务五份文件逐字节一致；采用 PR156 认证元数据以保持后续 PPT79–82/Paper81–84 的证书哈希链。main 原元数据由 Git 历史保留，未修改实验原始记录。
+- 本地验证：Python 全量先得 3009 通过、261 跳过、2 项后续证书哈希失败；调整同名元数据后对应认证库 38 项通过。Node 1662 通过、23 跳过；`motif:check` 与无模型 `smoke` 通过，付费模型请求 0。完整 Python 全量未在最终元数据选择后重新运行。
+- GitHub Actions 因账户计费限制未运行，用户决定待学生认证后统一修复 CI；本次不能标记 CI 通过。研究机制默认关闭，正式服务未发布。
+
 ## 2026-11-05 通用 Evolution Core 与真实反馈恢复
 
 - 已完成：通用调查、候选路由与反馈生命周期在`src/adapters/evolution_cycle.py`；Paper特定证据、oracle与评价留在`scenarios/paper_proofreading/evolution_adapter.py`。脚本只配置启动，Builder输入可选，原能力与新旧经历连续保留。原则已写入AGENTS、接口和通用协议。
@@ -21,7 +30,7 @@ SYSTEM已补效率/性能压力、成功经历、能力带来的新可行性与B
 - 接手。优先复核门禁修复的原工具重放与最终回归，随后审阅真实行为与研究边界。仅task_strategy接收可用，其余pending，跨进程额度恢复与完整高层图闭包继续待验。
 - 证据与权限。见[正式实验](../experiments/paper-evolution-20261105-001.md)及[集中调试](../debug/evolution-artifact-routing-20261105.md)。费用/请求null授权、账本与生产不改；GitHub job因付款/消费额度未启动，不能标CI通过。
 
-# 主线当前交接
+
 
 ### 当前协议修订3
 
@@ -45,32 +54,17 @@ SYSTEM已补效率/性能压力、成功经历、能力带来的新可行性与B
 - 服务器研究目录通过私有环境定位，原账本沿用不清零；实际deepseek-flash/off/393216，费用与请求不限。依赖预热两组一致，原tests字节与限时保留。原始轨迹仅在私有`.local/`，公开输入来自固定版本benchmark。
 - 未完成为真实演化后继采用与完整效率对照、benchmark中的boundary/构造策略宿主，以及真实Builder自应用收益。新机制不进入生产，不自行合并或部署。接手按当前实验运行ID继续，保留所有失败与未知费用。
 
-## 2026-11-04 条件化策略演化研究接线
+## 2026-11-05：文档目录分类候选
 
-- 基于远程main `b8e04296`，整合PR133 `04d6d7b5` 后在仓库内独立研究工作区实施。原共享工作区的清理与网页修改保留。
-- 协议、证据适配和Builder继承由三个子Agent并行，主Agent负责Evolution候选与CLI、跨模块测试、兼容库和总回归。计划见[依赖树](../changes/strategy-evolution-20261104.md)，入口见[接口](../strategy-evolution-v1.md)。
-- 已实现版本化条件策略、原Feedback独立准入/撤回、宿主语义投影、跨图共同问题聚合、父策略继承和实际Builder Prompt接线。公开诊断覆盖原事件与实际Prompt，真实模型采用和收益仍待验证。
-- 任务侧后续接通用策略选择与决策入口，观察任务分解、能力选择、组合、验证和恢复方式的实际变化。问询是行为例子。原Builder稳定执行片段继续沿原RAE学习链。
-- 本地全量2460 Python、1642 Node通过，smoke/Motif/RAE/RSI检查通过，模型请求0。服务器真实问讯样本目前为不同owner的单例；原始材料导出遭自动审批拒绝，具体隐私授权待明确，真实策略采用及收益pending。
-- 新兼容库PPT77/Paper79保留原Graph、工具schema与来源，绑定当前源码，旧库保留。本轮测试与未完成项见[记录](../experiments/strategy-evolution-20261104.md)。
+- 从 #135 已合并的 `main`（`f8179fa`）建立独立 `codex/docs-taxonomy-20261105`；共享开发工作区的未提交改动不覆盖。本轮只整理文档和其链接，不修改运行代码、认证 JSON 或历史快照。
+- 将 `docs/` 根目录 28 份 Markdown 归入 `product/`、`operations/` 与 `research/` 的主题子目录，新增 [文档导航](../README.md)；已有路径锁定的入口留在根目录。调试、正式实验、变更和交接目录保持各自用途。
+- 已核对仓库内非 vendor、非历史快照的 1155 个本地 Markdown 链接，缺失 0；`git diff --check` 通过。纯文档变更未运行付费模型或全量代码测试。PR、远端检查及合并状态以最新远端为准。
 
-## 2026-11-04：PR133 跟进 PR132 整合
+## 2026-11-05：PR135 与最新主线整合候选
 
-- 同步 PR132 `5b623d91`，已包含远程 main `eda9409b` 和 PPT76/Paper78 兼容库。保留 Evolution Agent、RAE、PPT与桌面全部接口和交接。
-- PR133 已为 Ready 状态，base 继续使用 PR132 分支，仅展示 Evolution Agent 增量。合入顺序仍为 PR132 后 PR133；最新整合版本的本地回归及远程检查独立核对。
-- 研究状态继续保留真实 `no_change`、未采用候选与未知收益，不以 Ready 状态代表有效自主演化已得到验证。本轮整合模型请求新增 0，原失败和费用记录保留。
-
-## 2026-11-04：Evidence-Grounded Evolution Agent
-
-- 目标与范围：用户明确改为专门的离线演化智能体；[实施方案](../evidence-grounded-evolution-agent.md)已固化。单个跨任务局部问题、一次有界提案，沿用原学习器/Builder/Store，不实现前端、常驻运行或自动再投资。
-- 分支与基线：`codex/evidence-evolution-agent-20261104` 从 `9c87126a` 开始；源码`f602c35e`已推送并创建[PR133](https://github.com/jingyio/GeneLoop/pull/133)，依赖尚未合并的PR132，以其分支为base单独展示增量。实时 main `931d1bc5` 的新增内容是桌面/网页功能，本轮不覆盖。PR132的Linux/Windows四项检查已实查通过；PR133未合并/部署，新CI以当前head为准。私人 `reference/` 保留。
-- 已完成：`capability_evolution_agent.py` 聚合、去重、匿名接口视图、模型提案校验、原边界与宿主构造队列接线；`run-evolution-agent.py` 单次论文研究入口；旧提案传输复用、有限物理请求数准入。默认关闭，模型不能修改验证/权限或自行发布。
-- 已验证：全量Python2318通过/241跳过，Node1587通过/21跳过；最终相关64项本地及Linux通过（包含后加的宿主准入队列与外发文本上限诊断）；smoke、Motif、RSI与效率计量检查通过。Linux最终专项结果见实验记录。确定性提案已走原miner→Store→后继执行，不能称真实模型自主演化。
-- 真实结果：2请求、代理计量USD0.0034098。首轮输入2918 tokens，建议重复封装已有组合图且验证字段被过严格式拒绝；离线修复格式后保留原失败。补充“已有容器覆盖/运行层级”后，第二轮输入3580 tokens、输出6 tokens，返回no_change。没有本轮新认证能力、实际后继采用或净收益结论。
-- 证据与配置：[实验记录](../experiments/evidence-evolution-20261104.md)；本地`.local/evolution-agent-20261104/`，服务器原研究根的`evolution-code-002/003`保存两轮。外发内容经结构化匿名投影；原路径、论文及原始结果未发。沿原累计账本3373→3375，不清零。
-- 未完成：论文CLI只配置边界候选的宿主验收；其他能力/构造方式需要宿主提供现有job与独立检查器，未接即pending。有效真实演化、完整成本对照仍待验证；不能拿Runtime内部重复节点替代重复推理证据。
-- 下一步：审阅独立增量；从真实任务中采集可核对的剩余决策/接口修复及费用，而不是继续要求模型封装已解决的图。没有证据时保留no_change，不预写D、不强制调用C。
-- 权限与回退：每个显式真实批次1请求/USD3，当前两批均结束。关闭入口即保留原路径；无生产修改、不合并/部署。提交和PR状态见本轮交付消息。
+- PR135 基于 `b8e04296`，本次在隔离检出合并主线 `f3289a21`，保留双方 README、接口和交接内容；当前主工作区未覆盖。PR156 仍为独立草稿，不包含在本次合并。
+- 主线和策略分支的 PPT77/Paper79 核心五文件逐字节一致，但认证代码锁不同。保留主线同名版本，从其重导出 PPT78/Paper80 并更新 `config/harless-scenes.json`；原 IR、工具 schema、来源与在线程序不变，旧版本保留。
+- 免费合并回归：Python 2459 项全量通过，唯一 macOS `/var` 符号链接临时路径失败在 `TMPDIR=/private/tmp` 下单项通过；Node 1649 通过、23 跳过；smoke 18/18，`motif:check` 通过。首次本机测试失败和环境原因见[合并诊断](../debug/pr135-merge-20261105.md)；新增真实模型请求 0。远程 CI 与最终合并状态待 PR 更新后核对。
 
 ## 2026-11-04 公平展示与初始提示清理
 
@@ -83,6 +77,33 @@ SYSTEM已补效率/性能压力、成功经历、能力带来的新可行性与B
 - 提交状态为源码 `1f416a87` 已推送并创建[PR #134](https://github.com/jingyio/GeneLoop/pull/134)，文档补记见PR最新head，尚未合并或部署，Linux/Windows最终CI按PR最新head核对。
 - 接手审阅匿名顺序与真实 lane 的绑定、首请求提示和记录迁移；验收通过后再安排维护发布。前端匿名处理应用生成的标识，模型自行生成的正文与产物保留原内容，开发 API 继续承载真实 lane 用于追查。
 
+## 2026-11-04 条件化策略演化研究接线
+
+- 基于远程main `b8e04296`，整合PR133 `04d6d7b5` 后在仓库内独立研究工作区实施。原共享工作区的清理与网页修改保留。
+- 协议、证据适配和Builder继承由三个子Agent并行，主Agent负责Evolution候选与CLI、跨模块测试、兼容库和总回归。计划见[依赖树](../changes/strategy-evolution-20261104.md)，入口见[接口](../research/evolution/strategy-evolution-v1.md)。
+- 已实现版本化条件策略、原Feedback独立准入/撤回、宿主语义投影、跨图共同问题聚合、父策略继承和实际Builder Prompt接线。公开诊断覆盖原事件与实际Prompt，真实模型采用和收益仍待验证。
+- 任务侧后续接通用策略选择与决策入口，观察任务分解、能力选择、组合、验证和恢复方式的实际变化。问询是行为例子。原Builder稳定执行片段继续沿原RAE学习链。
+- 本地全量2460 Python、1642 Node通过，smoke/Motif/RAE/RSI检查通过，模型请求0。服务器真实问讯样本目前为不同owner的单例；原始材料导出遭自动审批拒绝，具体隐私授权待明确，真实策略采用及收益pending。
+- 合并后新兼容库PPT78/Paper80保留原Graph、工具schema与来源，绑定当前源码，旧库保留。本轮测试与未完成项见[记录](../experiments/strategy-evolution-20261104.md)。
+
+## 2026-11-04：PR133 跟进 PR132 整合
+
+- 同步 PR132 `5b623d91`，已包含远程 main `eda9409b` 和 PPT76/Paper78 兼容库。保留 Evolution Agent、RAE、PPT与桌面全部接口和交接。
+- PR133 已为 Ready 状态，base 继续使用 PR132 分支，仅展示 Evolution Agent 增量。合入顺序仍为 PR132 后 PR133；最新整合版本的本地回归及远程检查独立核对。
+- 研究状态继续保留真实 `no_change`、未采用候选与未知收益，不以 Ready 状态代表有效自主演化已得到验证。本轮整合模型请求新增 0，原失败和费用记录保留。
+
+## 2026-11-04：Evidence-Grounded Evolution Agent
+
+- 目标与范围：用户明确改为专门的离线演化智能体；[实施方案](../research/evolution/evidence-grounded-evolution-agent.md)已固化。单个跨任务局部问题、一次有界提案，沿用原学习器/Builder/Store，不实现前端、常驻运行或自动再投资。
+- 分支与基线：`codex/evidence-evolution-agent-20261104` 从 `9c87126a` 开始；源码`f602c35e`已推送并创建[PR133](https://github.com/jingyio/GeneLoop/pull/133)，依赖尚未合并的PR132，以其分支为base单独展示增量。实时 main `931d1bc5` 的新增内容是桌面/网页功能，本轮不覆盖。PR132的Linux/Windows四项检查已实查通过；PR133未合并/部署，新CI以当前head为准。私人 `reference/` 保留。
+- 已完成：`capability_evolution_agent.py` 聚合、去重、匿名接口视图、模型提案校验、原边界与宿主构造队列接线；`run-evolution-agent.py` 单次论文研究入口；旧提案传输复用、有限物理请求数准入。默认关闭，模型不能修改验证/权限或自行发布。
+- 已验证：全量Python2318通过/241跳过，Node1587通过/21跳过；最终相关64项本地及Linux通过（包含后加的宿主准入队列与外发文本上限诊断）；smoke、Motif、RSI与效率计量检查通过。Linux最终专项结果见实验记录。确定性提案已走原miner→Store→后继执行，不能称真实模型自主演化。
+- 真实结果：2请求、代理计量USD0.0034098。首轮输入2918 tokens，建议重复封装已有组合图且验证字段被过严格式拒绝；离线修复格式后保留原失败。补充“已有容器覆盖/运行层级”后，第二轮输入3580 tokens、输出6 tokens，返回no_change。没有本轮新认证能力、实际后继采用或净收益结论。
+- 证据与配置：[实验记录](../experiments/evidence-evolution-20261104.md)；本地`.local/evolution-agent-20261104/`，服务器原研究根的`evolution-code-002/003`保存两轮。外发内容经结构化匿名投影；原路径、论文及原始结果未发。沿原累计账本3373→3375，不清零。
+- 未完成：论文CLI只配置边界候选的宿主验收；其他能力/构造方式需要宿主提供现有job与独立检查器，未接即pending。有效真实演化、完整成本对照仍待验证；不能拿Runtime内部重复节点替代重复推理证据。
+- 下一步：审阅独立增量；从真实任务中采集可核对的剩余决策/接口修复及费用，而不是继续要求模型封装已解决的图。没有证据时保留no_change，不预写D、不强制调用C。
+- 权限与回退：每个显式真实批次1请求/USD3，当前两批均结束。关闭入口即保留原路径；无生产修改、不合并/部署。提交和PR状态见本轮交付消息。
+
 ## 2026-11-04：PR132 同步 PR131 合并后的 main
 
 - 本次整合基线为远程 main `eda9409b`，PR132 原 head 为 `9c87126a`。保留 RAE 与 PPT/桌面接口及交接，复核共享 Builder 的语义视图与成员预算 Session 绑定。
@@ -93,7 +114,7 @@ SYSTEM已补效率/性能压力、成功经历、能力带来的新可行性与B
 ## 2026-11-04：RAE 连续研发
 
 - 更新时间与交接人：2026-11-04，Codex；本轮默认关闭，不合并、不部署。
-- 目标与范围：[原规格](../GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，机制/验收提交 `1b92ccac`、结果交接 `be89b159`（已从Mac推送），分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，认证恢复后已核对远程 main `690d2340`，合并预演无冲突。
+- 目标与范围：[原规格](../research/rae/GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md) T0–T8 后再执行[连续门禁](../research/rae/GeneLoop_RAE_Overnight_Followup.md)。起点 `b2329664`，计划提交 `fcd0e762`，机制/验收提交 `1b92ccac`、结果交接 `be89b159`（已从Mac推送），分支 `codex/rae-stage1-real-20261104`；此前实查远程 main `5d73a4b9`，认证恢复后已核对远程 main `690d2340`，合并预演无冲突。
 - 已完成：真实 Script 组合回执恢复、嵌套类型投影、原学习器发现局部候选、冻结验收器发布及后继调用；真实模型研究薄入口。Builder helper 训练材料前缀已接原两处 scene/Frontier 路径，默认关闭；独立审计修复相同输入重排冒充独立样本的问题。
 - 已验证：本轮独立历史候选 Linux 发布与 followup 通过；新模型构造发布成功。本地2301 Python/1587 Node通过（241/21跳过），Linux RAE102 Python+35 Node、最后适配/原生66项及smoke/Motif/RSI检查通过，详见[连续研发证据](../experiments/rae-followup-20261104.md)。此前 RAE 诊断 2256 Python、1587 Node 及专项成绩只代表之前源码，不能替代本次结果。
 - 实验结论：历史真实 `C,C,report` 保留完整重复拒绝，原 miner 自动学出 `C→report`；独立历史输入上发布/后继成功。新模型8次请求后选完整 paths 程序成功，C调用0，无Builder前缀。T6真实自应用未观察到，Gate0尚不通过，第二阶段Gate1/2不计完成；无本轮净收益结论。
@@ -113,7 +134,7 @@ SYSTEM已补效率/性能压力、成功经历、能力带来的新可行性与B
 
 ## 2026-11-03：Creation Efficiency 构造反馈与重新选择
 
-- 用户已授权按[开发计划](../creation-efficiency-development-plan.md)直接实现和验收。基于实时远程main `2b3d0051`，当前分支`codex/creation-efficiency-20261103`，机制及兼容修复源码`8e0a454f`，后续提交仅补证据文档；已推送并创建[草稿PR128](https://github.com/jingyio/GeneLoop/pull/128)，未合并/部署，远程CI按最新head核对。私人`reference/`保留。
+- 用户已授权按[开发计划](../research/evolution/creation-efficiency-development-plan.md)直接实现和验收。基于实时远程main `2b3d0051`，当前分支`codex/creation-efficiency-20261103`，机制及兼容修复源码`8e0a454f`，后续提交仅补证据文档；已推送并创建[草稿PR128](https://github.com/jingyio/GeneLoop/pull/128)，未合并/部署，远程CI按最新head核对。私人`reference/`保留。
 - 已实现：`capability_construction_history.py`从原请求/结果/原生获取/验收证据生成只读视图；原Builder接收同目标历史、失败和费用，并可声明做法；原修复暂缓后可在有限研究预算内重新选择一次，不重置计数或预算。默认关闭，不新建Agent循环或总账。历史导入、原目录/版本冻结、未知费用、重复归属及提交后继失败均有守卫。接口见[说明](../interfaces.md#构造经历与做法重新选择2026-11-03)。
 - 真实联调修复两处公共阻塞：动态历史摘要与稳定能力目录分开，仍逐项核对证据；PR127上传容量变化采用既有机制的精确Script版本兼容对，原证书、输入限制及未知版本拒绝保留。没有改模型目标算法或独立检查器。
 - 已验证：最终本地2196 Python通过/241跳过，1552 Node通过/21跳过；Linux显式原生104通过/0跳过；smoke、motif:check通过。macOS默认临时路径及直接Node缺少项目Python导致的环境失败保留，最终通过规范项目入口/真实临时路径复核。
@@ -132,7 +153,7 @@ SYSTEM已补效率/性能压力、成功经历、能力带来的新可行性与B
 
 - 起点：已核对远程main `eea8c558`，PR124已在该主线；当前工作区短期分支`codex/capability-aware-opportunities-20261103`，原分支和私人`reference/`保留。
 - 本轮只做PR1：独立发布后的需求重新评价、单次提案、宿主筛选、原队列构造，以及分离预期/编译/执行依赖的账本。不重复实现暂缓重试，不实现再投资或动态策略，不部署/不改正式任务。
-- 最小设计与当前覆盖：[协议](../capability-aware-opportunities-v1.md)。功能须显式配置，模型预算gate和独立宿主review均默认不提供；默认无付费探索和无新权限。
+- 最小设计与当前覆盖：[协议](../research/capability/capability-aware-opportunities-v1.md)。功能须显式配置，模型预算gate和独立宿主review均默认不提供；默认无付费探索和无新权限。
 - 已验证：应用源码`62e71214`，本地完整2176 Python/1543 Node通过（241/21跳过），Linux最终109项通过；smoke/motif:check通过。隔离真实项目重放002完成：C发布→机会提案→独立筛选→原Builder构造D→验证/后继发布；共4次检查通过，D验证实际调用C2次。目标、算法与比较叶来自固定历史材料，模型调用0；不是本轮自主发现证据。需求证据参与目标身份，授权操作范围传给提案器，材料获取与质量验证分别索引。原失败和001结果保留。
 - 结果边界：尚无本轮自主目标发现、有效目标空间扩展或节余收益结论。历史C→D证据和所有失败不变。后续PR2只消费已记录的请求/费用/独立验证引用，本轮不铸造可支配信用。
 - 证据：[机制验收](../experiments/capability-opportunities-20261103.md)，私有`.local/capability-opportunities-20261103/server-evidence/`。原始数据与费用账本保留，真实任务输入在全新Store/工作区执行，生产未动。
@@ -158,7 +179,7 @@ PR124的`922d4227`随后在Windows push/PR检查各出现同样三项失败（PR
 
 ## 2026-11-03 上午：自主递归构造
 
-main `2f29d34a`已合并PR123；当前同工作区分支`codex/recursive-construction-20261103`，源码`4af5c56f`，已推送[草稿PR124](https://github.com/jingyio/GeneLoop/pull/124)，未合并/部署。四对检查点信息消融已封账：on4/4合格、2格完整C；off2/4合格、0格完整C；费用USD0.005062164/0.068178516，为局部信息作用，不是C对无C增益。新增同答program+显式组合意图/静态Python拼写，精确版本在认证前固定，错误repair显示当前alias，不替模型补绑定。从初始池六格另行封账：一格模型新写3273字符比较程序+完整C，在DoRA/BitFit四项检查全过、每项2次C回执；成功实际用JSON意图，Python拼写尚无真实模型使用证据。另一个WithC重写仅过2/4；Flat1完整重写过4/4且更便宜。完整效率RSI仍未达标。38请求/USD0.139684764含失败，原账本3315→3353，无unknown；本地1979Python/1516Node、Linux129、smoke/motif通过。协议、全量结果/失败、组会一分钟讲稿见[上午报告](../experiments/recursive-construction-20261103.md)、[推进协议](../recursive-construction-protocol-20261103.md)；当前接手见[论文交接](paper-proofreading.md)。
+main `2f29d34a`已合并PR123；当前同工作区分支`codex/recursive-construction-20261103`，源码`4af5c56f`，已推送[草稿PR124](https://github.com/jingyio/GeneLoop/pull/124)，未合并/部署。四对检查点信息消融已封账：on4/4合格、2格完整C；off2/4合格、0格完整C；费用USD0.005062164/0.068178516，为局部信息作用，不是C对无C增益。新增同答program+显式组合意图/静态Python拼写，精确版本在认证前固定，错误repair显示当前alias，不替模型补绑定。从初始池六格另行封账：一格模型新写3273字符比较程序+完整C，在DoRA/BitFit四项检查全过、每项2次C回执；成功实际用JSON意图，Python拼写尚无真实模型使用证据。另一个WithC重写仅过2/4；Flat1完整重写过4/4且更便宜。完整效率RSI仍未达标。38请求/USD0.139684764含失败，原账本3315→3353，无unknown；本地1979Python/1516Node、Linux129、smoke/motif通过。协议、全量结果/失败、组会一分钟讲稿见[上午报告](../experiments/recursive-construction-20261103.md)、[推进协议](../research/evolution/recursive-construction-protocol-20261103.md)；当前接手见[论文交接](paper-proofreading.md)。
 
 ## GeneLoop Desktop 0.2.40（PR #130）
 
@@ -167,7 +188,7 @@ main `2f29d34a`已合并PR123；当前同工作区分支`codex/recursive-constru
 
 ## 2026-11-03：Capability Frontier 夜间研究
 
-起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D可发布/复用；H0第一份材料已够用但入池后丢构造意图，已补新snapshot续接，模型效果未重跑。独立反例已回到原撤回机制，三份错误D退出后续选择。79次DeepSeek请求估费USD0.340150572，旧账本不变；源码`e6d46f6`还修复日期写死与付费前条件核对，原16格匹配。全量1879 Python/1516 Node、Linux原生/公共95项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)的`a92f278`（含最后源码）Ubuntu/Windows push/PR四项CI全部通过；后续仅文档收尾，最新head见PR，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
+起点为已合并 PR #122 的 `f594e19`。C 已发布；三种冻结条件共16格D结束。最后条件WithC 2/2、Direct 1/2通过Mamba检查，但五个已发布D均完整重写，没有调用C/J，自主递归与效率收益仍pending。零模型强制C→D可发布/复用；H0第一份材料已够用但入池后丢构造意图，已补新snapshot续接，模型效果未重跑。独立反例已回到原撤回机制，三份错误D退出后续选择。79次DeepSeek请求估费USD0.340150572，旧账本不变；源码`e6d46f6`还修复日期写死与付费前条件核对，原16格匹配。全量1879 Python/1516 Node、Linux原生/公共95项通过。[草稿PR123](https://github.com/jingyio/GeneLoop/pull/123)的`a92f278`（含最后源码）Ubuntu/Windows push/PR四项CI全部通过；后续仅文档收尾，最新head见PR，未合并/部署。详见[论文交接](paper-proofreading.md)、[协议](../research/capability/capability-frontier-protocol-v1.md)、[实验](../experiments/capability-frontier-20261103.md)和[入口](../../scenarios/paper_proofreading/frontier/README.md)。
 
 ## 2026-11-03：B 真实书目验收
 
@@ -196,7 +217,7 @@ B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池�
 
 ## 2026-11-02：效率RSI共同流程与递归构造接线
 
-先完善机制、真实递归与收益分别pending，再由用户决定验证规模，聊天入口不作为当前优先项。新增共同改进控制器、版本化记录、发布历史到Builder的自动目录更新、修复/暂缓和双贡献记录。真实5次模型请求：C构造失败暂缓；D修复后由原语直接构造，验证与后继执行各4视频/44项通过。没有C→D或降本结论，详细失败与USD0.02025325代理估费均保留；不追加第二轮模型试验。当前状态见[交接](efficiency-rsi.md)、[协议](../capability-improvement-v1.md)和[实验](../experiments/efficiency-rsi-recursive-20261102.md)。本轮未推送或部署；以下为历史状态。
+先完善机制、真实递归与收益分别pending，再由用户决定验证规模，聊天入口不作为当前优先项。新增共同改进控制器、版本化记录、发布历史到Builder的自动目录更新、修复/暂缓和双贡献记录。真实5次模型请求：C构造失败暂缓；D修复后由原语直接构造，验证与后继执行各4视频/44项通过。没有C→D或降本结论，详细失败与USD0.02025325代理估费均保留；不追加第二轮模型试验。当前状态见[交接](efficiency-rsi.md)、[协议](../research/capability/capability-improvement-v1.md)和[实验](../experiments/efficiency-rsi-recursive-20261102.md)。本轮未推送或部署；以下为历史状态。
 
 ## 2026-11-02：效率RSI首个Source真实闭环
 
@@ -208,7 +229,7 @@ B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池�
 
 ## 2026-11-02：效率驱动 RSI 第一批实现
 
-按用户要求继续在原 SSS 目录的 `codex/efficiency-rsi-20261102` 开发。PR #117/#118 已合并；本轮外部历史更新后基线为 `09b81b2`，与原 `69724cf` 代码树完全相同。已实现 Capability 双语言契约/旧库映射、离线 Compose 编译器、固定依赖组合执行内核及全尝试评价器；诊断已实际执行子程序并验证数据流、失败和取消。真实模型生成、场景后端与独立发布接线待下一批；没有新效果结论或生产发布。验证、配置、限制与可执行下一步见[当前交接](efficiency-rsi.md)，完整范围见[任务表](../efficiency-rsi-plan.md)。旧分支、未提交工作及私人文件均保留；下方历史状态不代表本轮状态。
+按用户要求继续在原 SSS 目录的 `codex/efficiency-rsi-20261102` 开发。PR #117/#118 已合并；本轮外部历史更新后基线为 `09b81b2`，与原 `69724cf` 代码树完全相同。已实现 Capability 双语言契约/旧库映射、离线 Compose 编译器、固定依赖组合执行内核及全尝试评价器；诊断已实际执行子程序并验证数据流、失败和取消。真实模型生成、场景后端与独立发布接线待下一批；没有新效果结论或生产发布。验证、配置、限制与可执行下一步见[当前交接](efficiency-rsi.md)，完整范围见[任务表](../research/rsi/efficiency-rsi-plan.md)。旧分支、未提交工作及私人文件均保留；下方历史状态不代表本轮状态。
 
 ## 2026-10-31：RSI共享质量与复用形式整合（已完成本轮）
 
@@ -236,7 +257,7 @@ B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池�
 - 未完成与接手下一步：1. 审阅本地 diff 和兼容范围，再安排集成；2. 下一轮处理工具名字特判、固定第一页、失效屏障，以及候选挖掘与执行权限分离；3. PDF 与并发上传基线失败另行修复，不能以删除断言掩盖。
 - 权限与费用：本轮模型请求 0、API 费用 0；仅本地离线开发验证，外部应用和正式服务未操作。回退本分支源码、场景指针及兼容记录的本轮差异即可，不删除旧库或私有数据。
 > 2026-10-24 F02 审核候选：统一同例演示、Python/TS 协议、原生 Harness 工具回执和更新接缝已提交独立分支，真实模型18请求、峰值保守估费约USD0.00195336。先看[F02 当前交接](rsi-protocol.md)，包含已验证范围、失败、费用和接手动作。#114 G0/F03 接口联审尚待完成；不合并或部署，不把局部合成诊断当完整任务或降本成绩。
-> 2026-10-25 F02 继续：#115 新增机会评估、冻结优化计划与独立效果审核。`npm run rsi:optimize` 用通俗例子展示值得试验/待核验/跳过；15条历史真实请求因质量及整次请求证据不足仍为待核验。新增API费用0，未合并、未部署；[当前交接](rsi-protocol.md)及[一页说明](../rsi-optimization-v1.md)包含验证范围、费用和后续接入。
+> 2026-10-25 F02 继续：#115 新增机会评估、冻结优化计划与独立效果审核。`npm run rsi:optimize` 用通俗例子展示值得试验/待核验/跳过；15条历史真实请求因质量及整次请求证据不足仍为待核验。新增API费用0，未合并、未部署；[当前交接](rsi-protocol.md)及[一页说明](../research/rsi/rsi-optimization-v1.md)包含验证范围、费用和后续接入。
 
 > 2026-10-21 Plan/Compact/Goal复测：原正式7e167ed保持运行，无应用修改/重启。33项定向诊断、8项真实案例及3项公网网页流程均通过；54唯一真实请求、代理估费USD0.019849910，原账本前缀与计量路由保持。审批卡片仍为英文；一次自动重连后恢复，原因未调查。未在本轮重测三场景业务交付/File独立SDK。见[功能复测记录](../debug/mode-controls-20261021.md)，私有证据在`.local/mode-controls-20261021/`。本轮只有记录变更，源码/同步状态以Git为准。
 
@@ -304,7 +325,7 @@ B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池�
 - 2026-10-19（Codex）：附件/上下文与执行展示修复已发布运行代码 `d2291646`。当前原话与 plugin 资料分离、后续轮不重解析历史、完整上下文和图片随场景承接、准备进度提前绑定同一任务；执行展开状态与代码侧栏已真网页验证。paper16/ppt11是原库兼容认证，无新训练。真实四格式24轮/28侧全部严格通过；旧污染会话续聊2轮通过且日志原字节保留。Linux全量Python1114通过/2跳过、Node887通过/3跳过（仅测试完成窗口补丁，旧fixture超时保留），smoke/motif/continuation通过；最新GitHub Actions未取得终态，不称跨平台CI已通过。PPT更新仍16次冗余工具，未保证最短路径；短跨场景样本未测得两侧主请求重叠。发布/完整检查状态与失败费用见[验收记录](../debug/attachment-context-streaming-20261019.md)；PR89–91已合并，最后证据消费修复跟踪PR92。私有结果在 `.local/attachment-integrity-20261019/`，六组代理估费合计$0.245796300（排除独立网页成员测试及其他流量），账单未知。继续沿用共享账本和不限额度配置。服务仍仅从私有环境的 GENELOOP_SERVICE_HOME/GENELOOP_SERVICE_CONFIG 走统一 npm service 入口；旧代码/计划/库和失败回执保留，勿覆盖或另起临时发布进程。
 
 
-- 2026-10-19（Codex）：正式网站启动/重启/检查/回退统一为 `npm run service -- ACTION`，AGENTS 和 README 固定开发者/AI 的入口，禁止临时发布脚本重复实现启动。私有计划保留持久数据/预算；入口内置认证同步、进程代际核验、互斥、活动任务拒绝与失败回退。流程见[服务生命周期](../service-lifecycle.md)，实际验证边界见[记录](../debug/unified-service-lifecycle-20261019.md)及关联PR。
+- 2026-10-19（Codex）：正式网站启动/重启/检查/回退统一为 `npm run service -- ACTION`，AGENTS 和 README 固定开发者/AI 的入口，禁止临时发布脚本重复实现启动。私有计划保留持久数据/预算；入口内置认证同步、进程代际核验、互斥、活动任务拒绝与失败回退。流程见[服务生命周期](../operations/service-lifecycle.md)，实际验证边界见[记录](../debug/unified-service-lifecycle-20261019.md)及关联PR。
 
 - 2026-10-19（Codex，已推送/未部署）：在main `a1c0fa2` 开发并同步 `d422d77`，`d9f520a` 实现PPT轨迹→后台编译/认证→后续试用/晋级及负评停用，随 `571a55c` 推送 `feature/research-ppt-agent`，PR由用户创建。沿用官方ppt-master和两条来源准备结构，兼容库v9/v14保留旧证据。最终服务器Python924/Node855通过（199/3跳过），smoke/motif检查通过；真实读取17→15请求、2次skip只证局部收益。隔离库1/3合格Baseline，新候选尚未真实晋级；正式服务未切换。上线需真实模式/Python和账号policy开启PPT双路对照，见[PPT交接](research_ppt.md)及[接线记录](../experiments/ppt-user-learning-20261019.md)。
 
@@ -396,7 +417,7 @@ B基于A的`eba71e6`推进，正常任务→缺口→原生学习/认证入池�
 - 针对性诊断覆盖四场景连续追加、同名版本、原生及双栏 DOCX、带新附件切换、篡改拒绝、容量不静默丢失、原生图像与分支历史；114 项各自通过。排队气泡沿用前序 user/steering 展示投影并通过回归；未改模型证据。没有付费模型调用或实际制作/分析任务。
 - `ppt-master-v4` / `paper-web-v9` 使用原始两项训练/一项留出证据兼容重编；结构、工具和科学范围不变，新增比较输入代码锁。旧库保留；不称新学习、质量或费用提升。
 - 完整 Python 1056 通过/2 跳过、Node 828 通过/3 跳过；本地缺 MCP、服务器 Poppler 子进程环境和合成 DOCX 时间精度问题及后续修订均保留在[验证记录](../debug/geneloop-attachment-inheritance-20261018.md)。原始日志在 `.local/attachment-inheritance-20261018/`，服务器独立验证目录同名；最终 CI、合并/发布状态见 [PR #77](https://github.com/jingyio/GeneLoop/pull/77)。未放宽产品时间/版本守卫。
-- [输入与视觉边界说明](../attachment-input-behavior.md)记录 PPT 目前只提取文字、扫描 PDF 尚无自动 OCR 和建议实现。当前修复不声称已经增加视觉或 OCR；回退需代码、场景注册和匹配旧证书配套恢复，原件与累计账本不变。
+- [输入与视觉边界说明](../product/web/attachment-input-behavior.md)记录 PPT 目前只提取文字、扫描 PDF 尚无自动 OCR 和建议实现。当前修复不声称已经增加视觉或 OCR；回退需代码、场景注册和匹配旧证书配套恢复，原件与累计账本不变。
 
 ## 2026-10-18：统一加载与场景后续聊状态
 
@@ -682,7 +703,7 @@ PR #73 已合并/部署 `0c20986`。上线读取探针揭示首次 MCP 转换先
 - 验证：Linux Python 759 通过/193 跳过，最终 Node 668 通过/3 跳过；无模型 smoke 通过。真实 Flash Off 报告两侧重叠 24.288 秒，8 份交付下载 SHA 正确，23 请求/0.014672460 美元峰值代理估费，未盲评科学质量。浏览器跳页和快速评分后返回保持已交付及最后选择。
 - 记录：[验收与失败边界](../debug/geneloop-comparison-responsive-20261015-v1.md)。共享预算沿用每轮 0.23/每侧 0.115 美元，累计与额外输出上限 null；账本当前 850 请求/0.588207498 美元，不清零。
 - 发布：[PR #31](https://github.com/jingyio/DeepSeek-Harless/pull/31) 四项 Windows/Linux CI 全通过，合并及正式运行 SHA `5d2e6a09977dd08ac998ed72ad8c6ff8f9577b26`。68 个任务空闲后切换，5,957 条保护数据指纹保持；上线复核 3 账号、21 对照评分、112 preset、253 不可变文件保持，四个旧终态两侧状态正确，实际前端与源代码一致。配置变化为零，预算进程未重启，部署和复核新增模型 0 次，850 请求账本不变。公网浏览器登录页可访问。
-- 收尾：最终浏览器刷新保留评分 5/4；33 个 stage 任务、15 组对照均终态，临时 3 个进程、转发及标签页关闭，私有证据保留。账号进程管理说明补在 [账号网关](../harless-account-gateway.md)，没有新增空闲回收或资源配额。回退仅恢复应用到 `ce272476`，不得回滚用户资料、评分或账本。
+- 收尾：最终浏览器刷新保留评分 5/4；33 个 stage 任务、15 组对照均终态，临时 3 个进程、转发及标签页关闭，私有证据保留。账号进程管理说明补在 [账号网关](../operations/harless-account-gateway.md)，没有新增空闲回收或资源配额。回退仅恢复应用到 `ce272476`，不得回滚用户资料、评分或账本。
 
 ## 2026-10-15：连续工作消息、双栏轨迹与模型选择（历史，已发布）
 
@@ -811,7 +832,7 @@ PR #73 已合并/部署 `0c20986`。上线读取探针揭示首次 MCP 转换先
 - 已完成：`harless_web_client/client.js` 原生前缀候选/蓝色引用与草稿保护；`dsh_web_tasks.ts` 工作区 ID 创建、冷会话恢复、场景锁定与同场景续聊；`dsh_member_workspace.ts`/`harless_member_file_scope.ts` 公开文件 Fetch/Lookup 边界；账号网关成员 profile 轮询、关闭浏览器连接和启动中后端。
 - 已验证：最终 Linux 165 Python / 93 Node、smoke、motif:check 全通过。三组双账号各三轮真实对话，重启与隔离通过；PPT 浏览器两轮、截图对应的早期会话两轮；真实成员同名文件独立、6 类 API 越界拒绝、工作区与字节重启恢复。见 [本轮记录](../debug/slash-member-recovery-20261014-v1.md)。
 - 部署/数据：正式检出 `0b5955c`，owner 33102 / gateway 33101 保持；3080 原模型预算服务未重启。保留所有正式账号、Home、工作区、output 和迁移核验备份。原论文工作区没有覆盖；测试账户和凭证只在私有 `.local/`，结束清理测试后端，不清空历史日志。
-- 权限/预算：有效 deepseek-flash、Origin、off、输出 1000；本轮 22 请求估费 0.004509264 美元。观测累计 46 请求/0.008586282 美元，上限 0.23 美元/250 请求保持，账单未核对；公共说明 `docs/harless-account-gateway.md` 与 `docs/interfaces.md` 已同步。
+- 权限/预算：有效 deepseek-flash、Origin、off、输出 1000；本轮 22 请求估费 0.004509264 美元。观测累计 46 请求/0.008586282 美元，上限 0.23 美元/250 请求保持，账单未核对；公共说明 `docs/operations/harless-account-gateway.md` 与 `docs/interfaces.md` 已同步。
 - 限制/下一步：未做大规模容量压测或 PPT 成品质量验收；Paper/Data 仍由部署可用性拒绝。迁入的锁定历史为文字兼容，新工具需新会话。审阅新 PR 后由用户合并；后续升级保持同 Home/output，并验证新增工具的账号文件边界。
 - 回退：保留私有启动规格、policy 与访问 URL 文件；可回退 `2ad349a`，但会恢复较宽成员文件预览和旧连接退出行为。回退不删除用户文件、归属/任务索引，不重置预算，不改写私人原件。
 
@@ -874,7 +895,7 @@ PR #73 已合并/部署 `0c20986`。上线读取探针揭示首次 MCP 转换先
 
 - 范围与代码：分支 `codex/multiuser-web-gateway` 基于 `main` 的 `62ee46b`；账号网关、邀请码、账户设置、成员独立 DSH Home/工作区、账号预算路由及同一会话逐轮任务在 `scripts/harless_gateway.mjs`、`scripts/web_budget_broker.mjs`、`src/adapters/dsh_web_tasks.ts`。保留主线原生 Harless 场景/模型选择；未纳入服务器论文实验或私有配置。
 - 已验证：服务器独立 Linux worktree 中 `npm test` 为 164 Python、67 Node 全部通过。免费模拟 Web 带 `--public-origin` 启动，认证 303、首页和任务/设置 API 均 200。另用两个临时测试账号同时启动隔离 DSH 后端，双方就绪与首页均 200、进程端口不同；没有真实模型调用。旧检出的 host patch 在新检出上被拒绝，改用同一检出的 patch 后通过。Windows 本机全量测试另有符号链接权限和纯代码节点环境限制，Linux 全量通过。
-- 配置与部署：公共说明见 `docs/harless-account-gateway.md`，账号、邀请码、模型密钥、运行日志和私有论文继续只在 `.local/`。本 PR 未切换正在运行的公网服务；生产切换前需要以最新主线重建私有 host patch，确认 `bubblewrap` 挂载、两个测试账号实际并发和 HTTPS 隧道稳定性。服务器原论文工作区的未提交改动没有改写。
+- 配置与部署：公共说明见 `docs/operations/harless-account-gateway.md`，账号、邀请码、模型密钥、运行日志和私有论文继续只在 `.local/`。本 PR 未切换正在运行的公网服务；生产切换前需要以最新主线重建私有 host patch，确认 `bubblewrap` 挂载、两个测试账号实际并发和 HTTPS 隧道稳定性。服务器原论文工作区的未提交改动没有改写。
 - 后续：审阅 PR 后在隔离部署上完成双账号浏览器与真实模型预算验收，再安排生产切换。PR 暂不合并；回退为停止可选账号网关并继续使用现有单用户 Web 入口。
 
 ## 2026-10-13 原生二级菜单与输入框状态（已推送，PR 待创建）
@@ -933,7 +954,7 @@ PR #73 已合并/部署 `0c20986`。上线读取探针揭示首次 MCP 转换先
 
 - 2026-10-10 论文 bash 工具化：已人工从真实轨迹提炼 opt-in 只读 `read_pinned_paper_references(source_id, keys)`，一次返回完整BibTeX/来源哈希/缺失/重复；默认6工具，`SSS_PAPER_REFERENCE_RECORDS=1` 时7工具。服务器真实stdio MCP 34条原文匹配、伪造句柄拒绝、来源未变；两端201 Python/88 Node通过，本次模型/API费用0，累计预算不变。新工具未自动成为Motif、未接当前原生续接/Web，也未证明调用下降。代码/私有证据双端同步，未提交/未推送，Web工作不覆盖。详见 `docs/experiments/paper-bash-toolization-20261010-v1.md`，下一步活动引用图/产物校验工具化，再采集新工具正常轨迹学习调度。
 
-- 2026-10-10 论文 RSI 当前进展：已实现正常轨迹→不可覆盖版本库→下一任务固定库→完成后再编译的参数闭环，新增从轨迹提取的 TS Crossref 查询；私有 round-0001～0004 原型 1/6/6/7。两次真实 shadow 25/34 请求、完整纯工具机会3/0、实际跳过0，尚未证明覆盖或调用随学习增长；标题守卫修正、模型改写参数/使用 bash 的偏离均保留。两端最终195 Python/88 Node通过，阶段集合15/15、来源未变，语义质量未盲评。累计代理约4.415383/冻结上限4.84521046，剩余上界0.429827美元，账单未知。本次未提交/未推送，Web并行工作不覆盖；当前任务/库/代码/配置摘要在私有 manifest/round 中。详见 `docs/experiments/paper-rsi-sequential-20261010-v1.md`、`docs/paper-rsi-loop.md` 和论文场景交接。下一步编译受限解析归并脚本、减少额外选择请求，再用真实新稿/新论文验证；新增模板不称作独立认证或降本。下列论文段落为此前阶段状态，以本段最新交接为准。
+- 2026-10-10 论文 RSI 当前进展：已实现正常轨迹→不可覆盖版本库→下一任务固定库→完成后再编译的参数闭环，新增从轨迹提取的 TS Crossref 查询；私有 round-0001～0004 原型 1/6/6/7。两次真实 shadow 25/34 请求、完整纯工具机会3/0、实际跳过0，尚未证明覆盖或调用随学习增长；标题守卫修正、模型改写参数/使用 bash 的偏离均保留。两端最终195 Python/88 Node通过，阶段集合15/15、来源未变，语义质量未盲评。累计代理约4.415383/冻结上限4.84521046，剩余上界0.429827美元，账单未知。本次未提交/未推送，Web并行工作不覆盖；当前任务/库/代码/配置摘要在私有 manifest/round 中。详见 `docs/experiments/paper-rsi-sequential-20261010-v1.md`、`docs/research/rsi/paper-rsi-loop.md` 和论文场景交接。下一步编译受限解析归并脚本、减少额外选择请求，再用真实新稿/新论文验证；新增模板不称作独立认证或降本。下列论文段落为此前阶段状态，以本段最新交接为准。
 
 - 2026-10-10 两次真实 shadow 复验：同一冻结库/同一论文，confirm-a/b 请求 40/17，选定结果 23/23、30/30 全通过，完整纯工具机会 2/40、3/17，合计 5/57=8.8%；实际跳过 0，20% 尚不稳定。两份阶段产物集合均 15/15，来源哈希未变，语义质量未盲评；新费用约 0.102378，累计代理约 4.295005/上限4.84521046，余额上界0.550205，账单未知。逐请求分析明确 7 次选择协议响应，以及未绑定集合和 bash 片段；这些不是认证跳过。当前未形成 RSI 自动学习/发布闭环，下一步从正常轨迹编译参数化查询/脚本与恢复节点、把选择协议并入必要判断，再冻结新库开展留出 shadow；不继续相同库付费重测，加入脚本/Code Mode 对照。专项 7 项本地/服务器免费诊断通过，新数据两端同步，代码未提交/未推送。详见 `docs/experiments/paper-shadow-confirmation-20261010-v1.md`，私有新运行与分析仍位于 continuation-v2 根，suffix 不是独立任务；当前入口固定原稿/阶段任务、未接完整 PDF/Web。前次 execute 动作类型已更正为 8 读取+3 查询（2 请求）。
 
@@ -1154,7 +1175,7 @@ TaskScene新契约修复全局重命名、明确转换原件/产物读取，以�
 - **最近复核（2026-10-09）**：回答项目结构与连通性问题时，在当前本机重新执行 `npm test` 和 `npm run smoke`，仍通过 133 项 Python、24 项 Node 及全部 18 题工具检查；包含真实 Harness 对本机模拟 Provider 的三次请求、两次 MCP 调用。没有付费云调用或新的科研效果结论。当前在线路径为场景配置 → Python SDK → Node Harness → 可选 JS Motif 插件 → MCP；Python controller 为独立结构执行路径。新场景接入 Harness 后，要另行收集轨迹、编译认证 library 并配置任务/embedding 才能启用 Motif。现有 `docs/collaboration.md` 未提交修改属于用户工作，本次保留。
 - **后续技术路线（2026-10-09，用户明确）**：Python 负责离线学习、编译和科研实验；新增 Harness 在线逻辑用 TypeScript，逐步迁移现有 JS 插件。生产在线 Runtime 以 TS 为权威，Python controller 用于参考/离线验证；不实施之前讨论的 Python 在线桥接方案。SSS 已通过 npm 安装并启动本地 Harness，已有原生插件，但独立插件分发、共享 Schema/类型及无额外 Python 的已有 library 执行尚未完成。当前纯代码节点和实验预算代理仍依赖 Python。本次仅核对代码和更新文档，没有重构、重跑付费实验或重复全套测试；用户在协作文档和 `dsh_client.py` 中的未提交修改保留。
 - **首发历史库（2026-10-09）**：新增 `examples/motif-library/research-portfolio-v1/`，保留历史 4 个算子的认证摘要和 library 摘要。出处是真实 DeepSeek 调用、合成科研来源；两项训练/一项独立认证，共 26 次历史请求。公开 46 次工具证据均经 MCP 重放一致，未公开原日志；历史目录叫 v2，但题面哈希匹配 v1，已如实记录。新增 `npm run motif:check` 与 `motif:rebuild`，无须旧私有数据，重编译到 `.local/`，不修改在线核心或通用私有轨迹约束。136 项 Python、29 项 Node 通过，本机真实 Harness 四组协议验收通过：baseline/shadow/execute/旧版本请求为 14/14/7/14，四组工具调用均 13，取得相同对象/版本；结果验证跳过批次仅 execute 为 5。模拟 Provider 和固定 embedding 仅用于诊断，不是科研质量/成本结论；见 `docs/debug/distributed-motif-example-v1.md`。库开发阶段保留用户的两份未提交文件；后续按用户的提交推送要求处理，范围见下文。
-- **实验结论**：离线检查支持当前工具链和所覆盖的安全守卫可运行；没有本次真实研究交付的盲评或付费同题对照，不能据此宣称 Motif 降本或科研质量提升。清理与验证依据见 `docs/main-cleanup.md`；后续实验按 `AGENTS.md` 记录在 `docs/experiments/`。
+- **实验结论**：离线检查支持当前工具链和所覆盖的安全守卫可运行；没有本次真实研究交付的盲评或付费同题对照，不能据此宣称 Motif 降本或科研质量提升。清理与验证依据见 `docs/operations/main-cleanup.md`；后续实验按 `AGENTS.md` 记录在 `docs/experiments/`。
 - **配置与数据**：公开场景在 `scenarios/`，通用配置在 `config/`，依赖在 `package.json`、`package-lock.json` 和 `requirements.txt`。新入口默认 baseline、预览、`reasoning_effort="off"`，预算上限 0.25 美元、16 步、单请求输出上限 3000 token；实际实验以预览和配置快照为准。密钥使用本机 `DEEPSEEK_API_KEY` 或 Harness 凭证存储；MCP 认证用场景的 `from_env`。私人资料与历史原始记录在各自本机 `.local/`，不随 Git 分发。未在本记录中读取或记录任何密钥值。
 - **未完成与限制**：Ubuntu/Windows 原生离线 CI 已通过（测试、18 题 MCP、Motif 本机模拟闭环）；真实 HTTP MCP 服务及外部应用场景尚未联调。三个实际场景及负责人尚未在仓库冻结。在线 JS runtime 是 Python 结构执行的子集，不是完整移植；embedding 和具体 MCP 服务的平台适配仍需场景验证。仓库定价表也需在付费实验前核对。
 - **接手下一步**：

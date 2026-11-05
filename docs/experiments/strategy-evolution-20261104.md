@@ -20,7 +20,7 @@
 
 本地 Node22.22.3、Python3.12.14，完整 `npm test` 为2460 Python通过/261跳过/67已有warning、1642 Node通过/23跳过/0失败。`rsi:rae:check`、smoke、motif:check、rsi:check及rsi:efficiency:check通过。全量记录为私有 `.local/strategy-full.log`，专项及旧历史/提案整合91项通过；新增策略相关55项通过。
 
-源码审计补了父策略继承、宿主适配器执行核验后的同一份字节、handler owner校验。PPT77/Paper79经原兼容导出器生成，原五份Graph/manifest/题面/schema/来源载荷字节一致。
+源码审计补了父策略继承、宿主适配器执行核验后的同一份字节、handler owner校验。原独立实验的PPT77/Paper79经原兼容导出器生成；与最新main合并时保留main同名版本，并从它们重导出PPT78/Paper80。原五份Graph/manifest/题面/schema/来源载荷字节一致。
 
 远程main仍为 `b8e04296`。另查PR133实际合入PR132分支 `6d8e7574`，尚未进入main。本分支在该main上包含PR133源码依赖，交付须明确这一点。
 

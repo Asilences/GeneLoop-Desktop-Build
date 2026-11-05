@@ -9,12 +9,12 @@
 
 ## 2026-10-19：统一服务启动、发布与回退入口
 
-`npm run service -- <start|status|check|restart|rollback>` 是正式 owner/gateway 的统一入口，私有计划由 `GENELOOP_SERVICE_CONFIG` 指定。历史私有发布脚本只可参考配置准备，启动段退役。入口处理身份/配置/互斥检查、认证与令牌同步、活跃任务保护、失败回退及运行记录；保持预算进程/账本与用户数据。后续开发先读 [统一流程](../service-lifecycle.md)，验证与边界见[实施记录](../debug/unified-service-lifecycle-20261019.md)。本地开发 `web`/`web:real` 不等于正式网站发布，Linux 管理验证不代表 Windows 托管。
+`npm run service -- <start|status|check|restart|rollback>` 是正式 owner/gateway 的统一入口，私有计划由 `GENELOOP_SERVICE_CONFIG` 指定。历史私有发布脚本只可参考配置准备，启动段退役。入口处理身份/配置/互斥检查、认证与令牌同步、活跃任务保护、失败回退及运行记录；保持预算进程/账本与用户数据。后续开发先读 [统一流程](../operations/service-lifecycle.md)，验证与边界见[实施记录](../debug/unified-service-lifecycle-20261019.md)。本地开发 `web`/`web:real` 不等于正式网站发布，Linux 管理验证不代表 Windows 托管。
 
 ## 2026-10-19：管理员内部令牌陈旧导致服务不可用
 
 - 公开登录页/进程正常，所有者内部认证失败。直接重启 DSH 后漏写 `ownerTokenFile`；旧令牌 401、新令牌 303。已备份并原子同步当前有效令牌，网关热读取恢复，未重启、未调用模型、未改账号/数据/账本。
-- `scripts/harless_owner_access.py` 提供认证后首页检查和原子同步；本次私有发布与回退脚本均接入并绑定启动日志偏移。6 项定向回归通过，生产 `--check` 返回认证后 200；已有成员刷新正常，新注册与管理员本人浏览器反馈未验。详见[故障记录](../debug/owner-access-recovery-20261019.md)及[部署说明](../harless-account-gateway.md)。
+- `scripts/harless_owner_access.py` 提供认证后首页检查和原子同步；本次私有发布与回退脚本均接入并绑定启动日志偏移。6 项定向回归通过，生产 `--check` 返回认证后 200；已有成员刷新正常，新注册与管理员本人浏览器反馈未验。详见[故障记录](../debug/owner-access-recovery-20261019.md)及[部署说明](../operations/harless-account-gateway.md)。
 - 所有者与成员令牌独立；后续发布不能只检查 TCP/公开登录页。代码发布与PR状态以本次提交/PR为准；线上运行代码未因此切换。
 
 ## 2026-10-19：生成文件只有文件名、不能点击
@@ -102,6 +102,6 @@
 
 
 ## 2026-11-03 上传容量与历史附件
-服务器分支 `fix/native-upload-context-20261103` 对齐原生图片准入、统一普通文件 200 MiB、分块上传和多轮/跨场景来源保留。规则见 [upload-rules](../upload-rules.md)，回归与发布证据见 [upload-capacity-context-20261103](../debug/upload-capacity-context-20261103.md)。保持原用户数据、权限和 Motif 算法；Paper/PPT 仅兼容重导出。发布状态以实验记录为准。
+服务器分支 `fix/native-upload-context-20261103` 对齐原生图片准入、统一普通文件 200 MiB、分块上传和多轮/跨场景来源保留。规则见 [upload-rules](../product/web/upload-rules.md)，回归与发布证据见 [upload-capacity-context-20261103](../debug/upload-capacity-context-20261103.md)。保持原用户数据、权限和 Motif 算法；Paper/PPT 仅兼容重导出。发布状态以实验记录为准。
 
 最终服务器发布为 `70f86583`（上传容量修复第二版），2 个测试成员的原对话真实多轮验收通过；20 MiB 图片、约 31 MiB PPT 双栏读取、公网 120 MiB 原生回执均已验证。当前规则与负面网络证据详见上述实验记录。

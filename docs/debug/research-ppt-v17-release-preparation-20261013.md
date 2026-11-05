@@ -57,4 +57,4 @@ python -m scenarios.research_ppt.recovery_smoke --out .local/research-ppt/releas
 
 V17历史双路15页结果、质量待评审和成本归因限制见`research-ppt-v17-local-recovery-20261013.md`；本次免费检查没有新增请求/token降幅，也不能证明任意PDF必然交付。参数提高可能增加最坏费用与资源占用，预算预览和有界失败必须保留。
 
-本次尚未commit/push，无PR。按用户此前要求，用户查看完整真实V17成品并通知后再告知中文commit范围、提交和推送；本次分支整理不绕过该条件。清理细节见`docs/research-ppt-release-cleanup.md`。
+本次尚未commit/push，无PR。按用户此前要求，用户查看完整真实V17成品并通知后再告知中文commit范围、提交和推送；本次分支整理不绕过该条件。清理细节见`docs/operations/research-ppt-release-cleanup.md`。

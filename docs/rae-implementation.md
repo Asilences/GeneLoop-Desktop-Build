@@ -1,6 +1,6 @@
 # Recursive Abstraction Evolution：实现与验收
 
-- 规格：[用户提供的完整规格](GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md)。
+- 规格：[用户提供的完整规格](research/rae/GeneLoop_Recursive_Abstraction_Evolution_Codex_Spec.md)。
 - 开始日期：2026-11-04；远程main经`ls-remote`与fetch核对为`5d73a4b90e4121e94c9e7240bc8823e8b6bb3bff`。
 - 原分支：`codex/recursive-abstraction-evolution-20261104`，在当前工作区从该main建立；连续研发分支为 `codex/rae-stage1-real-20261104`；此前未推送研究分支完整保留，未整体带入。
 - 网页会话已读取最近轮次；助手正文接口返回引用占位，具体实现以用户本次请求及附件规格为准。

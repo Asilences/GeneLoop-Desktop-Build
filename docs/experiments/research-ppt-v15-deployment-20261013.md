@@ -89,7 +89,7 @@ lab 调整采用深蓝标题、灰黑正文、朴素白底，移除固定英文�
 
 直接单独Node测试首次没有统一入口配置的Python，受限code-node回退导致旧回归失败，留 `core-frontier-02.log`。随后使用根统一npm入口，完整146/47通过；没有删除旧检查或放宽守卫。不同测试批次不相加为新效果证据。
 
-发布保留main已有Web/API/预算/请求上限，仅场景必要代码、关键安全回归与历轮设计/报告。移出八个一次性历史实验/报告脚本，逐文件备份后核SHA/size；详见[清理记录](../research-ppt-release-cleanup.md)。V1–V14总报告18页已独立交付，并纳入[报告索引](research-ppt-reports/README.md)，不重复算作实验。本轮无PR；实际commit/push状态以[当前交接](../handoffs/research_ppt.md)与Git为准。
+发布保留main已有Web/API/预算/请求上限，仅场景必要代码、关键安全回归与历轮设计/报告。移出八个一次性历史实验/报告脚本，逐文件备份后核SHA/size；详见[清理记录](../operations/research-ppt-release-cleanup.md)。V1–V14总报告18页已独立交付，并纳入[报告索引](research-ppt-reports/README.md)，不重复算作实验。本轮无PR；实际commit/push状态以[当前交接](../handoffs/research_ppt.md)与Git为准。
 
 ## 7 / 下一步最小试用
 

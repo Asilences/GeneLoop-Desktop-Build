@@ -67,7 +67,7 @@
 - 已观察：`continuation-study-001`四对真实检查点消融，on四格全合格、两格模型完整C→D，off两格合格、无完整C。on/off模型估费0.005062164/0.068178516，局部低92.6%，不是无C对照或新盲测。
 - 从初始池结果：`generative-primitives-001`三组各两格；WithC1模型自主新写3273字符比较程序和C调用，DoRA/BitFit四项最终检查全过、每项2次C回执。D为`cap_c962563a382f4c1d2e1f598c`。实际用JSON意图，不是Python拼写。WithC0完整重写2/4；Flat1完整重写4/4且费用更低；另三格最终未评审。完整理论反馈未闭合。
 - 验证/费用：本地1979Python通过/239skip、1516Node通过/20skip，Linux原生/公共129通过，smoke/motif通过，诊断无模型。真实38请求、USD0.139684764用量估费，原账本3315→3353，全部结算unknown0；实付、Codex开发、人机成本未知。
-- 证据入口：公开[组会报告](../experiments/recursive-construction-20261103.md)含一分钟讲稿、完整矩阵和失败；[新协议](../recursive-construction-protocol-20261103.md)。私有`.local/recursive-construction-20261103/server-evidence/`保留两个study及配置/原始回答/质量/回执。服务器同名私有根`code-20`=main、`code-21`=`4af5c56f`，加载既有`.local/remote-env.sh`后用研究README入口；不重发已关闭格。
+- 证据入口：公开[组会报告](../experiments/recursive-construction-20261103.md)含一分钟讲稿、完整矩阵和失败；[新协议](../research/evolution/recursive-construction-protocol-20261103.md)。私有`.local/recursive-construction-20261103/server-evidence/`保留两个study及配置/原始回答/质量/回执。服务器同名私有根`code-20`=main、`code-21`=`4af5c56f`，加载既有`.local/remote-env.sh`后用研究README入口；不重发已关闭格。
 - 接手下一步：①减轻新程序调用与原生value包装等作者接口负担，仍由模型明确参数关系；②补array.items类型与确定数据形状错误的修复诊断，保留已提交后继失败的撤回/新机会；③再做可执行C/仅描述/无C的创造价值和同一任务流净节余→再投资→D→E对照，不追加重复任务凑回本。
 - 权限/风险：真实DeepSeek持续授权、平台null与原累计账本不变；生产/默认聊天/外部应用/私人原件未改。独立研究入口可停用，回退源码到main `2f29d34a`；保留所有失败与不可变研究快照。
 
@@ -75,7 +75,7 @@
 
 - 起点：已核对远程 main `f594e19`，PR #122 已合并。当前分支 `codex/capability-frontier-20261103`，沿用当前工作区，私人 `reference/` 未跟踪。
 - 更新时间与交接人：2026-11-03，Codex；研究已封账，独立草稿[PR #123](https://github.com/jingyio/GeneLoop/pull/123)审阅中，不自动合并。
-- 当前目标与结果：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结见[七小时协议](../capability-frontier-protocol-v1.md)。C 已真实发布；三种冻结条件全部结束，最后条件 WithC 2/2、Direct 1/2 通过 Mamba 两对检查，Flat 一格失败、一格无候选。已发布 D 全部完整重写、未调用 C/J；自主 C→D 与递归效率收益 pending。
+- 当前目标与结果：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结见[七小时协议](../research/capability/capability-frontier-protocol-v1.md)。C 已真实发布；三种冻结条件全部结束，最后条件 WithC 2/2、Direct 1/2 通过 Mamba 两对检查，Flat 一格失败、一格无候选。已发布 D 全部完整重写、未调用 C/J；自主 C→D 与递归效率收益 pending。
 - 执行窗口：约 00:48–07:48（Asia/Shanghai）；先固定真实/公开输入、独立判据、组间可见能力和有限实验预算，再运行。沿用原累计账本；生产服务、旧库与默认聊天不改。
 - 已实现：JSON 值桥接与65KB认证报告、双文件角色绑定、函数入口胶合与完整程序机械包装、按能力池版本恢复机会准入；复用原公共控制器/原生认证/TS执行与发布，没有另造Agent循环。
 - 已验证：`e6d46f6`源码本地全量1879 Python通过/239跳过、1516 Node通过/20跳过；服务器原生/公共95 Python、前轮20 Node通过/1平台跳过。含最终源码的`a92f278` Ubuntu/Windows push/PR四项CI全部通过（含全量、smoke、motif:check）；后续仅文档收尾，当前head见PR检查。444个实验内部文件引用校验无缺失/变化，未读凭证或越出实验根的链接。
@@ -106,7 +106,7 @@
 - 已完成：`capability_adapter.py`、`publish_capability.mjs`、`verify_capability_outputs.py`接公共Builder/反馈/Store；原生只读Script后端及精确版本白名单。独立验收先覆盖字面BibTeX条目数、唯一键和重复键，不认证文献真实性。
 - 已验证：Linux原生认证、组合、发布、不同输入后继和下一Builder可见，4项论文测试通过；21项Script/沙箱检查通过。全量Python1793通过/237跳过，Node1495通过/18跳过；Linux smoke通过。确定性组合和合成输入只属诊断，模型请求0。
 - 未完成：真实历史任务的acquire路由、新真实Builder提案、任务结束自动采集、读取Motif接入及收益对照。默认聊天和原学习工作器未接管。修复`observation`缺失前的发布失败保留。
-- 配置/复现/边界见[场景协议](../capability-scenes-v1.md#论文-script-接入2026-11-02续)和[记录](../experiments/efficiency-rsi-script-20261102.md)。测试使用项目Linux私有环境，原始产物仅存`.local/efficiency-rsi-script-20261102/`。真实API持续授权不变；本轮新增费用0、机器成本未计价。
+- 配置/复现/边界见[场景协议](../research/capability/capability-scenes-v1.md#论文-script-接入2026-11-02续)和[记录](../experiments/efficiency-rsi-script-20261102.md)。测试使用项目Linux私有环境，原始产物仅存`.local/efficiency-rsi-script-20261102/`。真实API持续授权不变；本轮新增费用0、机器成本未计价。
 - 接手下一步：固定真实任务训练/认证分区，运行原学习器路由；让真实Builder构造并逐阶段定位失败。回退可停用新scene_adapter；兼容策略与白名单应和本轮代码一起回退，不单独删除配置文件。
 
 ## 2026-10-23：回执传输独立 main 修复
