@@ -2,7 +2,7 @@
 
 ## 2026-11-06 原生执行候选 preview.11
 
-- 实现提交 `6ada3a13` 已推送 `codex/desktop-local-runtime`，未合入 main；0.2.40 及旧预览包保留，安装包未上传。
+- Windows 实现 `6ada3a13`、Mac 兼容修复与验收记录 `f4686abc` 已推送 `codex/desktop-local-runtime`，未合入 main；0.2.40 及旧预览包保留，安装包未上传。本轮没有重建或替换上述 Windows 日常安装包。
 - Windows 的同一工作区/输入框接通六场景。Agent 和会话继续使用 DSH 原生 agents/session；固定工具进程由 DSH subprocess 管理。PPT 模板与来源生成本机 PPTX/PDF；复杂视频使用 Remotion 4.0.539 和配套 Chromium、本机 compositor。Windows 浏览器桥去除 Remotion 的 `--no-sandbox`，启用 Chromium 渲染沙箱；这不是整个编译工具进程的读取/网络隔离。DSH Windows ACL 的命名管道限制及失败证据已记录。
 - 打包 ASAR 的 Remotion 实际渲染/完整解码、PPT/PDF/源不变、凭证过滤与取消孙进程检查通过。Office 在私有目录创建的只读目录可清理，不跟随链接。两种新建/绑定工作区仍使用相同对话界面。
 - Windows 真实模型使用原 V100 试用账号和累计账本、Flash/off、任务预算及输出不限，chat/files/data/paper/ppt/video 分别 1/3/3/3/5/4 次，共19次。视频未上传 Linux 渲染；源摘要均保持。私有记录 `.local/desktop-preview11-real-1793910776167/summary.json`。合成小任务通过不等于完整科研场景与收益验收。
