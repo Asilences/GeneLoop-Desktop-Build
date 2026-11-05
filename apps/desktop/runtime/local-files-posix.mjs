@@ -5,14 +5,19 @@ import { isAbsolute } from 'node:path';
 
 if (!['darwin', 'linux'].includes(process.platform)) throw Error('此平台没有本机文件访问实现。');
 const libc = koffi.load(process.platform === 'darwin' ? '/usr/lib/libSystem.B.dylib' : 'libc.so.6');
-const openat = libc.func('int openat(int directory, const char *name, int flags, unsigned int mode)');
+// mode is variadic in libc. Apple ARM64 passes variadic arguments on the
+// stack; declaring it as a fixed fourth argument can create unreadable files.
+const openat = libc.func('int openat(int directory, const char *name, int flags, ...)');
 const mkdirat = libc.func('int mkdirat(int directory, const char *name, unsigned int mode)');
 const unlinkat = libc.func('int unlinkat(int directory, const char *name, int flags)');
 const dup = libc.func('int dup(int file)');
-const fdopendir = libc.func('void *fdopendir(int file)');
-const readdir = libc.func('void *readdir(void *directory)');
+// Intel macOS also exports the legacy 32-bit-inode ABI as plain readdir.
+// Match the modern dirent layout used below instead of decoding that ABI.
+const directorySymbol = name => process.platform === 'darwin' && process.arch === 'x64' ? name+'$INODE64' : name;
+const fdopendir = libc.func(directorySymbol('fdopendir'), 'void *', ['int']);
+const readdir = libc.func(directorySymbol('readdir'), 'void *', ['void *']);
 const closedir = libc.func('int closedir(void *directory)');
-const rewinddir = libc.func('void rewinddir(void *directory)');
+const rewinddir = libc.func(directorySymbol('rewinddir'), 'void', ['void *']);
 const directoryFlags = constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW;
 const maxBytes = 256 * 1024;
 
@@ -26,7 +31,7 @@ function parts(path) {
 }
 
 function child(parent, name, flags, mode = 0) {
-  const fd = openat(parent, name, flags | constants.O_NOFOLLOW, mode);
+  const fd = openat(parent, name, flags | constants.O_NOFOLLOW, 'unsigned int', mode);
   if (fd < 0) throw Error('无法打开授权目录内的文件，或该路径使用了链接。');
   return fd;
 }
