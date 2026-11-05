@@ -10,6 +10,9 @@ import { runNativeProcess } from './native-process.mjs';
 const run = promisify(execFile);
 const maxSourceBytes = 80 * 1024 * 1024;
 const input = ['-protocol_whitelist', 'file,pipe', '-f', 'mov', '-enable_drefs', '0', '-use_absolute_path', '0'];
+// Remotion's native FFmpeg omits the default wrapped_avframe encoder. Decode
+// every frame using explicitly supported lossless output codecs and discard it.
+const decodedOutput = ['-c:v','rawvideo','-c:a','pcm_s16le','-threads','1','-f','null','-'];
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
 async function execute(bin, args, directory, signal) {
@@ -84,7 +87,7 @@ export async function renderNativeRemotion(ctx, reader, writer, tools, source, a
     if (media.width !== rendered.composition.width || media.height !== rendered.composition.height ||
         Math.abs(media.duration-rendered.composition.frames/rendered.composition.fps) > 0.15) throw Error('本机渲染规格核验失败。');
     await execute(tools.ffmpeg,['-v','error','-nostdin','-xerror',...input,'-i','video.mp4',
-      '-map','0:v:0','-map','0:a?','-f','null','-'],directory,signal);
+      '-map','0:v:0','-map','0:a?',...decodedOutput],directory,signal);
     for (const asset of assets) if (sha(reader.readBytes(asset.path,16*1024*1024)) !== asset.sha256) throw Error('来源素材已变化，请重新渲染。');
     const output = join(directory,'video.mp4');
     if (statSync(output).size > maxSourceBytes) throw Error('本机渲染产物过大。');
@@ -128,7 +131,7 @@ export async function renderHybridVideo(reader, writer, tools, source, assetList
     writeFileSync(join(directory, 'video.mp4'), video, {flag:'wx'});
     const info = await probe(tools, 'video.mp4', directory, signal);
     await execute(tools.ffmpeg, ['-v','error','-nostdin','-xerror', ...input,'-i','video.mp4',
-      '-map','0:v:0','-map','0:a?','-f','null','-'], directory, signal);
+      '-map','0:v:0','-map','0:a?',...decodedOutput], directory, signal);
     const receipt = {schema_version:1, execution:'server-remotion', source_sha256:sha(Buffer.from(source)),
       assets:assets.map(({path, name, sha256}) => ({path, name, sha256})), output:{...info, sha256:digest, fullyDecoded:true}};
     return {...receipt, artifacts:publishArtifacts(writer, onReport, signal, [
@@ -215,7 +218,7 @@ export async function renderLocalVideo(reader, writer, tools, plan, signal, onRe
       throw Error('导出视频的时长、画面规格或音轨验证失败。');
     }
     await execute(tools.ffmpeg, ['-v','error','-nostdin','-xerror', ...input,'-i','video.mp4',
-      '-map','0:v:0','-map','0:a:0','-f','null','-'], directory, signal);
+      '-map','0:v:0','-map','0:a:0',...decodedOutput], directory, signal);
     const output = join(directory, 'video.mp4');
     if (statSync(output).size > 80 * 1024 * 1024) throw Error('导出视频超过本机交付上限。');
     const bytes = readFileSync(output);

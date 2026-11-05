@@ -22,6 +22,8 @@ const serveUrl = await bundle({entryPoint:join(config.directory, 'entry.tsx'),
   publicDir:join(config.directory,'public'), outDir:join(config.directory,'bundle'),
   rootDir:config.directory, enableCaching:false, symlinkPublicDir:false,
   webpackOverride:previous => ({...previous, resolve:{...previous.resolve,
+    // ASAR entries are virtual files, not filesystem symlink targets.
+    symlinks:false,
     modules:[join(runtime,'node_modules'),...(previous.resolve?.modules || [])]}}),
 });
 const options = {serveUrl, id:'Main', browserExecutable:config.browser,
