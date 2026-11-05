@@ -130,3 +130,11 @@ Investigation.continue_with保留原能力目录、任务/Builder分流、笔记
 服务器连接恢复后只读核对原C与Builder记录。builder-input-audit-001.json确认seed摘要一致、C认证且active、4能力闭包；owner=frontier-20261103。恢复两条construction-evidence均指向同一task摘要a37c816c…，是同任务两次尝试，不能作为独立构造问题。不得改owner接入script-motif-real论文pilot。下一真实Builder试验沿原owner做局部后继验收，继续使用已有策略接收、inherited_strategy及Builder流程。
 
 首次全量保留2失败，分别为macOS /var符号链接临时目录守卫和测试运行期间更新的候选选择夹具；定向复核选择已通过，正式全量改用TMPDIR=/private/tmp固定代码后重跑。原失败日志context-continuity-full.log保留，最终验证另记录。此次新增模型请求0。
+
+## 2026-11-05 通用Core、真实003与恢复终验
+
+39b3b89e/25383ae6把Paper主脚本生命周期收回通用Core，场景以轻量回调提供经历、inspector、receiver与评价。Core不含Paper任务/评分判断；执行经历可单独启动，Builder专项另设显式门禁。旧经历、能力快照和Builder inspector不再在续接时丢失。原则已落到AGENTS、接口与通用协议。
+
+真实003提出2候选、完成两对4次任务，均未准入，原inconclusive保留。98请求/USD0.18567348代理观测费用全部结算。失败定位为日志晚结算追加破坏FileRef、重复开发暴露掩盖评价、CTRF0.3.5缺失raw_status；24b3effc增加不可变日志捕获、幂等暴露和断言拒绝识别。通用反馈完成阶段可从原决定FileRef零模型恢复，原18+新4=22条、第三续接22条、4份独立输入，快照保持，原失败质量与费用不重写。
+
+最终定向192、本地3010 Python/1662 Node、Linux356通过，3639源码摘要不变。24b3effc再次smoke、Motif、RSI、效率RSI及RAE均退出0。日志final-*.log、完整回归evolution-core-recovery-*.log和765份私有结果均关联同问题ID。两候选原oracle断言失败，行为review不确定；尚无净收益、Builder真实策略评价或Creation Efficiency结论。细节见[正式实验](../experiments/evolution-core-20261105-003.md)。

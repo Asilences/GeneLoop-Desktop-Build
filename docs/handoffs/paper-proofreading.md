@@ -5,7 +5,16 @@
 - Task Strategy采用增加既有独立reviewer的配对动作证据检查。接受需要实际读取并引用两侧动作证据；语义评审校准仍待真实运行。后继选择按预冻质量/成本规则，neutral/negative/unknown保留原方法，候选不再按最后提交顺序选择。
 - 已只读恢复真实C，seed摘要与原引用一致，`cap_dc3832ee6ce8f4f6e4fa9cf7`认证且active，snapshot有4个能力。owner为`frontier-20261103`，不同于五篇任务`script-motif-real`；恢复的两份Builder记录为同一`frontier-D`任务两次尝试，不能作两份独立构造问题。原证据不改身份、不写入原始论文实验。
 - 下一步真实Builder验收应在原owner及独立Store中复用`strategy_handler(target='construction')`、原`inherited_strategy_context`、Builder和检查器。先明确局部任务范围与新的评价资料，再比较后继构造动作、质量和完整投入。两次重试不能支持家族级推广；新任务/新能力发现仍由Evolution决定。
-- 本轮新增模型请求0，原73次请求及其neutral/no_change结论保留。当前代码验证结果随集中审计追加；未合并或部署。
+- 本输入接线阶段新增模型请求0，原73次请求及其neutral/no_change结论保留；后续真实003另列如下，未合并或部署。
+
+## 2026-11-05 通用Core与真实调查003
+
+- 生命周期抽到`src/adapters/evolution_cycle.py`；Paper证据、oracle、任务与结果解释在`scenarios/paper_proofreading/evolution_adapter.py`，脚本仅配置/启动。原则写入AGENTS和通用协议，第二最小Adapter覆盖非task_strategy路由和新能力回流。
+- 模型源码25383ae6已完成真实G1/G2：2个自主task_strategy、两对4次任务，候选均未准入，原决定inconclusive。98请求/代理USD0.18567348，原账本5156–5253全结算。两候选存在真实断言失败，行为review均不确定；没有新增收益或Creation Efficiency结论。
+- 真实运行暴露日志晚结算导致FileRef失效、重复开发暴露掩盖错误、CTRF缺失raw_status三项。24b3effc修复为不可变日志捕获、暴露幂等及断言拒绝兼容；通用`accumulate_evolution_feedback`支持原决定FileRef约束的零模型恢复。原失败保留，G5重放22条经历、第三视图22条、4份独立输入，快照不变，模型0。
+- 原始运行和恢复已关联私有`evolution-core-003-evidence.tar`，不含dsh凭证目录或.env。详见[本轮真实记录](../experiments/evolution-core-20261105-003.md)。真实运行与恢复分别用code-evolution-core-005/006，禁止覆盖它们或重写原状态。
+- 下一步优先审阅通用边界、动作review的返回可靠性，再在原frontier owner开展局部Builder后继试验。只存在同任务两次Builder尝试时不作跨任务独立证据；不为追求成功继续手工改论文解析细节。PR156仍草稿，不合并/部署。
+- 最终源码24b3effc验证。定向192、本地3010 Python/1662 Node、Linux356通过，3639源码摘要不变。真实G1–G3与修复后零模型G5分别报告；独立动作review仍未形成可靠采用结论，完整研究收益和Builder真实接收器未通过。
 
 ## 2026-11-05 Evolution修订3真实执行
 

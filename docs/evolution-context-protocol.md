@@ -245,3 +245,5 @@ G1/G2是首轮重点。先使用已有接收器完成可表达候选。多策略
 首轮原件读取通过evidence默认summary返回正文，完成门禁必须按实际返回content判断，不能要求调用者显式填写content。已经评价候选后仍可决定no_change，调查决定与隔离候选产物分别保存。重投影只改变FileRef路径时，不重开相同内容的已完成调查。修复保留原inconclusive记录，以原工具参数离线重放验证。
 
 用户Prompt审议后的4a020696补强效率/性能压力、成功经历与能力创造目标。调查结果的completion_scope为investigation_only，候选校验、独立验收、采用及效果分别记录；新版模型效果待真实验证。最终本地2977 Python/1662 Node、Linux308及smoke/Motif/RSI通过，模型0。
+
+后续通用化源码39b3b89e/25383ae6将生命周期收回Evolution Core，Paper保留场景适配。真实003自主提出2个任务策略并完成两对评价，未准入，原决定inconclusive。24b3effc依据真实失败修复追加日志快照、幂等暴露与CTRF断言拒绝；零模型G5恢复22条经历、第三视图22条，原快照和费用不变。最终3010 Python/1662 Node、Linux356通过，实际98请求/USD0.18567348无净收益结论。详情见[通用Core真实记录](experiments/evolution-core-20261105-003.md)。
