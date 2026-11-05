@@ -8,7 +8,7 @@ on:
         default: both
       timeout:
         type: number
-        default: 60
+        default: 50
 concurrency:
   group: private-macos-checks
   cancel-in-progress: false
@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.target == 'arm64' && '{"include":[{"os":"macos-15","arch":"arm64"}]}' || inputs.target == 'x64' && '{"include":[{"os":"macos-15-intel","arch":"x64"}]}' || '{"include":[{"os":"macos-15","arch":"arm64"},{"os":"macos-15-intel","arch":"x64"}]}') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ fromJSON(inputs.timeout) }}
+    timeout-minutes: ${{ inputs.timeout }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     defaults:
@@ -40,16 +40,22 @@ jobs:
       - name: Native file permission checks (no model)
         run: npm run smoke:native
       - name: Prepare pinned offline tools
+        id: tools
         run: node scripts/prepare-macos-tools.mjs
       - name: Native Remotion render and full video decode (no model)
         run: npm run runtime:stage && npm run smoke:remotion
       - name: Native PPT template and LibreOffice PDF export (no model)
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: npm run smoke:ppt
       - name: Credential scrubbing and cancellation of descendants
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: node scripts/check-native-process.mjs
       - name: Package on target architecture
+        id: package
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: npm run dist
       - name: Verify ASAR runtime in packaged app
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         run: |
           export ELECTRON_RUN_AS_NODE=1
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
