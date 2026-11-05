@@ -1,9 +1,9 @@
 ## 2026-11-05 Evolution修订3真实执行
 
 - 范围与状态。a3e96f59已推送草稿PR156，未合并部署。用户授权的修订3冻结补丁、原论文历史适配与隔离接收已实现。
-- 真实结果。自主调查18次/3来源，产生1个task_strategy，Prefix同条件两侧原oracle均5/5，费用差-0.00093408按冻结标准neutral。DDPM后继5/5，部分策略行为可查，完整遵守待验。完整61请求/USD0.10151940代理观测费，原账本5083—5143全部结算，实付未知。
-- 失败与修复。原no_change结束误拒，真实最终inconclusive保留。修复默认summary返回正文的判定及试验后维持决定，另避免纯路径重投影重访。修复后真实模型结束未复测。
-- 验证与入口。已有a3e96f59本地2971 Python/1662 Node、Linux302项及smoke/Motif/RSI通过，修复后回归另更新。Linux私有快照code-paper-evolution-001和同名results保留，入口scripts/run-paper-evolution.py；加载既有remote-env，沿原累计账本。原始日志不入Git。
+- 真实结果。自主调查18次/3来源，产生1个task_strategy，Prefix同条件两侧原oracle均5/5，费用差-0.00093408按冻结标准neutral。DDPM后继5/5，部分策略行为可查，完整遵守待验。首轮61请求/USD0.10151940；反馈轮12请求/USD0.01977294，总73请求/USD0.12129234代理观测。原账本5083—5155全部结算，实付未知。
+- 失败与修复。原no_change结束误拒，真实最终inconclusive保留。修复默认summary返回正文的判定及试验后维持决定，另避免纯路径重投影重访。81b6c306已完成原工具离线重放及真实反馈轮no_change，相同快照重访0请求。模型把模型工具修复误判为Runtime内部等解释问题保留为下一轮输入语义检查。
+- 验证与入口。已有a3e96f59本地2971 Python/1662 Node、Linux302项及smoke/Motif/RSI通过，最终81b6c306本地2973 Python/1662 Node、Linux304项及smoke/Motif/RSI通过。Linux私有快照code-paper-evolution-001和同名results保留，入口scripts/run-paper-evolution.py；加载既有remote-env，沿原累计账本。原始日志不入Git。
 - 接手。优先复核门禁修复的原工具重放与最终回归，随后审阅真实行为与研究边界。仅task_strategy接收可用，其余pending，跨进程额度恢复与完整高层图闭包继续待验。
 - 证据与权限。见[正式实验](../experiments/paper-evolution-20261105-001.md)及[集中调试](../debug/evolution-artifact-routing-20261105.md)。费用/请求null授权、账本与生产不改；GitHub job因付款/消费额度未启动，不能标CI通过。
 

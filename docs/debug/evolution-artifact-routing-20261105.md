@@ -98,3 +98,11 @@
 私有完整结果位于.local/debug/evolution-artifact-routing-20261105/server-results/paper-evolution-20261105-001，根result.json、agent/tool-*.json、candidate-evaluation-0/result.json及host/trials保留原字节。预热manifest在真实API前冻结了两份评价器/题面/环境摘要；新CLI进一步将其纳入effective.json。原记录不追改。
 
 本地受限沙箱的端口拒绝、Linux首次误列不存在测试文件的收集失败、GitHubAPI暂时EOF均留日志。允许回环端口后本地2971Python/1662Node通过，Linux纠正列表后302项通过。GitHub当前a3e96f59的job注解明确付款/消费额度导致未启动，steps为0。
+
+### 真实反馈002与最终门禁状态
+
+81b6c306下原30次工具重放no_change，0模型请求；Linux304、本地2973 Python/1662 Node及smoke/Motif/RSI通过。随后原入口检视三次新评价经历，20动作/12真实请求，完成no_change。相同快照重访为revisit_skipped，0请求。新增USD0.01977294代理观测，账本5144—5155全部已结算，两轮73请求/USD0.12129234。私有同目录server-results/paper-evolution-feedback-20261105-002保留全部回答及revisit/result.json，真实源码两轮前后均未变。
+
+反馈解释出现可复现的模型推断错误。它将明确由模型发起的execute修复归为Runtime内部，且把三次通过外推为家族质量饱和。原动作投影的deterministic_host_callback_action_projection描述容易混淆投影生成者与动作发起者。这是下一步输入语义定位点，当前不把模型解释全部标为正确。原成本差为已测neutral，保留其错误说法并给出审计反证。
+
+用户询问Prompt位置后又明确保留现有代码形式用于队友讨论。当前主Prompt仍在capability_evolution_investigation.py的SYSTEM，运行时追加规则在request构造处，完整生效文本和工具在每轮agent/request.json。没有新增Prompt文件。
