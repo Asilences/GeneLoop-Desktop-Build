@@ -1,17 +1,17 @@
 name: Desktop native macOS checks
 on:
   workflow_dispatch:
-  push:
-    branches: ['codex/desktop-local-runtime']
-    paths:
-      - 'apps/desktop/**'
-      - 'scenarios/ppt_master/**'
-      - '.github/workflows/desktop-native.yml'
-  pull_request:
-    paths:
-      - 'apps/desktop/**'
-      - 'scenarios/ppt_master/**'
-      - '.github/workflows/desktop-native.yml'
+    inputs:
+      target:
+        type: choice
+        options: [both, arm64, x64]
+        default: both
+      timeout:
+        type: number
+        default: 60
+concurrency:
+  group: private-macos-checks
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -19,14 +19,9 @@ jobs:
     name: macOS ${{ matrix.arch }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: macos-15
-            arch: arm64
-          - os: macos-15-intel
-            arch: x64
+      matrix: ${{ fromJSON(inputs.target == 'arm64' && '{"include":[{"os":"macos-15","arch":"arm64"}]}' || inputs.target == 'x64' && '{"include":[{"os":"macos-15-intel","arch":"x64"}]}' || '{"include":[{"os":"macos-15","arch":"arm64"},{"os":"macos-15-intel","arch":"x64"}]}') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: ${{ fromJSON(inputs.timeout) }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     defaults:
