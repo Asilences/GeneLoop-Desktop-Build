@@ -46,7 +46,8 @@ class Investigation:
     """One host-scoped view. Even a single unknown-quality source is queryable."""
 
     def __init__(self, snapshot, entries, scope, directory, *, inspector=inspect_graph,
-                 history=(), objective='Improve future execution and construction.', catalog=None):
+                 history=(), objective='Improve future execution and construction.', catalog=None,
+                 sealed_evidence=(), development_evidence=()):
         self.snapshot = validate_capability_snapshot(snapshot)
         if not isinstance(scope, str) or not scope.strip() or not isinstance(objective, str) or not objective.strip():
             raise ValueError('investigation_scope_or_objective_required')
@@ -58,6 +59,11 @@ class Investigation:
         self.history = {}
         self.evidence = {}
         self.notes = []
+        self.sealed_evidence = list(sealed_evidence)
+        self._sealed_hashes = {ref['sha256'] for ref in self.sealed_evidence}
+        self._sealed_paths = {str(Path(ref['path']).resolve()) for ref in self.sealed_evidence}
+        self.development_evidence = list(development_evidence)
+        self._unexposed_development = {ref['sha256'] for ref in self.development_evidence}
         self.sequence = 0
         self._inspector = inspector
         self._entries = {}
@@ -66,7 +72,7 @@ class Investigation:
             if (set(entry) != {'split', 'scope', 'evidence'} or entry['split'] != 'training'
                     or entry['scope'] != scope):
                 raise ValueError('investigation_split_or_scope_changed')
-            verify(entry['evidence'])
+            self._check_discovery_reference(entry['evidence'])
             row = copy.deepcopy(inspector(entry['evidence'], self.snapshot['owner']))
             if row.get('evaluation_role') == 'evaluation':
                 raise ValueError('investigation_evaluation_source_excluded')
@@ -111,8 +117,29 @@ class Investigation:
 
     def _index_evidence(self, references):
         for reference in references:
-            verify(reference)
+            self._check_discovery_reference(reference)
             self.evidence['evidence_' + reference['sha256']] = copy.deepcopy(reference)
+
+    def _check_discovery_reference(self, reference):
+        if (reference['sha256'] in self._sealed_hashes or
+                str(Path(reference['path']).resolve()) in self._sealed_paths or
+                reference['sha256'] in self._unexposed_development):
+            raise ValueError('investigation_sealed_evidence_excluded')
+        verify(reference)
+
+    def expose_development(self):
+        """Trusted evaluator marks its frozen development feedback exposed."""
+        self._unexposed_development.clear()
+        exposed = []
+        for reference in self.development_evidence:
+            if (reference['sha256'] in self._sealed_hashes or
+                    str(Path(reference['path']).resolve()) in self._sealed_paths):
+                continue
+            self._index_evidence([reference])
+            exposed.append(reference)
+        save(self.directory / 'development-exposure.json', {
+            'role': 'development', 'exposed': exposed,
+            'sealed_unchanged': self.sealed_evidence})
 
     def _index_history_sources(self, value):
         # Only explicit sources in the host manifest grant access. Never parse

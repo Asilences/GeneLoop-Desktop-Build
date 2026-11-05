@@ -1,0 +1,92 @@
+# Evolution 产物分配检视
+
+## 范围与结论
+
+2026-11-05只读代码及历史运行审计。基点为研究分支`codex/evolution-overnight-20261105`、HEAD `6499d32c`，同时核对当前磁盘上未提交的语义质量反馈补丁。本次未修改源码、运行新模型、合并或部署。磁盘实现、冻结实验和生产状态分开评价。
+
+产物分类与接收位置基本合理，实际运行入口覆盖不完整。任务策略主要依赖宿主显式选中，可执行能力已发生真实入池与后继试用；构造策略和边界改进在SkillsBench宿主仍为pending。当前证据不能把候选提出、独立验收、上下文展示、实际采用与价值改善合并为一个成功状态。
+
+## 四层数据流
+
+```text
+真实经历与质量、费用反馈
+    → Evolution候选
+    → 按产物类型构造和独立评价
+    → 认证能力 / 准入策略 / 新边界版本
+    → 下一任务或Builder获得对应版本
+    → 实际调用或行为变化
+    → 新质量、完整成本及后继构造反馈
+```
+
+## 产物与接收位置
+
+| 产物 | 接收者与用途 | 当前实现 |
+| --- | --- | --- |
+| `capability` | 原材料库、Capability目录、Runtime及后续构造可见能力 | SkillsBench经原Script学习和认证注册Python helper，下一任务读取最新catalog。语义质量另评 |
+| `task_strategy` | 执行任务的模型，改变取证、分解、选择或恢复 | Web研究模式注入已选条件策略；benchmark生成原生可发现的SKILL包 |
+| `construction_strategy` | Builder，改变能力构造方法 | 公共策略处理及Builder inherited_strategy已接；benchmark缺真实Builder评价适配 |
+| `boundary` | 原Motif学习、编译及独立验收，产生新抽象版本 | 原离线Evolution入口已接；benchmark缺适配当前轨迹的边界宿主 |
+
+`boundary`目前表达已观察轨迹中连续区域的选择。通用接口改造或Harness代码修改需要能落入现有能力表示或另行开发接线，当前没有任意Harness改写的自动投放入口。
+
+## 实际入口覆盖
+
+- `scripts/run-evolution-agent.py`实际只注册boundary handler。其余类型通过格式检查后仍会因没有宿主入口保持pending。
+- `scripts/run-strategy-evolution.py`由宿主配置task或construction，只注册对应策略handler，并要求实际评价适配器。
+- `src/adapters/evolution_benchmark_gene.py`接task_strategy，并在配置原生材料后接capability；construction_strategy和boundary明确保留pending。新增材料作为下一任务材料快照可见；同轮策略引用新材料时返回`new_material_requires_next_generation_snapshot`。
+- benchmark逐代写continuation；保存续接记录不等于已经自动启动下一代。生产任务策略按研究配置、场景和任务起点冻结，研究运行与正式生产分别判断。
+
+## 选择、采用与价值
+
+策略目前按target、scope和宿主selection进入固定接收位置。Web路径把一个已选策略的applicability及decision_policy送给任务模型；Builder路径读取一个显式inherited_strategy；benchmark保留最新独立准入的selected策略并生成可发现包。多策略按当前任务自动检索、排序和选择的完整通用路径尚未发现。
+
+自然语言applicability允许模型判断适用性，不能单独证明策略已被正确选用。Web收据明确记录prepared_only或prompt_submitted，semantic_adoption仍为null；benchmark区分原生skill_activated，但实际语义作用仍要求检查原任务行动。
+
+能力调用能够由Runtime回执确认。策略采用应定位到后继行动，说明采用了什么决策方法，随后再评价质量和成本。认证等价、独立任务质量、执行收益和创造贡献各自需要证据。
+
+## 已核对真实产物
+
+| 运行 | 结果 |
+| --- | --- |
+| 11月4日原Evolution real-001 | 两候选原始结果因描述字段校验拒绝；离线格式修复另记。没有发布或后继采用 |
+| 11月4日原Evolution real-002 | no_change，无待分配的新产物 |
+| `gene-econ-001` | selection=null，无新材料；原结果明确保留构造策略及边界适配pending |
+| `gene-threejs-004` | 一份OBJ检查程序注册为两个接口root；selection=null。后继实际文件两次调用输入形状失败，小样本试用成功；递归学习pending |
+
+原始结果来自服务器隔离`code-r6`、`code-r11`及本地已有`evolution-agent-20261104`同步副本，没有重写旧结果。以上范围不能外推为其他所有场景均无策略采用。
+
+## 后续检视用的五个问题
+
+1. 候选提出的是待解决工作、决策方法，还是已有能力内部实现？
+2. 当前入口确实接收该类型，还是只允许输出而保留pending？
+3. 下一任务如何拿到对应版本，当前是否还需显式宿主selection或续接？
+4. 后继证据属于可见、读取、实际调用，还是可定位的行为变化？
+5. 独立质量、完整成本及后继构造表现分别改变了什么？
+
+优先补齐真实论文语义任务的产物接收和采用验收，再决定是否需要多策略选择机制。保留有界条件Prompt形式，复用原Registry、Builder、Feedback和Runtime。
+
+## 用户指定的五篇重复实验检视包
+
+用户明确复用2026-10-21五篇各两次实验。先前准备的Skill∞新任务被替换，原下载材料保留为未运行备选。原五篇数据与运行记录已在旧`paper-script-motif`工作区找到，复制到当前私有`.local/debug/evolution-artifact-routing-20261105/five-paper-replay-001/`。
+
+包含QLoRA、S4、RoFormer、Prefix-Tuning、DDPM的五份原BibTeX、摘要与原protocol相同的题面、10次Baseline及两批各10次Motif原回答和运行summary/result/manifest，共30次历史记录；逐文件复制摘要与原文件一致。Baseline请求合计195，修复后110，核心正确率两者均9/10，失败身份与未知费用按原记录保留。完整网页事件另需按task_id定位，不能把本包的result/summary称为已完整复制的原生事件。
+
+本次准备新增模型请求0，旧输入与轨迹未改。先观察既有结构复用正例、未接管和误报反例，确认剩余负担，再评价新Evolution产物的增量。原任务范围为书目文件完整性与同标题分组，确定性质量验收和自然语言解释评价分别处理；不直接写成整篇论文语义审查或持续RSI结果。
+
+## 当前输入机制审计
+
+本次按`7fd8c1fd`及当前未提交文档继续只读核对。`capability_investigation.py`已有总览、经历/能力/历史搜索，以及context、quality、actions和原件分页读取；`capability_decision_evidence.py`已有原质量评价绑定，能把任务和工件的逐项评价接入调查。旧一次性packet和新的工具调查入口分别识别，不能把旧空候选当作新分层入口的完整验收。
+
+旧packet按宿主relation、stage和能力引用分组，调查接口则允许模型自行检索和选取经历。relation是证据组织线索，相关性、问题成因和适当改进仍是待调查假设。当前概览提供状态、质量和费用范围，未实现从全部日志自动计算可节省负担。
+
+通用Web经历的source_identity基于账户内decision_root和会话/父任务关系，主要防止同一决定续写重复计数。它不足以单独保证同一BibTeX在不同独立会话重复时仍计为一个输入；五篇实验适配必须复用原source_sha256组织独立性。原构造经历已有成本汇总，通用Web语义经历的observed_cost_usd仍为None，须与原账本归属衔接。
+
+质量check可给出证据引用，绑定到任务和回答；将具体误报关联到实际解析、比较和最终判断仍待真实事件重建。原actions接口和按需证据读取可复用。五篇30次记录尚未正式进入这套调查入口，因此当前结论为输入访问机制已有、真实数据组织和诊断依据未验收。
+
+## 修订3概念审计落实
+
+2026-11-05，用户要求只修订概念后再次核查。通用协议改为调查、验收、交付/采用和效果四维研究视图；明确host_selected、model_selected及实际执行，三类数据角色及暴露转移，来源派生、证据强度、局部准入及归因范围。no_change从候选类型分离，增加有限调查步骤/期限与恢复规则，费用/请求仍沿显式null授权。
+
+主批次30次记录恢复提升为当前事实，后续从skeleton、质量与动作关联推进；旧逐论断搜索为历史。完整C,C,report拒绝与局部C→report成功按主线历史记录分别保留，本次未重跑。首轮优先G1/G2，后端和长期研究缺口分列pending。
+
+修订2私有快照、审议原文位于同问题私有protocol-review-v3目录。本次只编辑文档，新增模型请求0，源码及旧实验原件未修改。T1—T12为拟补检查矩阵，本次仅检查Markdown、链接和概念覆盖。文档仍待用户核查，未宣布冻结。

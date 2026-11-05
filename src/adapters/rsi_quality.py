@@ -3,6 +3,55 @@ from pathlib import Path
 from .rsi_protocol import validate_record
 import hashlib
 import json
+from decimal import Decimal, InvalidOperation
+
+
+def compare_research_outcomes(baseline, candidate, policy_ref):
+    """Project frozen quality/cost criteria into a research decision, never a grant."""
+    from .capability_feedback import verify
+    policy = json.loads(verify(policy_ref))
+    fields = {'quality_tolerance', 'cost_tolerance_usd', 'minimum_samples',
+              'max_cost_increase_ratio', 'min_quality_gain', 'minimum_quality'}
+    if set(policy) != fields or type(policy['minimum_samples']) is not int or policy['minimum_samples'] < 1:
+        raise ValueError('quality_comparison_policy_invalid')
+    try:
+        limits = {key: Decimal(str(policy[key])) for key in fields - {'minimum_samples'}}
+        if any(not value.is_finite() or value < 0 for value in limits.values()):
+            raise ValueError('quality_comparison_policy_invalid')
+        values = []
+        for outcome in (baseline, candidate):
+            if type(outcome.get('samples')) is not int or outcome['samples'] < policy['minimum_samples']:
+                return {'effect': 'inconclusive', 'publication': 'pending', 'policy': policy_ref}
+            if outcome.get('quality') is None or outcome.get('cost_usd') is None:
+                return {'effect': 'inconclusive', 'publication': 'pending', 'policy': policy_ref}
+            quality, cost = (Decimal(str(outcome[key])) for key in ('quality', 'cost_usd'))
+            if not quality.is_finite() or not cost.is_finite() or not 0 <= quality <= 1 or cost < 0:
+                raise ValueError('quality_comparison_outcome_invalid')
+            values.append((quality, cost))
+    except (InvalidOperation, TypeError) as error:
+        raise ValueError('quality_comparison_value_invalid') from error
+    quality_delta = values[1][0] - values[0][0]
+    cost_delta = values[1][1] - values[0][1]
+    quality_up = quality_delta > limits['quality_tolerance'] and quality_delta >= limits['min_quality_gain']
+    quality_down = quality_delta < -limits['quality_tolerance']
+    cost_up = cost_delta > limits['cost_tolerance_usd']
+    cost_down = cost_delta < -limits['cost_tolerance_usd']
+    effect, publication = 'neutral', 'retain_current'
+    if quality_down:
+        effect, publication = ('mixed' if cost_down else 'negative'), 'research_only'
+    elif quality_up and cost_up:
+        effect = 'mixed'
+        publication = ('eligible_scoped' if cost_delta <= values[0][1] * limits['max_cost_increase_ratio']
+                       else 'research_only')
+    elif quality_up or cost_down:
+        effect, publication = 'positive', 'eligible_scoped'
+    elif cost_up:
+        effect, publication = 'negative', 'research_only'
+    if values[1][0] < limits['minimum_quality']:
+        publication = 'research_only'
+    return {'effect': effect, 'publication': publication, 'policy': policy_ref,
+            'quality_delta': str(quality_delta), 'cost_delta_usd': str(cost_delta),
+            'production_default_changed': False}
 
 
 def quality_status(record, *, task_sha256, artifact_sha256, rubric_sha256, required_checks):

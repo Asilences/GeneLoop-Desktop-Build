@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 
 from .capability_evolution_agent import restore_regions, validate_candidate
 from .capability_feedback import file_ref
+from .capability_feedback import verify
+from .capability_contract import capability_digest
 from .capability_improvement import save
 
 
@@ -56,16 +59,44 @@ For a strategy, proposal is {"applicability":text,"decision_policy":text,
 For capability, describe the desired function and interface in proposal.'''
 
 
-def run_investigation(investigation, *, call_agent, handlers, output):
+def run_investigation(investigation, *, call_agent, handlers, output,
+                      max_tool_calls=None, timeout_seconds=None, prior_results=(), local_only=False,
+                      require_no_change_evidence=False):
     """The caller owns the existing model loop and cumulative request ledger."""
     if not callable(call_agent) or not isinstance(handlers, dict):
         raise ValueError('evolution_investigation_host_invalid')
+    if max_tool_calls is not None and (type(max_tool_calls) is not int or max_tool_calls < 1):
+        raise ValueError('evolution_investigation_step_limit_invalid')
+    if timeout_seconds is not None and (type(timeout_seconds) not in (int, float)
+                                       or not 0 < timeout_seconds < float('inf')):
+        raise ValueError('evolution_investigation_timeout_invalid')
+    if type(local_only) is not bool:
+        raise ValueError('evolution_investigation_scope_invalid')
     directory = Path(output)
     directory.mkdir(parents=True, mode=0o700, exist_ok=False)
+    identity = capability_digest({'scope': investigation.scope, 'snapshot': investigation.snapshot,
+        'objective': investigation.objective,
+        'entries': sorted(ref['evidence']['sha256'] for ref in investigation._entries.values()),
+        'history': sorted(row['reference']['sha256'] for row in investigation.history.values()),
+        'sealed': sorted(ref['sha256'] for ref in investigation.sealed_evidence),
+        'development': sorted(ref['sha256'] for ref in investigation.development_evidence),
+        'handlers': sorted(handlers), 'local_only': local_only,
+        'capability_cards': investigation.capability_cards,
+        'protocol': 'evolution_execution_freeze_v1',
+        'require_no_change_evidence': require_no_change_evidence})
+    for reference in prior_results:
+        previous = json.loads(verify(reference))
+        if previous.get('status') == 'no_change' and previous.get('investigation_identity') == identity:
+            result = {'status': 'revisit_skipped', 'reason': 'unchanged_completed_no_change',
+                      'prior_result': reference, 'investigation_identity': identity,
+                      'model_requests': 0, 'production_enabled': False}
+            save(directory / 'result.json', result)
+            return result
     submissions = []
     tool_calls = []
     finish = None
     roots = {}
+    exhausted = False
     extra_tools = [
         {'name': 'evolution_submit',
          'description': 'Submit an evidence-grounded candidate to the existing construction and independent evaluation host.',
@@ -90,22 +121,41 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                  'description': 'Optional index of an earlier failed actual host evaluation. Retain its scope and observation selection.'}},
              'required': ['candidate', 'observation_ids'], 'additionalProperties': False}},
         {'name': 'evolution_finish', 'description': 'Finish this investigation with a reason; no_change is valid.',
-         'parameters': {'type': 'object', 'properties': {'reason': {'type': 'string', 'minLength': 1}},
+         'parameters': {'type': 'object', 'properties': {'reason': {'type': 'string', 'minLength': 1},
+                        'decision': {'type': 'string', 'enum': ['proposal', 'no_change', 'inconclusive']}},
                         'required': ['reason'], 'additionalProperties': False}}]
     initial = {**investigation.overview(), 'supported_candidate_kinds': sorted(handlers),
+               'admission_scope': 'local' if local_only else 'task_family',
+               'max_investigation_tool_calls': max_tool_calls,
                'candidate_evaluation_limit': 2,
                'candidate_repair_limit_per_root': 2,
                'unsupported_candidate_handling': 'Preserve the hypothesis as pending until its host adapter is available.'}
     request = {'mode': 'evolution_investigation', 'prompt': SYSTEM, 'initial_context': initial,
                'tools': [*investigation.tools(), *extra_tools], 'available_skill_cards': []}
+    request['prompt'] += ('\nFinish with an explicit decision: proposal, no_change, or inconclusive. '
+                          'Insufficient evidence or an interrupted investigation is inconclusive. '
+                          'Uncertified candidates execute only in the isolated research evaluator. '
+                          'Read the supported_candidate_kinds before submitting. '
+                          'A strategy must predict observable later actions, not just improved quality.')
+    if local_only:
+        request['prompt'] = request['prompt'].replace('Select at least two independent experiences',
+            'This host admits only local experiments. Select at least one experience')
+    if timeout_seconds is not None:
+        request['timeout_seconds'] = timeout_seconds
+    if require_no_change_evidence:
+        request['prompt'] += ('\nBefore a completed no_change decision, read original evidence and save an '
+                              'evidence-linked note. If you cannot complete that investigation, finish inconclusive.')
     save(directory / 'request.json', request)
 
     def dispatch(name, arguments):
-        nonlocal finish
+        nonlocal finish, exhausted
         record = {'name': name, 'arguments': copy.deepcopy(arguments)}
         try:
             if finish is not None:
                 raise ValueError('evolution_investigation_already_finished')
+            if name != 'evolution_finish' and max_tool_calls is not None and len(tool_calls) >= max_tool_calls:
+                exhausted = True
+                raise ValueError('evolution_investigation_tool_limit: call evolution_finish with decision=inconclusive')
             if not isinstance(arguments, dict):
                 raise ValueError('evolution_investigation_arguments_invalid')
             if name == 'evolution_submit':
@@ -117,6 +167,11 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                 submissions.append(submitted)
                 try:
                     context = investigation.context(arguments['observation_ids'])
+                    context['admission_scope'] = 'local' if local_only else 'task_family'
+                    if local_only:
+                        if context['independent_sources'] != 1:
+                            raise ValueError('evolution_local_candidate_requires_one_source')
+                        context['scope'] += ':local:' + context['observations'][0]['source_identity'][:24]
                     mapping = investigation.reference_map(arguments['observation_ids'])
                     proposed = copy.deepcopy(arguments['candidate'])
                     if isinstance(proposed, dict):
@@ -124,7 +179,8 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                         proposed.setdefault('evidence_ids', copy.deepcopy(arguments['observation_ids']))
                         if proposed['scope'] != context['scope']:
                             raise ValueError('evolution_candidate_scope_conflict')
-                    candidate = validate_candidate(restore_regions(proposed, mapping), context)
+                    candidate = validate_candidate(restore_regions(proposed, mapping), context,
+                                                   minimum_sources=1 if local_only else 2)
                     submitted['validated_candidate'] = candidate
                     repair_of = arguments.get('repair_of')
                     root_index = submitted['index']
@@ -199,10 +255,24 @@ def run_investigation(investigation, *, call_agent, handlers, output):
                               remaining_candidate_evaluations=2 - len(roots),
                               remaining_candidate_repairs={str(index): 2 - repairs for index, repairs in roots.items()})
             elif name == 'evolution_finish':
-                if (set(arguments) != {'reason'} or not isinstance(arguments['reason'], str)
+                if (set(arguments) - {'reason', 'decision'} or not isinstance(arguments.get('reason'), str)
                         or not arguments['reason'].strip()):
                     raise ValueError('evolution_investigation_finish_reason_required')
-                finish = {'reason': arguments['reason'], 'submissions': len(submissions)}
+                decision = arguments.get('decision', 'proposal' if submissions else 'no_change')
+                if decision not in ('proposal', 'no_change', 'inconclusive'):
+                    raise ValueError('evolution_investigation_decision_invalid')
+                if decision == 'no_change' and require_no_change_evidence and not exhausted:
+                    records = [json.loads(verify(ref)) for ref in tool_calls]
+                    original_read = any(call['name'] == 'evolution_read' and call['status'] == 'succeeded'
+                        and call['arguments'].get('kind') == 'evidence'
+                        and call['arguments'].get('section') == 'content' for call in records)
+                    supported_note = any(note['evidence_ids'] for note in investigation.notes)
+                    if not original_read or not supported_note:
+                        raise ValueError('evolution_no_change_investigation_incomplete: read original evidence and note support, or finish inconclusive')
+                if decision == 'proposal' and not submissions or decision == 'no_change' and submissions:
+                    raise ValueError('evolution_investigation_decision_submission_conflict')
+                finish = {'reason': arguments['reason'], 'submissions': len(submissions),
+                          'decision': 'inconclusive' if exhausted else decision}
                 save(directory / 'finish.json', finish)
                 result = {'status': 'finished', **finish}
             else:
@@ -219,11 +289,14 @@ def run_investigation(investigation, *, call_agent, handlers, output):
     result = {'status': 'incomplete', 'submissions': submissions, 'finish': None,
               'tool_calls': tool_calls, 'measured_net_benefit': None, 'actual_adoption': None,
               'production_enabled': False}
+    result['investigation_identity'] = identity
     try:
         result['agent_result'] = call_agent(request, dispatch)
         result['finish'] = finish
         if finish is not None:
-            result['status'] = 'completed' if submissions else 'no_change'
+            result['status'] = ('completed' if finish['decision'] == 'proposal' else finish['decision'])
+        if exhausted or (isinstance(result['agent_result'], dict) and result['agent_result'].get('timed_out')):
+            result['status'] = 'inconclusive'
         return result
     except Exception as error:
         result.update(status='failed', error=type(error).__name__ + ':' + str(error))

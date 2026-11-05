@@ -1,5 +1,19 @@
 # 主线当前交接
 
+### 当前协议修订3
+
+用户要求本轮继续概念修订并再次核查。已按冻结前审计重整[通用协议](../evolution-context-protocol.md)和[推进方案](../changes/paper-semantic-evolution-20261105.md)。当前版本尚未冻结。四维结果、三种数据角色、证据强度、当前能力适用、选择来源、抽象贡献及有限逻辑终止分别明确；no_change属于调查决定。原30次记录已恢复，下一步为skeleton与质量动作关联，完整重复图闭包保留独立pending。
+
+本轮只更新文档并保留修订2私有快照，模型调用0，源码未改。本轮文档未提交或推送。待用户核查修订3后再按G1/G2优先的路线推进。
+
+## 2026-11-05 Evolution协议与solver审议
+
+- 用户要求逐层核对产物去向。本次基于研究HEAD `6499d32c`及当前未提交补丁只读审计，未新增模型调用或改动源码。四类产物的接收位置已核对，实际入口覆盖与采用证据详见[检视记录](../debug/evolution-artifact-routing-20261105.md)。
+- 当前重点缺口为策略仍依赖显式selection、SkillsBench缺construction_strategy及boundary宿主，以及策略展示后实际行为变化与价值的验收。真实OBJ检查程序已入池，两个接口属于同一程序，后继小样本试用和任务质量分开记录。
+- 当前研究HEAD为`7fd8c1fd`。用户要求先交solver审议，已固化[通用上下文与产物协议](../evolution-context-protocol.md)及[完整推进方案](../changes/paper-semantic-evolution-20261105.md)。来源/任务/运行、可展开skeleton、四层上下文、产物匹配、采用及价值分级分别列明已有和拟补。
+- 真实优化起点为原五篇重复实验。新恢复清单`.local/overnight-20261105/multipaper-20261021-recovered/manifest.json`中30次任务、原事件和输入摘要核对一致，5份论文资料。下一步将原事件投影为skeleton并接入调查。
+- 本轮仅编辑文档和核对私有材料，模型调用0；本轮文档未提交/推送，未合并或部署。既有工作区改动保留，后续按solver审议结果实施。
+
 ## 2026-11-05 分层调查与SkillsBench隔离研究
 
 - 更新时间与交接人为2026-11-05，Codex；用户指定00:08至08:08持续实施。基线main为`f3289a21`，整合commit为`f46d0e64`，分支`codex/evolution-overnight-20261105`，本段记录源码冻结前状态，最终提交与实验结果继续追加。

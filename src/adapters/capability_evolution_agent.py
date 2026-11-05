@@ -173,7 +173,9 @@ def packet(entries, snapshot, scope, directory, *, inspector=inspect_graph,
     save(out / 'result.json', result); return result
 
 
-def validate_candidate(candidate, context):
+def validate_candidate(candidate, context, *, minimum_sources=2):
+    if type(minimum_sources) is not int or minimum_sources not in (1, 2):
+        raise ValueError('evolution_minimum_sources_invalid')
     fields = {'kind', 'burden', 'evidence_ids', 'scope', 'expected_behavior',
               'verification', 'failure_conditions', 'proposal'}
     if not isinstance(candidate, dict) or set(candidate) != fields:
@@ -191,7 +193,7 @@ def validate_candidate(candidate, context):
     ids = candidate['evidence_ids']; observations = {r['id']: r for r in context['observations']}
     if (not isinstance(ids, list) or not ids or any(not isinstance(i, str) for i in ids)
             or len(set(ids)) != len(ids) or any(i not in observations for i in ids)
-            or len({observations[i]['source_identity'] for i in ids}) < 2):
+            or len({observations[i]['source_identity'] for i in ids}) < minimum_sources):
         raise ValueError('evolution_candidate_cross_task_support_required')
     if not isinstance(candidate['proposal'], dict):
         raise ValueError('evolution_candidate_proposal_invalid')
