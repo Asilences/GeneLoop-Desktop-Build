@@ -14,7 +14,7 @@
 
 复用现有 Python jsonschema 和 DSH 轨迹提取、来源核验逻辑。v2 结构字段直接白名单投影。隔离 Web 和离线入口可显式选择 v3，额外生成经过本地 Presidio 和 Gitleaks 处理的任务指令。
 
-独立 Web 采集诊断需要 mock Provider、显式环境开关和指定 Python。已有账户学习在其原来的权限和调度范围内通过同一个 Python 投影器处理入选证据。离线导入需要显式授权标志，只导入操作员选定的文件。v2 采集结果没有账号 ID、任务 ID、源路径、原始哈希、提示词、参数值、正文或时间戳。边使用样本内的节点序号，未知工具只记固定拒绝码。样本依然是账号私有数据。正式用户授权、撤回和共享准入分别后续实施。
+独立 Web 采集诊断需要 mock Provider、显式环境开关和指定 Python。已有账户学习在其原来的权限和调度范围内通过同一个 Python 投影器处理入选证据。离线导入需要显式授权标志，只导入操作员选定的文件。v2 采集结果没有账号 ID、任务 ID、源路径、原始哈希、提示词、参数值、正文或时间戳。边使用样本内的节点序号，未知工具只记固定拒绝码。样本依然是账号私有数据；可选结构共享的逐次授权见下文。v3 正式学习与共享的准入、撤回仍待实施。
 
 ## 隔离验证
 
@@ -65,7 +65,7 @@ node --test --test-name-pattern='RSI privacy' tests/test_dsh_web_tasks.mjs
 | 源码、原始轨迹与可选遥测 | 未登记的共享、分析、崩溃上传 API | 默认拒绝；未知桌面网络出口同样拒绝 |
 | 用户打开网页 | 用户点击外部链接后交系统浏览器 | 复用现有链接校验；独立于自动共享 |
 
-`apps/desktop/src/privacy.ts` 为桌面 HTTP 与 WebSocket 提供出网白名单，`LocalFrontendHost` 在转发前再次校验。桌面只记录按目的计数，不记录请求正文、Cookie 或 URL 参数。共享服务的私有 `rsi-sharing-audit.jsonl` 仅记固定事件和时间，异常响应只给固定错误码及说明。
+`apps/desktop/src/privacy.ts` 为桌面 HTTP 与 WebSocket 提供出网白名单，`LocalFrontendHost` 在转发前再次校验。桌面只记录按目的计数，不记录请求正文、Cookie 或 URL 参数。共享服务的私有 `rsi-sharing-audit.jsonl` 仅记固定事件和时间，异常响应只给固定错误码及说明。无法记录预览或发送事件时拒绝生成授权或发起上传，文件系统异常内容不返回给客户端。
 
 共享对象采用 `geneloop.rsi-shared-object/v1`，恰含 `format/kind/trace`。其中 `trace` 必须通过原 v2 JSON Schema 和结构编译入口的绑定校验。v3 任务语义、源码和附件不在首版共享白名单内。客户端只提交服务端已拥有的任务 ID；不能提交共享正文或任意文件路径。未知字段、嵌套敏感字段、来源不属于当前账号、失败任务、异常图或脱敏失败均拒绝。
 
@@ -78,7 +78,7 @@ node --test --test-name-pattern='RSI privacy' tests/test_dsh_web_tasks.mjs
 
 预览与同意只在当前进程内有效，重启后需要重新预览。每个预览只允许一次发送尝试。网络中断后保留未知回执，接收端通过 `X-GeneLoop-Sharing-Id` 核对；界面重新打开时不恢复勾选。桌面设置的“数据与隐私”页可逐任务生成预览、保存本地副本、确认上传或取消。
 
-独立测试接收端只监听 `127.0.0.1`，使用合成数据。真实配置由私有环境变量 `GENELOOP_RSI_SHARING_ENDPOINT` 经 `scripts/harness-web.py` 写入有效策略；默认不设置。真实模式仅接受不含用户名、密码、查询和 fragment 的 HTTPS 接收地址，开发 mock 模式才允许显式回环 HTTP。通用接收服务的认证、持久回执及实际团队共享发布须另行验收。
+独立测试接收端只监听 `127.0.0.1`，使用合成数据，随测试启动和退出，不新增长期服务。真实配置由私有环境变量 `GENELOOP_RSI_SHARING_ENDPOINT` 经 `scripts/harness-web.py` 写入有效策略；默认不设置。真实模式仅接受不含用户名、密码、查询和 fragment 的 HTTPS 接收地址，开发 mock 模式才允许显式回环 HTTP。通用接收服务的认证、持久回执及实际团队共享发布须另行验收。
 
 桌面诊断复现。
 
@@ -88,6 +88,8 @@ node --test tests/test_rsi_sharing.mjs tests/test_desktop_frontend.mjs tests/tes
 ```
 
 工程诊断覆盖真实 Electron 进程、公共 Python 投影、私有 HTTP 接收端、预览字节、取消、异常和重启。Issue 143 的完整产品验收还依赖 DESK-01/04 的真实 Coding 与 macOS 链路，须按各自真实证据完成后再判定。
+
+服务器全量回归在独立检出加载其私有 `.local/remote-env.sh` 后运行 `npm test`、`npm run smoke` 和 `npm run motif:check`。环境须包含正确的 `SSS_PYTHON`、`SSS_PURE_CODE_PYTHON`、`TESSDATA_PREFIX` 与报告字体。运行时与依赖版本、源码 commit、有效环境及退出码保存在私有结果目录，公共结果见[隐私交接](handoffs/rsi-data-privacy.md)。这些工程诊断不调用真实模型，不构成任务质量或节费验收。
 
 ## 账户学习与证书兼容
 
