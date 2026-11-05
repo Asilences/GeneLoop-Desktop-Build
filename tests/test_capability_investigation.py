@@ -124,6 +124,16 @@ def test_continuation_preserves_sealed_material_until_explicit_role_transition(t
     assert third.read('evidence', 'evidence_' + sealed['sha256'])['content']
 
 
+def test_repeated_development_exposure_is_idempotent_and_does_not_mask_repairs(tmp_path, data):
+    development = put(tmp_path / 'development.json', {'result': 'observed'})
+    service = make(tmp_path, data, development_evidence=[development])
+    service.expose_development()
+    reference = file_ref(service.directory / 'development-exposure.json')
+    service.expose_development()
+    assert file_ref(service.directory / 'development-exposure.json') == reference
+    assert service.read('evidence', 'evidence_' + development['sha256'])['content']
+
+
 def test_continuation_cannot_silently_drop_capability_refs_used_by_earlier_experience(tmp_path, data):
     from src.adapters.capability_contract import create_capability_snapshot
     service = make(tmp_path, data)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from pathlib import Path
 import shlex
@@ -18,6 +19,38 @@ from .skill_infinity_baseline import _card
 from .skillsbench_trial import SkillsBenchTrial, input_fingerprint, task_manifest
 from .benchmark_capability_tools import benchmark_capability_tools, capability_trace_projection
 from .capability_motif_learning import capture_capability_trace
+
+
+def _freeze_model_logs(directory, paths):
+    """Index immutable captured bytes; late settlement may append live logs."""
+    references, entries = [], []
+    for source in paths:
+        if not source.is_file():
+            continue
+        raw = source.read_bytes()
+        sha = hashlib.sha256(raw).hexdigest()
+        target = directory / 'model-evidence' / sha[:16] / source.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            with target.open('xb') as stream:
+                stream.write(raw)
+        reference = file_ref(target)
+        if reference['sha256'] != sha:
+            raise ValueError('benchmark_frozen_model_evidence_changed')
+        references.append(reference)
+        entries.append({'source_path': str(source.resolve()), 'sha256_at_capture': sha,
+                        'captured_bytes': len(raw), 'snapshot': reference})
+    if entries:
+        identity = capability_digest(entries)
+        index = directory / ('model-evidence-index-' + identity[:16] + '.json')
+        value = {'capture_point': 'post_harness_return', 'entries': entries,
+                 'scope': 'captured log bytes; late live settlement is not silently incorporated'}
+        if not index.exists():
+            save(index, value)
+        elif json.loads(index.read_text(encoding='utf-8')) != value:
+            raise ValueError('benchmark_model_evidence_index_changed')
+        references.append(file_ref(index))
+    return references
 
 
 def _model_scoreable(model):
@@ -295,16 +328,11 @@ class BenchmarkHost:
         evidence.extend(diagnostics)
         if (directory / 'manifest.json').is_file():
             evidence.append(file_ref(directory / 'manifest.json'))
-        events = Path(model.get('directory', directory)) / 'events.jsonl'
-        if events.is_file():
-            evidence.append(file_ref(events))
-        tool_log = Path(model.get('directory', directory)) / 'tool-calls.jsonl'
-        if tool_log.is_file():
-            evidence.append(file_ref(tool_log))
-        for name in ('result.json', 'requests.jsonl'):
-            path = Path(model.get('directory', directory)) / name
-            if path.is_file():
-                evidence.append(file_ref(path))
+        model_directory = Path(model.get('directory', directory))
+        evidence.extend(_freeze_model_logs(directory,
+            [model_directory / name for name in ('events.jsonl', 'tool-calls.jsonl', 'requests.jsonl')]))
+        if (model_directory / 'result.json').is_file():
+            evidence.append(file_ref(model_directory / 'result.json'))
         row = {'owner': self.owner, 'task_id': trial.task_id + '-' + trial.split,
                'source_identity': manifest['source_identity'], 'relation': 'benchmark-task-work',
                'input_fingerprint': manifest['input_fingerprint'],

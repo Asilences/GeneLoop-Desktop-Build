@@ -379,7 +379,23 @@ def test_experience_retains_original_request_and_cost_evidence(fixture):
     assert 'requests.jsonl' in sources
     model_directory = Path(result['model']['directory'])
     assert file_ref(model_directory / 'result.json') in observation['evidence']
-    assert file_ref(model_directory / 'requests.jsonl') in observation['evidence']
+    captured = next(ref for ref in observation['evidence'] if Path(ref['path']).name == 'requests.jsonl')
+    assert captured['sha256'] == file_ref(model_directory / 'requests.jsonl')['sha256']
+    assert Path(captured['path']) != model_directory / 'requests.jsonl'
+
+
+def test_late_request_settlement_cannot_mutate_the_indexed_observation(fixture):
+    trial = fixture.host.trial('task-one')
+    before = benchmark.inspect_benchmark(trial['observation'], 'overnight-research')
+    live = Path(trial['model']['directory']) / 'requests.jsonl'
+    with live.open('a') as stream:
+        stream.write(json.dumps({'phase': 'settled', 'observed_peak_usd': '0.001'}) + '\n')
+    after = benchmark.inspect_benchmark(trial['observation'], 'overnight-research')
+    assert after == before
+    frozen = next(ref for ref in after['evidence'] if Path(ref['path']).name == 'requests.jsonl')
+    Path(frozen['path']).write_text('changed snapshot')
+    with pytest.raises(ValueError, match='evidence_changed'):
+        benchmark.inspect_benchmark(trial['observation'], 'overnight-research')
 
 
 def test_experience_inspection_checks_original_hashes_and_owner(fixture):

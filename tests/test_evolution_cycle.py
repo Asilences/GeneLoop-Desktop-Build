@@ -1,10 +1,11 @@
 """A second minimal adapter verifies portability, not autonomous improvement."""
 import json
 from pathlib import Path
+import pytest
 
 from src.adapters.capability_contract import capability_ref, create_capability_snapshot
 from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.evolution_cycle import run_evolution_cycle
+from src.adapters.evolution_cycle import run_evolution_cycle, accumulate_evolution_feedback
 from tests.test_capability_contract import leaf
 from tests.test_capability_investigation import data, make, put
 from tests.test_capability_evolution_investigation import candidate
@@ -77,3 +78,23 @@ def test_shared_cycle_has_no_scene_specific_import_or_scoring():
     source = Path(evolution_cycle.__file__).read_text()
     for text in ('BibTeX', 'paper_proofreading', 'QLoRA', 'score ==', 'BenchmarkHost'):
         assert text not in source
+
+
+def test_feedback_recovery_reuses_verified_real_decision_without_recalling_agent(tmp_path, data):
+    calls = []
+    view = make(tmp_path, data)
+    def agent(request, dispatch):
+        calls.append('called')
+        dispatch('evolution_finish', {'decision': 'no_change', 'reason': 'Diagnostic decision'})
+        return {}
+    def broken(_): raise ValueError('diagnostic feedback interrupted')
+    with pytest.raises(ValueError, match='feedback interrupted'):
+        run_evolution_cycle(view, call_agent=agent, handlers={}, output=tmp_path / 'failed-cycle',
+            limits={'max_tool_calls': 5, 'timeout_seconds': 10}, followup_evaluator=broken)
+    original = file_ref(tmp_path / 'failed-cycle/agent/result.json')
+    result = json.loads(verify(original))
+    recovered, next_view = accumulate_evolution_feedback(view, result, output=tmp_path / 'recovered',
+        feedback={}, investigation_result=original)
+    assert recovered['status'] == result['status'] == 'no_change'
+    assert calls == ['called'] and next_view.snapshot == view.snapshot
+    assert file_ref(tmp_path / 'failed-cycle/agent/result.json') == original

@@ -1626,6 +1626,10 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 `src/adapters/evolution_cycle.py::run_evolution_cycle(investigation, call_agent=..., handlers=..., output=..., limits=..., followup_evaluator=None, load_current_capabilities=None, prior_results=())`是场景无关的薄编排。它沿原`run_investigation`接收候选结果，调用宿主后继评价，并将回调返回的entries、inspector、history和可选snapshot合入原调查。公共层不定义具体工具、benchmark、质量分数或产物后端。场景回调不能覆盖原调查status/submissions/identity，失败保留cycle-error及原调查证据。
 
+`accumulate_evolution_feedback`复用同一个反馈完成阶段，可在新目录中以原始调查结果FileRef恢复G5，不再调用模型或任务。原status与investigation_identity必须匹配，不能将原inconclusive改写为成功。开发暴露操作幂等；BenchmarkHost索引捕获时的不可变日志副本，晚到的请求结算留在原追加日志中，不改变已登记摘要。捕获点和源路径由独立索引保留，捕获时未知费用仍保持未知。
+
+现用pytest-json-ctrf0.3.5可能省略raw_status、合并参数化用例名称。对于已完成pytest退出1、reward为零或部分分且报告有明确AssertionError的情况，沿原独立检查识别质量拒绝；setup/import/不完整报告继续unknown。该修正不改变题目、gold或成功要求，旧实验状态不原地改写。
+
 Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责经历解析、实际receivers、论文评分及后继评价。`scripts/run-paper-evolution.py`仅负责配置/启动；`--investigation-history`可追加宿主已经批准的原研究证据FileRef，实际清单写入effective.json。其它场景复用同一cycle，不复制Paper main中的生命周期。
 
 论文历史入口的 `--evolution-input-manifest` 为可选 Builder 输入，普通执行经历可独立调查。`--require-builder-evidence` 仅用于额外要求 C/Builder 材料的专项输入检查。当前入口的 receiver 仍为 `task_strategy`，有效配置固定 `experiment_scope=task_strategy_pilot`，Creation Efficiency 等待真实 Builder 评价器。

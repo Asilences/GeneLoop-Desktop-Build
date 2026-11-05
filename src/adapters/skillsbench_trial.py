@@ -117,7 +117,7 @@ def completed_quality_rejection(directory, verification, reward):
         for row in tests:
             if row['status'] == 'passed':
                 continue
-            if (row['status'] != 'failed' or row.get('raw_status') != 'call_failed'
+            if (row['status'] != 'failed' or row.get('raw_status') not in (None, 'call_failed')
                     or 'due to an assertion error' not in row.get('message', '')
                     or 'AssertionError' not in row.get('trace', '')):
                 return None

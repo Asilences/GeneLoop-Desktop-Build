@@ -191,9 +191,15 @@ class Investigation:
                 continue
             self._index_evidence([reference])
             exposed.append(reference)
-        save(self.directory / 'development-exposure.json', {
+        path = self.directory / 'development-exposure.json'
+        record = {
             'role': 'development', 'exposed': exposed,
-            'sealed_unchanged': self.sealed_evidence})
+            'sealed_unchanged': self.sealed_evidence}
+        if path.exists():
+            if json.loads(path.read_text(encoding='utf-8')) != record:
+                raise ValueError('investigation_development_exposure_changed')
+        else:
+            save(path, record)
 
     def _index_history_sources(self, value):
         # Only explicit sources in the host manifest grant access. Never parse

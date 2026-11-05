@@ -206,6 +206,20 @@ def test_completed_assertion_rejection_remains_scored_with_original_nonzero_exit
     assert operation['returncode'] == 1
 
 
+def test_installed_ctrf_schema_without_raw_status_keeps_witnessed_assertion_failure(tmp_path):
+    # pytest-json-ctrf 0.3.5's actual report omits raw_status and groups the
+    # parameterized test name. One witnessed assertion already rejects quality.
+    report = {'results': {'summary': {'tests': 1, 'passed': 0, 'failed': 1,
+        'skipped': 0, 'pending': 0, 'other': 0}, 'tests': [{
+        'status': 'failed', 'message': 'The test failed in the call phase due to an assertion error',
+        'trace': 'E AssertionError: observed output differs from the independent expectation'}]}}
+    adapter = trial(tmp_path, DockerDiagnostic(reward='0', verifier_code=1, ctrf=report))
+    adapter.prepare()
+    result = adapter.evaluate()
+    assert result['status'] == 'evaluated' and result['reward'] == 0
+    assert result['passed'] is False and result['verifier_outcome'] == 'quality_rejected'
+
+
 @pytest.mark.parametrize('defect', ['missing_report', 'setup_error', 'import_error', 'incomplete', 'bad_counts', 'collection_exit'])
 def test_infrastructure_and_incomplete_reports_do_not_become_quality_zero(tmp_path, defect):
     report = assertion_report()
