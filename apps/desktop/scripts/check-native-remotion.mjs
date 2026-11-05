@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -36,9 +36,10 @@ try {
   process.chdir(root);
   // A generated entry must never become a Node-side webpack inline loader.
   const marker=join(root,'forbidden-loader-marker');
-  const loaderSource=`require('node:fs').writeFileSync(${JSON.stringify(marker)},'loader executed');
-module.exports=()=>''; require('!!./entry.tsx!./entry.tsx');`;
-  await assert.rejects(renderNativeRemotion(ctx,reader,writer,tools,loaderSource,'[]',AbortSignal.timeout(30_000)));
+  // A mislabeled image is still untrusted input and must not execute in Node.
+  writeFileSync(join(root,'workspace','loader.png'),`require('node:fs').writeFileSync(${JSON.stringify(marker)},'loader executed');module.exports=()=>'';`);
+  const loaderSource=`import '!!./public/asset-1.png!react';`;
+  await assert.rejects(renderNativeRemotion(ctx,reader,writer,tools,loaderSource,'["loader.png"]',AbortSignal.timeout(30_000)));
   assert.equal(existsSync(marker),false,'生成的视频代码不得作为 Node 加载器执行');
   const receipt = await renderNativeRemotion(ctx,reader,writer,tools,source,'[]',AbortSignal.timeout(180_000));
   assert.equal(receipt.execution,process.platform+'-local-remotion');

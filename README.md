@@ -4,7 +4,7 @@ PPT新增公共RSI接线。合格单路轨迹与原生认证页面程序自动�
 
 GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
 
-Windows 本机工作区 preview.11 使用 DSH Agent 接通六个场景，包含本机 PPT 模板/PDF 和 Remotion 渲染。macOS 双架构构建及原生检查流程已准备，运行结果待验收。安装、工具路径和验证边界见[桌面说明](docs/desktop.md#本机工作区-windows-预览)。
+Windows 本机工作区 preview.11 使用 DSH Agent 接通六个场景，包含本机 PPT 模板/PDF 和 Remotion 渲染。macOS 15 ARM64、Intel 的原生工具及包内 DSH Agent 无模型检查已通过；Mac 真实模型场景、人工界面验收与 Apple 签名公证仍待完成。安装、工具路径和验证边界见[桌面说明](docs/desktop.md#本机工作区-windows-预览)。
 
 离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
 
