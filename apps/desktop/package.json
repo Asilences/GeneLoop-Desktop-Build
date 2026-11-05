@@ -1,13 +1,15 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.7",
+  "version": "0.3.0-preview.11",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
   "license": "UNLICENSED",
   "type": "module",
   "main": "dist/main.js",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "build": "tsc && node scripts/prepare-assets.mjs",
     "dev": "npm run build && electron .",
@@ -19,29 +21,73 @@
     "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
     "runtime:stage": "node scripts/stage-local-runtime.mjs",
+    "tools:stage": "node scripts/stage-desktop-tools.mjs",
     "pack": "npm run build && npm run runtime:stage && electron-builder --dir --publish never",
-    "dist": "npm run build && npm run runtime:stage && node scripts/wrap-installer.mjs"
+    "dist": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs",
+    "smoke:native": "node scripts/check-native-platform.mjs",
+    "smoke:remotion": "node scripts/check-native-remotion.mjs",
+    "smoke:ppt": "node scripts/check-native-ppt.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",
+    "@remotion/bundler": "4.0.539",
+    "@remotion/renderer": "4.0.539",
     "@types/node": "26.6.6",
     "csv-parse": "7.0.3",
     "electron": "45.2.1",
     "electron-builder": "26.18.0",
     "pdfjs-dist": "6.4.299",
+    "pptxgenjs": "4.0.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.539",
     "sharp": "0.35.5",
     "typescript": "7.0.2"
   },
-  "dependencies": {},
   "build": {
     "appId": "ai.geneloop.desktop",
     "productName": "GeneLoop Desktop",
     "asar": true,
-    "directories": { "output": "release", "buildResources": "assets" },
-    "files": ["dist/**/*", "ui/**/*", "assets/**/*", "!assets/installer*.bmp", "package.json"],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**/*",
+      "ui/**/*",
+      "assets/**/*",
+      "!assets/installer*.bmp",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "desktop-tools-bundle",
+        "to": "geneloop-tools",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "publish": null,
     "afterPack": "./scripts/pack-runtime.cjs",
-    "win": { "target": ["nsis"], "icon": "assets/icon.ico" },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png",
+      "artifactName": "GeneLoop-Desktop-${version}-macOS-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
+    },
     "nsis": {
       "include": "installer.nsh",
       "installerHeader": "assets/installerHeader.bmp",
@@ -51,5 +97,6 @@
       "deleteAppDataOnUninstall": false,
       "artifactName": "GeneLoop-Desktop-${version}-${arch}-Engine.${ext}"
     }
-  }
+  },
+  "dependencies": {}
 }

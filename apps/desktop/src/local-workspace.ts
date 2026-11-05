@@ -1,27 +1,88 @@
-import { app, WebContentsView, dialog, ipcMain, shell } from 'electron';
-import type { BrowserWindow, IpcMainInvokeEvent, Session } from 'electron';
+import { app, shell } from 'electron';
+import type { Session } from 'electron';
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { TITLE_BAR_HEIGHT } from './appearance.ts';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
-import type { LocalScene, LocalTaskUpdate } from './local-runtime.ts';
+import type { LocalMediaTools, LocalPptTools, LocalScene, LocalTaskUpdate, VideoApproval } from './local-runtime.ts';
 import { reopenDirectory } from './local-workspaces.ts';
 import type { LocalWorkspace } from './local-workspaces.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const page = join(here, '../ui/local-workspace.html');
-const channels = ['state', 'start', 'cancel', 'reveal', 'back'];
 const leasePath = '/api/harless/desktop-model/lease';
 type SavedTask = {
   prompt: string;
   at: number;
   scene?: LocalScene;
+  threadId?: string;
   sessionId?: string;
   updates: Extract<LocalTaskUpdate, { kind: 'answer' | 'report' | 'done' }>[];
 };
-const reportName = /^GeneLoop-[a-f0-9-]{36}\.md$/;
+const reportName = /^GeneLoop-[a-f0-9-]{36}\.(?:md|pptx|pdf|mp4|json|tsx)$/;
+const supportedScenes: readonly LocalScene[] = ['chat', 'files', 'data', 'paper', 'ppt', 'video'];
+const localRuntime = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime.asar') : join(here, '../runtime-bundle');
+const bundledTools = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-tools') : join(here, '../desktop-tools-bundle');
+
+function pptTools(): LocalPptTools | undefined {
+  const bundle = bundledTools();
+  const configured = !app.isPackaged && process.env.GENELOOP_PPT_PYTHON;
+  const python = configured || join(bundle, process.platform === 'win32' ? 'python/python.exe' : 'python/bin/geneloop-python');
+  const skill = configured ? process.env.GENELOOP_PPT_MASTER_ROOT : join(bundle, 'ppt-master');
+  const soffice = configured ? process.env.GENELOOP_PPT_SOFFICE : join(bundle,
+    process.platform === 'win32' ? 'libreoffice/program/soffice.com' : 'libreoffice/Contents/MacOS/soffice');
+  const sourceRoot = configured ? join(here, '../../..') : join(bundle, 'source');
+  const fixedFile = (path: string) => isAbsolute(path) && lstatSync(path).isFile() &&
+    (process.platform === 'win32' ? realpathSync(path).toLowerCase() === path.toLowerCase() : realpathSync(path) === path);
+  try {
+    if (!python || !skill || !soffice || !fixedFile(python) || !fixedFile(soffice) ||
+        basename(soffice).toLowerCase() !== (process.platform === 'win32' ? 'soffice.com' : 'soffice') ||
+        !existsSync(join(sourceRoot, 'scenarios/ppt_master/windows_delivery.py'))) return;
+    return { python, skill: reopenDirectory(skill), soffice, sourceRoot };
+  } catch { return undefined; }
+}
+
+function mediaTools(): LocalMediaTools | undefined {
+  try {
+    const configured = !app.isPackaged && process.env.GENELOOP_FFMPEG_DIRECTORY;
+    const bundled = join(bundledTools(), 'ffmpeg');
+    const directory = configured || (existsSync(bundled) ? bundled : join(app.getPath('userData'), 'local-tools', 'ffmpeg'));
+    if (!isAbsolute(directory)) return;
+    const root = reopenDirectory(directory);
+    const executable = (name: string) => {
+      const path = join(root, name);
+      const stat = lstatSync(path);
+      if (!stat.isFile() || stat.isSymbolicLink() ||
+          (process.platform === 'win32' ? realpathSync(path).toLowerCase() !== path.toLowerCase() : realpathSync(path) !== path)) {
+        throw Error('无效的本机媒体工具。');
+      }
+      return path;
+    };
+    const suffix = process.platform === 'win32' ? '.exe' : '';
+    const result: LocalMediaTools = { ffmpeg: executable('ffmpeg' + suffix), ffprobe: executable('ffprobe' + suffix) };
+    const manifestPath = join(bundledTools(),'manifest.json');
+    if (!existsSync(manifestPath)) return result;
+    const manifest = JSON.parse(readFileSync(manifestPath,'utf8'));
+    if (manifest.platform !== process.platform || manifest.arch !== process.arch) return;
+    if (typeof manifest.browser !== 'string' || !manifest.browser.startsWith('chromium/') || manifest.browser.includes('..')) return;
+    const browser = realpathSync(join(bundledTools(),manifest.browser));
+    const compositor = process.platform === 'win32' ? 'win32-x64-msvc' : 'darwin-'+process.arch;
+    const binaries = localRuntime().replace(/\.asar$/,'.asar.unpacked')+'/node_modules/@remotion/compositor-'+compositor;
+    if (existsSync(browser) && existsSync(binaries)) result.remotion = {browser,binaries};
+    return result;
+  } catch { return undefined; }
+}
+
+export function localSceneStatus(): Partial<Record<LocalScene, string>> {
+  const runtime = localRuntime();
+  if (!['win32', 'darwin'].includes(process.platform) || !existsSync(join(runtime, 'local-worker.mjs'))) {
+    return Object.fromEntries(supportedScenes.map(scene => [scene, '需要带本机运行时的 Windows 或 Mac 版本。']));
+  }
+  const status: Partial<Record<LocalScene, string>> = {};
+  if (!existsSync(join(runtime, 'local-ppt-render.mjs'))) status.ppt = '本机演示文稿运行时尚未打包。';
+  if (!mediaTools()) status.video = '本机视频需要在桌面数据目录安装 FFmpeg 和 FFprobe。';
+  return status;
+}
 const sessionIdPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
 function loadTasks(path: string): SavedTask[] {
@@ -32,128 +93,82 @@ function loadTasks(path: string): SavedTask[] {
   } catch { return []; }
 }
 
-export class LocalWorkspacePanel {
-  private view?: WebContentsView;
-  private workspaceId?: string;
-  private busy = false;
-  private closed = false;
+function location(workspace: LocalWorkspace) {
+  if (!workspace.directory) throw Error('请先为工作区添加本机文件夹。');
+  const directory = workspace.directory;
+  const key = createHash('sha256').update(workspace.id).update('\0')
+    .update(process.platform === 'win32' ? directory.toLowerCase() : directory).digest('hex');
+  const home = join(app.getPath('userData'), 'local-workspace', 'contexts', key);
+  return { directory, home, history: join(app.getPath('userData'), 'local-workspace', 'history', key + '.json') };
+}
+
+export class LocalWorkspaceConversation {
   private controller?: ReturnType<typeof startLocalWorker>;
-  private pending?: AbortController;
-  private reports = new Set<string>();
+  private pending?: { workspaceId: string; threadId: string; abort: AbortController };
+  private closed = false;
 
-  constructor(private options: { parent: BrowserWindow; server: string; session: Session; onClose: () => void }) {}
+  constructor(private options: { server: string; session: Session; approveVideo?: (request: VideoApproval) => Promise<boolean> }) {}
 
-  get isOpen(): boolean { return !!this.view; }
-
-  fit(): void {
-    if (!this.view || this.options.parent.isDestroyed()) return;
-    const [width, height] = this.options.parent.getContentSize();
-    this.view.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: Math.max(0, height - TITLE_BAR_HEIGHT) });
+  history(workspace: LocalWorkspace): SavedTask[] {
+    return loadTasks(location(workspace).history);
   }
 
-  setVisible(visible: boolean): void { this.view?.setVisible(visible); }
-
-  async open(workspace: LocalWorkspace): Promise<void> {
-    if (!workspace.directory) throw Error('请先为工作区添加本机文件夹。');
-    if (this.view) {
-      if (this.workspaceId !== workspace.id) throw Error('请先返回另一个工作区。');
-      this.view.webContents.focus();
-      return;
-    }
-    if (this.busy || this.closed || this.pending) return;
-    const runtime = app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime.asar') : join(here, '../runtime-bundle');
-    if (process.platform !== 'win32' || !existsSync(join(runtime, 'local-worker.mjs'))) {
-      await dialog.showMessageBox(this.options.parent, { type: 'info', message: '本机工作区需要带运行时的 Windows 预览版。' });
-      return;
-    }
-    this.busy = true;
-    try {
-      const directory = reopenDirectory(workspace.directory);
-      const output = join(directory, 'GeneLoop 输出');
-      const historyKey = createHash('sha256').update(workspace.id).update('\0').update(directory.toLowerCase()).digest('hex');
-      const history = join(app.getPath('userData'), 'local-workspace', 'history', historyKey + '.json');
-      const home = join(app.getPath('userData'), 'local-workspace', 'contexts', historyKey);
-      const tasks = loadTasks(history);
-      for (const task of tasks) {
-        for (const update of task.updates) {
-          if (update?.kind === 'report' && reportName.test(update.report?.name)) this.reports.add(update.report.name);
-        }
-      }
-      const view = this.view = new WebContentsView({
-        webPreferences: { preload: join(here, 'local-preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
-      });
-      view.setVisible(false);
-      this.options.parent.contentView.addChildView(view);
-      this.fit();
-      this.workspaceId = workspace.id;
-      const contents = view.webContents;
-      contents.on('will-navigate', event => event.preventDefault());
-      contents.setWindowOpenHandler(() => ({ action: 'deny' }));
-      const handle = (channel: string, fn: (input: unknown) => unknown) => {
-        ipcMain.handle('geneloop-local:' + channel, (event: IpcMainInvokeEvent, input: unknown) => {
-          if (event.sender !== contents || event.senderFrame !== contents.mainFrame ||
-              event.senderFrame.url !== pathToFileURL(page).href) throw Error('Invalid local workspace sender');
-          return fn(input);
-        });
-      };
-      const emit = (event: LocalTaskUpdate) => {
-        if (!contents.isDestroyed()) contents.send('geneloop-local:update', event);
-      };
-      handle('state', () => ({ name: workspace.name, directory, output, tasks }));
-      handle('back', () => {
-        if (this.pending) throw Error('请先停止或等待当前本机任务。');
-        this.closePanel();
-      });
-      handle('start', input => {
-        if (this.pending) throw Error('已有本机任务正在运行。');
-        const { prompt, scene, continuation } = (input ?? {}) as { prompt?: unknown; scene?: unknown; continuation?: unknown };
-        if (typeof prompt !== 'string' || !prompt.trim()) throw Error('请输入任务内容。');
-        if (scene !== 'files' && scene !== 'data' && scene !== 'paper') throw Error('本机场景无效。');
-        const resume = continuation !== undefined;
-        const previous = resume && typeof continuation === 'string' && sessionIdPattern.test(continuation) &&
-          tasks.find(row => row.sessionId === continuation && row.scene === scene && row.updates.at(-1)?.kind === 'done' &&
-            row.updates.some(event => event?.kind === 'done' && event.status === 'completed'));
-        if (resume && !previous) throw Error('找不到该场景可继续的本机会话。');
-        const sessionId = previous ? previous.sessionId! : randomUUID();
-        const abort = this.pending = new AbortController();
-        const task: SavedTask = { prompt, scene, at: Date.now(), updates: [] };
-        return this.run({ runtime, directory, prompt, scene, home, sessionId, resume }, abort, update => {
-          if (update.kind !== 'ready') task.updates.push(update);
-          if (update.kind !== 'done') { emit(update); return; }
-          if (update.status === 'completed') task.sessionId = sessionId;
-          tasks.unshift(task);
-          tasks.splice(30);
-          try {
-            mkdirSync(dirname(history), { recursive: true });
-            writeFileSync(history + '.tmp', JSON.stringify(tasks) + '\n', { mode: 0o600 });
-            renameSync(history + '.tmp', history);
-          } catch {
-            emit({ ...update, error: '本机任务历史未能保存。' });
-            return;
-          }
-          emit(update);
-        });
-      });
-      handle('cancel', () => { this.pending?.abort(); this.controller?.cancel(); });
-      handle('reveal', name => {
-        if (typeof name === 'string' && this.reports.has(name)) {
-          shell.showItemInFolder(join(reopenDirectory(output), name));
-        }
-      });
-      contents.once('render-process-gone', () => this.closePanel());
+  async start(workspace: LocalWorkspace, input: unknown, emit: (update: LocalTaskUpdate) => void) {
+    if (this.closed || this.pending) throw Error('已有本机对话正在执行。');
+    const { prompt, scene, threadId } = (input ?? {}) as { prompt?: unknown; scene?: unknown; threadId?: unknown };
+    if (typeof prompt !== 'string' || !prompt.trim()) throw Error('请输入消息。');
+    if (!supportedScenes.includes(scene as LocalScene)) throw Error('该场景暂不支持本机执行。');
+    const localScene = scene as LocalScene;
+    if (typeof threadId !== 'string' || !sessionIdPattern.test(threadId)) throw Error('无效的本机会话。');
+    const unavailable = localSceneStatus()[localScene];
+    if (unavailable) throw Error(unavailable);
+    const runtime = localRuntime();
+    const media = localScene === 'video' ? mediaTools() : undefined;
+    const ppt = localScene === 'ppt' ? pptTools() : undefined;
+    if (localScene === 'video' && !media) throw Error('本机媒体工具不可用。');
+    const { history, directory, home } = location(workspace);
+    const approved = reopenDirectory(directory);
+    const tasks = loadTasks(history);
+    const previous = tasks.find(row => (row.threadId ?? row.sessionId) === threadId && row.sessionId &&
+      sessionIdPattern.test(row.sessionId) && row.updates.at(-1)?.kind === 'done' &&
+      row.updates.some(event => event?.kind === 'done' && event.status === 'completed'));
+    if (previous && (previous.scene ?? 'files') !== localScene) throw Error('切换场景请新建本机会话。');
+    const sessionId = previous?.sessionId ?? randomUUID();
+    const abort = new AbortController();
+    this.pending = { workspaceId: workspace.id, threadId, abort };
+    const task: SavedTask = { prompt, scene: localScene, threadId, at: Date.now(), updates: [] };
+    await this.run({ runtime, directory: approved, prompt, scene: localScene, media, ppt, home, sessionId, resume: Boolean(previous) }, abort, update => {
+      if (update.kind !== 'ready' && update.kind !== 'progress') task.updates.push(update);
+      if (update.kind !== 'done') { emit(update); return; }
+      if (update.status === 'completed') task.sessionId = sessionId;
+      tasks.unshift(task);
+      tasks.splice(30);
       try {
-        await contents.loadFile(page);
-        if (this.view !== view) return;
-        view.setVisible(true);
-        contents.focus();
-      } catch (error) {
-        if (this.view === view) this.closePanel();
-        throw error;
+        mkdirSync(dirname(history), { recursive: true });
+        writeFileSync(history + '.tmp', JSON.stringify(tasks) + '\n', { mode: 0o600 });
+        renameSync(history + '.tmp', history);
+      } catch {
+        emit({ ...update, error: '本机对话记录未能保存。' });
+        return;
       }
-    } finally { this.busy = false; }
+      emit(update);
+    });
   }
 
-  private async run(task: { runtime: string; directory: string; prompt: string; scene: LocalScene; home: string; sessionId: string; resume: boolean },
+  cancel(workspaceId: string, threadId: string): void {
+    if (this.pending?.workspaceId !== workspaceId || this.pending.threadId !== threadId) return;
+    this.pending.abort.abort();
+    this.controller?.cancel();
+  }
+
+  reveal(workspace: LocalWorkspace, name: unknown): void {
+    if (typeof name !== 'string' || !reportName.test(name) || !this.history(workspace).some(task =>
+      task.updates.some(update => update?.kind === 'report' && update.report?.name === name))) return;
+    const { directory } = location(workspace);
+    shell.showItemInFolder(join(reopenDirectory(join(directory, 'GeneLoop 输出')), name));
+  }
+
+  private async run(task: { runtime: string; directory: string; prompt: string; scene: LocalScene; media?: LocalMediaTools; ppt?: LocalPptTools; home: string; sessionId: string; resume: boolean },
     abort: AbortController, emit: (event: LocalTaskUpdate) => void) {
     const endpoint = new URL(leasePath, this.options.server);
     let token: string | undefined;
@@ -174,11 +189,11 @@ export class LocalWorkspacePanel {
       this.controller = startLocalWorker({
         ...task, executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
         token: lease.token, model: lease.model,
+        approveVideo: task.scene === 'video' && lease.videoRendering === true ? this.options.approveVideo : undefined,
         onUpdate: event => {
           if (event.kind === 'done') { outcome = event; return; }
           if (event.kind === 'report') {
             if (!reportName.test(event.report.name)) return;
-            this.reports.add(event.report.name);
           }
           emit(event);
         },
@@ -202,29 +217,13 @@ export class LocalWorkspacePanel {
     }
   }
 
-  private closePanel(notify = true): void {
-    const view = this.view;
-    if (!view) return;
-    this.view = undefined;
-    this.workspaceId = undefined;
-    this.pending?.abort();
-    this.controller?.cancel();
-    for (const channel of channels) ipcMain.removeHandler('geneloop-local:' + channel);
-    this.reports.clear();
-    if (!this.options.parent.isDestroyed()) this.options.parent.contentView.removeChildView(view);
-    if (!view.webContents.isDestroyed()) view.webContents.close();
-    if (notify) this.options.onClose();
-  }
-
   releaseWorkspace(id: string): void {
-    if (id !== this.workspaceId) return;
-    if (this.pending) throw Error('请先结束当前本机任务，再修改文件夹。');
-    this.closePanel();
+    if (this.pending?.workspaceId === id) throw Error('请先结束当前本机任务，再修改文件夹。');
   }
 
   dispose(): void {
     this.closed = true;
+    this.pending?.abort.abort();
     this.controller?.stop();
-    this.closePanel(false);
   }
 }

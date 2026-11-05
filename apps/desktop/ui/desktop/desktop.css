@@ -217,3 +217,66 @@ body[data-ds-dark-theme] .scene-command-symbol{color:color-mix(in srgb,var(--sce
 .local-folder-card{margin-top:18px;padding:12px 14px}
 .local-folder-card p{margin:3px 0 12px}
 .local-folder-card p:last-child{margin-bottom:0}
+
+.questions{
+  --question-height:min(410px,44dvh);
+  width:min(800px,calc(100% - 48px));
+  max-height:var(--question-height);
+  margin:0 auto;
+  padding:0;
+  border:0;
+  border-radius:16px;
+}
+.question-card{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--gl-canvas);
+}
+.question-card:only-child{max-height:var(--question-height)}
+.question-card+.question-card{margin-top:8px}
+.question-header,.question-footer{
+  display:flex;
+  align-items:center;
+  flex:none;
+  padding:10px 16px;
+  background:var(--gl-sidebar);
+}
+.question-header{justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
+.question-header h2{font-size:14px;font-weight:650;margin:0}
+.question-count{color:var(--muted);font-size:12px}
+.question-content{min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 16px}
+.questions fieldset{min-width:0;margin:0;padding:0 0 14px;overflow-wrap:anywhere}
+.questions legend{width:100%;padding:14px 0 8px;font-weight:600}
+.question-number{
+  display:inline-grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  margin-right:8px;
+  border-radius:7px;
+  background:var(--panel);
+  color:var(--muted);
+  font-size:12px;
+  vertical-align:middle;
+}
+.questions fieldset+fieldset legend{border-top:1px solid var(--line)}
+.question-options{display:grid;gap:4px;margin-bottom:8px}
+.questions .question-option{
+  align-items:flex-start;
+  gap:9px;
+  padding:7px 9px;
+  border:1px solid transparent;
+  border-radius:8px;
+  font-size:13px;
+  cursor:pointer;
+}
+.question-option:hover{background:var(--panel)}
+.question-option:has(input:checked){background:var(--selection);border-color:color-mix(in srgb,var(--blue) 25%,var(--line))}
+.question-option:has(input:focus-visible){outline:2px solid var(--blue);outline-offset:1px}
+.question-option input{flex:none;margin:3px 0 0;accent-color:var(--blue)}
+.question-content textarea{display:block;width:100%;resize:vertical;min-height:56px;max-height:150px;font-size:13px}
+.question-footer{justify-content:flex-end;border-top:1px solid var(--line)}
+.question-footer .primary{padding:6px 14px;font-size:13px}

@@ -774,14 +774,17 @@ def _read_package(path: Path, report: dict, *, include_chart_data=False,
         return texts, notes
 
 
-def _convert(binary: str, source: Path, directory: Path, timeout: int):
-    profile = directory / 'profile'
+def _convert(binary: str, source: Path, directory: Path, timeout: int, *, profile: Path | None = None):
+    profile = profile if profile is not None else directory / 'profile'
     profile.mkdir()
     command = [binary, f'-env:UserInstallation={profile.as_uri()}', '--headless',
                '--nologo', '--nodefault', '--norestore', '--nofirststartwizard',
                '--convert-to', 'pdf:impress_pdf_Export', '--outdir', str(directory), str(source)]
+    env = {**os.environ, 'SAL_DISABLE_OPENCL': '1'}
+    if os.name == 'posix':
+        env['SAL_USE_VCLPLUGIN'] = 'svp'
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env={**os.environ,'SAL_DISABLE_OPENCL':'1','SAL_USE_VCLPLUGIN':'svp'},
+                               env=env,
                                start_new_session=os.name == 'posix')
     timed_out = False
     try:
@@ -809,7 +812,8 @@ def validate_delivery(pptx_path: str | Path, expected_slides: int,
                       expected_visible_sources=None,
                       expected_notes=None,
                       timeout_seconds: int = 120,
-                      validation_root: Path | None = None) -> dict:
+                      validation_root: Path | None = None,
+                      require_notes: bool = True) -> dict:
     """返回可 JSON 序列化报告，保留真实 PDF/PNG 和失败证据。
 
     ``expected_texts`` / ``expected_sources`` 为逐页字符串列表。前者检查
@@ -852,7 +856,7 @@ def validate_delivery(pptx_path: str | Path, expected_slides: int,
             _issue(report, 'slide_count_mismatch', 'PPTX 页数不符合提交计划')
         if not structure['each_slide_has_editable_text']:
             _issue(report, 'editable_text_missing', '部分页面没有原生可编辑文字')
-        if structure['notes_count'] != expected_slides:
+        if require_notes and structure['notes_count'] != expected_slides:
             _issue(report, 'notes_missing', '部分页面缺少讲者备注或来源')
         submitted = expected_texts if expected_texts is not None else texts
         report['text_retention'] = {'mode': 'submitted_plan' if expected_texts is not None else 'pptx_native_text', 'pages': []}
@@ -904,9 +908,16 @@ def validate_delivery(pptx_path: str | Path, expected_slides: int,
             return _finish(report, directory, started)
         report['dependencies']['libreoffice_binary'] = binary
         report['dependencies']['pymupdf'] = importlib.metadata.version('PyMuPDF')
-        version = subprocess.run([binary, '--version'], capture_output=True, timeout=10)
+        version_args = ['--headless', '--version'] if os.name == 'nt' else ['--version']
+        version = subprocess.run([binary, *version_args], capture_output=True,
+                                 timeout=45 if os.name == 'nt' else 10)
         report['dependencies']['libreoffice_version'] = version.stdout.decode('utf-8', errors='replace').strip()[:200]
-        returncode, timed_out = _convert(binary, source, directory, timeout_seconds)
+        # LibreOffice builds longer internal paths under the profile on Windows.
+        if os.name == 'nt' and validation_root is not None:
+            profile = directory.parent.parent / ('lo-' + directory.name[:12])
+            returncode, timed_out = _convert(binary, source, directory, timeout_seconds, profile=profile)
+        else:
+            returncode, timed_out = _convert(binary, source, directory, timeout_seconds)
         if timed_out:
             _issue(report, 'render_timeout', '真实渲染超时，已停止进程；失败产物保留')
             return _finish(report, directory, started)

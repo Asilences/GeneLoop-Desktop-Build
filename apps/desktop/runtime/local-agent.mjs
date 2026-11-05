@@ -4,7 +4,8 @@ import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
-export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files' }) {
+export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt }) {
+  if (ppt) ppt = {...ppt,nativeContext:ctx};
   const reader = openWorkspaceReader(directory);
   let writer, handle;
   try {
@@ -12,7 +13,27 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
     const options = {
       agentOptions: model,
       signal,
-      setup(scope) { registerLocalFileTools(scope, reader, writer, onReport, scene); },
+      setup(scope) {
+        registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx);
+        if (scene === 'video' && media?.remotion) scope.systemPrompt.section({
+          name:'geneloop:desktop-video',order:10210,
+          text:'视频使用 local_video_render 在本机执行。复杂合成的 plan 为 {source,assets}，source 是 Remotion TSX，assets 为授权素材路径数组；简单剪辑的 plan 为时间线数组。用户未明确要求服务器执行时，不调用 hybrid_video_render。不引用外部网络素材。',
+        });
+        if (scene === 'chat') scope.systemPrompt.section({
+          name: 'geneloop:desktop-chat', order: 10210,
+          text: '你是 GeneLoop。直接回复一般问题，只在任务确实需要文件时调用已授权的本机工具。'
+            + '只引用实际读取的来源，不编造文件内容，也不将用户原文件写入或移动到其他位置。',
+        });
+        if (scene === 'ppt' && ppt) scope.systemPrompt.section({
+          name: 'geneloop:desktop-ppt-master', order: 10210,
+          text: '使用 local_ppt_master_guide 读取锁定版技能入口和 Generate 工作流。'
+            + '用户给出来源时先用 local_ppt_read_material 核对实际内容和版本，将所用材料摘要放进交付计划。'
+            + '用户给出带字段标记的 PPTX 模板时先读取各页字段，用 local_ppt_fill_template 填写副本。'
+            + '对于静态形状和文本页面，先准备设计规格和逐页备注，再使用 local_ppt_master_export 交付。'
+            + '按真实检查结果修复，分别说明机械检查和目视审阅状态。'
+            + '如果需求超出当前本机工具范围，请先说明可交付的部分。',
+        });
+      },
     };
     handle = resume
       ? await ctx.agents.resume({ ...options, resumeSessionId: sessionId })
@@ -29,7 +50,7 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
     submit(text) {
       if (closing) throw Error('本机会话已关闭。');
       if (agent.status !== 'idle') throw Error('请等待当前本机任务完成。');
-      if (typeof text !== 'string' || !text.trim()) throw Error('请输入本机文件任务。');
+      if (typeof text !== 'string' || !text.trim()) throw Error('请输入本机会话消息。');
       agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }));
     },
     async cancel() {

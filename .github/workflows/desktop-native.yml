@@ -1,0 +1,66 @@
+name: Desktop native macOS checks
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/desktop-local-runtime']
+    paths:
+      - 'apps/desktop/**'
+      - 'scenarios/ppt_master/**'
+      - '.github/workflows/desktop-native.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'scenarios/ppt_master/**'
+      - '.github/workflows/desktop-native.yml'
+permissions:
+  contents: read
+jobs:
+  macos:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: node -e "if(process.arch !== '${{ matrix.arch }}')process.exit(1)"
+      - run: npm ci
+      - run: npm run build && npm run check
+      - name: Native file permission checks (no model)
+        run: npm run smoke:native
+      - name: Prepare pinned offline tools
+        run: node scripts/prepare-macos-tools.mjs
+      - name: Native Remotion render and full video decode (no model)
+        run: npm run runtime:stage && npm run smoke:remotion
+      - name: Native PPT template and LibreOffice PDF export (no model)
+        run: npm run smoke:ppt
+      - name: Credential scrubbing and cancellation of descendants
+        run: node scripts/check-native-process.mjs
+      - name: Package on target architecture
+        run: npm run dist
+      - name: Verify ASAR runtime in packaged app
+        run: |
+          export ELECTRON_RUN_AS_NODE=1
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
+          export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
+          "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-remotion.mjs
+          "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
+      # Intentionally no upload-artifact or release publishing step.

@@ -1,0 +1,18 @@
+{
+  "local_ppt_pin_source": {
+    "required_params": ["path"],
+    "read_only": true,
+    "output_fields": ["source_id", "path", "version_sha256"],
+    "replay_stable": false,
+    "observed_anchor": true
+  },
+  "local_ppt_read_source": {
+    "required_params": ["source_id"],
+    "provenance_params": ["source_id"],
+    "default_params": [["page", 1]],
+    "witness_default_only": ["page"],
+    "read_only": true,
+    "output_fields": ["path", "version_sha256", "page", "pages", "text"],
+    "replay_stable": true
+  }
+}

@@ -4,3 +4,4 @@ assets/
 release/
 .local/
 /runtime-bundle/
+desktop-tools-bundle/

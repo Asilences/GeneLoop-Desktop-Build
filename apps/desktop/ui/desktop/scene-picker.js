@@ -11,7 +11,7 @@ const sceneSymbols={
 };
 
 /** 下拉与斜杠菜单选择同一个本轮场景；文本里的已识别命令转换为选择状态。 */
-export function bindScenePicker({input,trigger,container,getScenes,getSelected,choose,fail,label,upload,options}){
+export function bindScenePicker({input,trigger,container,getScenes,getSelected,isLocal=()=>false,choose,fail,label,upload,options}){
   let suggestions=[],active=0;
   let openedByButton=false;
   const menu=node('div',{id:'scene-command-menu',class:'scene-command-menu',role:'listbox','aria-label':'选择当前消息的场景',hidden:true});
@@ -29,7 +29,7 @@ export function bindScenePicker({input,trigger,container,getScenes,getSelected,c
     menu.setAttribute('aria-label',openedByButton?'添加':'选择当前消息的场景');
     menu.classList.toggle('composer-add-menu',openedByButton);
     menu.replaceChildren(node('div',{class:'scene-command-heading'},'场景'));
-    if(openedByButton)menu.prepend(node('div',{class:'scene-command-heading'},'添加'),
+    if(openedByButton&&!isLocal())menu.prepend(node('div',{class:'scene-command-heading'},'添加'),
       action('composer-upload','paperclip','添加照片或文件','从电脑上传',upload));
     suggestions.forEach((scene,index)=>{
       const shortcut=shortcutOf(scene);
@@ -37,7 +37,7 @@ export function bindScenePicker({input,trigger,container,getScenes,getSelected,c
       const code=scene.id==='files'?'file':shortcut?.slice(1)||scene.id;
       const control=button([
         node('span',{class:'scene-command-symbol'},icon(sceneSymbols[scene.id]||'scenes')),
-        node('span',{class:'scene-command-label'},node('span',{class:'scene-command-name'},code),node('small',{},description)),
+        node('span',{class:'scene-command-label'},node('span',{class:'scene-command-name'},code),node('small',{},description+(scene.hint?' · '+scene.hint:''))),
       ],()=>pick(scene.id),'scene-command-item'+(index===active?' active':''));
       control.id='scene-command-'+index;
       control.dataset.scene=scene.id;
@@ -48,10 +48,10 @@ export function bindScenePicker({input,trigger,container,getScenes,getSelected,c
       if(selected)control.append(icon('check'));
       control.disabled=scene.available===false;control.title=scene.unavailable_reason||shortcut||'';menu.append(control);
     });
-    if(openedByButton&&getSelected()!=='new-scene'){
+    if(openedByButton&&!isLocal()&&getSelected()!=='new-scene'){
       menu.append(action('composer-clear-scene','close','清除已选场景',null,()=>pick('new-scene',input.value)));
     }
-    if(openedByButton)menu.append(action('composer-options','settings','场景选项',null,options));
+    if(openedByButton&&!isLocal())menu.append(action('composer-options','settings','场景选项',null,options));
     menu.hidden=false;
     trigger.setAttribute('aria-expanded',String(openedByButton));
     input.setAttribute('aria-expanded',String(!openedByButton));
@@ -98,7 +98,7 @@ export function bindScenePicker({input,trigger,container,getScenes,getSelected,c
   trigger.addEventListener('click',()=>{
     if(!menu.hidden&&openedByButton){close();return;}
     openedByButton=true;
-    suggestions=getScenes().filter(scene=>scene.id!=='new-scene');
+    suggestions=getScenes().filter(scene=>isLocal()||scene.id!=='new-scene');
     active=-1;
     render();
   });

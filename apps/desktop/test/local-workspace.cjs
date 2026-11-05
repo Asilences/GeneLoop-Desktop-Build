@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
-const { app, BrowserWindow, session, webContents } = require('electron');
+const { app, session } = require('electron');
+const { randomUUID } = require('node:crypto');
 const { existsSync } = require('node:fs');
 const { join } = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -15,50 +16,47 @@ const until = async (predicate, label) => {
   throw Error('等待超时：' + label);
 };
 app.whenReady().then(async () => {
-  const { LocalWorkspacePanel } = await import(pathToFileURL(join(__dirname, '../dist/local-workspace.js')).href);
+  const { LocalWorkspaceConversation } = await import(pathToFileURL(join(__dirname, '../dist/local-workspace.js')).href);
   const profile = session.fromPartition('local-workspace-test');
   await profile.cookies.set({ url: fixture.origin, name: 'harless_sess', value: fixture.cookie });
-  const parent = new BrowserWindow({ show: false });
-  let returned = 0;
-  const local = new LocalWorkspacePanel({ parent, server: fixture.origin + '/', session: profile, onClose: () => { returned++; } });
+  const create = () => new LocalWorkspaceConversation({ server: fixture.origin + '/', session: profile });
+  const local = create();
+  const workspace = { id: 'workspace', name: '本机诊断', directory: fixture.source, updatedAt: Date.now() };
+  const threadId = randomUUID();
   try {
-    const workspace = { id: 'workspace', name: '本机诊断', directory: fixture.source, updatedAt: Date.now() };
-    await local.open(workspace);
-    const view = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
-    assert.ok(view);
-    assert.equal(BrowserWindow.getAllWindows().length, 1);
-    assert.ok(parent.contentView.children.some(child => child.webContents === view));
-    view.setBackgroundThrottling(false);
-    const evaluate = code => view.executeJavaScript(code);
-    await until(() => evaluate(`document.getElementById('directory').textContent.length>0`), '本机目录展示');
-    assert.equal(await evaluate(`document.getElementById('directory').textContent`), fixture.source);
-    assert.equal(await evaluate(`document.getElementById('output').textContent`), fixture.reports);
-    assert.equal(await evaluate(`!!document.getElementById('choose-output')`), false);
+    assert.deepEqual(local.history(workspace), []);
     assert.equal(existsSync(fixture.reports), false, '打开工作区不提前创建输出目录');
-    await evaluate(`document.getElementById('prompt').value='读取资料并写报告';document.getElementById('task').requestSubmit()`);
-    await until(() => evaluate(`!document.getElementById('send').disabled`), '本机任务结束');
-    assert.equal(await evaluate(`document.getElementById('status').textContent`), '任务已完成。');
-    assert.match(await evaluate(`document.getElementById('results').innerText`), /报告已保存/);
-    assert.ok(await evaluate(`document.querySelector('#results button').textContent.includes('.md')`));
-    await evaluate(`document.getElementById('reset-context').click();document.getElementById('prompt').value='等待取消';document.getElementById('task').requestSubmit()`);
+    await assert.rejects(local.start(workspace, { scene: 'unknown', threadId, prompt: '禁止发送' }, () => {}), /暂不支持本机/);
+    await local.start(workspace, { scene: 'files', threadId, prompt: '读取资料并写报告' }, () => {});
+    const [first] = local.history(workspace);
+    assert.equal(first.updates.at(-1).status, 'completed');
+    assert.match(first.updates.find(event => event.kind === 'answer').text, /报告已保存/);
+    assert.match(first.updates.find(event => event.kind === 'report').report.name, /\.md/);
+    const cancelThread = randomUUID();
+    const pending = local.start(workspace, { scene: 'files', threadId: cancelThread, prompt: '等待取消' }, () => {});
     await until(() => existsSync(fixture.waiting), '上游模型处于等待');
-    await evaluate(`document.getElementById('cancel').click()`);
-    await until(() => evaluate(`document.getElementById('status').textContent==='任务已停止。'`), '取消任务并结算');
-    await until(() => evaluate("!document.getElementById('back').disabled"), '取消结算后可返回');
-    await evaluate("document.getElementById('back').click(); void 0").catch(() => {});
-    await until(() => !local.isOpen && returned === 1, '同窗返回工作区');
-    await local.open(workspace);
-    const reopened = webContents.getAllWebContents().find(contents => contents.getURL().endsWith('/local-workspace.html'));
-    assert.ok(reopened && reopened !== view);
-    await until(() => reopened.executeJavaScript(`document.querySelectorAll('#history-list li').length===2`), '重新打开工作区后恢复历史任务');
-    await reopened.executeJavaScript(`document.querySelector('#history-list li:last-child button').click()`);
-    assert.equal(await reopened.executeJavaScript(`document.getElementById('prompt').value`), '读取资料并写报告');
-    assert.match(await reopened.executeJavaScript(`document.querySelector('#results button').textContent`), /\.md/);
-    await reopened.executeJavaScript("document.querySelector('#history-list li:last-child button:nth-child(2)').click()");
-    assert.equal(await reopened.executeJavaScript("document.getElementById('continuation').hidden"), false);
-    await reopened.executeJavaScript("document.getElementById('prompt').value='续接测试';document.getElementById('task').requestSubmit()");
-    await until(() => reopened.executeJavaScript("document.getElementById('results').innerText.includes('续接成功') && !document.getElementById('send').disabled"), '续接历史任务');
-
-  } finally { local.dispose(); parent.destroy(); }
+    local.cancel(workspace.id, cancelThread);
+    await pending;
+    assert.equal(local.history(workspace)[0].updates.at(-1).status, 'canceled');
+    const reopened = create();
+    try {
+      assert.equal(reopened.history(workspace)[1].prompt, '读取资料并写报告');
+      await reopened.start(workspace, { scene: 'files', threadId, prompt: '续接测试' }, () => {});
+      const [next] = reopened.history(workspace);
+      assert.equal(next.sessionId, first.sessionId);
+      assert.match(next.updates.find(event => event.kind === 'answer').text, /续接成功/);
+    } finally { reopened.dispose(); }
+    for (const scene of ['chat','data','paper','ppt','video']) {
+      const updates=[];
+      await local.start(workspace, {scene,threadId:randomUUID(),prompt:'诊断-'+scene}, update=>updates.push(update));
+      assert.equal(updates.at(-1)?.status,'completed',scene+' '+JSON.stringify(updates.at(-1)));
+      const answers = updates.filter(update=>update.kind==='answer');
+      assert.match(answers.at(-1)?.text ?? '',new RegExp('诊断完成 '+scene));
+      if (scene==='ppt'||scene==='video') {
+        const extension=scene==='ppt'?'.pptx':'.mp4';
+        assert.ok(updates.some(update=>update.kind==='report'&&update.report.name.endsWith(extension)),scene);
+      }
+    }
+  } finally { local.dispose(); }
   app.exit(0);
 }).catch(error => { console.error(error); app.exit(1); });

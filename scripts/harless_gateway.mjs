@@ -307,7 +307,7 @@ export function createGateway(config) {
     config, json, requireOrigin, sessionHash,
     isSessionActive: (hash, userId) => activeSession(hash)?.userId === userId,
     readBounded: (req, limit, model) => readBounded(req, model ? MODEL_REQUEST_MAX_BYTES : limit, model),
-    forward: scopedForward,
+    forward: scopedForward, videoRenderer,
   });
   const issueSession = (res, user) => {
     const value = random();

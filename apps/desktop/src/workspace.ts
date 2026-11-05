@@ -7,8 +7,7 @@ import { downloadName, externalWebUrl, ownedDownload, sameServer, serverOrigin }
 import { saveSettings } from './settings.ts';
 import type { Settings } from './settings.ts';
 import { authorizedDirectory, LocalWorkspaceStore, reopenDirectory } from './local-workspaces.ts';
-import type { LocalWorkspace } from './local-workspaces.ts';
-import { LocalWorkspacePanel } from './local-workspace.ts';
+import { LocalWorkspaceConversation, localSceneStatus } from './local-workspace.ts';
 import { LocalFrontendHost } from './frontend.ts';
 import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
 import type { Appearance } from './appearance.ts';
@@ -23,7 +22,8 @@ export class DesktopWorkspace {
   frontend: LocalFrontendHost | undefined;
   readonly ready: Promise<void>;
   private currentSession?: Session;
-  private localWorkspace?: LocalWorkspacePanel;
+  private localAccountId?: string;
+  private localWorkspace?: LocalWorkspaceConversation;
   private readonly localWorkspaces: LocalWorkspaceStore;
   private readonly folderTickets = new Map<string, string>();
   private downloadListener?: DownloadListener;
@@ -74,7 +74,7 @@ export class DesktopWorkspace {
       this.requireShell(event);
       if (name !== 'file' && name !== 'edit' && name !== 'view' && name !== 'help') return;
       if (this.stateValue.phase === 'connected' && this.stateValue.modalOpen) return;
-      if (this.pageReady && this.stateValue.phase === 'connected' && !this.localWorkspace?.isOpen) this.workspace?.webContents.focus();
+      if (this.pageReady && this.stateValue.phase === 'connected') this.workspace?.webContents.focus();
       Menu.getApplicationMenu()?.getMenuItemById('desktop-' + name)?.submenu?.popup({ window: this.window, x: { file: 8, edit: 58, view: 108, help: 158 }[name], y: TITLE_BAR_HEIGHT });
     });
     ipcMain.handle('geneloop:settings', event => { this.requireShell(event); this.showSettings(); });
@@ -105,36 +105,38 @@ export class DesktopWorkspace {
   runWorkspaceCommand(command: 'new-session' | 'new-workspace' | 'attach' | 'account-nav'): void {
     const view = this.workspace?.webContents;
     if (!view || view.isDestroyed() || !this.stateValue.workspaceVisible ||
-        this.stateValue.phase !== 'connected' || this.stateValue.modalOpen || this.localWorkspace?.isOpen ||
+        this.stateValue.phase !== 'connected' || this.stateValue.modalOpen ||
         !sameServer(view.getURL(), this.stateValue.server)) return;
     // 附件按钮需要桌面菜单点击提供的用户手势来打开系统文件选择器。
     void view.executeJavaScript(`document.getElementById(${JSON.stringify(command)})?.click(); void 0`, true).catch(() => {});
   }
 
-  async openLocalWorkspace(runTask = false): Promise<void> {
-    if (this.stateValue.phase !== 'connected' || this.stateValue.modalOpen || this.localWorkspace?.isOpen) return;
+  async openLocalWorkspace(): Promise<void> {
+    if (this.stateValue.phase !== 'connected' || this.stateValue.modalOpen) return;
     const generation = this.generation;
     try {
       const picked = await this.pickWorkspaceDirectory('选择本机工作区文件夹');
       const view = this.workspace?.webContents;
       if (picked && generation === this.generation && view && !view.isDestroyed()) {
-        const row = this.localWorkspaces.open(picked);
-        if (runTask) await this.showLocalTask(row);
-        else view.send('geneloop:workspace-selected', row.id);
+        const row = this.localWorkspaces.open(picked, this.stateValue.server, this.localAccountId);
+        view.send('geneloop:workspace-selected', row.id);
       }
     } catch { if (!this.window.isDestroyed()) dialog.showErrorBox('本机工作区', '无法打开这个本机文件夹。'); }
   }
 
   private async pickWorkspaceDirectory(title: string): Promise<string | undefined> {
-    if (process.platform !== 'win32' || this.disposed) return;
+    if (!['win32', 'darwin'].includes(process.platform) || this.disposed) return;
     const result = await dialog.showOpenDialog(this.window, { title, properties: ['openDirectory'] });
     if (!result.canceled && !this.disposed) return authorizedDirectory(result.filePaths[0]);
   }
 
   private async localWorkspaceAction(command: unknown, value: unknown) {
-    if (process.platform !== 'win32' || this.disposed) throw Error('本机工作区仅支持 Windows。');
-    if (command === 'open-task') return this.openLocalWorkspace(true);
-    if (command === 'list') return this.localWorkspaces.list(this.stateValue.server, value);
+    if (!['win32', 'darwin'].includes(process.platform) || this.disposed) throw Error('本机工作区需要 Windows 或 macOS。');
+    if (command === 'scenes') return localSceneStatus();
+    if (command === 'open-folder' || command === 'list') {
+      this.localAccountId = typeof value === 'string' ? value : undefined;
+      return command === 'list' ? this.localWorkspaces.list(this.stateValue.server, value) : this.openLocalWorkspace();
+    }
     if (command === 'pick') {
       const generation = this.generation;
       const path = await this.pickWorkspaceDirectory('选择本机工作区文件夹');
@@ -171,6 +173,36 @@ export class DesktopWorkspace {
       if (typeof input.source === 'string') this.folderTickets.delete(input.source);
       return saved;
     }
+    if (command === 'history' || command === 'start' || command === 'cancel' || command === 'report') {
+      const input = (value ?? {}) as { workspaceId?: unknown; accountId?: unknown; threadId?: unknown; name?: unknown };
+      if (typeof input.workspaceId !== 'string' || !this.currentSession) throw Error('无效的本机工作区。');
+      const row = this.localWorkspaces.list(this.stateValue.server, input.accountId).find(item => item.id === input.workspaceId);
+      if (!row?.directory) throw Error('找不到已绑定的本机工作区。');
+      const server = this.stateValue.server;
+      const runner = this.localWorkspace ??= new LocalWorkspaceConversation({
+        server, session: this.currentSession,
+        approveVideo: async request => {
+          const details = request.assets.map(asset => `• ${asset.path}（${Math.ceil(asset.bytes / 1024)} KiB）`);
+          const result = await dialog.showMessageBox(this.window, {
+            type: 'question', title: 'GeneLoop Desktop', message: '在服务器上渲染 Remotion 视频？',
+            detail: [new URL(server).origin, `Remotion 工程源码（${Math.ceil(request.sourceBytes / 1024)} KiB）`,
+              ...details, '仅发送上面列出的素材。渲染完成后，视频将写入本机工作区。'].join('\n'),
+            buttons: ['取消', '上传并渲染'], defaultId: 0, cancelId: 0,
+          });
+          return result.response === 1;
+        },
+      });
+      if (command === 'history') return runner.history(row);
+      if (command === 'report') return runner.reveal(row, input.name);
+      if (typeof input.threadId !== 'string') throw Error('无效的本机会话。');
+      if (command === 'cancel') return runner.cancel(row.id, input.threadId);
+      const view = this.workspace?.webContents;
+      return runner.start(row, input, update => {
+        if (view && view === this.workspace?.webContents && !view.isDestroyed()) {
+          view.send('geneloop:local-update', { workspaceId: row.id, threadId: input.threadId, update });
+        }
+      });
+    }
     if (typeof value !== 'string') throw Error('无效的本机工作区。');
     const row = this.localWorkspaces.get(value);
     if (command === 'remove') {
@@ -183,26 +215,7 @@ export class DesktopWorkspace {
       if (result) throw Error('无法在资源管理器中打开这个文件夹。');
       return;
     }
-    if (command === 'run') return this.showLocalTask(row);
     throw Error('无效的本机工作区操作。');
-  }
-
-  private async showLocalTask(row: LocalWorkspace): Promise<void> {
-    if (!this.currentSession) throw Error('请先连接 GeneLoop 模型服务。');
-    this.localWorkspace ??= new LocalWorkspacePanel({
-      parent: this.window, server: this.stateValue.server, session: this.currentSession,
-      onClose: () => {
-        if (this.stateValue.phase === 'connected') {
-          this.workspace?.setVisible(true);
-          this.workspace?.webContents.focus();
-        }
-      },
-    });
-    const panel = this.localWorkspace;
-    await panel.open(row);
-    if (panel !== this.localWorkspace || !panel.isOpen) return;
-    this.workspace?.setVisible(false);
-    panel.setVisible(this.stateValue.phase === 'connected');
   }
 
   private requireShell(event: IpcMainInvokeEvent): void {
@@ -226,7 +239,6 @@ export class DesktopWorkspace {
   }
 
   private fit(): void {
-    this.localWorkspace?.fit();
     if (this.workspace && !this.window.isDestroyed()) {
       const [width, height] = this.window.getContentSize();
       this.workspace.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: Math.max(0, height - TITLE_BAR_HEIGHT) });
@@ -234,15 +246,13 @@ export class DesktopWorkspace {
   }
 
   showSettings(): void {
-    this.localWorkspace?.setVisible(false);
     this.workspace?.setVisible(false);
     this.update('settings');
   }
 
   showWorkspace(): void {
     if (this.workspace && this.pageReady && this.stateValue.phase !== 'error') {
-      this.workspace.setVisible(!this.localWorkspace?.isOpen);
-      this.localWorkspace?.setVisible(true);
+      this.workspace.setVisible(true);
       this.update('connected');
     } else void this.connect(this.stateValue.server);
   }
@@ -257,6 +267,7 @@ export class DesktopWorkspace {
     const attempt = ++this.generation;
     this.localWorkspace?.dispose();
     this.localWorkspace = undefined;
+    this.localAccountId = undefined;
     this.folderTickets.clear();
     this.removeWorkspace();
     this.pageReady = false;

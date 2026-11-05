@@ -4,23 +4,44 @@
 
 ## 本机工作区 Windows 预览
 
-侧栏「新建工作区」提供本机和云端两种类型。「文件」菜单的「打开本机文件夹」可用系统选择器直接添加或打开本机工作区。工作区右键和三点菜单的「编辑工作区」支持添加、更换或解除一个本机文件夹。云端工作区的绑定按服务器和账号保存在本机，云端会话继续在服务器执行。绑定后，可从工作区首页运行本机任务。任务面板在当前主窗口打开，返回时保留工作区位置。登录成功后，即使云端工作区仍在加载或其接口不可用，也可在加载页点「打开本机文件夹」。本机任务发送时使用同一账号获取模型授权。
+侧栏「新建工作区」提供本机和云端两种类型。「文件 → 打开本机文件夹」可直接打开已有工作区或将目录添加为本机工作区。工作区右键和三点菜单的「编辑工作区」可添加、更换或解除本机文件夹。两种入口共用工作区首页、侧栏和对话输入框。绑定按服务器和账号保存在本机，绑定后的新会话从主输入框发送时由本机 Agent 和工具执行。旧云端会话仍显示「云端」并在原服务器执行。本机新会话默认使用通用对话。六个场景共用本机 Agent 路由。缺少媒体依赖时，视频在发送前提示并暂停发送。登录后如工作区接口仍在加载或不可用，可在加载页点「打开本机文件夹」。
 
-本机 Agent 以只读方式访问原始文件，只能在所选文件夹的 `GeneLoop 输出/` 下新建 Markdown 报告。输出目录在首次写入时创建，旧版已生成的报告保留在原位置。解除绑定和移除本机工作区仅修改应用记录。侧栏「工作区视图」保存分组、排序和归档筛选偏好。
+本机 Agent 以只读方式访问原始文件，只能在所选文件夹的 `GeneLoop 输出/` 下新建交付物。输出目录在首次写入时创建，旧版已生成的报告保留在原位置。解除绑定和移除本机工作区仅修改应用记录。侧栏「工作区视图」保存分组、排序和归档筛选偏好。
 
-每次运行建立一个本机 Agent，本机任务记录保存在桌面应用数据目录。预览界面暂未提供历史恢复。
+本机对话记录保存在桌面应用数据目录，同一工作区下可重新打开并继续对话。每轮重新检查目录权限并申请本机任务的模型授权。
 
-Windows 预览支持以下本机任务。
+Windows 本机预览支持以下六个场景。
 
+- **通用对话**在本机运行 Agent，可按需读取所选目录中的文本。
 - **文件管理**浏览目录、读取和搜索文本，保存 Markdown 报告。
 - **数据分析**针对 UTF-8 CSV 或 TSV 进行分组统计，返回计数、缺失数、合计、均值、范围和源文件 SHA-256。单张表上限 256 KiB、10,000 行和 200 组。
 - **论文材料核验**按页提取含文本层的 PDF 或文本材料，返回页码和文件 SHA-256。支持检查 LaTeX 常用引用命令中的 BibTeX 键，报告缺失与重复定义。PDF 上限 8 MiB，扫描件 OCR 不在当前范围。
+- **演示文稿**复用科研版式引擎，生成可编辑 PPTX 和布局回执。支持标题、正文、表格、图表、流程图、双栏比较和工作区中的 PNG。回执记录布局检查及输出和图件摘要。也可读取源材料、使用 PPTX 模板字段，并在 Windows 上渲染 PDF 预览。视觉质量需要人工审阅。
+- **视频编辑**使用本机 FFmpeg、FFprobe、Remotion 4.0.539 与 Chromium。简单时间线输出 720p/30fps 带音轨 MP4；复杂合成在本机编译 TSX 并渲染，最多 1080p/60fps、90 秒。素材按 SHA-256 核验，交付前完整解码。服务器渲染保留为明确上传确认后的独立能力，不作为本机失败时的自动回退。
 
-完成后可直接输入下一轮，或在重开工作区后对历史任务选择「续接」。本机 Harness 保存同一目录及场景的会话上下文。每轮重新获得模型授权，并检查目录权限。「另起任务」开启独立上下文。旧任务仍可查看已有记录。
+未随包分发工具的开发版可将便携版 `ffmpeg.exe` 和 `ffprobe.exe` 放进桌面数据目录的 `local-tools/ffmpeg/`。开发版也可在启动前设置 `GENELOOP_FFMPEG_DIRECTORY` 为可信安装的 `bin` 绝对路径。工作区内容无法更改工具选择。此轮在本机验收环境准备了 Windows x64 FFmpeg 8.1.2 Essentials。验收命令 `npm --prefix apps/desktop run smoke:local-workspace` 需要设置上述目录。 [Windows FFmpeg 分发与校验摘要](https://www.gyan.dev/ffmpeg/builds/)
+
+混合视频要求隔离网关启用 `desktopLocalModel.videoRendering: true`。渲染器可使用既有的 `memberSceneDeployment.videoRenderer` 容器，或通过 `desktopLocalModel.videoSandbox` 配置绝对路径 `rootfs`、`runtimeRoot` 和镜像内部的 Chromium `browser`。后者需要 Linux 用户及挂载命名空间、bubblewrap、可信只读系统镜像和锁定的 Remotion 4.0.539 依赖。桌面显示目标服务器和每份素材，用户确认后才发送快照。沙箱无外网，工作目录只读，临时文件占用有上限。桌面收回 MP4 后校验摘要和完整解码，再保存 MP4、TSX 和回执。素材最多 8 个，合计 16 MiB。
+
+在同一对话中发送下一轮时，本机 Harness 续接同一目录和场景的会话上下文。「新会话」开启独立上下文。换用不同场景请另开会话。旧版本保存的任务可在对应工作区查看。
 
 首次真实验收使用独立服务器启动计划和试用账号。候选账号网关配置中加入 `"desktopLocalModel": {"accountIds": ["<隔离试用账号 ID>"]}`。保持原有预算代理、累计账本、服务入口和模型密钥。启用配置后，仅已登录且在名单中的账号能取得十分钟任务凭证，单账号同时一个本机任务。桌面使用该凭证调用 `deepseek-flash`，服务端在既有预算控制登记、绑定并结算。切断连接、撤销或超时后关闭模型转发。任务描述和必要文件片段发给云端模型。客户端不会收到供应商密钥。
 
 开发构建先执行 `npm --prefix apps/desktop run runtime:stage`，然后使用现有 dev 入口。Windows x64 的 `pack` 和 `dist` 将锁定的 Harness 运行时封入 `resources/geneloop-runtime.asar`，Windows 原生模块和外部工具保存在相邻的 `.asar.unpacked` 目录。桌面界面仍来自本仓库。用 `npm --prefix apps/desktop run smoke:local-workspace` 运行回环诊断，或运行 `node apps/desktop/scripts/probe-local-runtime.mjs --installed "<安装目录>"` 验证实际安装中的 Agent 和文件工具。真实云端模型验收使用隔离服务和试用账号，并核对预算账本、产物、取消与重复提交。
+
+## Windows PPT 导出开发入口
+
+`scenarios/ppt_master/windows_delivery.py` 处理宿主批准的、已完成的静态 Generate 项目。读取 `spec_lock.md`、`svg_output/*.svg` 和逐页同名 `notes/*.md`。它在独立临时目录执行 ppt-master 6.6.0 的校验和导出，再调用既有的 LibreOffice 交付验收。通过后一次发布 PPTX、PDF、逐页 PNG 和含 SHA-256 的回执。输入项目保持原位。
+
+开发环境使用已有的锁定 ppt-master 安装、Windows LibreOffice `soffice.com` 和安装了 PPT 场景依赖的 Python。输出路径必须是位于已有目录下的新目录。
+
+开发版可通过绝对路径环境变量 `GENELOOP_PPT_PYTHON`、`GENELOOP_PPT_MASTER_ROOT`、`GENELOOP_PPT_SOFFICE` 将同一导出器接入本机对话。PPT Agent 提供规格、静态 SVG 和逐页备注，交付可编辑 PPTX、PDF 和验收回执。转换进程使用 Windows Job 随任务取消。Windows 预览包可随包安装 Python、锁定的 ppt-master、LibreOffice 与 FFmpeg。构建前分别设置 `GENELOOP_DESKTOP_PYTHON_ROOT`、`GENELOOP_PPT_MASTER_ROOT`、`GENELOOP_DESKTOP_LIBREOFFICE_ROOT` 和 `GENELOOP_FFMPEG_DIRECTORY` 指向经核对的工具，再运行 `npm --prefix apps/desktop run tools:stage` 与 `npm run desktop:build`。工具文件夹和安装包保存在本机。
+
+```powershell
+python -m scenarios.ppt_master.windows_delivery --project <项目> --output <新输出目录> --ppt-master <锁定工具目录> --soffice <soffice.com路径>
+```
+
+PPTX 模板工作流读取含 `{{FIELD}}` 文字字段的页面，只修改副本对应的文字段。母版、布局、主题和其余 ZIP 部件按原字节保留。PPTX 和 PDF 按页核对文字并保存源文件摘要。PDF、PPTX 按页读取，DOCX、文本和 CSV/TSV 按段提取。未标记的任意模板改版和源图表、图像提取不在此入口。静态 SVG 导出限 ASCII 页文件名、自包含形状与文本、1–30 页。
 
 ## 使用与基线
 
@@ -67,3 +88,9 @@ npm --prefix apps/desktop run smoke:packaged
 上述测试均不证明真实模型效果。正式账号、六场景真实交付、评分/归档/清空/改密等服务器持久操作仍需隔离账号验收；不通过读取用户密码、复制浏览器Cookie或模拟回复补齐。本机Agent/工具执行属于下一阶段，模型仍可通过网络调用云服务。
 
 当前版本与证据见[桌面交接](handoffs/desktop.md)和[独立前端记录](experiments/geneloop-desktop-independent-20261103.md)。
+
+## macOS 构建候选与 Windows 本机 Remotion
+
+本机工具构建另需 `GENELOOP_DESKTOP_BROWSER` 指向 Remotion `ensureBrowser()` 准备的配套浏览器。纯 JS 封入运行时 ASAR，原生 compositor、esbuild、FFmpeg、Office、Python 和浏览器保留实体文件。包内 `manifest.json` 记录平台、架构、浏览器摘要和 ppt-master 锁。Windows 本机复杂渲染使用 Chromium 渲染沙箱，固定工具进程由 DSH 管理取消，不能将其称为全面文件/网络隔离。
+
+Mac 在目标平台原生执行 `node scripts/prepare-macos-tools.mjs`（工作目录 `apps/desktop`），再运行 `npm run dist`。它获取固定版本与校验和的便携 Python/LibreOffice，验证锁定 ppt-master，并准备配套 Chromium 和 Remotion 原生组件；输出 ARM64 或 x64 的 DMG/ZIP。`.github/workflows/desktop-native.yml` 在两类 Mac 构建机上运行原生文件、PPT/PDF、实际 Remotion、取消及 ASAR 检查；没有安装包上传步骤。当前只是构建候选，Mac 验证状态以交接和 CI 实际结果为准。六个 Windows 合成小任务的真实模型证据见 [preview.11 记录](experiments/desktop-preview11-20261106.md)。

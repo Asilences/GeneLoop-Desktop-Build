@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, isAbsolute } from 'node:path';
 
 export type WorkspaceBinding = { server: string; accountId: string; workspaceId: string };
 export type LocalWorkspace = { id: string; name: string; directory?: string; binding?: WorkspaceBinding; updatedAt: number };
-const localPath = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z]:[\\/]/.test(value) && !value.includes('\0');
-const samePath = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+const localPath = (value: unknown): value is string => typeof value === 'string' && !value.includes('\0') &&
+  (process.platform === 'win32' ? /^[A-Za-z]:[\\/]/.test(value) : isAbsolute(value));
+const samePath = (a: string, b: string) => process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
 
 export function authorizedDirectory(path: string): string {
   if (!localPath(path)) throw Error('请选择本机磁盘上的文件夹。');
@@ -45,9 +46,10 @@ export class LocalWorkspaceStore {
     if (!row) throw Error('找不到该本机工作区。');
     return { ...row };
   }
-  open(directory: string): LocalWorkspace {
-    return this.entries.find(row => !row.binding && row.directory && samePath(row.directory, directory)) ??
-      this.save({ directory, name: basename(directory) || directory });
+  open(directory: string, server: string, accountId: unknown): LocalWorkspace {
+    const matches = this.list(server, accountId).filter(row => row.directory && samePath(row.directory, directory));
+    return matches.find(row => !row.binding) ?? (matches.length === 1 ? matches[0] :
+      this.save({ directory, name: basename(directory) || directory }));
   }
   save(value: { id?: string; name: string; directory?: string; binding?: WorkspaceBinding }): LocalWorkspace {
     const name = value.name.trim();

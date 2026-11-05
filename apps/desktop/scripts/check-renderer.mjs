@@ -28,6 +28,7 @@ const server=createServer(async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1'),path=url.pathname;const buffers=[];for await(const chunk of req)buffers.push(chunk);const raw=Buffer.concat(buffers),body=raw.length&&(req.headers['content-type']||'').includes('json')?JSON.parse(raw):{};
   requests.push({path,method:req.method,body});
   if(path==='/api/account/me'){await new Promise(resolve=>setTimeout(resolve,600));return json(res,{user:{id:'diagnostic',displayName:'协议诊断账号',username:'diagnostic'}});}
+  if(path==='/api/harless/desktop-model/lease')return json(res,{error:'诊断网关未开放模型'},404);
   if(path==='/api/workspace/ready')return json(res,{ready:true});
   if(path==='/api/harless/settings'){
    const id=body.session_id||url.searchParams.get('session_id');
@@ -54,7 +55,10 @@ const server=createServer(async(req,res)=>{
    if(body.action)push('workspace/follow',{type:'archived',archivedSessionIds:[...archived]});
    return json(res,{sessions:sessions.filter(row=>deleted.has(row.sessionId)).map(row=>({session_id:row.sessionId,title:row.projections.values.title})),revision:'fixture'});
   }
-  if(path==='/api/harless/questions'){if(req.method==='POST')questionPending=false;return json(res,{questions:questionPending?[{id:'question-fixture',questions:[{id:'q1',question:'请选择诊断范围',multiSelect:true,options:[{id:'wrong-id-1',label:'保留来源'},{id:'wrong-id-2',label:'生成副本'}]}]}]:[]});}
+  if(path==='/api/harless/questions'){if(req.method==='POST')questionPending=false;return json(res,{questions:questionPending?[{id:'question-fixture',questions:[
+    {id:'q1',question:'请选择资料处理范围',multiSelect:true,options:[{id:'wrong-id-1',label:'保留来源'},{id:'wrong-id-2',label:'生成副本'}]},
+    {id:'q2',question:'你希望为哪类读者准备这份演示文稿？',options:['零基础入门','课题组讨论','专业汇报']},
+  ]}]:[]});}
   if(path==='/api/fixture/questions'){questionPending=true;return json(res,{ok:true});}
   if(path==='/api/harless/comparisons'){
    const file=url.searchParams.get('file');
@@ -90,7 +94,8 @@ const ws=new WebSocketServer({server,path:'/api/remote.mux'});
 ws.on('connection',socket=>{socket.on('message',data=>{const frame=JSON.parse(data);if(frame.type==='cancel'){streams.delete(frame.streamId);return;}const row={socket,endpoint:frame.endpoint,sessionId:frame.payload.args.request?.address?.sessionId};streams.set(frame.streamId,row);const item=value=>socket.send(JSON.stringify({type:'item',streamId:frame.streamId,value}));if(frame.endpoint==='workspace/follow')item({type:'baseline',value:{items:[{workspaceId:'workspace',title:'诊断工作区',sessionIds:['history','menu-fixture']},{workspaceId:'empty-workspace',title:'空工作区',sessionIds:[]}],archivedSessionIds:[...archived]}});else if(frame.endpoint==='$events')item({type:'ready',clientId:'fixture-client'});else if(frame.endpoint==='session/control')item({type:'baseline',value:{}});else if(frame.endpoint==='session/follow')item({type:'snapshot',header:{id:row.sessionId},cursor:2,records:row.sessionId==='history'?records:[],hasMore:false,projections:{asOfSeq:2,values:{}}});});socket.on('close',()=>{for(const [id,row]of streams)if(row.socket===socket)streams.delete(id);});});
 server.listen(0,'127.0.0.1');await once(server,'listening');
 const fixture=join(output,'fixture.json');writeFileSync(fixture,JSON.stringify({diagnostic:true,server:`http://127.0.0.1:${server.address().port}/`,output}));
-const env={...process.env,GENELOOP_RENDERER_FIXTURE:fixture};delete env.ELECTRON_RUN_AS_NODE;
+const env={...process.env,GENELOOP_RENDERER_FIXTURE:fixture,
+  GENELOOP_FFMPEG_DIRECTORY:join(output,'missing-media-tools')};delete env.ELECTRON_RUN_AS_NODE;
 let result=1;
 try{const child=spawn(require('electron'),['test/renderer.cjs'],{cwd:app,env,stdio:'inherit',windowsHide:true});const [code,signal]=await once(child,'exit');result=code??1;console.log(JSON.stringify({diagnostic_child_exit:code,signal}));if(!JSON.parse(readFileSync(join(output,'summary.json'))).ok)throw Error('Renderer diagnostic failed before quit');
  const prompts=requests.filter(row=>row.path==='/api/session/prompt');if(prompts.length!==3)throw Error('Expected exactly three synthetic prompt submissions');
@@ -101,6 +106,8 @@ try{const child=spawn(require('electron'),['test/renderer.cjs'],{cwd:app,env,std
  if(prompts[1].body.payload.args.request.content[0].text!=='普通下一轮')throw Error('Scene selection did not reset per turn');
  const selected=requests.findIndex(row=>row.path==='/api/session/selectModel'),sent=requests.findIndex(row=>row.path==='/api/session/prompt');if(selected<0||selected>sent)throw Error('Prompt did not await model selection');
  const reply=requests.find(row=>row.path==='/api/$events/result');if(reply?.body.payload.args.outcome.value!=='allowed-once')throw Error('Explicit approval reply missing');
- const answered=requests.find(row=>row.path==='/api/harless/questions'&&row.method==='POST');if(JSON.stringify(answered?.body.answers[0].selected)!==JSON.stringify(['保留来源','生成副本']))throw Error('Human answer labels or multiSelect did not match server contract');
+ const answered=requests.find(row=>row.path==='/api/harless/questions'&&row.method==='POST');
+ const [multiple,single]=answered?.body.answers??[];
+ if(JSON.stringify(multiple?.selected)!==JSON.stringify(['保留来源','生成副本'])||multiple?.custom!=='保留原始资料\n只写入输出目录'||JSON.stringify(single?.selected)!==JSON.stringify(['课题组讨论']))throw Error('Human answer selections or multiline details did not match server contract');
 }catch(error){console.error(error);result=1;}finally{for(const client of ws.clients)client.terminate();await new Promise(done=>ws.close(done));await new Promise(done=>server.close(done));writeFileSync(join(output,'requests.json'),JSON.stringify({kind:'synthetic-protocol-diagnostic',real_model_requests:0,requests},null,2));}
 process.exitCode=result;

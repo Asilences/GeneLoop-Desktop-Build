@@ -36,12 +36,17 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 contextBridge.exposeInMainWorld('desktopWorkspaces', Object.freeze({
-  available: process.platform === 'win32',
+  available: ['win32', 'darwin'].includes(process.platform),
+  scenes: () => ipcRenderer.invoke('geneloop:local-workspaces', 'scenes'),
   list: (accountId: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'list', accountId),
-  openTask: () => ipcRenderer.invoke('geneloop:local-workspaces', 'open-task'),
+  openFolder: (accountId: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'open-folder', accountId),
   pick: () => ipcRenderer.invoke('geneloop:local-workspaces', 'pick'),
   save: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'save', value),
-  run: (id: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'run', id),
+  history: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'history', value),
+  start: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'start', value),
+  cancel: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'cancel', value),
+  report: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'report', value),
+  onUpdate: (callback: (event: unknown) => void) => ipcRenderer.on('geneloop:local-update', (_event, value) => callback(value)),
   reveal: (id: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'reveal', id),
   remove: (id: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'remove', id),
   onSelected: (callback: (id: string) => void) => ipcRenderer.on('geneloop:workspace-selected', (_event, id: string) => callback(id)),

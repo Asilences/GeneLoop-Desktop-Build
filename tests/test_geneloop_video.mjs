@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {request} from 'node:http';
+import {EventEmitter} from 'node:events';
 const typed={skip:!process.features?.typescript};
 function temporary(){return realpathSync(mkdtempSync(join(tmpdir(),'geneloop-video-test-')));}
 function cleanup(root){assert.ok(root.startsWith(realpathSync(tmpdir())+sep)&&root.includes('geneloop-video-test-'));rmSync(root,{recursive:true,force:true});}
@@ -17,7 +18,7 @@ function installation(root){
  return {runtimeRoot,mediaToolsRoot,image:'sha256:'+'a'.repeat(64)};
 }
 test('Video recipe uses fixed runtime and only the owning Session; caller cannot choose host mounts or network',{skip:!process.features?.typescript||process.platform!=='linux'},async()=>{
- const {videoConfiguration,videoCommand}=await import('../src/adapters/geneloop_video.ts');
+ const {videoConfiguration,videoCommand,videoProjectCommand}=await import('../src/adapters/geneloop_video.ts');
  const root=temporary(),session='session-11111111-1111-4111-8111-111111111111';
  try{
   const config=installation(root);mkdirSync(join(root,'sessions',session,'work'),{recursive:true});
@@ -29,6 +30,9 @@ test('Video recipe uses fixed runtime and only the owning Session; caller cannot
   assert.ok(argv.includes('--read-only'));assert.ok(argv.includes('--cap-drop=ALL'));
   assert.ok(!argv.some(s=>s.includes('docker.sock')||s.includes('accounts.json')||s.includes('DEEPSEEK_API_KEY')));
   assert.ok(argv.includes(`type=bind,source=${root}/sessions/${session}/work/remotion/public,target=/work/public,readonly`));
+  assert.ok(argv.includes('geneloop.session='+session));
+  const desktop=videoProjectCommand(recipe.project,'node --version',config);
+  assert.ok(desktop.argv.includes(`type=bind,source=${recipe.project},target=/work,readonly`));
   assert.throws(()=>videoCommand(root,'session-22222222-2222-4222-8222-222222222222','true',config));
   assert.throws(()=>videoCommand(root,session,'',config));
   writeFileSync(join(config.runtimeRoot,'.env'),'private');assert.throws(()=>videoConfiguration(config));
@@ -37,6 +41,66 @@ test('Video recipe uses fixed runtime and only the owning Session; caller cannot
    assert.throws(()=>videoCommand(root,foreign,'true',config));
   }
  }finally{cleanup(root);}
+});
+test('桌面 Remotion 只接受固定素材名称、字节摘要和入口源码',typed,async()=>{
+ const {desktopVideoInput}=await import('../src/adapters/geneloop_desktop_video.ts');
+ const bytes=Buffer.from('sample');
+ const asset={name:'asset-1.png',bytes:bytes.toString('base64'),sha256:createHash('sha256').update(bytes).digest('hex')};
+ const parse=(assets,extra={})=>desktopVideoInput(Buffer.from(JSON.stringify({source:'registerRoot(Entry)',assets,...extra})));
+ assert.deepEqual(parse([asset]).assets,[{name:asset.name,bytes}]);
+ assert.throws(()=>parse([{...asset,name:'../outside.png'}]));
+ assert.throws(()=>parse([{...asset,bytes:'AA=='}]));
+ assert.throws(()=>parse([asset,{...asset,name:asset.name.toUpperCase()}]));
+ assert.throws(()=>parse([asset],{command:'pwd'}));
+});
+test('拒绝桌面渲染时只生成待授权的文件清单',async()=>{
+ const {renderHybridVideo}=await import('../apps/desktop/runtime/local-video.mjs');
+ const source='registerRoot(Entry)';
+ let approval;
+ const result=await renderHybridVideo({
+  readBytes(path){assert.equal(path,'素材/录屏.mp4');return Buffer.from('fixture');},
+ },null,null,source,JSON.stringify(['素材/录屏.mp4']),new AbortController().signal,request=>{
+  approval=request;
+  return false;
+ });
+ assert.equal(result.status,'denied');
+ assert.deepEqual(approval,{sourceBytes:Buffer.byteLength(source),assets:[{path:'素材/录屏.mp4',bytes:7}]});
+});
+test('桌面 Remotion 拒绝无凭证请求及非视频任务，且不读取上传内容',typed,async()=>{
+ const {createDesktopModelRoute,DESKTOP_MODEL_PATH}=await import('../scripts/harless_desktop_model.mjs');
+ const control=await import('node:http').then(({createServer})=>createServer((req,res)=>{req.resume();res.end('{}');}));
+ await new Promise(resolve=>control.listen(0,'127.0.0.1',resolve));
+ let reads=0;
+ const route=createDesktopModelRoute({
+  config:{desktopLocalModel:{accountIds:['test'],videoRendering:true},apiKey:'fixture',
+   memberPolicy:{control_token:'fixture'},upstreamBrokerPort:control.address().port,upstreamControlPort:control.address().port},
+  videoRenderer:{},json:(res,status,body)=>Object.assign(res,{status,body}),
+  requireOrigin:()=>true,sessionHash:()=> 'session',isSessionActive:()=>true,
+  readBounded:req=>{reads++;return Buffer.from(req.input);},
+ });
+ try{
+  const denied=new EventEmitter(),path=DESKTOP_MODEL_PATH+'/video/render';
+  await route.handle({method:'POST',headers:{}},denied,path);
+  assert.equal(denied.status,403);
+  const lease=new EventEmitter();
+  await route.handle({method:'POST',headers:{},input:'{"scene":"ppt"}'},lease,DESKTOP_MODEL_PATH+'/lease',{id:'test'});
+  assert.equal(lease.status,200);
+  assert.equal(lease.body.videoRendering,undefined);
+  const headers={authorization:'Bearer '+lease.body.token};
+  const wrong=new EventEmitter();
+  await route.handle({method:'POST',headers},wrong,path);
+  assert.equal(wrong.status,403);
+  assert.equal(reads,1);
+  await route.handle({method:'DELETE',headers},new EventEmitter(),DESKTOP_MODEL_PATH+'/lease');
+  const videoLease=new EventEmitter();
+  await route.handle({method:'POST',headers:{},input:'{"scene":"video"}'},videoLease,DESKTOP_MODEL_PATH+'/lease',{id:'test'});
+  assert.equal(videoLease.body.videoRendering,true);
+  const videoHeaders={authorization:'Bearer '+videoLease.body.token};
+  const invalid=new EventEmitter();
+  await route.handle({method:'POST',headers:videoHeaders,input:'{"command":"pwd"}'},invalid,path);
+  assert.equal(invalid.status,422);
+  await route.handle({method:'DELETE',headers:videoHeaders},new EventEmitter(),DESKTOP_MODEL_PATH+'/lease');
+ }finally{route.close();control.closeAllConnections();await new Promise(resolve=>control.close(resolve));}
 });
 test('A gateway without video installation rejects the video endpoint',typed,async()=>{
  if(process.platform==='win32')return;

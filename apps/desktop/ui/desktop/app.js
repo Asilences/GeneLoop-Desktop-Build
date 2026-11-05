@@ -1,7 +1,7 @@
 import {request,post,rpc,upload,RemoteStreams} from './api.js';
 import {Conversation} from './conversation.js';
 import {node,button,blocks,markdown,dialog,icon,popupMenu,choiceControl,refreshChoice,replyAction} from './components.js';
-import {promptContent} from './composer.js';
+import {promptContent,sceneCommand} from './composer.js';
 import {settingsPanel,conversationPreferences} from './panels.js';
 import {comparisonCard} from './comparison.js';
 import {bindScenePicker} from './scene-picker.js';
@@ -30,7 +30,70 @@ let activeWorkspaceDraft=null;
 let awaitingHistory=false,historyError='';
 let pinnedWorkspaces=[];
 const localBridge=window.desktopWorkspaces?.available?window.desktopWorkspaces:null;
-let localWorkspaces=[],localWorkspaceId=null;
+let localWorkspaces=[],localWorkspaceId=null,localThread=null,localActive=null;
+const localHistory=new Map(),localDrafts=new Map(),localInputs=new Map();
+let localUnavailable={};
+const localSceneCatalog=[
+  ['new-scene','chat','通用对话','chat'],
+  ['files','file','文件管理','files'],
+  ['research-data-analysis','data','数据分析','data'],
+  ['paper-proofreading','paper','论文材料核验','paper'],
+  ['ppt','ppt','演示文稿','ppt'],
+  ['video-editing','video','视频编辑','video'],
+].map(([id,shortcut,label,kind])=>({id,shortcut,label,kind}));
+const localSceneChoices=()=>localSceneCatalog.map(scene=>({...scene,hint:localUnavailable[scene.kind]||''}));
+const localSceneFor=kind=>localSceneCatalog.find(scene=>scene.kind===kind)?.id||'files';
+const localRow=()=>localWorkspaces.find(row=>row.id===localWorkspaceId);
+const bindingFor=id=>id?localWorkspaces.find(row=>row.binding?.workspaceId===id&&row.binding.accountId===state.user?.id&&row.directory):undefined;
+const localScope=(workspaceId,threadId)=>({workspaceId,threadId,accountId:state.user?.id});
+function threadsFor(id){
+  const threads=new Map();
+  for(const turn of localHistory.get(id)||[]){
+    const threadId=turn.threadId||turn.sessionId||'legacy-'+turn.at;
+    const entry=threads.get(threadId)||{id:threadId,title:turn.prompt.slice(0,52),turns:[]};
+    entry.turns.unshift(turn);entry.title=turn.prompt.slice(0,52);threads.set(threadId,entry);
+  }
+  return [...threads.values()];
+}
+function localThreadRows(id,query=''){
+  if(workspaceView.archive==='archived')return [];
+  const rows=threadsFor(id);
+  const draft=localDrafts.get(id);
+  if(draft&&!rows.some(row=>row.id===draft.id))rows.unshift({id:draft.id,title:localActive?.threadId===draft.id?localActive.prompt.slice(0,52):'新会话 · 草稿'});
+  return rows.filter(row=>row.title.toLowerCase().includes(query)).map(row=>node('div',{
+    class:'session-row'+(localWorkspaceId===id&&localThread?.id===row.id?' active':''),'data-local-thread':row.id,
+  },button(row.title,()=>openLocalWorkspace(id,{threadId:row.id}),'session-link')));
+}
+async function loadLocalHistory(row){
+  if(!row.directory)return;
+  const user=state.user;
+  const current=()=>user===state.user&&localWorkspaces.some(item=>item.id===row.id&&item.directory===row.directory);
+  let tasks;
+  try{tasks=await localBridge.history(localScope(row.id));}
+  catch(error){if(current())throw error;return;}
+  if(!current())return;
+  localHistory.set(row.id,tasks);
+  renderSidebar();if(localWorkspaceId===row.id)scheduleRender();
+}
+function saveLocalComposer(){
+  if(!localThread)return;
+  const text=$('prompt').value;
+  if(text.trim())localInputs.set(localThread.id,text);
+  else{
+    localInputs.delete(localThread.id);
+    if(localDrafts.get(localWorkspaceId)===localThread&&localActive?.threadId!==localThread.id)localDrafts.delete(localWorkspaceId);
+  }
+}
+function localSelection(text=$('prompt').value){
+  const command=sceneCommand(text,localSceneCatalog);
+  const selected=localSceneCatalog.find(scene=>scene.id===(command?.scene||localThread?.scene||'new-scene'));
+  const latest=threadsFor(localWorkspaceId).find(row=>row.id===localThread?.id)?.turns.at(-1);
+  if(!selected?.kind)return {message:'无效的本机场景。'};
+  if(localUnavailable[selected.kind])return {message:localUnavailable[selected.kind]};
+  if(latest?.scene&&selected.kind!==latest.scene)return {message:'这个本机会话使用'+(labels[localSceneFor(latest.scene)]||latest.scene)+'。切换场景请新建会话。'};
+  return {kind:selected.kind,prompt:command?.text??text};
+}
+
 const viewKey='geneloop.desktop.workspace-view';
 const viewOptions={group:['workspace','flat'],sort:['workspace','recent'],archive:['active','all','archived']};
 const workspaceView={group:'workspace',sort:'workspace',archive:'active'};
@@ -70,11 +133,11 @@ function restoreLoginPreference(){
   $('login-user').value=username||'';
   $('remember-login').checked=localStorage.getItem('geneloop.desktop.remember-login')!=='off';
 }
-function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;localWorkspaceId=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();newWorkspaceDrafts.clear();activeWorkspaceDraft=null;pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();restoreLoginPreference();screen('auth');$('login-pass').value='';}
+function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;localWorkspaceId=null;localThread=null;localHistory.clear();localInputs.clear();localDrafts.clear();state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();newWorkspaceDrafts.clear();activeWorkspaceDraft=null;pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();restoreLoginPreference();screen('auth');$('login-pass').value='';}
 $('open-local-task').onclick=async event=>{
   const button=event.currentTarget;
   button.disabled=true;
-  try{await localBridge?.openTask();}
+  try{await localBridge?.openFolder(state.user?.id);}
   catch(error){fail(error);}
   finally{button.disabled=false;}
 };
@@ -104,7 +167,8 @@ async function connectWorkspace(){
   },warning);
   eventFollow=await streams.follow('$events',undefined,frame=>{handleEvent(frame).catch(fail);},warning);
   controlFollow=await streams.follow('session/control',undefined,frame=>{if(frame.type==='queue'&&frame.sessionId===state.session){$('session-status').textContent=frame.items.length?'排队中 · '+frame.items.length+' 条':'工作空间已连接';}if(frame.type==='jobs'&&frame.sessionId===state.session){state.jobs=frame.jobs;scheduleRender();}},warning);
-  screen('workspace');refreshLocalWorkspaces().catch(fail);restoreSidebarWidth();renderSidebar();renderModels();renderScenes();renderConversation();
+  await refreshLocalWorkspaces();
+  screen('workspace');restoreSidebarWidth();renderSidebar();renderModels();renderScenes();renderConversation();
   clearInterval(pollTimer);pollTimer=setInterval(()=>{if(state.session)refreshTaskPanels().catch(()=>{});},4000);
   if(state.session&&state.sessions.some(row=>row.sessionId===state.session))await selectSession(state.session,{force:true});else state.session=null;
 }
@@ -137,11 +201,14 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
   const sorted=rows=>workspaceView.sort==='recent'?rows.sort((a,b)=>lastUpdated(b)-lastUpdated(a)):rows;
   const sessionButton=row=>{
     const element=node('div',{class:'session-row'+(row.sessionId===state.session?' active':''),'data-session-id':row.sessionId,onclick:()=>selectSession(row.sessionId).catch(fail)});
-    const label=node('button',{class:'session-link',type:'button'},(row.running?'● ':'')+titleOf(row),state.archived.has(row.sessionId)?node('small',{class:'workspace-tag'},'已归档'):null);
+    const label=node('button',{class:'session-link',type:'button'},(row.running?'● ':'')+titleOf(row),state.archived.has(row.sessionId)?node('small',{class:'workspace-tag'},'已归档'):null,
+      bindingFor(state.workspaces.find(group=>group.sessionIds.includes(row.sessionId))?.workspaceId)?node('small',{class:'workspace-tag'},'云端'):null);
     const more=button(icon('more'),event=>{event.stopPropagation();openSessionMenu(row.sessionId,{anchor:more});},'session-more icon');more.title='管理对话';more.setAttribute('aria-label','管理对话：'+titleOf(row));more.setAttribute('aria-haspopup','menu');
     element.append(label,more);element.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();openSessionMenu(row.sessionId,{x:event.clientX,y:event.clientY,anchor:label});});return element;
   };
-  for(const item of sorted(localWorkspaces.filter(row=>!row.binding&&(!query||row.name.toLowerCase().includes(query))))){
+  for(const item of sorted(localWorkspaces.filter(row=>!row.binding))){
+    const children=localThreadRows(item.id,query);
+    if(query&&!children.length&&!item.name.toLowerCase().includes(query))continue;
     const label=button([icon('folder'),node('span',{},item.name),node('small',{class:'workspace-tag'},'本机')],()=>openLocalWorkspace(item.id),'workspace-row');
     label.dataset.localWorkspaceId=item.id;
     if(localWorkspaceId===item.id)label.setAttribute('aria-current','true');
@@ -149,9 +216,10 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     more.setAttribute('aria-label','工作区菜单：'+item.name);
     const row=node('div',{class:'workspace-entry'},label,more);
     row.addEventListener('contextmenu',event=>{event.preventDefault();localWorkspaceMenu(item,{anchor:label,x:event.clientX,y:event.clientY});});
-    list.append(row);
+    list.append(node('section',{class:'workspace-group','aria-label':item.name},row,children.length?node('div',{class:'workspace-children'},children):null));
   }
   if(workspaceView.group==='flat'){
+    for(const group of state.workspaces){const bound=bindingFor(group.workspaceId);if(bound)list.append(...localThreadRows(bound.id,query));}
     if(workspaceView.archive!=='archived')for(const [id,draft]of newWorkspaceDrafts){
       const title=state.workspaces.find(group=>group.workspaceId===id)?.title||'工作区';
       if(query&&!('新会话 · 草稿 '+title).toLowerCase().includes(query))continue;
@@ -167,13 +235,15 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     (workspaceView.sort==='recent'?latest(b)-latest(a):0));
   for(const group of groups){
     const rows=sorted(group.sessionIds.map(id=>sessionsById.get(id)).filter(visible));
-    const draft=newWorkspaceDrafts.get(group.workspaceId);
+    const bound=bindingFor(group.workspaceId);
+    const localChildren=bound?localThreadRows(bound.id,query):[];
+    const draft=bound?null:newWorkspaceDrafts.get(group.workspaceId);
     const showDraft=workspaceView.archive!=='archived'&&draft&&(!query||'新会话 · 草稿'.includes(query));
-    if(query&&!rows.length&&!showDraft&&!group.title.toLowerCase().includes(query))continue;
-    const id=group.workspaceId,hasChildren=rows.length>0||Boolean(showDraft);
+    if(query&&!rows.length&&!localChildren.length&&!showDraft&&!group.title.toLowerCase().includes(query))continue;
+    const id=group.workspaceId,hasChildren=rows.length>0||localChildren.length>0||Boolean(showDraft);
     const expanded=hasChildren&&(Boolean(query)||!collapsedWorkspaces.has(id));
     const header=button(node('span',{},group.title),()=>{
-      if(state.workspace!==id){
+      if(state.workspace!==id||(bound&&(state.session||localThread))){
         collapsedWorkspaces.delete(id);
         openWorkspace(id);
       }else if(hasChildren&&!query){
@@ -183,6 +253,7 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
       [...list.querySelectorAll('.workspace-row')].find(row=>row.dataset.workspaceId===id)?.focus({preventScroll:true});
     },'workspace-row');
     header.dataset.workspaceId=id;
+    if(bound)header.append(node('small',{class:'workspace-tag'},'本机'));
     if(hasChildren)header.setAttribute('aria-expanded',String(expanded));
     header.prepend(icon(expanded?'folder-open':'folder'));
     if(state.workspace===group.workspaceId)header.setAttribute('aria-current','true');
@@ -191,7 +262,7 @@ function renderSidebar(){const list=$('workspace-list'),query=$('search').value.
     const row=node('div',{class:'workspace-entry'},header,more);
     row.addEventListener('contextmenu',event=>{event.preventDefault();workspaceMenu(group,{anchor:header,x:event.clientX,y:event.clientY});});
     const section=node('section',{class:'workspace-group','aria-label':group.title},row);
-    const children=expanded?rows.map(sessionButton):[];
+    const children=expanded?[...localChildren,...rows.map(sessionButton)]:[];
     if(expanded&&showDraft){
       const label=button('新会话 · 草稿',()=>beginWorkspaceDraft(group.workspaceId).catch(fail),'session-link');
       if(draft===activeWorkspaceDraft)label.setAttribute('aria-current','true');
@@ -219,37 +290,23 @@ function workspaceMenu(group,position){
 async function refreshLocalWorkspaces(){
   if(!localBridge)return;
   const user=state.user;
-  const rows=await localBridge.list(user?.id);
+  const [rows,unavailable]=await Promise.all([localBridge.list(user?.id),localBridge.scenes()]);
   if(state.user!==user)return;
-  localWorkspaces=rows;
+  localWorkspaces=rows;localUnavailable=unavailable;
+  for(const row of rows)loadLocalHistory(row).catch(fail);
+  if(localWorkspaceId&&!localRow())openWorkspace(state.workspace);
   renderSidebar();
   if(localWorkspaceId)renderConversation();
 }
-function openLocalWorkspace(id){
-  if(creatingSession||state.submitting||!localWorkspaces.some(row=>row.id===id))return;
-  if(localWorkspaceId!==id){
-    openWorkspace(null);
-    localWorkspaceId=id;
-  }
-  renderSidebar();renderConversation();$('history').scrollTop=0;
+function openLocalWorkspace(id,options={}){
+  const row=localWorkspaces.find(item=>item.id===id);
+  if(row)openWorkspace(row.binding?.workspaceId??null,{...options,localId:id});
 }
-function runLocalTask(id){localBridge.run(id).catch(fail);}
-function cloudFolder(group){return localWorkspaces.find(row=>row.binding?.workspaceId===group.workspaceId&&row.binding.accountId===state.user?.id);}
-function localWorkspaceHome(row){
-  return node('section',{class:'workspace-home local-workspace-home','aria-label':'本机工作区首页'},
-    node('div',{class:'local-home-heading'},icon('folder-open'),node('div',{},
-      node('h2',{},row.name),node('p',{},'本机工作区 · 文件管理'))),
-    node('section',{class:'local-folder-card'},
-      node('span',{class:'delivery-kicker'},'本机文件夹'),node('p',{},row.directory||'尚未添加文件夹')),
-    node('div',{class:'workspace-editor-actions'},
-      row.directory?button('在资源管理器中打开',()=>localBridge.reveal(row.id).catch(fail),'secondary'):null,
-      button('编辑工作区',()=>workspaceEditor({local:row}),'secondary'),
-      row.directory?button('新建任务',()=>runLocalTask(row.id),'primary'):null),
-    node('p',{class:'workspace-editor-hint'},'生成的报告保存在工作区的「GeneLoop 输出」文件夹。运行任务时，任务描述和必要文件片段会发给所连接的云端模型。'));
-}
+function cloudFolder(group){return bindingFor(group.workspaceId);}
 function localWorkspaceMenu(row,position){
   popupMenu([
     {id:'local-open',label:'打开工作区',icon:'folder',action:()=>openLocalWorkspace(row.id)},
+    ...(row.directory?[{id:'local-new',label:'在此新建会话',icon:'plus',action:()=>openLocalWorkspace(row.id,{focus:true})}]:[]),
     ...(row.directory?[{id:'local-reveal',label:'在资源管理器中打开',icon:'folder-open',action:()=>localBridge.reveal(row.id).catch(fail)}]:[]),
     {id:'local-edit',label:'编辑工作区',icon:'edit',action:()=>workspaceEditor({local:row})},
     {separator:true},
@@ -315,7 +372,7 @@ function workspaceEditor({local,cloud}={}){
     pickSource.lastElementChild.textContent=source?'更换文件夹…':'添加文件夹…';
     localType.setAttribute('aria-pressed',String(type==='local'));cloudType.setAttribute('aria-pressed',String(type==='cloud'));
     hint.textContent=type==='local'?'报告会自动保存到文件夹下的「GeneLoop 输出」。':
-      cloud&&localBridge?'本机文件夹用于本机任务。云端会话仍在服务器执行。':'云端工作区与网页版共用。';
+      cloud&&localBridge?'绑定文件夹后，新建会话在本机执行。已有云端会话仍可打开。':'云端工作区与网页版共用。';
     save.disabled=saving||picking||!name.value.trim()||(type==='local'&&!editing&&!source);
     name.disabled=localType.disabled=cloudType.disabled=cancel.disabled=saving||picking;
     if(remove)remove.disabled=saving||picking;
@@ -345,6 +402,7 @@ function workspaceEditor({local,cloud}={}){
             await localBridge.save({name:title,source:sourceTicket,cloud:{workspaceId:cloud.workspaceId,accountId}});
             sourceTicket=undefined;
             await refreshLocalWorkspaces();
+            if(state.workspace===cloud.workspaceId&&!state.session)openWorkspace(cloud.workspaceId);
           }
           renderSidebar();renderConversation();
         }
@@ -369,7 +427,7 @@ function showWorkspaceView(){
     option('archive','archived','仅显示已归档对话','archive'),
   ],{anchor:$('workspace-view')});
 }
-localBridge?.onSelected(id=>{refreshLocalWorkspaces().then(()=>openLocalWorkspace(id)).catch(fail);});
+localBridge?.onSelected(id=>{refreshLocalWorkspaces().then(()=>{if(!state.user)return;screen('workspace');openLocalWorkspace(id);}).catch(fail);});
 function confirmWorkspaceDelete(group){
   const rows=group.sessionIds.map(id=>state.sessions.find(row=>row.sessionId===id)).filter(Boolean);
   const list=node('div',{class:'workspace-delete-list'});
@@ -432,6 +490,7 @@ function clearSessionPanels(){
   if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
 }
 function saveComposer(){
+  if(localWorkspaceId){saveLocalComposer();return;}
   const content={text:$('prompt').value,attachments:state.attachments};
   if(activeWorkspaceDraft){
     const draft=activeWorkspaceDraft;
@@ -444,6 +503,7 @@ function saveComposer(){
 }
 async function beginWorkspaceDraft(id){
   if(creatingSession||state.submitting)return;
+  if(bindingFor(id)){openWorkspace(id,{focus:true});return;}
   const wasCollapsed=collapsedWorkspaces.delete(id);
   if(activeWorkspaceDraft?.workspaceId===id){if(wasCollapsed)renderSidebar();$('prompt').focus();return;}
   openWorkspace(id,{focus:true});
@@ -457,10 +517,19 @@ async function beginWorkspaceDraft(id){
   }
   if(activeWorkspaceDraft===draft)$('prompt').focus();
 }
-function openWorkspace(id,{focus=false}={}){
+function openWorkspace(id,{focus=false,localId,threadId}={}){
   if(creatingSession||state.submitting)return;
-  localWorkspaceId=null;
   saveComposer();
+  const local=localId?localWorkspaces.find(row=>row.id===localId):bindingFor(id);
+  localWorkspaceId=local?.id??null;
+  localThread=null;
+  if(local&&(focus||threadId)){
+    const existing=threadsFor(local.id).find(row=>row.id===threadId);
+    localThread=existing?{id:threadId,scene:localSceneFor(existing.turns.at(-1).scene)}:
+      localDrafts.get(local.id)??{id:crypto.randomUUID(),scene:'new-scene'};
+    if(!existing)localDrafts.set(local.id,localThread);
+    if(id)collapsedWorkspaces.delete(id);
+  }
   if(id!==state.workspace){
     workspaceDrafts.set(state.workspace,scratchText);
     scratchText=workspaceDrafts.get(id)||'';
@@ -469,13 +538,15 @@ function openWorkspace(id,{focus=false}={}){
   state.conversation=new Conversation();state.comparisons=new Map();state.jobs=[];state.trace=false;
   awaitingHistory=false;historyError='';$('composer').inert=false;
   $('deliveries').hidden=true;
-  resetComposerScene();state.attachments=[];$('prompt').value=scratchText;
+  resetComposerScene();state.attachments=[];
+  $('prompt').value=local?(localInputs.get(localThread?.id)||''):scratchText;
   clearSessionPanels();renderScenes();renderAttachments();renderSidebar();renderConversation();
-  $('history').scrollTop=0;
-  if(id&&!focus)refreshHomeDelivery(id).catch(()=>{});
+  $('history').scrollTop=localThread?$('history').scrollHeight:0;
+  if(id&&!focus&&!local)refreshHomeDelivery(id).catch(()=>{});
   if(focus)$('prompt').focus();
 }
 async function ensureSession(){
+  if(localWorkspaceId||(!state.session&&bindingFor(state.workspace)))throw Error('请在本机工作区输入框发送。');
   if(creatingSession)return creatingSession;
   if(state.session)return state.session;
   creatingSession=(async()=>{
@@ -494,13 +565,14 @@ async function ensureSession(){
 async function selectSession(id,{fromScratch=false,force=false,workspaceDraft=null}={}){
   if((creatingSession||state.submitting)&&!fromScratch)return;
   if(state.session===id&&!force&&!historyError)return;
-  localWorkspaceId=null;
-  if(!workspaceDraft){
+  if(localWorkspaceId)saveLocalComposer();
+  else if(!workspaceDraft){
     if(fromScratch)scratchText='';
     else if(!force||state.session!==id)saveComposer();
     else if(!activeWorkspaceDraft)state.drafts.set(id,{text:$('prompt').value,attachments:state.attachments});
     else Object.assign(activeWorkspaceDraft,{text:$('prompt').value,attachments:state.attachments});
   }
+  localWorkspaceId=null;localThread=null;
   currentFollow?.();currentFollow=null;
   const generation=++state.generation;
   state.session=id;clearSessionPanels();if(!fromScratch)resetComposerScene();state.trace=false;state.jobs=[];
@@ -635,24 +707,98 @@ function workspaceHome(group){
     }
     section.append(list);
   }
-  const bound=cloudFolder(group);
-  const local=bound?.directory?node('section',{class:'local-folder-card'},
-    node('span',{class:'delivery-kicker'},'本机文件夹'),node('p',{},bound.directory),
-    button('运行本机任务',()=>runLocalTask(bound.id),'secondary')):null;
-  return node('div',{class:'workspace-home'},summary,resume,local,section);
+  return node('div',{class:'workspace-home'},summary,resume,section);
 }
+function renderLocalConversation(row){
+  const threads=threadsFor(row.id);
+  const entry=threads.find(item=>item.id===localThread?.id);
+  const cloud=state.workspaces.find(group=>group.workspaceId===row.binding?.workspaceId);
+  const workspaceName=cloud?.title||row.name;
+  const running=localActive?.workspaceId===row.id&&localActive.threadId===localThread?.id?localActive:null;
+  $('session-title').textContent=entry?.title||(localThread?'新会话 · 草稿':workspaceName);
+  $('session-status').textContent=running?.phase==='remote-render'?'服务器正在渲染 Remotion':running?'本机 Agent 正在执行':'本机执行';
+  $('chat-tab').parentElement.hidden=true;
+  for(const id of ['rename-session','session-actions','deliveries-toggle'])$(id).hidden=true;
+  $('stop').hidden=!running;
+  $('prompt').placeholder='在「'+workspaceName+'」中发送本机任务';
+  const history=$('history');
+  history.replaceChildren();
+  if(!entry?.turns.length&&!running){
+    const recent=threads.map(item=>node('li',{},button(item.title,()=>openLocalWorkspace(row.id,{threadId:item.id}),'workspace-recent-link')));
+    const old=cloud?workspaceSessions(cloud):[];
+    history.append(node('section',{class:'workspace-home local-workspace-home','aria-label':'本机工作区首页'},
+      node('div',{class:'workspace-home-heading'},node('div',{class:'workspace-home-name'},
+        node('span',{class:'workspace-home-icon'},icon('folder')),
+        node('div',{},node('h2',{},workspaceName),node('p',{},'本机工作区'))),
+        button(node('span',{},icon('plus'),'新会话'),()=>openLocalWorkspace(row.id,{focus:true}),'secondary workspace-start')),
+      node('section',{class:'local-folder-card'},node('span',{class:'delivery-kicker'},'本机文件夹'),
+        node('p',{},row.directory||'尚未添加文件夹'),
+        row.directory?button('在资源管理器中打开',()=>localBridge.reveal(row.id).catch(fail),'secondary'):null,
+        button('编辑工作区',()=>workspaceEditor(cloud?{cloud}:{local:row}),'secondary')),
+      node('section',{class:'workspace-recent','aria-label':'最近对话'},
+        node('div',{class:'workspace-recent-heading'},node('h3',{},'最近对话')),
+        node('ul',{class:'workspace-recent-list'},recent,...old.map(item=>node('li',{},
+          button(titleOf(item)+' · 云端',()=>selectSession(item.sessionId).catch(fail),'workspace-recent-link')))),
+        recent.length||old.length?null:node('p',{class:'workspace-editor-hint'},'从下方输入框开始本机会话。报告保存到「GeneLoop 输出」。'))));
+  }
+  for(const turn of [...(entry?.turns||[]),...(running?[running]:[])]){
+    history.append(node('article',{class:'message user'},node('div',{class:'message-content'},node('p',{},turn.prompt))));
+    const reply=node('article',{class:'message assistant'},node('div',{class:'message-label'},'GeneLoop · 本机'));
+    for(const event of turn.updates||[]){
+      if(event?.kind==='answer')reply.append(markdown(event.text));
+      if(event?.kind==='report')reply.append(button(event.report.name,()=>localBridge.report({...localScope(row.id),name:event.report.name}).catch(fail),'secondary'));
+      if(event?.kind==='done'&&(event.status!=='completed'||event.error))
+        reply.append(node('p',{class:'workspace-editor-hint'},event.error||(event.status==='canceled'?'已停止本机执行。':'本机执行未完成。')));
+    }
+    if(turn===running&&(running.phase==='remote-render'||!turn.updates.length)){
+      reply.append(node('p',{role:'status'},running.phase==='remote-render'?'正在上传已授权的素材并渲染视频…':'正在启动本机 Agent…'));
+    }
+    history.append(reply);
+  }
+  renderScenes();
+}
+async function sendLocal(){
+  const row=localRow(),selection=localSelection();
+  if(selection.message){toast(selection.message);return;}
+  if(!row?.directory||localActive||!selection.prompt?.trim())return;
+  if(!localThread){
+    localThread={id:crypto.randomUUID(),scene:localSceneFor(selection.kind)};
+    localDrafts.set(row.id,localThread);
+  }else localThread.scene=localSceneFor(selection.kind);
+  const input=localScope(row.id,localThread.id);
+  const active={...input,prompt:selection.prompt.trim(),updates:[]};
+  localActive=active;
+  $('prompt').value='';localInputs.delete(input.threadId);
+  renderSidebar();renderConversation();$('history').scrollTop=$('history').scrollHeight;
+  try{await localBridge.start({...input,prompt:active.prompt,scene:selection.kind});}
+  catch(error){
+    if(localWorkspaceId===row.id&&localThread?.id===input.threadId&&!$('prompt').value)$('prompt').value=active.prompt;
+    fail(error);
+  }finally{
+    if(localDrafts.get(row.id)?.id===input.threadId&&active.updates.some(update=>update.kind==='done'))localDrafts.delete(row.id);
+    if(localActive===active)localActive=null;
+    await loadLocalHistory(row).catch(fail);
+    renderSidebar();renderConversation();
+  }
+}
+localBridge?.onUpdate(({workspaceId,threadId,update})=>{
+  if(localActive?.workspaceId!==workspaceId||localActive.threadId!==threadId)return;
+  if(update.kind==='progress')localActive.phase=update.phase;
+  else if(update.kind!=='ready')localActive.updates.push(update);
+  if(localWorkspaceId===workspaceId&&localThread?.id===threadId)scheduleRender();
+});
+$('prompt').addEventListener('input',()=>{if(localWorkspaceId)renderSendButton();});
 function renderConversation(){
   const history=$('history'),previousTop=history.scrollTop,nearBottom=history.scrollHeight-previousTop-history.clientHeight<140;
   const rows=state.conversation.rows(),renderedComparisons=new Set();
   const resultCard=id=>comparisonCard(state.comparisons.get(id),{trace:state.trace,fail,onUpdate:next=>{state.comparisons.set(id,next);scheduleRender();}});
-  const local=localWorkspaces.find(row=>row.id===localWorkspaceId);
-  document.querySelector('.composer-wrap').hidden=Boolean(local);
+  const local=localRow();
+  $('attach').hidden=Boolean(local);
+  document.querySelector('.model-controls').hidden=Boolean(local);
+  $('composer-caption').textContent='文件和任务在所连接的 GeneLoop 服务器执行';
   if(local){
-    $('session-title').textContent=local.name;
-    $('session-status').textContent='本机工作区';
-    $('chat-tab').parentElement.hidden=true;
-    for(const id of ['rename-session','session-actions','deliveries-toggle'])$(id).hidden=true;
-    history.replaceChildren(localWorkspaceHome(local));
+    renderLocalConversation(local);
+    history.scrollTop=nearBottom?history.scrollHeight:previousTop;
     return;
   }
   const group=state.workspaces.find(row=>row.workspaceId===state.workspace);
@@ -722,7 +868,15 @@ function renderConversation(){
 }
 async function loadEarlier(){try{const before=Math.min(...state.conversation.events.keys());const value=await rpc('session/page',{address:{kind:'session',sessionId:state.session},throughSeq:state.conversation.cursor,beforeSeq:before,maxMessages:80});state.conversation.prepend(value.records);state.conversation.hasMore=value.hasMore;renderConversation();}catch(error){fail(error);}}
 function renderScenes(){
-  const trigger=$('scene-select'),id=state.composerScene||'new-scene';
+  const local=localRow();
+  const trigger=$('scene-select'),id=local?(localThread?.scene||'new-scene'):state.composerScene||'new-scene';
+  if(local){
+    trigger.dataset.scene=id;trigger.hidden=false;trigger.removeAttribute('data-pending');
+    trigger.setAttribute('aria-busy','false');
+    trigger.textContent=localSceneCatalog.find(scene=>scene.id===id)?.label||'通用对话';
+    renderSendButton();
+    return;
+  }
   const scene=state.settings?.scenes?.find(row=>row.id===id);
   trigger.dataset.scene=id;
   trigger.hidden=id==='new-scene'&&!sceneSelection.pending;
@@ -732,6 +886,16 @@ function renderScenes(){
   renderSendButton();
 }
 async function chooseScene(id){
+  if(localWorkspaceId){
+    if(localActive)throw Error('正在本机执行，请先等待任务完成。');
+    if(!localThread){
+      localThread={id:crypto.randomUUID(),scene:'new-scene'};
+      localDrafts.set(localWorkspaceId,localThread);
+    }
+    localThread.scene=id;
+    renderSidebar();renderConversation();
+    return;
+  }
   if(state.submitting)throw Error('正在发送消息，请稍后切换场景。');
   const scene=state.settings.scenes.find(row=>row.id===id);
   if(scene?.available===false)throw Error(scene.unavailable_reason||'该场景暂不可用');
@@ -778,7 +942,7 @@ function renderAttachments(){
     return node('span',{class:'attachment'},icon('document'),node('span',{},(entry.uploading?'上传中 · ':'')+entry.name),remove);
   }));
 }
-async function attach(files){await ensureSession();const session=state.session,attachments=state.attachments;for(const file of files){const entry={name:file.name,uploading:true};attachments.push(entry);if(state.session===session)renderAttachments();try{const receipt=await upload(session,file);entry.receiptId=receipt.receiptId;entry.uploading=false;entry.session=session;}catch(error){entry.uploading=false;entry.error=true;fail(error);}if(state.session===session)renderAttachments();}}
+async function attach(files){if(localWorkspaceId)throw Error('本机会话可直接读取已选文件夹中的文件。');await ensureSession();const session=state.session,attachments=state.attachments;for(const file of files){const entry={name:file.name,uploading:true};attachments.push(entry);if(state.session===session)renderAttachments();try{const receipt=await upload(session,file);entry.receiptId=receipt.receiptId;entry.uploading=false;entry.session=session;}catch(error){entry.uploading=false;entry.error=true;fail(error);}if(state.session===session)renderAttachments();}}
 function promoteWorkspaceDraft(sessionId){
   if(activeWorkspaceDraft?.sessionId!==sessionId)return;
   const group=state.workspaces.find(row=>row.workspaceId===activeWorkspaceDraft.workspaceId);
@@ -788,6 +952,15 @@ function promoteWorkspaceDraft(sessionId){
 }
 function renderSendButton(){
   const control=$('send');
+  if(localWorkspaceId){
+    const {message}=localSelection(),busy=Boolean(localActive),row=localRow();
+    const label=message||(!row?.directory?'请先添加本机文件夹':busy?'本机 Agent 正在执行':'发送到本机 Agent');
+    control.disabled=busy||Boolean(message)||!row?.directory||!$('prompt').value.trim();
+    control.setAttribute('aria-busy',String(busy));control.setAttribute('aria-label',label);control.title=label;
+    control.replaceChildren(busy?node('span',{class:'send-spinner','aria-hidden':'true'}):icon('send'));
+    $('composer-caption').textContent=message||'本机执行 · Agent 读取此文件夹，模型通过云端调用';
+    return;
+  }
   const loading=awaitingHistory||$('composer').inert;
   const busy=loading||sceneSelection.pending||state.submitting;
   const label=loading?(historyError?'会话加载失败':'正在加载对话'):sceneSelection.pending?'正在同步场景':state.submitting?'正在发送':'发送';
@@ -797,7 +970,7 @@ function renderSendButton(){
   control.title=label;
   control.replaceChildren(busy?node('span',{class:'send-spinner','aria-hidden':'true'}):icon('send'));
 }
-async function send(event){event?.preventDefault();if($('send').disabled)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;renderSendButton();try{
+async function send(event){event?.preventDefault();if(localWorkspaceId)return sendLocal();if($('send').disabled)return;const text=$('prompt').value;if(!text.trim()&&!state.attachments.length)return;if(state.attachments.some(row=>row.uploading||row.error)){toast('请等待上传完成，或移除失败附件。');return;}state.submitting=true;renderSendButton();try{
     await selectionChange;
     const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);promoteWorkspaceDraft(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);resetComposerScene();renderScenes();}state.conversation.running=true;scheduleRender();
   }catch(error){if(error.status>=400&&error.status<500)state.pending.delete(state.session);fail(error);}finally{state.submitting=false;renderSendButton();}}
@@ -828,7 +1001,60 @@ async function refreshTaskPanels(){const session=state.session;if(!session)retur
 }
 function renderDeliveries(){const target=$('delivery-list');target.replaceChildren();for(const file of state.deliveries||[])target.append(node('div',{class:'file-row'},button([icon('document'),node('span',{},file.name)],()=>preview(file)),node('a',{href:file.href,download:file.name,title:'下载','aria-label':'下载 '+file.name},icon('download'))));if(!target.children.length)target.append(node('p',{class:'empty'},'本对话的已验证交付文件会显示在这里。'));}
 async function preview(file){try{const response=await fetch(file.href,{credentials:'same-origin'});if(!response.ok)throw Error('文件暂时不可用');const blob=await response.blob();if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(blob);const target=$('preview');target.replaceChildren(node('h3',{},file.name));const extension=file.name.split('.').pop().toLowerCase();if(['png','jpg','jpeg','gif','webp'].includes(extension))target.append(node('img',{src:previewUrl,alt:file.name}));else if(['mp4','webm'].includes(extension))target.append(node('video',{src:previewUrl,controls:true}));else if(extension==='pdf')target.append(node('iframe',{src:previewUrl,sandbox:'',title:file.name}));else if(['md','txt','json','csv','tsv','py','js','ts','tex','bib','log'].includes(extension)&&blob.size<2_000_000)target.append(node('pre',{},await blob.text()));else target.append(node('p',{},'此格式请下载后用本机应用打开。'));}catch(error){fail(error);}}
-function renderQuestions(rows){const signature=JSON.stringify([state.session,rows]);if(signature===state.questionsSignature)return;state.questionsSignature=signature;const target=$('questions');target.replaceChildren();target.hidden=!rows.length;for(const row of rows){const form=node('form'),answers=[];for(const question of row.questions||[]){const selected=new Set(),custom=node('input',{placeholder:'补充说明'});const field=node('fieldset',{},node('legend',{},question.question));for(const option of question.options||[]){const value=typeof option==='string'?option:option.label;const input=node('input',{type:question.multiSelect?'checkbox':'radio',name:row.id+question.id,value,onchange:()=>{if(!question.multiSelect)selected.clear();if(input.checked)selected.add(value);else selected.delete(value);}});field.append(node('label',{},input,typeof option==='string'?option:option.label));}field.append(custom);form.append(field);answers.push(()=>({id:question.id,selected:[...selected],...(custom.value.trim()?{custom:custom.value}:{})}));}const submit=node('button',{class:'primary'},'提交回答');form.append(submit);form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{await post('/api/harless/questions',{session_id:state.session,id:row.id,answers:answers.map(read=>read())});await refreshTaskPanels();}catch(error){fail(error);submit.disabled=false;}};target.append(form);}}
+function renderQuestions(rows){
+  const signature=JSON.stringify([state.session,rows]);
+  if(signature===state.questionsSignature)return;
+  state.questionsSignature=signature;
+  const target=$('questions');
+  target.replaceChildren();
+  target.hidden=!rows.length;
+  for(const row of rows){
+    const questions=row.questions||[];
+    const content=node('div',{class:'question-content'});
+    const answers=questions.map((question,index)=>{
+      const selected=new Set();
+      const custom=node('textarea',{rows:2,placeholder:'补充说明（选填）','aria-label':`第 ${index+1} 题补充说明（选填）`});
+      const field=node('fieldset',{},
+        node('legend',{},node('span',{class:'question-number','aria-hidden':true},index+1),question.question),
+      );
+      const options=node('div',{class:'question-options'});
+      for(const option of question.options||[]){
+        const value=typeof option==='string'?option:option.label;
+        const input=node('input',{
+          type:question.multiSelect?'checkbox':'radio',name:question.id,value,
+          onchange:()=>{
+            if(!question.multiSelect)selected.clear();
+            if(input.checked)selected.add(value);
+            else selected.delete(value);
+          },
+        });
+        options.append(node('label',{class:'question-option'},input,node('span',{},value)));
+      }
+      if(options.childElementCount)field.append(options);
+      field.append(custom);
+      content.append(field);
+      return ()=>({id:question.id,selected:[...selected],...(custom.value.trim()?{custom:custom.value}:{})});
+    });
+    const submit=node('button',{type:'submit',class:'primary'},'提交回答');
+    const form=node('form',{class:'question-card','aria-label':'补充资料'},
+      node('header',{class:'question-header'},
+        node('h2',{},'补充资料'),
+        node('span',{class:'question-count'},`${questions.length} 个问题`),
+      ),
+      content,
+      node('footer',{class:'question-footer'},submit),
+    );
+    form.onsubmit=async event=>{
+      event.preventDefault();
+      submit.disabled=true;
+      try{
+        await post('/api/harless/questions',{session_id:state.session,id:row.id,answers:answers.map(read=>read())});
+        await refreshTaskPanels();
+      }catch(error){fail(error);submit.disabled=false;}
+    };
+    target.append(form);
+  }
+}
 async function handleEvent(frame){if(frame.type==='ready'){state.eventClientId=frame.clientId;return;}if(frame.type==='emit'){if(frame.event==='api-session/added'||frame.event==='api-session/activity'||frame.event==='api-session/removed')loadSessions().catch(()=>{});if(frame.event==='api-session/status'){const [id,running]=frame.args||[];const row=state.sessions.find(row=>row.sessionId===id);if(row)row.running=running;if(id===state.session)state.conversation.running=running;renderSidebar();scheduleRender();}if(frame.event==='api-session/error')warning(Error(frame.args?.[1]||'服务器任务未完成'));return;}if(frame.type==='cancel'){state.approvals?.get(frame.eventId)?.close();return;}if(frame.type!=='waterfall')return;
   const reply=outcome=>post('/api/$events/result',{type:'client-request',rpcId:crypto.randomUUID(),method:'$events/result',payload:{args:{clientId:state.eventClientId,eventId:frame.eventId,outcome}}});
   if(frame.event!=='approval/request'){await reply({kind:'next'});return;}
@@ -900,18 +1126,19 @@ $('connect-retry').onclick=()=>initialize();$('refresh-session').onclick=()=>con
 $('new-workspace').onclick=()=>workspaceEditor();
 $('workspace-view').onclick=()=>showWorkspaceView();
 $('new-session').onclick=()=>{
-  if(localWorkspaceId)runLocalTask(localWorkspaceId);
+  if(localWorkspaceId)openLocalWorkspace(localWorkspaceId,{focus:true});
   else openWorkspace(state.workspace,{focus:true});
 };
 $('rename-session').onclick=()=>{if(state.session)renameSession(state.session);};
 $('sidebar-toggle').onclick=()=>$('workspace').classList.toggle('sidebar-hidden');$('chat-tab').onclick=()=>{state.trace=false;renderConversation();};$('trace-tab').onclick=()=>{state.trace=true;renderConversation();};
 async function openSceneOptions(){
+  if(localWorkspaceId)return;
   const selection=sceneSelection;
   try{await selectionChange;if(selection===sceneSelection)sceneOptions();}catch(error){fail(error);}
 }
 $('model-select').onchange=()=>{renderEfforts();changeModel().catch(fail);};$('effort-select').onchange=()=>changeModel().catch(fail);$('account-nav').onclick=account;
 $('attach').onclick=()=>$('file-input').click();$('file-input').onchange=event=>{attach([...event.target.files]).catch(fail);event.target.value='';};$('composer').onsubmit=send;$('prompt').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();send();}};
-$('stop').onclick=async()=>{try{await rpc('session/cancel',{sessionId:state.session});toast('已请求停止，等待服务器确认。');}catch(error){fail(error);}};
+$('stop').onclick=async()=>{if(localWorkspaceId){if(localActive?.workspaceId===localWorkspaceId)await localBridge.cancel(localScope(localActive.workspaceId,localActive.threadId)).catch(fail);return;}try{await rpc('session/cancel',{sessionId:state.session});toast('已请求停止，等待服务器确认。');}catch(error){fail(error);}};
 $('deliveries-toggle').onclick=()=>{$('deliveries').hidden=!$('deliveries').hidden;renderDeliveries();};$('deliveries-close').onclick=()=>$('deliveries').hidden=true;
 for(const [id,name]of Object.entries({'sidebar-toggle':'sidebar','rename-session':'edit','deliveries-toggle':'files','refresh-session':'refresh','new-workspace':'plus','workspace-view':'sliders','attach':'paperclip','send':'send','deliveries-close':'close'}))$(id).replaceChildren(icon(name));
 $('attach').setAttribute('aria-label','上传文件');
@@ -972,8 +1199,8 @@ divider.addEventListener('keydown',event=>{
 divider.addEventListener('dblclick',()=>{localStorage.removeItem(sidebarWidthKey);restoreSidebarWidth();});
 window.addEventListener('resize',restoreSidebarWidth);
 restoreSidebarWidth();
-bindScenePicker({input:$('prompt'),trigger:addAction,container:$('composer'),getScenes:()=>state.settings?.scenes||[],
-  getSelected:()=>state.composerScene||'new-scene',choose:chooseScene,fail,label:scene=>labels[scene.id]||scene.label,
+bindScenePicker({input:$('prompt'),trigger:addAction,container:$('composer'),getScenes:()=>localWorkspaceId?localSceneChoices():state.settings?.scenes||[],isLocal:()=>Boolean(localWorkspaceId),
+  getSelected:()=>localWorkspaceId?(localThread?.scene||'new-scene'):state.composerScene||'new-scene',choose:chooseScene,fail,label:scene=>labels[scene.id]||scene.label,
   upload:()=>$('attach').click(),options:openSceneOptions});
 const actions=button(icon('more'),sessionActions,'icon');actions.id='session-actions';actions.title='管理对话';actions.setAttribute('aria-label','管理对话');$('rename-session').after(actions);
 window.addEventListener('beforeunload',()=>{streams.close();clearInterval(pollTimer);if(previewUrl)URL.revokeObjectURL(previewUrl);});

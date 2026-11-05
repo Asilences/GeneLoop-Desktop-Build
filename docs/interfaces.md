@@ -1527,6 +1527,15 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 ## 桌面本机模型授权
 
-本机 Agent 使用独立的 HTTPS 模型入口。账号网关默认关闭该入口，仅在隔离候选配置显式设置 `desktopLocalModel.accountIds` 时开放。桌面主进程通过已登录的同源 Cookie 向 `POST /api/harless/desktop-model/lease` 发送含可选字段的 JSON 对象（scene 可取 files、data 或 paper，空对象默认 files），获得 `{token, model, expiresAt}`。凭证限一个账号的当前任务和十分钟，供应商密钥保留在网关。
+本机 Agent 使用独立的 HTTPS 模型入口。账号网关默认关闭该入口，仅在隔离候选配置显式设置 `desktopLocalModel.accountIds` 时开放。桌面主进程通过已登录的同源 Cookie 向 `POST /api/harless/desktop-model/lease` 发送含可选字段的 JSON 对象（scene 可取 chat、files、data、paper、ppt 或 video，空对象默认 files），获得 `{token, model, expiresAt}`。凭证限一个账号的当前任务和十分钟，供应商密钥保留在网关。
 
-`POST /api/harless/desktop-model/v1/chat/completions` 校验 Bearer 凭证及其场景的工具白名单，使用现有模型传输容量。请求登记到原预算控制，网关替换计量绑定和上游认证，模型凭证不能调用控制接口。`DELETE /api/harless/desktop-model/lease` 撤销凭证并结束绑定。账号退出或凭证过期同样结束路由。Windows 上的本机工具、授权目录和报告均由桌面进程管理。配置与验收见[桌面说明](desktop.md#本机工作区-windows-预览)。
+`POST /api/harless/desktop-model/v1/chat/completions` 校验 Bearer 凭证及其场景的工具白名单，使用现有模型传输容量。请求登记到原预算控制，网关替换计量绑定和上游认证，模型凭证不能调用控制接口。`DELETE /api/harless/desktop-model/lease` 撤销凭证并结束绑定。账号退出或凭证过期同样结束路由。Windows 上的本机工具、授权目录和报告均由桌面进程管理。 绑定本机目录的工作区通过桌面主进程启动新会话，既有云端会话沿用原有云端会话协议。配置与验收见[桌面说明](desktop.md#本机工作区-windows-预览)。
+
+开启 `desktopLocalModel.videoRendering` 的试用网关对视频授权额外返回 `videoRendering: true`。本机 Agent 在桌面确认后通过同一任务凭证向 `POST /api/harless/desktop-model/video/render` 提交 `{source, assets: [{name, bytes, sha256}]}`。素材使用固定安全文件名和 Base64。接口只执行固定 Remotion 入口，响应为 MP4 和 `X-Geneloop-Sha256`。断连、取消、授权回收或渲染超时会中止隔离渲染。服务端同时只接受一个桌面渲染请求。
+## 原生桌面执行与构建（preview.11）
+
+本机 Agent 复用 DSH agents/session/subprocess；Linux 正式服务生命周期不变。工作区路径和目录授权按平台分别处理，云端绑定仍以服务器/账号/工作区为键。
+
+`local_video_render(plan)` 保留工具名和单字符串参数。JSON 数组沿用片段协议；JSON 对象 `{source,assets}` 为完整 Remotion TSX 与本机素材相对路径数组，注册 `Main`，素材顺序映射为 `asset-N.扩展名`。两种计划均在本机交付，不因依赖缺失或失败自动转服务器。读取源摘要、复制快照、渲染后复核、FFmpeg 完整解码与输出摘要继续保留。服务器路径仍需独立明确同意。
+
+Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使用自身渲染沙箱。macOS 候选使用平台原生目录句柄与 DSH Seatbelt，尚待真实 Mac 运行。构建用 Python、Office、FFmpeg、Chromium 在构建阶段获取并随工具资源打包，任务阶段不自动安装依赖。构建入口见 `apps/desktop/scripts/build-installer.mjs`，Mac 流程见 `.github/workflows/desktop-native.yml`；均不自动发布安装包。

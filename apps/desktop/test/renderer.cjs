@@ -131,7 +131,24 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate('document.getElementById("scene-select").dataset.scene'),'new-scene');check('配置确认后发送、实时消息/结束状态与逐轮场景重置');
  assert.equal(await evaluate(`!!document.querySelector('#send svg')&&!document.getElementById('send').disabled`),true);
  await evaluate(`document.getElementById('prompt').value='普通下一轮';document.getElementById('composer').requestSubmit()`);await until(()=>evaluate('document.getElementById("prompt").value===""'),'第二次发送');
- await evaluate(`fetch('/api/fixture/questions')`);await until(()=>evaluate('!document.getElementById("questions").hidden'),'原生人类提问');await evaluate(`document.querySelectorAll('#questions input[type=checkbox]').forEach(input=>input.click());document.querySelector('#questions form').requestSubmit()`);await until(()=>evaluate('document.getElementById("questions").hidden'),'回答提交');check('人类问题支持原协议多选与标签答案，轮询保持未提交输入');
+ await evaluate(`fetch('/api/fixture/questions')`);
+ await until(()=>evaluate('!document.getElementById("questions").hidden'),'原生人类提问');
+ await evaluate(`{
+   const panel=document.getElementById('questions');
+   const content=panel.querySelector('.question-content');
+   const footer=panel.querySelector('.question-footer');
+   if(content.scrollHeight<=content.clientHeight||footer.getBoundingClientRect().bottom>panel.getBoundingClientRect().bottom)
+     throw Error('补充资料的长表单应单独滚动，提交按钮应可见');
+   panel.querySelectorAll('input[type=checkbox]').forEach(input=>input.click());
+   const radios=panel.querySelectorAll('input[type=radio]');
+   radios[0].click();
+   radios[1].click();
+   panel.querySelector('textarea').value='保留原始资料\\n只写入输出目录';
+ }`);
+ writeFileSync(join(fixture.output,'question-panel.png'),(await desktop.workspace.webContents.capturePage()).toPNG());
+ await evaluate(`document.querySelector('#questions form').requestSubmit()`);
+ await until(()=>evaluate('document.getElementById("questions").hidden'),'回答提交');
+ check('补充资料支持独立滚动、单选、多选及多行说明');
  await evaluate(`document.getElementById('account-nav').click()`);
  assert.deepEqual(await evaluate(`[...document.querySelectorAll('.context-menu [role="menuitem"]')].map(row=>row.textContent)`),['设置','账户与安全','退出登录']);
  assert.equal(await evaluate(`!document.querySelector('dialog')&&document.querySelector('.context-menu').getBoundingClientRect().bottom<document.getElementById('account-nav').getBoundingClientRect().top`),true);
@@ -245,6 +262,7 @@ app.whenReady().then(async()=>{
  assert.deepEqual(await evaluate(`JSON.parse(localStorage.getItem('geneloop.desktop.workspace-view'))`),
    {group:'flat',sort:'workspace',archive:'archived'});
  check('工作区视图支持对话单列表、已归档筛选和本机保存');
+ await evaluate(`document.getElementById('workspace-view').click();document.querySelector('[data-action=view-archive-active]').click()`);
  if(process.platform==='win32'){
    const source=join(fixture.output,'本机源文件夹'),replacement=join(fixture.output,'更换后的文件夹');
    mkdirSync(source);
@@ -262,23 +280,18 @@ app.whenReady().then(async()=>{
      await until(()=>evaluate(`!!document.querySelector('.local-workspace-home')&&!document.querySelector('dialog')`),'创建后在主窗口打开工作区');
      assert.equal(BrowserWindow.getAllWindows().length,1);
      const id=await evaluate(`document.querySelector('${localRow}').dataset.localWorkspaceId`);
-     if (require('node:fs').existsSync(join(__dirname,'../runtime-bundle/local-worker.mjs'))) {
-       const contents=require('electron').webContents;
-       await evaluate(`[...document.querySelectorAll('.local-workspace-home button')].find(item=>item.textContent==='新建任务').click()`);
-       let localView;
-       await until(()=>!!(localView=contents.getAllWebContents().find(view=>view.getURL().endsWith('/local-workspace.html'))),'主窗口打开本机任务面板');
-       await until(()=>localView.executeJavaScript(`document.getElementById('workspace-name').textContent==='本机源文件夹'`),'本机面板读取所选工作区');
-       assert.equal(BrowserWindow.getAllWindows().length,1);
-       assert.equal(desktop.workspace.getVisible(),false);
-       desktop.showSettings();
-       assert.equal(desktop.window.contentView.children.find(child=>child.webContents===localView).getVisible(),false);
-       desktop.showWorkspace();
-       assert.equal(desktop.window.contentView.children.find(child=>child.webContents===localView).getVisible(),true);
-       await localView.executeJavaScript(`document.getElementById('back').click();void 0`).catch(()=>{});
-       await until(()=>desktop.workspace.getVisible(),'返回同一工作区首页');
-       assert.equal(await evaluate(`document.querySelector('.local-workspace-home h2').textContent`),'本机源文件夹');
-       check('本机任务在同一主窗口打开，连接设置及返回保留工作区');
-     }
+     await evaluate(`document.getElementById('new-session').click()`);
+     assert.equal(await evaluate(`!document.querySelector('.composer-wrap').hidden&&document.getElementById('session-status').textContent==='本机执行'`),true);
+     assert.equal(await evaluate(`document.querySelector('.local-workspace-home .workspace-start').textContent.trim()==='新会话'`),true);
+     await evaluate(`document.querySelector('.composer-add').click()`);
+     assert.equal(await evaluate(`document.querySelectorAll('#scene-command-menu [data-scene]').length`),6);
+     await evaluate(`document.querySelector('#scene-command-menu [data-scene="video-editing"]').click()`);
+     await until(()=>evaluate(`document.getElementById('composer-caption').textContent.includes('FFmpeg')`),'缺少本机媒体工具时提前提示');
+     await evaluate(`document.getElementById('prompt').value='禁止发送测试';document.getElementById('composer').requestSubmit()`);
+     assert.equal(await evaluate(`document.getElementById('send').disabled`),true);
+     assert.equal(BrowserWindow.getAllWindows().length,1);
+     assert.equal(desktop.workspace.getVisible(),true);
+     check('本机会话使用主输入框展示六个场景，依赖缺失时阻止发送');
      selected=replacement;
      await evaluate(`document.querySelector('${localRow}').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:80,clientY:250}));document.querySelector('[data-action=local-edit]').click();document.querySelector('dialog input').value='更名后的本机工作区';document.querySelector('.workspace-folder-pick').click()`);
      await until(()=>evaluate(`document.querySelector('.workspace-folder-name')?.textContent==='更换后的文件夹'`),'更换源文件夹');
@@ -303,14 +316,25 @@ app.whenReady().then(async()=>{
      await evaluate(`document.querySelector('.workspace-folder-pick').click()`);
      await until(()=>evaluate(`document.querySelector('.workspace-folder-name')?.textContent==='更换后的文件夹'`),'云端工作区添加本机文件夹');
      await evaluate(`document.querySelector('.workspace-editor-form').requestSubmit()`);
-     await until(()=>evaluate(`!document.querySelector('dialog')&&document.querySelector('.workspace-home .local-folder-card')?.textContent.includes('运行本机任务')`),'云端首页显示本机任务入口');
+     await until(()=>evaluate(`!document.querySelector('dialog')&&document.querySelector('.workspace-home .local-folder-card')?.textContent.includes('本机文件夹')`),'绑定后显示相同本机工作区首页');
      assert.equal(registry()[0].binding.workspaceId,'empty-workspace');
      assert.equal(await evaluate(`!!document.querySelector('${localRow}')`),false);
+     await evaluate(`document.getElementById('new-session').click()`);
+     assert.equal(await evaluate(`document.getElementById('session-status').textContent==='本机执行'&&!!document.querySelector('[data-local-thread]')`),true);
+     await evaluate(`document.getElementById('prompt').value='/video 不能发送';document.getElementById('prompt').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('composer').requestSubmit()`);
+     assert.match(await evaluate(`document.getElementById('composer-caption').textContent`),/FFmpeg/);
+     if (require('node:fs').existsSync(join(__dirname,'../runtime-bundle/local-worker.mjs'))) {
+       await evaluate(`document.getElementById('prompt').value='/data 本机输入框诊断';document.getElementById('composer').requestSubmit()`);
+       await until(()=>evaluate(`document.getElementById('history').textContent.includes('当前服务器尚未开放本机模型试用')`),'本机输入框调用模型授权，不触发云端会话发送');
+     }
+     await desktop.openLocalWorkspace();
+     await until(()=>evaluate(`document.querySelector('.local-workspace-home h2')?.textContent==='空工作区'`),'打开已绑定的目录返回原工作区');
+     assert.equal(registry().length,1);
      await editCloud();
      await evaluate(`document.querySelector('.workspace-folder-clear').click();document.querySelector('.workspace-editor-form').requestSubmit()`);
      await until(()=>evaluate(`!document.querySelector('dialog')&&!document.querySelector('.workspace-home .local-folder-card')`),'云端工作区解除文件夹绑定');
      assert.deepEqual(registry(),[]);
-     check('云端工作区支持添加和解除本机文件夹绑定，云端会话入口保留');
+     check('已有工作区绑定后复用本机输入框，解除后返回云端首页');
    }finally{dialog.showOpenDialog=originalPicker;}
  }
  report.ok=true;
