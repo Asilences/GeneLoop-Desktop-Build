@@ -1607,3 +1607,13 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 `inspect_decision`复核原RSI质量记录及来源字节，保留执行status与独立quality的区别，提供逐项`quality_findings`和按需原始证据引用。评价记录不声明语义判断必然正确。
 
 原`evolution_search`新增quality过滤，原`evolution_read`新增`section="quality"`的分页检查结果和来源ID。只有主动读取才返回局部发现与原文；默认概览仍为统计。标为evaluation的经历不能进入原Investigation或单轮packet的发现输入。旧策略CLI沿原inspect_decision接收这些反馈，无新增Registry、IR或Agent循环。
+
+## Evolution修订3离线调查（2026-11-05）
+
+- `Investigation(..., sealed_evidence=(), development_evidence=())`沿原证据视图增加宿主冻结的排除范围。`expose_development()`仅供可信宿主更新开发暴露，封存摘要、索引和原件仍排除。
+- `run_investigation`沿原Harness接入有限工具/期限、显式局部范围、完成no_change重访及原件/笔记检查。原调用默认兼容，生产接管与候选认证沿旧入口。
+- `compare_research_outcomes`读取预冻FileRef策略，分别返回effect与研究发布建议。实际认证及生产默认版本沿旧权限，未知保持pending。
+- 首轮论文历史入口为`scripts/run-paper-evolution.py`。Linux加载原私有环境后传入`--history`、`--policy`、`--output`、原`--ledger-root`、`--max-tool-calls 100 --timeout-seconds 5400`，真实调用使用`--call-model`。有效配置冻结源码、能力、策略、评价任务摘要及数据角色，费用/请求null沿原账本。
+- 当前真实调查Prompt位于`src/adapters/capability_evolution_investigation.py`的`SYSTEM`及request构造处；每轮`agent/request.json`保留完整实际文本与工具。用户选择沿现有代码形式讨论。
+
+完整语义见[通用协议](evolution-context-protocol.md)，实际候选、失败、费用及接收器边界见[真实实验](experiments/paper-evolution-20261105-001.md)。

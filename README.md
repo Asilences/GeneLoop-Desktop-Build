@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+2026-11-05，新增[修订3独立研究入口](docs/evolution-context-protocol.md)，运行 `node scripts/project.mjs python scripts/run-paper-evolution.py --help`。原五篇论文历史经历已产生一个真实策略并进入隔离评价与后继执行，采用为部分行为，预冻比较为neutral；真实反馈轮完成no_change及零请求重访。默认研究模式，原始失败与完整投入见[实验记录](docs/experiments/paper-evolution-20261105-001.md)。
+
 2026-11-04，新增默认关闭的 [Evidence-Grounded Evolution Agent 离线原型](docs/evidence-grounded-evolution-agent.md)：单个跨任务证据包、一次有界模型提案，复用原边界学习与宿主构造/认证入口。运行 `node scripts/project.mjs python scripts/run-evolution-agent.py --help`。两轮真实提案最终为 `no_change`，未产生新认证能力或收益；上下文、失败和费用见[实验记录](docs/experiments/evidence-evolution-20261104.md)。
 
 Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
