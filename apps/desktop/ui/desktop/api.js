@@ -1,0 +1,17 @@
+/** 桌面自己的HTTP RPC与WebSocket mux客户端，仅复用服务器公开协议。 */
+export class ApiError extends Error{constructor(message,code,status){super(message);this.code=code;this.status=status;}}
+export async function request(path,options={}){const response=await fetch(path,{credentials:'same-origin',cache:'no-store',...options});if(!(response.headers.get('content-type')||'').includes('application/json'))throw new ApiError(response.status===401?'请先登录':'服务器返回了不兼容的响应','http/'+response.status,response.status);const value=await response.json();if(!response.ok||value.error)throw new ApiError(typeof value.error==='string'?value.error:value.error?.message||'请求未完成',value.error?.code,response.status);return value;}
+export const post=(path,body,options={})=>request(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),...options});
+export async function rpc(endpoint,value,extra={}){const args=value===undefined?{}:{[endpoint==='session/list'?'_request':'request']:value};const result=await post('/api/'+endpoint,{type:'client-request',rpcId:crypto.randomUUID(),method:endpoint,payload:{args,...extra}});if(result.type!=='server-response'||typeof result.result?.ok!=='boolean')throw new ApiError('服务器RPC响应不兼容','desktop/protocol');if(!result.result.ok)throw new ApiError(result.result.error.message,result.result.error.code,400);return result.result.value;}
+export async function upload(sessionId,file,signal){const value=await request('/api/session/uploadFileBinary?'+new URLSearchParams({sessionId,name:file.name}),{method:'POST',headers:{'content-type':'application/octet-stream'},body:file,signal});if(!value.ok)throw new ApiError(value.error?.message||'上传失败',value.error?.code);return value.value;}
+export class RemoteStreams{
+  constructor(onDisconnect=()=>{}){this.streams=new Map();this.onDisconnect=onDisconnect;this.closed=false;}
+  async connect(){if(this.socket?.readyState===WebSocket.OPEN)return;if(this.opening)return this.opening;this.closed=false;
+    this.opening=new Promise((resolve,reject)=>{const url=new URL('/api/remote.mux',location.origin);url.protocol=url.protocol==='https:'?'wss:':'ws:';const socket=this.socket=new WebSocket(url);const timer=setTimeout(()=>{socket.close();reject(Error('事件连接超时'));},15000);
+      socket.onopen=()=>{clearTimeout(timer);resolve();};socket.onerror=()=>{clearTimeout(timer);reject(Error('事件连接失败'));};
+      socket.onmessage=event=>{try{const frame=JSON.parse(event.data),stream=this.streams.get(frame.streamId);if(!stream)return;if(frame.type==='item')stream.item(frame.value);else{this.streams.delete(frame.streamId);if(frame.type==='error')stream.error(new ApiError(frame.error?.message||'事件流失败',frame.error?.code));}}catch(error){this.onDisconnect(error);}};
+      socket.onclose=()=>{clearTimeout(timer);this.opening=null;reject(Error('事件连接已关闭'));for(const stream of this.streams.values())stream.error(Error('连接已断开；重连将恢复状态，不会重发消息。'));this.streams.clear();if(!this.closed)this.onDisconnect(Error('与服务器的实时连接已断开'));};});return this.opening;
+  }
+  async follow(endpoint,value,item,error=()=>{}){await this.connect();const streamId=crypto.randomUUID();this.streams.set(streamId,{item,error});this.socket.send(JSON.stringify({type:'open',streamId,endpoint,payload:{args:value===undefined?{}:{request:value}}}));return()=>{this.streams.delete(streamId);if(this.socket?.readyState===WebSocket.OPEN)this.socket.send(JSON.stringify({type:'cancel',streamId}));};}
+  close(){this.closed=true;this.streams.clear();this.socket?.close();this.socket=null;this.opening=null;}
+}

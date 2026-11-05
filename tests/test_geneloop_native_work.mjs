@@ -7,6 +7,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash,randomUUID} from 'node:crypto';
 import {Context} from '@deepseek-ai/cordis';
+import {createScope,scopeOf} from '@deepseek-ai/dsh-scope';
 import {AgentRegistry} from '@deepseek-ai/dsh-agent';
 import {AgentLoop} from '@deepseek-ai/dsh-agent-loop';
 import {SessionStore} from '@deepseek-ai/dsh-session';
@@ -68,6 +69,17 @@ test('only locked administrator ppt-master is published through the actual nativ
  }finally{await f.close();}
 });
 
+test('approved PPT skill is scoped and disappears when its scene binding is disposed',async()=>{
+ const f=await fixture(),ppt=createScope(f.ctx,{}),chat=createScope(f.ctx,{});
+ try{
+  const dispose=registerApprovedSkill(ppt.ctx,packageFixture(f.root));
+  assert.deepEqual((await f.ctx.skills.list({scope:scopeOf(ppt.ctx)})).map(row=>row.name),['ppt-master']);
+  assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(chat.ctx)}),[]);
+  assert.deepEqual(await f.ctx.skills.list(),[]);
+  dispose();assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(ppt.ctx)}),[]);
+ }finally{await ppt.dispose();await chat.dispose();await f.close();}
+});
+
 test('native todo_write permits parallel work and projects the latest list without inventing completion',async()=>{
  const f=await fixture();try{
   const rows=[{content:'分析数据',status:'in_progress'},{content:'检查图表',status:'in_progress'}];
@@ -102,6 +114,10 @@ test('present only accepts output paths and emits immutable task-bounded proof p
   const artifacts=comparisonArtifacts(join(f.root,'artifacts'));
   const rows=artifacts.snapshot('turn-one','baseline',0,f.root,new Set(proofs.keys()),false,new Set(proofs.keys()));
   assert.equal(rows.length,1);assert.equal(artifacts.read('turn-one','baseline',rows[0]).toString(),'first bytes');
+  writeFileSync(join(output,'failed-draft.pptx'),'incomplete export without notes');
+  const pptRows=captureComparisonDeliveries(artifacts,{...context,turn:'ppt-final-only',lane:'baseline',attempt:0,adapter:'ppt',status:'completed'});
+  assert.deepEqual(pptRows.map(row=>row.name),['outputs/code/report.docx']);
+  rmSync(join(output,'failed-draft.pptx'));
   writeFileSync(join(output,'report.docx'),'changed');assert.equal(nativePresentedFiles(context).size,0);
   assert.equal(captureComparisonDeliveries(artifacts,{...context,turn:'changed-after-present',lane:'baseline',attempt:0,adapter:'workspace',status:'completed'}).length,0);
   // Simulate a writer swapping bytes after proof collection but before copy.

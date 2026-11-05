@@ -27,6 +27,8 @@ def test_exact_entry_and_routing_bytes(installed):
     assert entry['text']=='official entry' and routing['text']=='routing'
     assert entry['version_sha256']==routing['version_sha256'] and routing['guard_exit_code']==0
     assert entry['skill_dir']=='/opt/geneloop/ppt-master'
+    assert entry['runtime_policy']['text']==Path(server.__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')
+    assert 'prepare_ppt' in entry['runtime_policy']['text']
 
 
 @pytest.mark.parametrize('name',['SKILL.md','workflows/routing.md','scripts/attribution_guard.py'])

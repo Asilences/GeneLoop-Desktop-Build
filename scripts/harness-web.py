@@ -10,6 +10,7 @@ import os
 import platform
 import re
 import signal
+import shutil
 import subprocess
 import sys
 import threading
@@ -37,6 +38,73 @@ def save(path, value):
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     temporary.chmod(0o600)
     temporary.replace(path)
+
+
+def prepare_run_directory(args,output):
+    """Explicit development resume keeps the same Home/output, never live processes."""
+    if not args.resume:
+        output.mkdir(parents=True,mode=0o700)
+        for name in ('work','dsh'):(output/name).mkdir(mode=0o700)
+        return output/'startup.log'
+    if not args.run_id or output.is_symlink() or output.absolute()!=output.resolve(strict=True):
+        raise ValueError('resume requires an existing owned run-id directory')
+    for name in ('policy.json','process.json','effective-config.json','work','dsh'):
+        path=output/name
+        if path.is_symlink() or not path.exists() or path.absolute()!=path.resolve(strict=True):
+            raise ValueError('resume path is missing or redirected')
+    policy=json.loads((output/'policy.json').read_text())
+    if policy.get('user_id')!=args.user_id or policy.get('provider_mode')!=('real' if args.real_model else 'mock'):
+        raise ValueError('resume owner/provider differs from saved run')
+    process=json.loads((output/'process.json').read_text())
+    if any(type(process.get(name)) is not int or (Path('/proc')/str(process[name])).exists() for name in ('launcher_pid','harness_pid')):
+        raise ValueError('resume refused while a prior process may still be alive')
+    if sys.platform!='linux':raise ValueError('development resume is verified on Linux only')
+    history=output/'resume-history'/uuid4().hex;history.mkdir(parents=True,mode=0o700)
+    for name in ('policy.json','process.json','effective-config.json','host.patch.yml','metrics.json','runtime-exit.json','answer.json','answer.md','task-state.json'):
+        path=output/name
+        if path.exists():
+            if path.is_symlink() or path.stat().st_nlink!=1:raise ValueError('resume file is redirected')
+            shutil.copyfile(path,history/name);(history/name).chmod(0o600)
+    for name in ('access-url.txt','public-access-url.txt'):
+        path=output/name
+        if path.exists():
+            if path.is_symlink() or path.stat().st_nlink!=1:raise ValueError('resume access file is redirected')
+            path.rename(history/name)
+    for name in ('agent.cordis.yml','preset.yml'):
+        path=output/'presets/sss-task'/name
+        if path.exists():
+            if path.is_symlink() or path.stat().st_nlink!=1 or path.absolute()!=path.resolve(strict=True):
+                raise ValueError('resume preset file is redirected')
+            shutil.copyfile(path,history/('preset-'+name));(history/('preset-'+name)).chmod(0o600)
+    save(history/'resume.json',{'same_output_and_home':True,'old_processes_exited':True,'ledger_reset':False,'at':time.time()})
+    return output/('startup-resume-'+history.name+'.log')
+
+
+def prepare_preset_directory(args,output):
+    if any(path.is_symlink() or getattr(path,'is_junction',lambda:False)() for path in (output,*output.parents)):
+        raise ValueError('preset directory is redirected')
+    # Windows TEMP may use its 8.3 alias. Resolve the approved root before
+    # comparing child paths, while keeping symbolic-link/junction guards.
+    output=output.resolve(strict=True)
+    preset=output/'presets/sss-task'
+    if any(path.is_symlink() for path in (preset.parent,preset)):
+        raise ValueError('preset directory is redirected')
+    preset.mkdir(parents=True,mode=0o700,exist_ok=bool(getattr(args,'resume',False)))
+    if preset.absolute()!=preset.resolve(strict=True):
+        raise ValueError('preset directory is redirected')
+    for name in ('agent.cordis.yml','preset.yml'):
+        path=preset/name
+        if path.is_symlink() or (path.exists() and (not path.is_file() or path.stat().st_nlink!=1)):
+            raise ValueError('preset file is redirected')
+    return preset
+
+
+def shutdown_local_stats(registry,task_file,task_state):
+    """The frontend may use a shared external registry; never replace its counters with zero."""
+    route=task_file.parent/'budget-route.json'
+    session=json.loads(route.read_text()).get('budget_session_id') if route.exists() else task_state['session_id']
+    try:return registry.stats(session)
+    except KeyError:return None
 
 
 def https_public_origin(value):
@@ -108,8 +176,7 @@ def prepare(args, output, endpoint):
         scenario = ROOT / ({'new-scene': 'scenarios/general/scenario.json', 'ppt': 'scenarios/research_ppt/web-scenario.json',
                             'files': 'scenarios/file-management/web-scenario.json'}.get(args.scenario, f'scenarios/{args.scenario}/scenario.json'))
     prepared = prepare_scenario(scenario, session_workspace='__HARLESS_SESSION_WORKSPACE__', case=args.case or ('l_retrieval_persistence' if args.scenario == 'portfolio-v1' else ''), web_deployment=True)
-    preset = output / 'presets/sss-task'
-    preset.mkdir(parents=True, mode=0o700)
+    preset = prepare_preset_directory(args,output)
     rows = [{'id': 'sss-persona', 'name': '@deepseek-ai/dsh-persona', 'config': product_persona()}, *([] if args.scenario in ('new-scene', 'ppt', 'files') else prepared['mcp_rows'])]
     rendered = json.dumps(rows, ensure_ascii=False, indent=2)
     for token, expression in prepared['environment_references'].items():
@@ -119,10 +186,23 @@ def prepare(args, output, endpoint):
     save(preset / 'preset.yml', {'name': f'GeneLoop · {prepared["name"]}（{"真实模型" if args.real_model else "免费模拟"}）'})
     canonical_prompt_sha = hashlib.sha256(prepared['prompt'].strip().encode()).hexdigest()
     policy = {'learning_python':sys.executable, 'output': str(output), 'prompt_sha256': canonical_prompt_sha,
+              'rsi_sharing_endpoint':os.environ.get('GENELOOP_RSI_SHARING_ENDPOINT'),
               'allowed_tools': prepared['allowed_tools'], 'endpoint': endpoint,
               'max_output_tokens': public['max_output_tokens'], 'mode': args.mode,
               'embedding_endpoint': args.embedding_endpoint,
               'fixture': args.fixture}
+    strategy_config = getattr(args, 'task_strategy_config', None)
+    if strategy_config:
+        if args.frozen:
+            raise ValueError('task_strategy_requires_dynamic_runtime')
+        strategy_path = Path(strategy_config).resolve()
+        strategy_bytes = strategy_path.read_bytes()
+        strategy = json.loads(strategy_bytes)
+        if not isinstance(strategy, dict) or strategy.get('enabled') is not True:
+            raise ValueError('task_strategy_research_config_invalid')
+        policy['research_strategy'] = strategy
+        policy['research_strategy_source'] = {'path': str(strategy_path),
+            'sha256': hashlib.sha256(strategy_bytes).hexdigest()}
     if (not args.frozen and args.scenario == 'portfolio-v1') or (args.frozen and args.mode != 'baseline') or args.manifest:
         bundle = ROOT / 'examples/motif-library/research-portfolio-v1'
         task = json.loads((bundle / 'task.json').read_text())
@@ -206,11 +286,11 @@ def prepare(args, output, endpoint):
             ROOT / 'src/adapters/harless_web_client/index.mjs').as_uri()}]}]
     if not args.frozen:
         patch.append({'insert': [
-            {'id': 'geneloop-shell', 'name': (ROOT / 'src/adapters/geneloop_shell.ts').as_uri()},
+            {'id': 'geneloop-shell', 'name': (ROOT / 'src/adapters/artifact_motif_shell.ts').as_uri()},
             {'id': 'geneloop-web-search', 'name': (ROOT / 'src/adapters/geneloop_web_search.ts').as_uri()}]})
         composed = subprocess.run(['node', str(ROOT / 'src/adapters/geneloop_native_host.mjs'),
             '--source-dir', str(ROOT / 'src')], input=json.dumps(patch), text=True,
-            capture_output=True, check=True)
+            encoding='utf-8', capture_output=True, check=True)
         patch = json.loads(composed.stdout)
     save(output / 'host.patch.yml', patch)
     (output / 'prompt.md').write_text(prepared['prompt'], encoding='utf-8'); (output / 'prompt.md').chmod(0o600)
@@ -275,12 +355,15 @@ def main():
     parser.add_argument('--manifest', help='certified online manifest for this capability profile')
     parser.add_argument('--task', help='certified task/version binding, paired with --manifest')
     parser.add_argument('--resources', help='private server-owned resource registry JSON: ID -> {text_file}')
+    parser.add_argument('--task-strategy-config', type=Path,
+                        help='private host-approved task strategy configuration for isolated research')
     parser.add_argument('--embedding-endpoint', default='')
     parser.add_argument('--embedding-model', default='fixture-vectors-not-a-semantic-model')
     parser.add_argument('--mode', choices=['baseline', 'shadow', 'execute'], default=None)
     parser.add_argument('--port', type=int, default=defaults['port'])
     parser.add_argument('--public-origin', help='exact HTTPS gateway origin; backend remains on loopback, no proxy or account isolation is created')
     parser.add_argument('--run-id', help='optional unique 32-character hexadecimal output identity')
+    parser.add_argument('--resume',action='store_true',help='Linux development only: resume the same run-id after both old processes exited')
     parser.add_argument('--budget-usd', type=cost_cap_argument, default=defaults['budget_usd'],
                         help='per-task cost cap; 0/default means unlimited')
     parser.add_argument('--max-output-tokens', type=int, default=defaults['max_output_tokens'],
@@ -324,6 +407,7 @@ def main():
         parser.error('configure DEEPSEEK_API_KEY or HARLESS_GLM_API_KEY in private .env')
     if args.run_id is not None and not re.fullmatch('[0-9a-f]{32}', args.run_id):
         parser.error('run-id must be 32 lowercase hexadecimal characters')
+    if args.resume and (not args.run_id or args.frozen):parser.error('--resume requires --run-id and dynamic Web mode')
     args.deepseek_catalog = None
     if args.real_model and os.environ.get('DEEPSEEK_API_KEY', '').strip():
         try:
@@ -334,9 +418,8 @@ def main():
             parser.error(str(error))
     os.umask(0o077)
     output = ROOT / '.local/web/runs' / (args.run_id or uuid4().hex)
-    output.mkdir(parents=True, mode=0o700)
-    (output / 'work').mkdir(mode=0o700)
-    (output / 'dsh').mkdir(mode=0o700)
+    try:startup_path=prepare_run_directory(args,output)
+    except (ValueError,FileNotFoundError) as error:parser.error(str(error))
     for name in ('events.jsonl', 'motif-audit.jsonl', 'ledger.jsonl'):
         (output / name).touch(mode=0o600)
     module = fixture_module()
@@ -400,7 +483,7 @@ def main():
            'DEEPSEEK_API_KEY': os.environ.get('DEEPSEEK_API_KEY', '') if args.real_model else 'sss-mock-only',
            'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{gate.server_port}/v1',
            'SSS_ONLINE_MOTIF_MANIFEST': '', 'SSS_ONLINE_MOTIF_TASK': ''}
-    log = (output / 'startup.log').open('w')
+    log = startup_path.open('w')
     process = subprocess.Popen(['node', str(ROOT / 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
         '--profile', 'web', '--patch', str(output / 'host.patch.yml'),
         '--host', '127.0.0.1', '--port', str(args.port), '--no-open',
@@ -419,6 +502,7 @@ def main():
             for file in (output / 'tasks').glob('*/motif-audit.jsonl'):
                 audit.extend(json.loads(line) for line in file.read_text().splitlines())
         save(output / 'metrics.json', {'mock_requests': len(handler.calls),
+            'accounting_scope':'local_launcher_gate_only; externally_routed_task_usage_is_not_this_counter',
             'embedding_calls': handler.embedding_calls, 'reserved_upper_usd': state.reserved_usd,
             'paid_calls': state.request_count if args.real_model else 0,
             'provider_mode': 'real' if args.real_model else 'mock', 'provider_failures': handler.failures, 'harness_exit_code': process.poll(),
@@ -438,7 +522,7 @@ def main():
     try:
         for _ in range(300):
             if process.poll() is not None: break
-            text = (output / 'startup.log').read_text()
+            text = startup_path.read_text()
             match = re.search(r'http://127\.0\.0\.1:' + str(args.port) + r'/\?token=[^\s]+', text)
             if match:
                 (output / 'access-url.txt').write_text(match.group(0) + '\n'); (output / 'access-url.txt').chmod(0o600)
@@ -455,6 +539,9 @@ def main():
             metrics()
             time.sleep(0.25)
     finally:
+        save(output/'runtime-exit.json',{'harness_exit_before_cleanup':process.poll(),
+            'launcher_exception_type':sys.exc_info()[0].__name__ if sys.exc_info()[0] else None,
+            'startup_log':startup_path.name,'at':time.time()})
         stop(None, None)
         try: process.wait(timeout=10)
         except subprocess.TimeoutExpired: process.kill(); process.wait()
@@ -468,12 +555,17 @@ def main():
                 final_state.update(status='cancelled', failure='server_stopped')
                 save(state_path, final_state)
         if registry:
+            unavailable=[]
             for task_file in (output / 'tasks').glob('*/task-state.json'):
                 task_state = json.loads(task_file.read_text())
-                task_state['stats'].update(registry.stats(task_state['session_id']))
+                local=shutdown_local_stats(registry,task_file,task_state)
+                if local is not None:task_state['stats'].update(local)
+                else:unavailable.append(task_state.get('task_id'))
                 if task_state['status'] in ('awaiting_confirmation', 'running'):
                     task_state.update(status='cancelled', failure='server_stopped')
                 save(task_file, task_state)
+            if unavailable:save(output/'shutdown-accounting.json',{'unavailable_local_registry_task_ids':unavailable,
+                'existing_task_counters_preserved':True,'external_accounting_not_replaced_by_local_zeros':True})
         events = [json.loads(line) for line in (output / 'events.jsonl').read_text().splitlines()]
         metrics()
         save(output / 'mock-requests.json', handler.calls)

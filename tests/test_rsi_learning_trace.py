@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from jsonschema import ValidationError
 
-from src.adapters.rsi_learning_trace import SCHEMA, project
+from src.adapters.rsi_learning_trace import SCHEMA, project, sharing_object
 
 PIN = "mcp__paper_checks__pin_document"
 READ = "mcp__paper_checks__read_pinned_document"
@@ -96,6 +96,31 @@ def test_duplicate_results_fail_closed():
     events = [call("pin", PIN, {}), result("pin", {}), result("pin", {})]
     with pytest.raises(ValueError, match="invalid_tool_result"):
         project(events, "paper-proofreading", "completed")
+
+
+@pytest.mark.parametrize("mutation", ["secret", "nested", "tool", "binding", "semantic", "failed", "empty"])
+def test_shared_object_rejects_unknown_nested_sensitive_or_unwitnessed_content(mutation):
+    sample = project([call("pin", PIN, {"name": "/home/private/draft.pdf", "sha256": "private"}),
+                      result("pin", {"source_id": HANDLE})], "paper-proofreading", "completed")
+    admitted = sharing_object(sample)
+    assert admitted["kind"] == "tool_flow"
+    assert "private" not in json.dumps(admitted)
+    if mutation == "secret":
+        sample["authorization"] = {"token": "synthetic-secret"}
+    elif mutation == "nested":
+        sample["nodes"][0]["content"] = {"user": {"email": "private@example.com"}}
+    elif mutation == "tool":
+        sample["nodes"][0]["tool"] = "/home/private/tool"
+    elif mutation == "binding":
+        sample["bindings"] = [{"from": 0, "to": 0, "parameter": "source_id", "field": "source_id"}]
+    elif mutation == "semantic":
+        sample.update(format="geneloop.rsi-learning-trace/v3", task_intent="Unpublished private research")
+    elif mutation == "failed":
+        sample["status"] = "failed"
+    else:
+        sample["nodes"] = []
+    with pytest.raises(ValueError):
+        sharing_object(sample)
 
 
 def test_offline_import_requires_authorization_and_redacts_errors(tmp_path):

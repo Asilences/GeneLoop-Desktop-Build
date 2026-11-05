@@ -39,6 +39,12 @@ def legacy_fixture(backend):
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_empty_initial_library_has_no_executable_roots(self):
+        snapshot = create_capability_snapshot('owner', [], [])
+        self.assertEqual(validate_capability_snapshot(snapshot), snapshot)
+        with self.assertRaisesRegex(ValueError, 'snapshot_extra_capability'):
+            create_capability_snapshot('owner', [], [leaf()])
+
     def test_numeric_unicode_canonical(self):
         self.assertEqual(capability_digest({'x': 1.25, '\U00010000': 2, '\ue000': 3}), '5c2c01fd25da0325635a9dbf7256ed32fa3d65384982fb59cfa2cc0d23e63795')
         self.assertEqual(capability_digest([1, 0]), capability_digest([1.0, -0.0]))

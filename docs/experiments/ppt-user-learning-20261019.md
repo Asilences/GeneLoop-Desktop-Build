@@ -97,7 +97,7 @@ npm run motif:check
 
 用户授权确认接通后提交到 `feature/research-ppt-agent`，自行准备PR。开发起点仍为上述 `a1c0fa2`；提交前已同步最新 main `b939cd5`。新增主线改动仅服务生命周期与管理员认证，没有改变PPT学习依赖；两库分别47/88项源码锁逐项匹配，覆盖102个不同源码文件，Git索引里的实际提交字节也全部匹配。沿用v9/v14证书，不冒充重新训练。正式网站后续必须走 `npm run service`，本次不部署或重启正式服务。
 
-旧feature仅有两项main未包含的历史提交。以main当前实现为准保留提交历史，并保留其独有的[前端真实验收报告](research-ppt-frontend-rsi-20261014.md)，不恢复旧场景内自建Agent循环。候选版本在新的独立服务器目录 `DeepSeekHarness-ppt-learning-20261019-submission-audit` 验证，不覆盖原实验目录或账本。源码快照1571文件逐项SHA一致，归档摘要 `cce86be4f2e7e65d5b8b4bfed5e544c5ce4070cfac23b7e10f6f430ef0b04900`。
+旧feature仅有两项main未包含的历史提交。以main当前实现为准保留提交历史，并保留其独有的[前端真实验收报告](../debug/research-ppt-frontend-rsi-20261014.md)，不恢复旧场景内自建Agent循环。候选版本在新的独立服务器目录 `DeepSeekHarness-ppt-learning-20261019-submission-audit` 验证，不覆盖原实验目录或账本。源码快照1571文件逐项SHA一致，归档摘要 `cce86be4f2e7e65d5b8b4bfed5e544c5ce4070cfac23b7e10f6f430ef0b04900`。
 
 首次候选回归920通过/199跳过、4失败：隔离源码包没有`.git`，四项需要记录HEAD的模型配置/产品提示/原生SDK诊断拒绝运行；没有改测试或绕过版本检查。由本机main Git bundle补齐准确`b939cd5`元数据后再复验，失败日志保留在 `.local/test-logs/ppt-user-learning-submission-20261019/npm-test.log`。本次提交审计不增加模型调用，之前461请求的原始账本不改。
 

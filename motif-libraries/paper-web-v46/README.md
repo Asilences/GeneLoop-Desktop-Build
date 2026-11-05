@@ -6,4 +6,4 @@
 
 本次零新训练任务、零原始轨迹重放、零模型调用；不声称合格净降本。entry/report 原有 new_training=true 描述原始训练来源，不是本次重导出发生训练。当前质量、费用和压力效果需独立真实实验；未测结果不能写为通过。
 
-验证记录：docs/experiments/upload-capacity-context-20261103.md。
+验证记录：docs/debug/upload-capacity-context-20261103.md。

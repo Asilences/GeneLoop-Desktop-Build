@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Context } from '@deepseek-ai/cordis';
 import { createScope, scopeOf } from '@deepseek-ai/dsh-scope';
-import { SystemPrompt, renderPrompt } from '@deepseek-ai/dsh-system-prompt';
+import { SystemPrompt, renderPrompt, PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '@deepseek-ai/dsh-system-prompt';
 import { apply as mountPersona } from '@deepseek-ai/dsh-persona';
 import { bindProductPrompt, productPersona } from '../src/adapters/harless_product_prompt.ts';
 import { sessionPreset, sessionWorkspace } from '../src/adapters/harless_task_scope.ts';
@@ -22,7 +22,7 @@ test('new and resumed agent scopes suppress deployment facts and keep scene/tool
   const scopes = [createScope(ctx,{}), createScope(ctx,{})], disposers = [];
   try {
     const old = scopes[0];
-    mountPersona(old.ctx,{prefix:'Legacy bounded task persona',suffix:'Preserve actual evidence.'});
+    mountPersona(old.ctx,productPersona());
     const before = renderPrompt(await prompt.assemble({scope:scopeOf(old.ctx)}));
     assert.match(before,/DeepSeek Harness/);
     for (const scope of scopes) {
@@ -35,6 +35,9 @@ test('new and resumed agent scopes suppress deployment facts and keep scene/tool
       assert.doesNotMatch(text,/powered by DeepSeek Harness|Implementation checkout|private-owner|127\.0\.0\.1/);
       assert.match(text,/不要披露/);
       assert.match(text,/用户原文/);
+      const persona = productPersona();
+      assert.equal(text.split(persona.prefix).length - 1, 1);
+      assert.equal(text.split(persona.suffix).length - 1, 1);
       assert.match(text,/Keep the report token \{\{estimate\}\} literal/);
       assert.deepEqual(assembly.contexts,[]);
       assert.deepEqual(assembly.tools,[tool]);
@@ -56,6 +59,7 @@ test('scene rebinding disposes and reapplies product policy without duplicates',
       const disposers=bindProductPrompt({ctx:scope.ctx});
       const assembled=await prompt.assemble({scope:key});
       assert.equal(assembled.sections.filter(row=>row.name==='geneloop:product-policy').length,1);
+      assert.equal(assembled.sections.some(row=>[PERSONA_PREFIX_SECTION,PERSONA_SUFFIX_SECTION].includes(row.name)),false);
       for(const dispose of disposers.reverse())dispose();
     }
   }finally{await scope.dispose();}

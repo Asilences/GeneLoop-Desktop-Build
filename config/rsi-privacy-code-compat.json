@@ -7,9 +7,13 @@
     "certified": "a0111bc4254d982b27a38d591c00e71d4c090bdf3e35e72c8b9abb1730989fc3",
     "current": "b1dd62ebd6d824125e99dd12f5f483ffab87aca6f5ce9d065a2207c34329402b"
   },
+  "scripts/harness-web.py": {
+    "certified": "04e3bb997cc76f974312dcbb05fc4aa01dadf01428500258ff187bdc8f26f5ef",
+    "current": "228dd80387ca3e41ae4ac9fcf0ba1479c94623d3fbce41a117f811b759639245"
+  },
   "scripts/learn-ppt-master-motif.py": {
-    "certified": "eddd545b65716471c534fd1f0b50c1da47c6bfe0bc9cf537edcd9d6b5b5f5ca7",
-    "current": "321672dd51136d8572e4b855b76b75801cd3b1ab09346fc20616f99652502547"
+    "certified": "42b928b1df3eb83b6c096823651afe8e1c82885c57f6b772500eb630e327dfe0",
+    "current": "2f55f219cac3c8e70cf97bd7d3d89c771f030bb120f1a260bdf8d6071e6996d0"
   },
   "scripts/learn-web-paper-document-motif.py": {
     "certified": "09c7d55ac6ed6f6ac297a7dfc4586cbff6c2d0c0ce4f374ed2f7db429fc34edd",
@@ -20,12 +24,12 @@
     "current": "5e91b22ebe26e077813c7731ef01356dc1c7c6dbb18fda4f7a667fed600cffbe"
   },
   "scripts/learn-web-ppt-tasks.py": {
-    "certified": "00d26a19946759b7bd44765451b4d98468b11d646c0a03509870e98e08db6cbc",
-    "current": "3453d6bddc0c34b70542654656f5b22e51ad33c5c525b1421418e2421a6b009c"
+    "certified": "43796d1faa5d56ff679a0a90677b012215791275ae24912279208e2533851954",
+    "current": "79f1743f6d7efa2b6c59a494e177aa6a6ed18ef21700fef89870dd63ba17abe5"
   },
   "src/adapters/dsh_web_tasks.ts": {
-    "certified": "55f56fb61d1b2ca6bbcf874eb2403b9bab07a91aad868defe117abe2b11b6342",
-    "current": "33edb4662f0282ac2049f7200224cab221be6c76a644ba80affbbd21d33668f5"
+    "certified": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284",
+    "current": "f85236f4070d6dba409f53e1dd084d1707f5c9e75ca772a2bf2cf98abbaf0b3c"
   },
   "src/adapters/harless_rsi_bundle.py": {
     "certified": "06af97b2a465a439dd4323a37f764c492cd3927bb1bed232afeef8f389f5fe91",

@@ -6,7 +6,7 @@
 
 当前观察：C 可在新 Mamba 留出复用；最后条件的 D 自主构造未选 C/J，完整 Python 也能得到合格 D。第一条件有 J 复用，但仍未调用完整 C。宿主强制 C→D 组合诊断通过，但不计自主研究成功或效率收益。三种冻结条件分别保留，79 次真实请求估费 USD0.340150572。
 
-当前目标、冻结条件与原始失败见 [推进协议](../../../docs/capability-frontier-protocol-v1.md)、[实验记录](../../../docs/experiments/capability-frontier-20261103.md)。输入及运行结果只放忽略的 `.local/`；私有论文、原始轨迹和凭证不得提交。
+当前目标、冻结条件与原始失败见 [推进协议](../../../docs/research/capability/capability-frontier-protocol-v1.md)、[实验记录](../../../docs/experiments/capability-frontier-20261103.md)。输入及运行结果只放忽略的 `.local/`；私有论文、原始轨迹和凭证不得提交。
 
 ## 入口与顺序
 

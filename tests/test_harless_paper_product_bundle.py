@@ -143,6 +143,16 @@ def test_original_paper_shadow_release_stays_shadow_and_cannot_be_relabelled_as_
     ('ppt-master-v10','ppt-master-v11','ppt','attachment_evidence_consumption_compatibility'),
     ('paper-web-v16','paper-web-v17','paper-proofreading','ppt_learning_compatibility'),
     ('ppt-master-v11','ppt-master-v12','ppt','ppt_learning_compatibility'),
+    ('paper-web-v79','paper-web-v80','paper-proofreading','native_capabilities_compatibility'),
+    ('ppt-master-v77','ppt-master-v78','ppt','native_capabilities_compatibility'),
+    ('paper-web-v80','paper-web-v81','paper-proofreading','native_capabilities_compatibility'),
+    ('ppt-master-v78','ppt-master-v79','ppt','native_capabilities_compatibility'),
+    ('paper-web-v81','paper-web-v82','paper-proofreading','native_capabilities_compatibility'),
+    ('ppt-master-v79','ppt-master-v80','ppt','native_capabilities_compatibility'),
+    ('paper-web-v82','paper-web-v83','paper-proofreading','native_capabilities_compatibility'),
+    ('ppt-master-v80','ppt-master-v81','ppt','native_capabilities_compatibility'),
+    ('paper-web-v83','paper-web-v84','paper-proofreading','native_capabilities_compatibility'),
+    ('ppt-master-v81','ppt-master-v82','ppt','native_capabilities_compatibility'),
 ])
 def test_compatibility_reuses_validated_program_without_rewriting_previous_release(before,after,scene,record):
     original=ROOT/'motif-libraries'/before

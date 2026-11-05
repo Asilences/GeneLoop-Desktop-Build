@@ -161,7 +161,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     mode=parser.add_mutually_exclusive_group();mode.add_argument('--preview',action='store_true');mode.add_argument('--write',action='store_true')
     parser.add_argument('--update-registry',action='store_true')
-    parser.add_argument('--validation-record',default='docs/experiments/dsh-native-capabilities-20261021.md')
+    parser.add_argument('--validation-record',default='docs/debug/dsh-native-capabilities-20261021.md')
     args=parser.parse_args()
     if args.update_registry and not args.write:parser.error('--update-registry requires --write after final source freeze')
     candidates,registry=review()

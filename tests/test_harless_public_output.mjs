@@ -50,6 +50,18 @@ test('system prompt details are not exposed through the message view', () => {
   assert.equal(result.data.message.content[0].text,'已应用本轮会话设置。');
 });
 
+test('internal program catalogs stay in private model history and never become a user prompt', () => {
+  for (const plugin of ['ppt-program-library', 'artifact-motif']) {
+    const event={type:'user/message',seq:12,data:{source:{kind:'plugin',plugin,form:'notice'},
+      content:[{type:'text',text:'internal certified-program interface '+secret}]}};
+    const original=JSON.stringify(event), projected=publicSessionEvent(event);
+    assert.deepEqual(projected.data.content,[]);
+    assert.equal(JSON.stringify(event),original,'raw model context remains intact');
+    const human={...event,data:{...event.data,source:{kind:'user'}}};
+    assert.equal(publicSessionEvent(human),human,'the user may discuss scripts without being hidden');
+  }
+});
+
 test('compact replay keeps chunk positions and flushes delta-only terminal tails', () => {
   const acc=new AssistantStreamAccumulator();
   for (const [i,text] of ['我是 Deep','Seek Harness，位置 /ho','me/operator/app.py','。DSH'].entries()) acc.push({time:i+1,chunk:{type:'text-delta',index:0,text}});

@@ -1,5 +1,5 @@
 /** Account-local paired turns over the existing DSH task runner. No new Agent loop. */
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID, randomInt, createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { hasReportPlaceholders, REPORT_ANSWER_BINDING } from './harless_report_answer.ts';
@@ -22,10 +22,15 @@ type Turn = { id: string; session_id: string; request_id: string; fingerprint: s
   reasoning_effort?: WebReasoningEffort;
   lanes: Record<LaneName, Lane>; scores: Partial<Record<LaneName, number>>; score_revision: number; input: any;
   presentation?: 'paired' | 'single'; prior_artifacts?: Partial<Record<LaneName,any[]>>; prior_sources?: any[];
+  display_order?: LaneName[];
   prior_evidence?: Partial<Record<LaneName,string[]>>;
   source_images?:any[];prior_images?:any[];
   published?: boolean; cancellation_requested?: boolean; source_files?:Record<string,any>; prior_context?: Partial<Record<LaneName,string>> };
 const turnLanes = (t: Pick<Turn,'presentation'>): readonly LaneName[] => t.presentation === 'single' ? ['baseline'] : lanes;
+function randomDisplayOrder(presentation: Turn['presentation']): LaneName[] {
+  if (presentation === 'single') return ['baseline'];
+  return randomInt(2) ? ['motif', 'baseline'] : ['baseline', 'motif'];
+}
 const admissionMessages: Record<string, string> = {
   image_too_large:'单张图片不能超过 20 MiB，请选择较小的图片。',
   images_too_large:'本轮图片合计不能超过 200 MiB。',
@@ -106,9 +111,14 @@ export function createComparisonService(output: string, principal: string, host:
     writeState();
   };
   // Reconnect never starts a paid task. A stopped turn needs an explicit retry.
-  for (const t of state.turns) if (!terminal.has(t.status)) {
-    for (const name of turnLanes(t)) if (!terminal.has(t.lanes[name].status)) Object.assign(t.lanes[name], { status: 'failed', failure: '服务重启中断了这一路，请重试。' });
-    t.status = 'failed';
+  for (const t of state.turns) {
+    t.display_order ??= randomDisplayOrder(t.presentation);
+    if (!Array.isArray(t.display_order) || t.display_order.length !== turnLanes(t).length || new Set(t.display_order).size !== turnLanes(t).length ||
+        t.display_order.some(name => !turnLanes(t).includes(name))) throw Error('comparison_display_order_invalid');
+    if (!terminal.has(t.status)) {
+      for (const name of turnLanes(t)) if (!terminal.has(t.lanes[name].status)) Object.assign(t.lanes[name], { status: 'failed', failure: '服务重启中断了这一路，请重试。' });
+      t.status = 'failed';
+    }
   }
   save();
   const locked = <T>(fn: () => Promise<T>): Promise<T> => {
@@ -122,6 +132,7 @@ export function createComparisonService(output: string, principal: string, host:
   const outputHash = (lane: Lane) => hash([lane.answer, lane.artifacts,
     ...(lane.answer_display === undefined ? [] : [{ answer_display: lane.answer_display, answer_binding: lane.answer_binding }])]);
   const view = (t: Turn) => ({ snapshot_epoch: state.snapshot_epoch, snapshot_revision: state.revision ?? 0, presentation: t.presentation ?? 'paired', id: t.id, session_id: t.session_id, scene: t.scene, status: t.status,
+    display_order: [...t.display_order!],
     input_sha256: t.input_sha256, created_at: t.created_at, score_revision: t.score_revision, scores: { ...t.scores },
     scoring_available: t.presentation !== 'single' && turnLanes(t).every(name => t.lanes[name].status === 'completed'),
     lanes: Object.fromEntries(turnLanes(t).map(name => {
@@ -356,6 +367,7 @@ export function createComparisonService(output: string, principal: string, host:
       }
       const t: Turn = { id: 'comparison-' + randomUUID(), session_id: session, request_id: request.requestId,
         fingerprint, scene: context.scene, options: context.options, model: context.model, reasoning_effort: context.reasoning_effort ?? 'off', presentation,
+        display_order: randomDisplayOrder(presentation),
         input_sha256: context.input_sha256, created_at: new Date().toISOString(), status: 'preparing',
         lanes: Object.fromEntries(selectedLanes.map(name => [name, { session_id: thread.lanes[name], status: 'preparing', attempt: 0 }])) as Record<LaneName,Lane>,
         scores: {}, score_revision: 0, input: request.content, published: false, source_files:context.source_files,source_images:context.source_images,prior_images:priorImages, prior_context: priorContext, prior_evidence:priorEvidence, prior_artifacts: priorArtifacts, prior_sources: priorSources };
@@ -422,6 +434,7 @@ export function createComparisonService(output: string, principal: string, host:
       if (revision !== t.score_revision || outputHash !== t.lanes[name as LaneName].output_sha256) throw new ComparisonError('score_version_changed', '结果或评分已更新，请刷新后评分。');
       t.scores[name as LaneName] = score; t.score_revision++; save();
       const event = { comparison_id: id, principal, lane: name, score, revision: t.score_revision,
+        display_order: t.display_order, display_position: t.display_order!.indexOf(name as LaneName) + 1,
         output_sha256: outputHash, input_sha256: t.input_sha256, at: new Date().toISOString() };
       writeFileSync(join(output, 'comparison-ratings.jsonl'), JSON.stringify(event) + '\n', { flag: 'a', mode: 0o600 });
       void publish(t);
@@ -432,7 +445,7 @@ export function createComparisonService(output: string, principal: string, host:
       if(!turnLanes(t).includes(name as LaneName)||!['up','down',null].includes(vote as any))throw new ComparisonError('invalid_feedback','反馈选项无效。',400);
       if(!terminal.has(lane.status)||!lane.output_sha256||outputSha!==lane.output_sha256)throw new ComparisonError('feedback_version_changed','回复尚未完成或已更新，请刷新后反馈。');
       lane.feedback=vote as 'up'|'down'|null;save();
-      appendFileSync(join(output,'comparison-feedback.jsonl'),JSON.stringify({comparison_id:id,principal,lane:name,vote,output_sha256:outputSha,at:new Date().toISOString()})+'\n',{mode:0o600});
+      appendFileSync(join(output,'comparison-feedback.jsonl'),JSON.stringify({comparison_id:id,principal,lane:name,vote,display_order:t.display_order,display_position:t.display_order!.indexOf(name as LaneName)+1,output_sha256:outputSha,at:new Date().toISOString()})+'\n',{mode:0o600});
       void publish(t);return view(t);
     });},
     async trace(session:string,id:string,name:string,after=-1,limit=100){

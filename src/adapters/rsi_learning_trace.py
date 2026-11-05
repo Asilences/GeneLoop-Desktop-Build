@@ -174,6 +174,17 @@ def compilation_trace(sample, contracts, *, scene, trace_id, fingerprint):
     return DshTrace(trace_id, tuple(records), (), fingerprint)
 
 
+def sharing_object(sample):
+    """Admit only the witnessed structure contract for cross-user sharing."""
+    if not SCHEMA.is_valid(sample) or sample["format"] != "geneloop.rsi-learning-trace/v2":
+        raise ValueError("unapproved_shared_object")
+    contracts = parse_tool_contracts(json.loads((ROOT / CONTRACTS[sample["scene"]]).read_text(encoding="utf-8")))
+    compilation_trace(sample, contracts, scene=sample["scene"], trace_id="shared", fingerprint="shared")
+    if not sample["nodes"]:
+        raise ValueError("empty_shared_object")
+    return {"format": "geneloop.rsi-shared-object/v1", "kind": "tool_flow", "trace": sample}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--authorized", action="store_true", required=True,
@@ -184,10 +195,14 @@ def main():
     parser.add_argument("--start", type=int, required=True, help="zero-based line offset of the task")
     parser.add_argument("--include-task-intent", action="store_true",
                         help="also authorize local de-identification of this task's first user instruction")
+    parser.add_argument("--share-object", action="store_true",
+                        help="admit a structure-only object for an explicit sharing preview")
     args = parser.parse_args()
     try:
         sample = import_trace(args.input, args.scene, args.status, args.start,
                               include_task_intent=args.include_task_intent)
+        if args.share_object:
+            sample = sharing_object(sample)
     except Exception:
         # Validation and parser exceptions can contain raw values and paths.
         parser.exit(1, "rsi_learning_trace_rejected\n")

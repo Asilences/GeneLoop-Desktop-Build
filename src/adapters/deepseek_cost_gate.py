@@ -79,7 +79,8 @@ def provider_output_reservation(model: str, request: dict) -> int:
 
 def _image_count(value: Any) -> int:
     if isinstance(value, dict):
-        return int(value.get("type") in {"image_url", "input_image", "file", "image"}) + sum(
+        kind = value.get("type")
+        return int(isinstance(kind, str) and kind in {"image_url", "input_image", "file", "image"}) + sum(
             _image_count(item) for item in value.values())
     if isinstance(value, list):
         return sum(_image_count(item) for item in value)

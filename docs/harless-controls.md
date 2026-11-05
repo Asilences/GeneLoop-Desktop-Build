@@ -81,7 +81,7 @@ npm run web:scenes:check -- --real-model --scenes ppt --mode execute
 node scripts/check-ppt-runtime.mjs <所属私有任务/job.json>
 ```
 
-本轮结果见 [上线准备记录](experiments/harless-launch-readiness-20261014-v1.md)，历史桥接见 [桥接记录](experiments/harless-scenes-runtime-20261013-v1.md)，库取回见 [迁移记录](experiments/ppt-library-transfer-20261014-v1.md)。科研质量、模型自主完整 PPT 生成及稳定费用收益需要独立后续验收，不能用固定计划的机械交付代替。
+本轮结果见 [上线准备记录](debug/harless-launch-readiness-20261014-v1.md)，历史桥接见 [桥接记录](debug/harless-scenes-runtime-20261013-v1.md)，库取回见 [迁移记录](debug/ppt-library-transfer-20261014-v1.md)。科研质量、模型自主完整 PPT 生成及稳定费用收益需要独立后续验收，不能用固定计划的机械交付代替。
 
 ## 论文引用与通用校对的兼容边界
 

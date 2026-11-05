@@ -21,8 +21,9 @@ export function registerApprovedSkill(ctx:any,resources:{pptMasterRoot?:string;p
   if(!matched)throw Error('approved skill metadata missing');
   const meta=parse(matched[1]);
   if(meta?.name!=='ppt-master'||typeof meta.description!=='string'||!meta.description.trim())throw Error('approved skill metadata invalid');
+  const profile=readFileSync(new URL('../../scenarios/ppt_master/runtime-policy.md',import.meta.url),'utf8');
   return ctx.skills.register({name:'ppt-master',description:meta.description.trim(),source:'runtime',provider:'geneloop-approved',
-    resourceBase:{kind:'directory',path:installation.target},content:matched[2].trim(),
+    resourceBase:{kind:'directory',path:installation.target},content:profile+'\n\n## 官方参考正文\n\n'+matched[2].trim(),
     invocation:{modelInvocable:true,userInvocable:true}});
 }
 
@@ -108,7 +109,5 @@ export function nativePresentedFiles(context:{workspace:string;eventsPath?:strin
 export const name='geneloop-native-work';
 export const inject=['skills','tools','fs'];
 export function apply(ctx:any) {
-  const policy=JSON.parse(readFileSync(process.env.SSS_WEB_POLICY!,'utf8'));
-  registerApprovedSkill(ctx,policy.command_resources);
   installNativePresentation(ctx);
 }

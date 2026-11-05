@@ -237,7 +237,7 @@ def validate_capability_snapshot(value, expected_owner=None):
     if expected_owner is not None and value['owner'] != expected_owner:
         _fail('foreign_owner')
     roots = [_ref(r) for r in value['roots']]
-    if not roots or len(roots) != len(set(roots)) or roots != sorted(roots):
+    if len(roots) != len(set(roots)) or roots != sorted(roots):
         _fail('roots_not_unique_sorted')
     capabilities = [validate_capability(c, value['owner']) for c in value['capabilities']]
     ids = [c['id'] for c in capabilities]

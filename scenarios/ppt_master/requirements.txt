@@ -3,3 +3,4 @@
 PyMuPDF==1.26.7
 python-pptx==1.0.2
 PyYAML==6.0.3
+CairoSVG==2.8.2

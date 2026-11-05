@@ -18,7 +18,7 @@
 - native create仍只公开sss-task，新文献独立preset只能由服务端内部调用原Controller创建。已绑定Session禁止第二任务/steer/queue改写/fork；原生聊天返回scene_requires_workbench。每任务/全启动预算与单槽继续原实现，阶段/引用失败计入原工具事件与真实费用。
 - 后端阶段reading→review(全字段)→review(仅缺口，最多2轮)→synthesis→delivered。引用历史先重放、按claim授权；旧拒绝提案只导航，不能变支持结论。原阅读工具仅reading开放，其他阶段走claim读取额度。收据守卫最多2次同Session续接，消息来源task-completion-guard，Web统计completion_continuations，真实本轮0；不计Motif skip。
 - 包装器转发SIGTERM/SIGINT并等待真实Web启动器退出；仅停止本次自己创建的进程，不按端口盲杀其他服务。
-- 378 Python+66 Node回归通过，最终两问题免费协议以及两问题真实API验证见[验收记录](../experiments/literature-web-binding-20261012.md)。真实最终43请求/0.176891508美元/每题15字段0程序缺口；首版缺口、54条最终pending拒绝诊断、一次阶段错误及启动失败均保留。0程序缺口不认证科学支持。
+- 378 Python+66 Node回归通过，最终两问题免费协议以及两问题真实API验证见[验收记录](../debug/literature-web-binding-20261012.md)。真实最终43请求/0.176891508美元/每题15字段0程序缺口；首版缺口、54条最终pending拒绝诊断、一次阶段错误及启动失败均保留。0程序缺口不认证科学支持。
 
 ## 兼容、风险与回退
 

@@ -1,0 +1,72 @@
+{
+  "format": "skillsbench_dependency_prewarm_v1",
+  "id": "apt-curl-uv097-pytest841-ctrf035",
+  "verifier_sha256": [
+    "8123b529f99e5860d52feb7605dae90aef0409af26af8e34d6021d6d23b45fda"
+  ],
+  "scope": "public_dependencies_before_model_execution",
+  "versions": {
+    "uv": "0.9.7",
+    "pytest": "8.4.1",
+    "pytest-json-ctrf": "0.3.5",
+    "apt": "original_signed_repository_versions_recorded_after_installation"
+  },
+  "environment_keys": [
+    "UV_DOWNLOAD_URL"
+  ],
+  "verifier_variants": {
+    "ca8535246a4cab5170bb3147d4e38ecd8af3b2d1962cfa647bf3069daacd05c0": {
+      "id": "apt-curl-uv097-pytest841-ctrf035-pandas",
+      "versions": {
+        "pandas": "unpinned_in_original_verifier_record_actual_resolution"
+      },
+      "steps": [
+        {
+          "id": "pytest-environment",
+          "command": "set -euo pipefail; source \"$HOME/.local/bin/env\"; uvx -v --with pytest==8.4.1 --with pytest-json-ctrf==0.3.5 --with pandas pytest --version --version",
+          "timeout_seconds": 180
+        }
+      ]
+    },
+    "9ae0392ee876bf71e3aebbe33fd51b2235e4972b1b3b9469a4aa8a49b99482c3": {
+      "id": "apt-curl-uv097-pytest841-ctrf035-openpyxl315",
+      "versions": {
+        "openpyxl": "3.1.5"
+      },
+      "steps": [
+        {
+          "id": "pytest-environment",
+          "command": "set -euo pipefail; source \"$HOME/.local/bin/env\"; uvx --with pytest==8.4.1 --with pytest-json-ctrf==0.3.5 --with openpyxl==3.1.5 pytest --version --version",
+          "timeout_seconds": 180
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "apt-lists",
+      "command": "apt-get update",
+      "timeout_seconds": 600
+    },
+    {
+      "id": "apt-packages",
+      "command": "apt-get install -y --no-install-recommends curl ca-certificates",
+      "timeout_seconds": 600
+    },
+    {
+      "id": "uv",
+      "command": "set -euo pipefail; curl -LsSf https://astral.sh/uv/0.9.7/install.sh | sh; source \"$HOME/.local/bin/env\"; uv --version",
+      "timeout_seconds": 120
+    },
+    {
+      "id": "pytest-environment",
+      "command": "set -euo pipefail; source \"$HOME/.local/bin/env\"; uvx --with pytest==8.4.1 --with pytest-json-ctrf==0.3.5 pytest --version --version",
+      "timeout_seconds": 180
+    },
+    {
+      "id": "installed-versions",
+      "command": "set -euo pipefail; dpkg-query -W -f='${Package}=${Version}\\n' curl ca-certificates; python3 --version",
+      "timeout_seconds": 30
+    }
+  ]
+}

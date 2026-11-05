@@ -21,7 +21,7 @@ compat.ADDITIONAL_LOCKS = {'scripts/reexport-ppt-preview-boundary-compat.py'}
 compat.RELEASES = [
     ('ppt-master-v18', 'ppt-master-v19', 'ppt', 'scenarios/ppt_master/contracts.json'),
 ]
-RECORD = 'docs/experiments/five-user-stress-20261020.md'
+RECORD = 'docs/debug/five-user-stress-20261020.md'
 
 
 def main():
