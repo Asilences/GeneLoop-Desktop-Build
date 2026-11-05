@@ -248,3 +248,58 @@ def test_t12_relocated_reference_does_not_repeat_completed_investigation(tmp_pat
         handlers={}, output=tmp_path / 'second', prior_results=[file_ref(tmp_path / 'first/result.json')])
     assert first['investigation_identity'] == second['investigation_identity']
     assert second['status'] == 'revisit_skipped'
+
+
+def test_rejected_only_attempt_does_not_finish_as_proposal(tmp_path, data):
+    def agent(request, dispatch):
+        identifiers = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        proposed = candidate(identifiers)
+        proposed.pop('burden')
+        rejected = dispatch('evolution_submit', {'candidate': proposed, 'observation_ids': identifiers})
+        assert rejected['status'] == 'rejected'
+        rejected_finish = dispatch('evolution_finish', {'reason': 'Invalid attempted candidate', 'decision': 'proposal'})
+        assert 'proposal_requires_valid_candidate' in rejected_finish['error']
+        dispatch('evolution_finish', {'reason': 'No valid proposal after the failed attempt'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'invalid-only')
+    assert result['status'] == 'inconclusive'
+    assert result['investigation_decision'] == 'inconclusive'
+    assert result['candidate_counts']['attempted'] == 1
+    assert result['candidate_counts']['schema_and_evidence_valid'] == 0
+    assert result['candidate_counts']['host_evaluations_started'] == 0
+
+
+def test_investigation_completion_keeps_failed_independent_admission(tmp_path, data):
+    def handler(*_):
+        raise ValueError('independent_quality_failed')
+    def agent(request, dispatch):
+        identifiers = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        rejected = dispatch('evolution_submit', {'candidate': candidate(identifiers), 'observation_ids': identifiers})
+        assert rejected['status'] == 'rejected'
+        dispatch('evolution_finish', {'reason': 'Valid hypothesis failed independent admission', 'decision': 'proposal'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'admission-failed')
+    assert result['status'] == 'completed'
+    assert result['completion_scope'] == 'investigation_only'
+    assert result['candidate_counts']['schema_and_evidence_valid'] == 1
+    assert result['candidate_counts']['host_evaluations_started'] == 1
+    assert result['candidate_counts']['rejected'] == 1
+    assert result['actual_adoption'] is None
+    assert result['measured_net_benefit'] is None
+
+
+@pytest.mark.parametrize('local_only,requirement', [(True, 'at least one source'), (False, 'at least two independent sources')])
+def test_source_requirement_matches_actual_local_scope(tmp_path, data, local_only, requirement):
+    def agent(request, dispatch):
+        submit = next(tool for tool in request['tools'] if tool['name'] == 'evolution_submit')
+        description = submit['parameters']['properties']['observation_ids']['description']
+        assert requirement in description
+        assert 'acquires its next' in request['prompt']
+        assert 'successful and failed experiences' in request['prompt']
+        assert 'Builder experience' in request['prompt']
+        assert 'Model-issued commands' in request['prompt']
+        dispatch('evolution_finish', {'reason': 'Scope and research objective checked', 'decision': 'inconclusive'})
+        return {}
+    run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'scope-check',
+                      local_only=local_only)

@@ -1617,3 +1617,7 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 - 当前真实调查Prompt位于`src/adapters/capability_evolution_investigation.py`的`SYSTEM`及request构造处；每轮`agent/request.json`保留完整实际文本与工具。用户选择沿现有代码形式讨论。
 
 完整语义见[通用协议](evolution-context-protocol.md)，实际候选、失败、费用及接收器边界见[真实实验](experiments/paper-evolution-20261105-001.md)。
+
+### 调查完成语义补充
+
+`completion_scope=investigation_only`与`investigation_decision`明确调查结束维度。`candidate_counts`分别统计尝试、schema/证据通过、宿主评价已启动、pending和拒绝。只有非法尝试时默认inconclusive；合法候选的独立验收失败仍保留失败，调查结束不授予认证或后继采用。局部模式来源工具说明按单来源生成，家族模式沿两独立来源检查。

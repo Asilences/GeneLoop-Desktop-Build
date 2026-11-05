@@ -395,7 +395,8 @@ class Investigation:
                             'description': 'Optional JSON object fields/array indices for history/evidence content only.'}},
              ['kind', 'id']),
             ('evolution_note', 'Save your hypothesis, supporting observation IDs and remaining questions.',
-             {'hypothesis': text, 'evidence_ids': {'type': 'array', 'items': text},
+             {'hypothesis': text, 'evidence_ids': {'type': 'array', 'items': text,
+                  'description': 'Experience observation IDs from evolution_search, never evidence_* file IDs.'},
               'next_questions': {'type': 'array', 'items': text}},
              ['hypothesis', 'evidence_ids', 'next_questions'])]
         return [{'name': name, 'description': description,
