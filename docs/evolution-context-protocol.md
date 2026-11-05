@@ -83,6 +83,10 @@ Evolution自主选择问题、调查反例并决定是否提交候选。具体�
 
 具备调用接口只支持“可用”。输入被拒绝时保留调用尝试；成功回执支持实际执行；当前质量与后续用途仍按对应证据评价。折叠内部实现是展示选择，能力目录和已解决工作在概览中分别呈现。
 
+真实 Creation-Efficiency 调查须同时输入一份已认证、仍有效的 Capability 快照和至少两份独立 Builder 构造经历。经历必须由原 `record_construction_decision` 投影生成，注明构造时可见的 Capability，并沿 `inspect_decision` 回查原尝试、费用和验证证据；完整轨迹仍留在原件层，Agent 先看经历卡，再按需读证据。输入清单绑定同一 owner、scope、Capability 精确版本及历史暴露角色。缺任一类材料时只允许预览，不发真实模型请求；这不会要求后继任务一定调用 C。
+
+入口清单 `capability_evolution_builder_inputs_v1` 仅含 `owner`、`scope`、`exposure=historically_exposed`、snapshot FileRef、`focus_capability` 精确引用及 `construction_observations` FileRef 数组。路径、内容摘要和owner都在运行前校验；至少两条记录必须映射到不同原始构造任务。当前论文入口以此为硬门，沿原 `Investigation`、`ResearchHarness` 和接收器执行，不增加新的学习/发布生命周期。
+
 历史完整`C,C,report`重复图在学习/编译中有拒绝记录，局部`C→report`学习、发布和后继执行已有历史证据。完整高层图闭包保持已知限制，具体范围见主线交接原记录；本轮未重跑该编译器问题。语义经历调查可以先沿原事件投影推进，完整图闭包单独追踪。
 
 ## 五、四层上下文

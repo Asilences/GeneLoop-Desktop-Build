@@ -1,6 +1,6 @@
 ## 2026-11-05 Prompt审议与后续输入
 
-4a020696已补强抽象带来的新可行性与Creation Efficiency目标，区分调查结束和候选/独立验收状态，局部工具描述按单来源生成。最终本地2977 Python/1662 Node、Linux308及smoke/Motif/RSI通过，模型0。既有73次真实请求均属旧Prompt，效果记录不追改。下一步先复用record_construction_decision和原已认证能力目录，接入实际Builder构造经历；原11月3日递归构造与creation-efficiency记录是待核对候选来源，不手工编写后继D。
+4a020696已补强抽象带来的新可行性与Creation Efficiency目标，区分调查结束和候选/独立验收状态，局部工具描述按单来源生成。最终本地2977 Python/1662 Node、Linux308及smoke/Motif/RSI通过，模型0。既有73次真实请求均属旧Prompt，效果记录不追改。本轮新增 `capability_evolution_inputs.py`，将已认证Capability快照与至少两份独立、历史暴露的 Builder 构造记录接入同一 Investigation；论文入口在缺少这两类输入时拒绝真实模型调用。服务器只读通道当前在SSH握手阶段被远端关闭，因此尚未核对11月3日证据的真实owner、Capability引用及原始Builder记录，也没有启动新模型请求。下一步从服务器恢复这两类原始材料，生成输入清单并做零模型预览，再冻结配置后执行真实调查；不手工编写后继D。
 
 ## 2026-11-05 Evolution修订3真实执行
 

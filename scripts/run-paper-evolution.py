@@ -14,6 +14,8 @@ from src.adapters.capability_contract import create_capability_snapshot
 from src.adapters.capability_feedback import CapabilityFeedback, file_ref, verify
 from src.adapters.capability_improvement import save
 from src.adapters.capability_investigation import Investigation
+from src.adapters.capability_evolution_inputs import load_builder_input_manifest
+from src.adapters.capability_decision_evidence import inspect_decision
 from src.adapters.capability_evolution_investigation import run_investigation
 from src.adapters.capability_evolution_agent import strategy_handler
 from src.adapters.capability_proposal import CumulativeProposalGate
@@ -31,6 +33,7 @@ def main():
     parser.add_argument('--policy', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--ledger-root', type=Path, required=True)
+    parser.add_argument('--evolution-input-manifest', type=Path)
     parser.add_argument('--call-model', action='store_true')
     parser.add_argument('--max-tool-calls', type=int, required=True)
     parser.add_argument('--timeout-seconds', type=int, required=True)
@@ -40,6 +43,8 @@ def main():
         parser.error('finite positive tool count and deadline required')
     if args.call_model and sys.platform != 'linux':
         parser.error('real model evaluation runs on the configured Linux research server')
+    if args.call_model and not args.evolution_input_manifest:
+        parser.error('real Evolution requires a certified Capability and independent Builder construction evidence')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
     history_ref, policy_ref = file_ref(args.history.resolve()), file_ref(args.policy.resolve())
@@ -48,9 +53,25 @@ def main():
     compare_research_outcomes({'quality': 1, 'cost_usd': '0', 'samples': 1},
                               {'quality': 1, 'cost_usd': '0', 'samples': 1}, policy_ref)
     entries, sealed = index_history(history_ref, output / 'projection')
-    snapshot = create_capability_snapshot(OWNER, [], [])
+    supplied = None
+    if args.evolution_input_manifest:
+        input_manifest_ref = file_ref(args.evolution_input_manifest.resolve())
+        supplied = load_builder_input_manifest(input_manifest_ref, expected_owner=OWNER, expected_scope=SCOPE)
+        entries.extend(supplied['entries'])
+        snapshot = supplied['snapshot']
+    else:
+        input_manifest_ref = None
+        snapshot = create_capability_snapshot(OWNER, [], [])
+    construction_refs = ({item['evidence']['sha256'] for item in supplied['entries']}
+                         if supplied else set())
+    def inspect_experience(reference, owner):
+        if reference['sha256'] in construction_refs:
+            return inspect_decision(reference, owner)
+        return inspect_history(reference, owner)
+    if args.call_model and not supplied['snapshot']['roots']:
+        parser.error('real Evolution requires a certified Capability and independent Builder construction evidence')
     investigation = Investigation(snapshot, entries, SCOPE, output / 'investigation-input',
-        inspector=inspect_history, sealed_evidence=sealed['evaluation'],
+        inspector=inspect_experience, sealed_evidence=sealed['evaluation'],
         development_evidence=sealed['development'], history=[policy_ref],
         objective='Investigate these real historical task experiences and current available materials. '
                   'Autonomously choose whether any change would improve later work; preserving the current method is valid.')
@@ -60,6 +81,10 @@ def main():
         source_version='original-five-paper-historical-replay')
         for path in sorted((root / role).iterdir())] for role in ('development', 'evaluation')}
     frozen = {'history': history_ref, 'policy': policy_ref, 'policy_values': policy,
+              'evolution_input_manifest': input_manifest_ref,
+              'focus_capability': supplied['focus_capability'] if supplied else None,
+              'builder_observation_count': supplied['independent_builder_sources'] if supplied else 0,
+              'input_exposure': supplied['exposure'] if supplied else 'paper_history_only',
               'snapshot': snapshot, 'model': 'deepseek-flash', 'reasoning_effort': 'off',
               'max_tokens': 393216, 'budget_usd': None, 'max_requests': None,
               'max_investigation_tool_calls': args.max_tool_calls, 'timeout_seconds': args.timeout_seconds,
