@@ -114,3 +114,16 @@ test('redirects, projection errors and unrecognized fields cannot create seconda
     assert.equal(value.enabled,false);
   }
 });
+
+test('audit storage failure refuses the upload and returns no filesystem or credential exception',async t=>{
+  const receiver=await sink(t,(_request,response)=>response.end('ok'));
+  for(const failAt of ['preview','sending']){
+    const sharing=createRsiSharing({endpoint:receiver.url,allowLoopback:true,prepare:async()=>payload,
+      audit:({event})=>{if(event===failAt)throw Error('/private/account token=synthetic-secret');}});
+    const first=await sharing.handle(req({action:'preview',task_id:'owned'}));
+    const failed=failAt==='preview'?first:await sharing.handle(req(send(await first.json())));
+    assert.equal(failed.status,503);
+    assert.doesNotMatch(await failed.text(),/private\/account|synthetic-secret/);
+  }
+  assert.equal(receiver.bodies.length,0);
+});

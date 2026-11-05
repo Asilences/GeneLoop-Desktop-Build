@@ -5,7 +5,7 @@ const endpoint='/api/harless/rsi-sharing';
 
 /** Preview and consent live only in this panel. Reopening starts without consent. */
 export function privacyPanel(){
-  const section=node('section',{'data-privacy-panel':'true'});
+  const section=node('section',{class:'privacy-panel','data-privacy-panel':'true'});
   const status=node('p',{role:'status'},'正在检查当前部署的隐私设置…');
   const content=node('div');
   section.append(node('h3',{},'数据与隐私'),
@@ -37,6 +37,7 @@ export function privacyPanel(){
       const link=node('a',{href:url,download:'rsi-tool-flow.json'});link.click();
       setTimeout(()=>URL.revokeObjectURL(url),1000);
     },'secondary');
+    download.dataset.privacyDownload='true';
     const stop=button('取消本次共享',async()=>{
       const result=await cancel();
       if(valid()){
@@ -48,6 +49,7 @@ export function privacyPanel(){
     stop.dataset.privacyCancel='true';
     content.replaceChildren(node('p',{},'共享对象为工具流程结构。以下 JSON 是本次将发送的完整内容。'),
       node('p',{},'接收端 '+(value.target||'尚未配置')),
+      node('p',{},'本次共享编号 '+value.preview_id),
       node('p',{},value.bytes+' 字节 · SHA256 '+value.sha256),
       node('pre',{'data-privacy-payload':'true'},value.payload),
       node('label',{},consent,'我已核对以上内容和接收端，同意仅共享本次对象。'),send,download,stop);

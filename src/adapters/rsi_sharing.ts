@@ -31,7 +31,9 @@ export function createRsiSharing(options: Options) {
   const previews = new Map<string, Preview>();
   let disposed = false;
   let preparing = 0;
-  const record = (event: Audit['event']) => options.audit({event});
+  const record = (event: Audit['event']) => {
+    try {options.audit({event}); return true;} catch {return false;}
+  };
   const view = (row: Preview) => ({preview_id: row.id, payload: row.body, sha256: row.sha256,
     bytes: row.bytes, expires_at: new Date(row.expires).toISOString(), state: row.state, target: endpoint ?? null});
   const response = (value: unknown, status = 200) => Response.json(value, {status, headers: {'Cache-Control': 'no-store'}});
@@ -92,7 +94,8 @@ export function createRsiSharing(options: Options) {
             throw Error('invalid_projected_sharing_object');
           const row: Preview = {id: randomUUID(), body: payload, bytes,
             sha256: createHash('sha256').update(payload).digest('hex'), expires: Date.now() + EXPIRY_MS, state: 'preview'};
-          previews.set(row.id, row); record('preview');
+          if (!record('preview')) return rejected('rsi_sharing_unavailable', 503);
+          previews.set(row.id, row);
           return response(view(row));
         }
         const row = find(body.preview_id);
@@ -105,7 +108,8 @@ export function createRsiSharing(options: Options) {
         if (!endpoint) return rejected('rsi_sharing_disabled', 403);
         if (body.consent !== true || body.sha256 !== row.sha256 || row.state !== 'preview')
           return rejected('rsi_sharing_confirmation');
-        row.abort = new AbortController(); row.state = 'sending'; record('sending');
+        row.abort = new AbortController(); row.state = 'sending';
+        if (!record('sending')) {row.state = 'cancelled'; return rejected('rsi_sharing_unavailable', 503);}
         try {
           const uploaded = await fetch(endpoint, {method: 'POST', body: row.body,
             headers: {'Content-Type': 'application/json', 'X-GeneLoop-Sharing-Id': row.id},
