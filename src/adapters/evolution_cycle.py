@@ -50,6 +50,7 @@ def run_evolution_cycle(investigation, *, call_agent, handlers, output, limits,
             entries=entries, inspector=feedback.get('inspector'), snapshot=snapshot,
             history=[file_ref(decision_path), *feedback.get('history', [])],
             expose_evaluation=feedback.get('expose_evaluation', False))
+        next_view._index_evidence([file_ref(directory / 'agent/result.json')])
         save(directory / 'feedback-overview.json', next_view.overview())
         result['feedback_requery'] = {'status': 'queryable', 'observations': len(entries),
             'total_observations': len(next_view.observations), 'snapshot_sha256': next_view.snapshot['digest'],

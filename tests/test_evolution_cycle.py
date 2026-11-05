@@ -62,6 +62,8 @@ def test_cycle_no_change_needs_no_followup_and_preserves_revisit_identity(tmp_pa
         return {}
     first, view = run_evolution_cycle(make(tmp_path, data), call_agent=finish, handlers={},
         output=tmp_path / 'first', limits={'max_tool_calls': 5, 'timeout_seconds': 10})
+    original_result = file_ref(tmp_path / 'first/agent/result.json')
+    assert view.read('evidence', 'evidence_' + original_result['sha256'])['content']
     def forbidden(*_): raise AssertionError('unchanged evidence should not issue another request')
     second, next_view = run_evolution_cycle(view, call_agent=forbidden, handlers={},
         output=tmp_path / 'second', limits={'max_tool_calls': 5, 'timeout_seconds': 10},
