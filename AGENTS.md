@@ -33,7 +33,7 @@
 
 产品验收同时看任务是否完成、来源能否追溯、更新是否正确、安装部署是否方便、维护是否可承受，以及未来收费是否有真实价值。通过单元测试、模拟工具覆盖或一次演示，不等于达到这些目标。没有效果证据时缩小机制主张；简单脚本或缓存更合适时如实采用。
 
-main 已收敛为可运行开发起点。历史需求、比较、实验和报告保存在 `archive` 与 `archive-pre-cleanup-20261009`；归档不代表实验失败或结论作废。具体恢复方式见 `docs/main-cleanup.md`。当前接口见 `docs/interfaces.md`，协作见 `docs/collaboration.md`。
+main 已收敛为可运行开发起点。历史需求、比较、实验和报告保存在 `archive` 与 `archive-pre-cleanup-20261009`；归档不代表实验失败或结论作废。具体恢复方式见 `docs/operations/main-cleanup.md`。当前接口见 `docs/interfaces.md`，协作见 `docs/collaboration.md`。
 
 ## 技术路线：Python 离线编译，TypeScript 在线执行
 
@@ -61,7 +61,7 @@ main 已收敛为可运行开发起点。历史需求、比较、实验和报告
 
 ### 统一服务入口（所有人及 AI 必须遵守）
 
-- 正式网页的启动、重启、代码发布切换和回退统一通过 `npm run service -- <start|restart|status|check|rollback>`，公网另用同一入口的 `public-check`、`public-prepare`、`public-confirm` 核验与恢复，完整流程见 [docs/service-lifecycle.md](docs/service-lifecycle.md)。私有计划由 `GENELOOP_SERVICE_CONFIG` 或 `--config` 指定；公网配置独立由 `GENELOOP_PUBLIC_CONFIG` 或 `--public-config` 指定。开始运维先执行 status/check，健康服务不得为验证而随意重启。后端正常、公网隧道故障时只恢复公网链路，不能为此停止正常任务。
+- 正式网页的启动、重启、代码发布切换和回退统一通过 `npm run service -- <start|restart|status|check|rollback>`，公网另用同一入口的 `public-check`、`public-prepare`、`public-confirm` 核验与恢复，完整流程见 [docs/operations/service-lifecycle.md](docs/operations/service-lifecycle.md)。私有计划由 `GENELOOP_SERVICE_CONFIG` 或 `--config` 指定；公网配置独立由 `GENELOOP_PUBLIC_CONFIG` 或 `--public-config` 指定。开始运维先执行 status/check，健康服务不得为验证而随意重启。后端正常、公网隧道故障时只恢复公网链路，不能为此停止正常任务。
 - 不得为单个修复另写 `Popen`、`nohup`、批量 kill 或独立的 owner/gateway 启动逻辑。历史 `.local/deploy*.py` 的启动部分已退役；可以复用配置生成步骤，实际启动、令牌同步、认证检查和切换必须交给统一入口。需要改变流程时修改仓库入口并增加回归，不绕过它。
 - 新版本在独立代码/配置/库/preset 路径准备，保留上一版本；候选计划沿用原账号、Home、输出与预算存储，禁止原地覆盖运行配置、清空累计账本或删除旧检出。发现活跃/未知任务时停止发布，安排维护窗口；不得改任务状态来让重启通过。回退后也须执行认证与公网验证。
 - 单机开发继续 `npm run web`，真实独立测试继续 `npm run web:real`；这两个命令不等于正式多用户网站发布。服务器服务生命周期当前仅验证 Linux，不宣称 Windows 托管支持。
@@ -71,6 +71,7 @@ main 已收敛为可运行开发起点。历史需求、比较、实验和报告
 - `examples/motif-library/research-portfolio-v1/` 是从历史 DeepSeek 轨迹整理的首发结构样例。仅公开与仓库合成来源逐项重放一致的最小证据夹具，原始日志仍禁止提交。`npm run motif:check` 检查无历史数据依赖的重编译与 Harness 执行；模拟 Provider/embedding 成绩不能当成真实质量或费用结论。更新时保留来源、认证摘要及版本差异。
 - 产品原生聊天的模型费用由服务端预算约束，发送后直接执行；修改用户文件或其他有副作用的流程仍须显示影响与预览，并有明确确认。测试目的真实调用按上述持续授权执行。通用 `scenario` 默认只预览，后续模型联调使用显式 `scenario:real`/`web:real`；有副作用的 MCP 仍须在场景服务内提供权限和操作确认。
 - 最小可运行改动；说明改什么、服务哪个真实任务、如何验证、尚有哪些实验与体验限制。不能宣称未经验证的节省、收入或 Windows 支持。
+- 新增长期文档按 [docs/README.md](docs/README.md) 归入产品、运维或研究主题；调试、实验、变更与交接仍用各自专门目录。`docs/` 根目录只留公共入口和被既有来源锁定的路径。移动文档时同步更新仓库内链接，不改写历史快照与认证产物。
 
 ## 配置记录规范
 

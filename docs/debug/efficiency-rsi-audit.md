@@ -6,7 +6,7 @@
 
 ## A 计量修复状态（2026-11-02，最新）
 
-F1/F2/F4/F5 已补实现及免费反例回归：全 cell 费用判断预算，首成功获取成本计算条件节省；registry v2 固定 request→owner/cell/category，拒绝费用移位；无界/未知/未关闭结果不再计作有限预算能力增益；十进制累计修复金额边界，并严格守恒分摊。新增宿主 booking journal 与现有提案网关可选接线，导出不从 observations 反推，也不改原累计账本。详见[计量修复记录](efficiency-rsi-measurement-20261102.md)和[评价协议](../efficiency-rsi-evaluation.md)。
+F1/F2/F4/F5 已补实现及免费反例回归：全 cell 费用判断预算，首成功获取成本计算条件节省；registry v2 固定 request→owner/cell/category，拒绝费用移位；无界/未知/未关闭结果不再计作有限预算能力增益；十进制累计修复金额边界，并严格守恒分摊。新增宿主 booking journal 与现有提案网关可选接线，导出不从 observations 反推，也不改原累计账本。详见[计量修复记录](efficiency-rsi-measurement-20261102.md)和[评价协议](../research/rsi/efficiency-rsi-evaluation.md)。
 
 这些修复不等于 G5 全平台 runner/预算执行已完成，不证明新增效率收益。Paper 真实端到端验收由 B 分支推进；任意崩溃恢复、跨代 C→D 及 F8 等仍按原研究边界保留。下面各表及“仍未关闭”为同日较早审计时点，保留原始复现，当前状态以上述最新说明及交接为准。
 

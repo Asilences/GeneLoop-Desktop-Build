@@ -60,6 +60,6 @@ LibreOffice首次在V100启用OpenCL后退出134，保留失败报告；相同PP
 
 加载既有服务器隔离环境及 `.env`，安装根/场景固定依赖并构建，配置三个 `HARLESS_PPT_*` 环境变量；运行上列免费入口和 `npm run web:scenes:check`。真实入口为 `npm run web:scenes:check -- --real-model --scenes paper-proofreading research-data-analysis` 或 `--scenes ppt --mode execute`，再次运行必须先核对累计预算，不能将每次启动新cap当新增授权。
 
-配置与协议见 [控制文档](../harless-controls.md)、[接口](../interfaces.md)、[成员部署](../harless-account-gateway.md)。当前是独立检出的测试与PR交付，**未切换公网生产网关**；旧Session问题由另一协作者处理。本轮未做全任务PPT模型生成、论文编译投稿、GLM行为、浏览器点击或两真实成员模型并发验收。未做配对baseline，不支持稳定净费用收益；结构认证也不是科研正确性认证。上线后先用真实研究任务独立人评，再扩展库。
+配置与协议见 [控制文档](../harless-controls.md)、[接口](../interfaces.md)、[成员部署](../operations/harless-account-gateway.md)。当前是独立检出的测试与PR交付，**未切换公网生产网关**；旧Session问题由另一协作者处理。本轮未做全任务PPT模型生成、论文编译投稿、GLM行为、浏览器点击或两真实成员模型并发验收。未做配对baseline，不支持稳定净费用收益；结构认证也不是科研正确性认证。上线后先用真实研究任务独立人评，再扩展库。
 
 回退保留既有公网进程、私有账户库与累计账本；可撤回新部署字段恢复明确chat-only，或RSI Off回Origin。不能为了回退清空用户tasks/Session/.local。代码/工具/来源变化要新配置/新部署包，失效旧包不能改哈希绕过。私有旧库及本轮PPT交付/检查日志均已保留服务器和本机备份。

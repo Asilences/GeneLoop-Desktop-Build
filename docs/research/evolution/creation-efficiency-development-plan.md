@@ -118,4 +118,4 @@
 
 再往后才是持续多代实验，以及依据真实数据估计探索的边际价值。当前不制定固定的“策略最优分数”，也不宣称已证明效率驱动的持续递归增长。
 
-相关现有依据：[机会发现协议](capability-aware-opportunities-v1.md)、[PR #126 机制验收](experiments/capability-opportunities-20261103.md)、[效率评价协议](efficiency-rsi-evaluation.md)、[已有自主递归实验](experiments/recursive-construction-20261103.md)。
+相关现有依据：[机会发现协议](../capability/capability-aware-opportunities-v1.md)、[PR #126 机制验收](../../experiments/capability-opportunities-20261103.md)、[效率评价协议](../rsi/efficiency-rsi-evaluation.md)、[已有自主递归实验](../../experiments/recursive-construction-20261103.md)。

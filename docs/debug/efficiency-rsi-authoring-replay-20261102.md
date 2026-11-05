@@ -2,7 +2,7 @@
 
 - 问题：前轮C失败是否来自组合决定本身，还是协议包装；修复能否定位到具体位置。
 - 类型与输入：重放`efficiency-rsi-recursive-20261102`的5份真实历史回答，沿用各自task/snapshot；不是新的模型实验。原回答从服务器只读复制，输入摘要、代码摘要与结果在`.local/efficiency-rsi-authoring-20261102/replay-*/result.json`。
-- 配置：基于dc3d842加本轮修改；模型调用0、执行0、发布0、API费用0，原账本未访问写入。没有质量/收益对照，人工作业时间未计量。复现入口见[协议](../capability-improvement-v1.md)，必须新建输出目录。
+- 配置：基于dc3d842加本轮修改；模型调用0、执行0、发布0、API费用0，原账本未访问写入。没有质量/收益对照，人工作业时间未计量。复现入口见[协议](../research/capability/capability-improvement-v1.md)，必须新建输出目录。
 
 | 原尝试 | 原样重放 | 独立副本诊断修改 |
 |---|---|---|

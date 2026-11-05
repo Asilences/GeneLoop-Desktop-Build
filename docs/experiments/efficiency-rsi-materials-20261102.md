@@ -29,7 +29,7 @@
 - `npm run rsi:efficiency:check`：免费机制检查。
 - `npm test`：完整Python/Node回归。macOS使用解析符号链接后的TMPDIR。
 - 论文采集：`node scripts/project.mjs python scripts/observe-capability-paper-tasks.py --request "$PRIVATE_PAPER_REQUEST"`。
-- 新Source路由配置及已有私有环境要求见[接口说明](../capability-scenes-v1.md#原生材料获取与重新评价2026-11-02续)。显式`--call-model`才可能付费；本轮没有调用。
+- 新Source路由配置及已有私有环境要求见[接口说明](../research/capability/capability-scenes-v1.md#原生材料获取与重新评价2026-11-02续)。显式`--call-model`才可能付费；本轮没有调用。
 
 ## 结果、失败与限制
 
