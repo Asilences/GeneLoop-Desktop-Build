@@ -83,6 +83,8 @@ actual host evaluation, pass repair_of with its submission index. Each root
 allows at most two actual revisions in total, including branched revisions.
 Repairs keep the original scope and observation selection. Zero remaining root
 evaluations still permits an available repair; inspect remaining_candidate_repairs.
+Changing the explanation without changing the proposed method is not a repair.
+Read the failed evaluation before attempting another submission.
 Never encode or concatenate rejected literals to evade admission. Use appropriate
 input binding or representation, a different candidate, or no_change instead.
 
@@ -258,6 +260,15 @@ def run_investigation(investigation, *, call_agent, handlers, output,
                         preflight = getattr(handler, 'preflight', None)
                         if preflight is not None:
                             preflight(candidate, context)
+                        method = capability_digest({'kind': candidate['kind'], 'scope': candidate['scope'],
+                                                    'proposal': candidate['proposal']})
+                        repeated = next((row for row in submissions[:-1]
+                            if row.get('evaluation_started') and row.get('method_digest') == method), None)
+                        if repeated is not None:
+                            submitted['duplicate_of'] = repeated['index']
+                            raise ValueError('evolution_duplicate_proposal: original method already evaluated; '
+                                             'read its outcome and change the proposal, or finish without a new candidate')
+                        submitted['method_digest'] = method
                         if repair_of is None and len(roots) >= 2:
                             raise ValueError('evolution_candidate_evaluation_limit_reached: use repair_of for an eligible failed evaluation or call evolution_finish')
                         if repair_of is not None and roots[root_index] >= 2:
@@ -287,6 +298,11 @@ def run_investigation(investigation, *, call_agent, handlers, output,
                     if str(error).startswith(('evolution_repair_', 'evolution_candidate_repair_limit_')):
                         submitted['diagnostic']['message'] = ('repair_of must reference a failed actual host evaluation '
                             'with the original scope and observation selection. Each root permits two actual revisions total.')
+                    if str(error).startswith('evolution_duplicate_proposal'):
+                        submitted['diagnostic']['message'] = ('The proposed method was already evaluated. Read that '
+                            'submission and its original evaluation evidence. Change proposal to attempt a repair, '
+                            'or finish inconclusive/no_change. A planned stability retest needs a separate recorded run.')
+                        submitted['diagnostic']['duplicate_of'] = submitted['duplicate_of']
                     if isinstance(getattr(error, 'evolution_diagnostic', None), dict):
                         submitted['diagnostic'].update(error.evolution_diagnostic)
                     references = getattr(error, 'evolution_evidence_refs', [])
@@ -364,6 +380,9 @@ def run_investigation(investigation, *, call_agent, handlers, output,
         result['investigation_decision'] = finish['decision'] if finish else None
         result['candidate_counts'] = {
             'attempted': len(submissions),
+            'distinct_methods_evaluated': len({row['method_digest'] for row in submissions
+                                               if row.get('evaluation_started') and row.get('method_digest')}),
+            'duplicate_proposals_rejected': sum('duplicate_of' in row for row in submissions),
             'schema_and_evidence_valid': sum('validated_candidate' in row for row in submissions),
             'host_evaluations_started': sum(bool(row.get('evaluation_started')) for row in submissions),
             'pending': sum(row['status'] == 'pending' for row in submissions),

@@ -170,10 +170,14 @@ def test_local_candidate_limit_bounds_real_evaluations_without_limiting_reads(tm
         return {'status': 'rejected', 'reason': 'Independent evaluation failed'}
     def agent(request, dispatch):
         ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
-        for expected in (1, 0):
-            reply = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        for number, expected in enumerate((1, 0)):
+            proposal = candidate(ids)
+            proposal['proposal']['decision_policy'] += ' version ' + str(number)
+            reply = dispatch('evolution_submit', {'candidate': proposal, 'observation_ids': ids})
             assert reply['remaining_candidate_evaluations'] == expected
-        rejected = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        third = candidate(ids)
+        third['proposal']['decision_policy'] += ' version 2'
+        rejected = dispatch('evolution_submit', {'candidate': third, 'observation_ids': ids})
         assert 'evaluation_limit_reached' in rejected['reason']
         assert dispatch('evolution_overview', {})['scope'] == 'study'
         dispatch('evolution_finish', {'reason': 'Retain two actual rejected candidates for the next investigation'})
@@ -181,6 +185,39 @@ def test_local_candidate_limit_bounds_real_evaluations_without_limiting_reads(tm
     result = run_investigation(make(tmp_path, data), call_agent=agent,
         handlers={'construction_strategy': handler}, output=tmp_path / 'run')
     assert len(handled) == 2 and len(result['submissions']) == 3
+
+
+def test_same_method_with_reworded_rationale_does_not_consume_second_evaluation(tmp_path, data):
+    handled = []
+    def handler(*args):
+        handled.append(args)
+        return {'status': 'rejected', 'reason': 'Independent quality failure'}
+    def agent(request, dispatch):
+        ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
+        first = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        assert first['status'] == 'submitted'
+        repeated = candidate(ids)
+        repeated['burden'] = 'Reworded description of the same interface cost'
+        repeated['expected_behavior'] = 'Different wording, unchanged method'
+        duplicate = dispatch('evolution_submit', {'candidate': repeated, 'observation_ids': ids})
+        assert duplicate['status'] == 'rejected'
+        assert 'duplicate_proposal' in duplicate['reason']
+        assert duplicate['diagnostic']['duplicate_of'] == 0
+        assert duplicate['remaining_candidate_evaluations'] == 1
+        revised = candidate(ids)
+        revised['proposal']['decision_policy'] = 'Check each output field against the original input'
+        repair = dispatch('evolution_submit', {'candidate': revised, 'observation_ids': ids,
+                                               'repair_of': 0})
+        assert repair['status'] == 'submitted'
+        dispatch('evolution_finish', {'reason': 'A changed method was evaluated after original failure'})
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': handler}, output=tmp_path / 'run')
+    assert len(handled) == 2
+    assert [row.get('evaluation_started', False) for row in result['submissions']] == [True, False, True]
+    assert result['submissions'][2]['repair_of'] == 0
+    assert result['candidate_counts']['distinct_methods_evaluated'] == 2
+    assert result['candidate_counts']['duplicate_proposals_rejected'] == 1
 
 
 def test_missing_verification_reports_the_real_field_and_can_be_repaired(tmp_path, data):
@@ -344,8 +381,10 @@ def test_host_preflight_failures_do_not_spend_native_evaluation_slots(tmp_path, 
             result = dispatch('evolution_submit', {'candidate': invalid, 'observation_ids': ids})
             assert result['remaining_candidate_evaluations'] == 2
             assert result['diagnostic']['lookup_tool'] == 'host_inputs'
-        for expected in (1, 0):
-            result = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        for number, expected in enumerate((1, 0)):
+            valid = candidate(ids)
+            valid['proposal']['decision_policy'] += ' version ' + str(number)
+            result = dispatch('evolution_submit', {'candidate': valid, 'observation_ids': ids})
             assert result['remaining_candidate_evaluations'] == expected
         dispatch('evolution_finish', {'reason': 'Preserve three preflight failures and two actual evaluations'})
         return {}
@@ -429,16 +468,25 @@ def test_failed_root_can_be_repaired_twice_without_consuming_other_root(tmp_path
         ids = [row['id'] for row in dispatch('evolution_search', {'kind': 'experience'})['items'][:2]]
         first = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
         assert first['root_index'] == 0 and first['repair_attempt'] == 0
-        for expected in (1, 0):
-            revised = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': 0})
+        for number, expected in enumerate((1, 0), 1):
+            update = candidate(ids)
+            update['proposal']['decision_policy'] += ' repair ' + str(number)
+            revised = dispatch('evolution_submit', {'candidate': update, 'observation_ids': ids, 'repair_of': 0})
             assert revised['remaining_candidate_evaluations'] == 1
             assert revised['remaining_candidate_repairs'] == {'0': expected}
         # Referencing a different failed revision cannot reset the root allowance.
-        failed = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': 1})
+        extra = candidate(ids)
+        extra['proposal']['decision_policy'] += ' repair 3'
+        failed = dispatch('evolution_submit', {'candidate': extra, 'observation_ids': ids, 'repair_of': 1})
         assert 'repair_limit_reached' in failed['reason']
-        second = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids})
+        other = candidate(ids)
+        other['proposal']['decision_policy'] += ' second root'
+        second = dispatch('evolution_submit', {'candidate': other, 'observation_ids': ids})
         assert second['remaining_candidate_evaluations'] == 0
-        repaired = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': second['index']})
+        other_repair = candidate(ids)
+        other_repair['proposal']['decision_policy'] += ' second root repair'
+        repaired = dispatch('evolution_submit', {'candidate': other_repair, 'observation_ids': ids,
+                                                 'repair_of': second['index']})
         assert repaired['remaining_candidate_evaluations'] == 0
         assert repaired['remaining_candidate_repairs'] == {'0': 0, '4': 1}
         dispatch('evolution_finish', {'reason': 'Root and repair allowances are separate'})
@@ -533,7 +581,9 @@ def test_repair_keeps_context_and_preflight_failures_do_not_spend_revision(tmp_p
         assert expected in reply['reason']
         assert reply['remaining_candidate_evaluations'] == 1
         assert reply['remaining_candidate_repairs'] == {'0': 2}
-        repaired = dispatch('evolution_submit', {'candidate': candidate(ids), 'observation_ids': ids, 'repair_of': 0})
+        changed = candidate(ids)
+        changed['proposal']['decision_policy'] += ' corrected after host feedback'
+        repaired = dispatch('evolution_submit', {'candidate': changed, 'observation_ids': ids, 'repair_of': 0})
         assert repaired['remaining_candidate_repairs'] == {'0': 1}
         dispatch('evolution_finish', {'reason': 'Original context and host preflight remain authoritative'})
         return {}
