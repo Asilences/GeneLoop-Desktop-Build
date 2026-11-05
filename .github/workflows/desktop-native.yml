@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.target == 'arm64' && '{"include":[{"os":"macos-15","arch":"arm64"}]}' || inputs.target == 'x64' && '{"include":[{"os":"macos-15-intel","arch":"x64"}]}' || '{"include":[{"os":"macos-15","arch":"arm64"},{"os":"macos-15-intel","arch":"x64"}]}') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ inputs.timeout }}
+    timeout-minutes: ${{ fromJSON(inputs.timeout) }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     defaults:
