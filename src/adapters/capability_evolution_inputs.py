@@ -46,6 +46,8 @@ def load_builder_input_manifest(reference, *, expected_owner, expected_scope):
     entries, identities = [], set()
     for item in references:
         row = inspect_decision(item, expected_owner)
+        if row.get('evaluation_role') == 'evaluation':
+            raise ValueError('evolution_input_evaluation_source_not_exposed')
         if row.get('stage') != 'construction':
             raise ValueError('evolution_input_builder_observation_required')
         if focus not in row.get('capabilities', []):
@@ -56,4 +58,6 @@ def load_builder_input_manifest(reference, *, expected_owner, expected_scope):
         entries.append({'split': 'training', 'scope': expected_scope, 'evidence': item})
     return {'snapshot': snapshot, 'entries': entries,
             'exposure': manifest['exposure'], 'focus_capability': focus,
-            'independent_builder_sources': len(identities)}
+            'independent_builder_sources': len(identities),
+            'source_independence_basis': 'distinct_verified_task_identities; source_family_requires_host_audit',
+            'exposure_basis': 'host_manifest_declaration; original_bytes_and_existing_evaluation_role_revalidated'}

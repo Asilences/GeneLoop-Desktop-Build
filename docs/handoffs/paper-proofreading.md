@@ -1,6 +1,11 @@
-## 2026-11-05 Prompt审议与后续输入
+## 2026-11-05 组合输入与反馈连续性审议
 
-4a020696已补强抽象带来的新可行性与Creation Efficiency目标，区分调查结束和候选/独立验收状态，局部工具描述按单来源生成。最终本地2977 Python/1662 Node、Linux308及smoke/Motif/RSI通过，模型0。既有73次真实请求均属旧Prompt，效果记录不追改。本轮新增 `capability_evolution_inputs.py`，将已认证Capability快照与至少两份独立、历史暴露的 Builder 构造记录接入同一 Investigation；论文入口在缺少这两类输入时拒绝真实模型调用。服务器只读通道当前在SSH握手阶段被远端关闭，因此尚未核对11月3日证据的真实owner、Capability引用及原始Builder记录，也没有启动新模型请求。下一步从服务器恢复这两类原始材料，生成输入清单并做零模型预览，再冻结配置后执行真实调查；不手工编写后继D。
+- 修正 `bf15185a` 的过度启动限制。真实执行经历可以独立调查，Capability/Builder清单可选；`--require-builder-evidence`仅用于专项输入检查。当前论文入口准确标为Task Strategy Pilot，`construction_strategy`仍等待真实Builder评价器。
+- 原 `Investigation.continue_with` 保留能力快照、原任务与Builder inspector、笔记、候选/评价和已暴露证据，再追加新运行。无候选和多代续接均覆盖；消费评价角色需显式暴露并要求后续新评价材料。纯记账续接不触发同证据no_change重查。
+- Task Strategy采用增加既有独立reviewer的配对动作证据检查。接受需要实际读取并引用两侧动作证据；语义评审校准仍待真实运行。后继选择按预冻质量/成本规则，neutral/negative/unknown保留原方法，候选不再按最后提交顺序选择。
+- 已只读恢复真实C，seed摘要与原引用一致，`cap_dc3832ee6ce8f4f6e4fa9cf7`认证且active，snapshot有4个能力。owner为`frontier-20261103`，不同于五篇任务`script-motif-real`；恢复的两份Builder记录为同一`frontier-D`任务两次尝试，不能作两份独立构造问题。原证据不改身份、不写入原始论文实验。
+- 下一步真实Builder验收应在原owner及独立Store中复用`strategy_handler(target='construction')`、原`inherited_strategy_context`、Builder和检查器。先明确局部任务范围与新的评价资料，再比较后继构造动作、质量和完整投入。两次重试不能支持家族级推广；新任务/新能力发现仍由Evolution决定。
+- 本轮新增模型请求0，原73次请求及其neutral/no_change结论保留。当前代码验证结果随集中审计追加；未合并或部署。
 
 ## 2026-11-05 Evolution修订3真实执行
 

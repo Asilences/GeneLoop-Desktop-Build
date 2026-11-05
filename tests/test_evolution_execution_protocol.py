@@ -13,6 +13,23 @@ from tests.test_capability_investigation import data, inspect, make, put
 from tests.test_capability_evolution_investigation import candidate
 
 
+def test_no_change_continuation_bookkeeping_does_not_reopen_unchanged_investigation(tmp_path, data):
+    original = make(tmp_path, data)
+    def finish(request, dispatch):
+        dispatch('evolution_finish', {'decision': 'no_change', 'reason': 'The inspected evidence supports retaining the method'})
+        return {}
+    first = run_investigation(original, call_agent=finish, handlers={}, output=tmp_path / 'first')
+    assert first['status'] == 'no_change'
+    original.note('The same evidence supports retaining the method', [next(iter(original.observations))], [])
+    decision = put(tmp_path / 'decision.json', {'format': 'evolution_investigation_decision_v1', 'status': 'no_change'})
+    continued = original.continue_with(tmp_path / 'continued', history=[decision])
+    def forbidden(*_):
+        raise AssertionError('unchanged completed evidence must not start another model investigation')
+    second = run_investigation(continued, call_agent=forbidden, handlers={}, output=tmp_path / 'second',
+                               prior_results=[file_ref(tmp_path / 'first/result.json')])
+    assert second['status'] == 'revisit_skipped' and second['model_requests'] == 0
+
+
 def test_t1_shared_source_family_does_not_increase_independence(tmp_path, data):
     snapshot, entries, catalog = data
     first = json.loads(file_ref_value(entries[0]['evidence']))

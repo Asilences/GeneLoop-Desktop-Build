@@ -124,7 +124,10 @@ def run_investigation(investigation, *, call_agent, handlers, output,
         'objective': investigation.objective,
         'entries': sorted(capability_digest(_content_identity(json.loads(verify(ref['evidence']))))
                           for ref in investigation._entries.values()),
-        'history': sorted(row['reference']['sha256'] for row in investigation.history.values()),
+        'history': sorted(row['reference']['sha256'] for row in investigation.history.values()
+            if row['value'].get('format') not in ('capability_investigation_note_v1',
+                'capability_investigation_continuation_v1', 'evolution_investigation_decision_v1',
+                'capability_evolution_candidate_selection_v1')),
         'sealed': sorted(ref['sha256'] for ref in investigation.sealed_evidence),
         'development': sorted(ref['sha256'] for ref in investigation.development_evidence),
         'handlers': sorted(handlers), 'local_only': local_only,

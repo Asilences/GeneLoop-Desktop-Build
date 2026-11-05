@@ -118,3 +118,15 @@
 定向107项通过。本次更新的模型效果待新唯一快照验证，前述73次真实请求仍对应a3e96f59/81b6c306的旧Prompt。当前论文初始能力快照为空、没有Builder构造经历，不能仅靠新目标指令声称观测Creation Efficiency或新高层任务可行性。
 
 4a020696最终完整回归2977 Python/1662 Node通过，Linux308通过，smoke/Motif/RSI全通过，模型0；本地日志abstraction-prompt-full.log、abstraction-prompt-targeted.log及同前缀各检查日志，服务器快照code-paper-evolution-003/.local/linux-regression.log。后续只同步验证与交接文档。首次推送遇GitHub SSL_ERROR_SYSCALL，保留失败后按原分支重试。
+
+## 2026-11-05 组合输入与连续反馈修正
+
+按用户审议撤销bf15185a对普通真实Evolution的Builder输入硬门。专项输入检查独立为--require-builder-evidence；当前入口为Task Strategy Pilot。Builder清单继续复用原snapshot与decision证据，不新增Registry或学习流程。来源计数只证明不同构造任务身份，家族独立性需宿主核对；historically_exposed明确为宿主声明加原角色/原件复核。
+
+Investigation.continue_with保留原能力目录、任务/Builder分流、笔记、历史和已暴露原件，合并新结果；新BenchmarkHost从创建时绑定当前owner。无候选、实际新结果、多代证据保留、封存角色转移均有回归。已完成no_change不因新增笔记/续接/选择记账重开，实际新评价仍改变调查标识。
+
+任务策略采用新增原review_skill的可选行为检查，宿主冻结policy及300秒/64次读取。模型接受时必须引用两侧已经读取的动作证据，失败和未知不准入。后继按预冻质量/成本政策及稳定摘要排序，取消最后候选选择。模型评审仍是可核查的语义判断，真实校准和持续收益未完成。
+
+服务器连接恢复后只读核对原C与Builder记录。builder-input-audit-001.json确认seed摘要一致、C认证且active、4能力闭包；owner=frontier-20261103。恢复两条construction-evidence均指向同一task摘要a37c816c…，是同任务两次尝试，不能作为独立构造问题。不得改owner接入script-motif-real论文pilot。下一真实Builder试验沿原owner做局部后继验收，继续使用已有策略接收、inherited_strategy及Builder流程。
+
+首次全量保留2失败，分别为macOS /var符号链接临时目录守卫和测试运行期间更新的候选选择夹具；定向复核选择已通过，正式全量改用TMPDIR=/private/tmp固定代码后重跑。原失败日志context-continuity-full.log保留，最终验证另记录。此次新增模型请求0。

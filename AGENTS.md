@@ -46,6 +46,8 @@ main 已收敛为可运行开发起点。历史需求、比较、实验和报告
 
 ## 实施原则
 
+Evolution 是 GeneLoop Core 的通用能力。调查启动、候选路由、评价结果接收、后继反馈和经历累积统一复用 `src/adapters/evolution_cycle.py`、原 `run_investigation` 与 `Investigation`；场景 Adapter 只提供真实经历、原件 inspector、实际支持的 receivers、场景评价与后继任务。公共 Core 不导入具体场景，不硬编码任务、评分或唯一产物类型。新增场景不得复制一套 Evolution 循环，也不另建 Registry、IR、Meta-Agent 或存储系统。外部执行经历与 Builder 经历可以在同一调查中组合；Builder 输入仅在显式专项实验中额外要求。
+
 1. 效果第一、机制第二。以真实交付质量、合格总成本、人工修订和端到端时间判断机制，不以 token 总量或内部复用次数代替产品收益。mu、Codex、WorkBuddy、KnoxChat 等是可选能力/产品基线；公平对照使用匹配版本与任务条件，接入 Laya 本身不称创新。
 2. 结构层拥有可执行节点、依赖、参数流和证据守卫；语义层处理明确的相关性、冲突和研究判断缺口。不能把关键词、固定路线、手写场景 DAG 或提示词 Skill 当作 Motif 核心机制。
 3. `motif_skill_library` 从历史正常工具轨迹与 schema 挖掘/编译，经过独立训练决定、认证及后续任务验证。保留图/匹配描述的版本来源、修订差异和回退；同一研究决定的续写不算独立任务。

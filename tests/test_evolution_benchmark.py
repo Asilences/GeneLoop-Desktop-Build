@@ -667,6 +667,50 @@ def test_failed_reviewer_session_cannot_admit_candidate_from_parseable_text(fixt
             'evaluation': {}, 'proposal': {}})
 
 
+@pytest.mark.parametrize('mode', ['observed', 'unread', 'one_arm'])
+def test_behavior_review_requires_read_action_citations_from_both_arms(fixture, mode):
+    parent, candidate = fixture.root / 'behavior-parent', fixture.root / 'behavior-candidate'
+    parent.mkdir(); candidate.mkdir()
+    policy = fixture.root / 'behavior-policy.txt'
+    policy.write_text('Require actual paired action changes')
+    sources = []
+    for name, text in [('control', 'Generated a literal report'), ('candidate', 'Computed the report from parsed input')]:
+        path = fixture.root / (name + '-actions.json')
+        path.write_text(json.dumps({'action': text}))
+        sources.append(file_ref(path))
+    def reviewer(request, dispatch):
+        assert request['timeout_seconds'] == 300
+        if mode != 'unread':
+            for ref in sources:
+                dispatch('review_read', {'subject': 'evidence', 'resource': ref['sha256']})
+        directory = fixture.root / 'behavior-model'; directory.mkdir()
+        (directory / 'result.json').write_text('{"diagnostic":true}')
+        cited = sources[:1] if mode == 'one_arm' else sources
+        return {'status': 'completed', 'directory': str(directory), 'text': json.dumps({
+            'accepted': True, 'reason': 'Different processing was witnessed',
+            'behavior_evidence': [{'sha256': ref['sha256'], 'observation': 'Original action supports the difference'}
+                                  for ref in cited]})}
+    fixture.host.agent = reviewer
+    request = {'parent_skill_directory': str(parent), 'candidate_skill_directory': str(candidate),
+        'reviewer_policy': str(policy), 'behavior_expectation': 'Compute the report from parsed input',
+        'parent_rollout': {'evidence_refs': [sources[0]], 'behavior_evidence_refs': [sources[0]]},
+        'candidate_rollout': {'evidence_refs': [sources[1]], 'behavior_evidence_refs': [sources[1]]}}
+    if mode == 'observed':
+        result = fixture.host.review_skill(request)
+        assert result['accepted'] is True and len(result['verified_behavior_evidence']) == 2
+    else:
+        with pytest.raises(ValueError, match='citation_not_read|paired_action_citations_required'):
+            fixture.host.review_skill(request)
+
+
+def test_benchmark_new_observations_use_explicit_owner_without_rewriting_old_records(fixture):
+    fixture.host.owner = 'paper-owner'
+    trial = fixture.host.trial('task-one')
+    assert benchmark.inspect_benchmark(trial['observation'], 'paper-owner')['owner'] == 'paper-owner'
+    with pytest.raises(ValueError, match='owner_changed'):
+        benchmark.inspect_benchmark(trial['observation'], 'overnight-research')
+
+
 def script_module():
     path = Path(__file__).resolve().parents[1] / 'scripts/run-evolution-benchmark.py'
     spec = importlib.util.spec_from_file_location('evolution_benchmark_cli_test', path)

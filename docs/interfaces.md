@@ -1621,3 +1621,17 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 ### 调查完成语义补充
 
 `completion_scope=investigation_only`与`investigation_decision`明确调查结束维度。`candidate_counts`分别统计尝试、schema/证据通过、宿主评价已启动、pending和拒绝。只有非法尝试时默认inconclusive；合法候选的独立验收失败仍保留失败，调查结束不授予认证或后继采用。局部模式来源工具说明按单来源生成，家族模式沿两独立来源检查。
+
+### 组合输入与后继连续性
+
+`src/adapters/evolution_cycle.py::run_evolution_cycle(investigation, call_agent=..., handlers=..., output=..., limits=..., followup_evaluator=None, load_current_capabilities=None, prior_results=())`是场景无关的薄编排。它沿原`run_investigation`接收候选结果，调用宿主后继评价，并将回调返回的entries、inspector、history和可选snapshot合入原调查。公共层不定义具体工具、benchmark、质量分数或产物后端。场景回调不能覆盖原调查status/submissions/identity，失败保留cycle-error及原调查证据。
+
+Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责经历解析、实际receivers、论文评分及后继评价。`scripts/run-paper-evolution.py`仅负责配置/启动；`--investigation-history`可追加宿主已经批准的原研究证据FileRef，实际清单写入effective.json。其它场景复用同一cycle，不复制Paper main中的生命周期。
+
+论文历史入口的 `--evolution-input-manifest` 为可选 Builder 输入，普通执行经历可独立调查。`--require-builder-evidence` 仅用于额外要求 C/Builder 材料的专项输入检查。当前入口的 receiver 仍为 `task_strategy`，有效配置固定 `experiment_scope=task_strategy_pilot`，Creation Efficiency 等待真实 Builder 评价器。
+
+`Investigation.continue_with(directory, entries=(), inspector=None, snapshot=None, history=(), expose_evaluation=False)`沿同一调查器保留旧经历及其 inspector、能力目录、笔记和历史，再追加新证据。默认保留旧 snapshot；显式更新必须同 owner 并保留旧经历引用版本。开发材料的已暴露状态继续保留；消费最终评价后须显式暴露该角色，`transition.json`记下数据角色转移及需要新独立评价材料。
+
+`BenchmarkHost(..., owner='overnight-research')`允许调用方从创建时绑定同一研究owner，旧记录不改写。`review_skill`可选 `behavior_expectation`，使用既有独立review工具按需读配对动作。接受行为变化时必须引用两侧已经读取的宿主动作证据；输出 `verified_behavior_evidence`，质量仍走原oracle。此评审是有来源的模型判断，语义校准与因果归因另外验证。论文试验冻结300秒/64次读取，费用及请求沿原无限额账本。
+
+后继候选选择冻结为通过独立质量及行为检查、符合原质量/费用政策后，按质量降序、任务模型成本升序和策略摘要确定顺序。neutral、negative、unknown不改默认选择。选择只用于隔离后继，完整研究成本与正式发布仍分别判断。

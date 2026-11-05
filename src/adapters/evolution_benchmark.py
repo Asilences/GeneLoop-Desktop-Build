@@ -130,7 +130,11 @@ class BenchmarkHost:
     """Identical task inputs, tools, model transport and verifier for both arms."""
 
     def __init__(self, training_root, test_root, output, *, source_version, gate,
-                 verifier_environment=None, materials=None, prewarm_dependencies=False, validation_splits=None):
+                 verifier_environment=None, materials=None, prewarm_dependencies=False, validation_splits=None,
+                 owner='overnight-research'):
+        if not isinstance(owner, str) or not owner.strip():
+            raise ValueError('benchmark_owner_invalid')
+        self.owner = owner
         self.training = Path(training_root).resolve()
         self.test = Path(test_root).resolve()
         self.output = Path(output).resolve()
@@ -301,7 +305,7 @@ class BenchmarkHost:
             path = Path(model.get('directory', directory)) / name
             if path.is_file():
                 evidence.append(file_ref(path))
-        row = {'owner': 'overnight-research', 'task_id': trial.task_id + '-' + trial.split,
+        row = {'owner': self.owner, 'task_id': trial.task_id + '-' + trial.split,
                'source_identity': manifest['source_identity'], 'relation': 'benchmark-task-work',
                'input_fingerprint': manifest['input_fingerprint'],
                'stage': 'execution', 'status': 'passed' if evaluation.get('passed') else 'failed',
@@ -376,7 +380,7 @@ class BenchmarkHost:
                             evaluation_role='validation' if request['split'] == 'validation' else 'development')
         if result.get('score') is None:
             raise ValueError('benchmark_trial_unscored:' + result.get('error', result['status']))
-        observation = inspect_benchmark(result['observation'], 'overnight-research')
+        observation = inspect_benchmark(result['observation'], self.owner)
         evidence_path = Path(result['record']['path']).parent / 'evaluation-evidence-index.json'
         save(evidence_path, {'evidence_refs': [result['record'], result['observation'], *observation['evidence']],
                              'evidence_indexes': [], 'scope': 'original_task_and_verifier_diagnostics_no_oracle'})
@@ -395,6 +399,13 @@ class BenchmarkHost:
         roots = {'parent': parent, 'candidate': candidate, 'policy': policy.parent}
         references = {}
         evidence_indexes = set()
+        read_evidence = set()
+        behavior = request.get('behavior_expectation')
+        behavior_groups = {}
+        reads = 0
+        policy_ref = file_ref(policy)
+        if behavior is not None and (not isinstance(behavior, str) or not behavior.strip()):
+            raise ValueError('review_behavior_expectation_invalid')
 
         def register_host_evidence(value):
             # Match SkillInfinityRun._register_evidence: only explicit host
@@ -418,8 +429,20 @@ class BenchmarkHost:
             for name in ('record', 'observation'):
                 if host_result.get(name) is not None:
                     register_host_evidence({'evidence_refs': [host_result[name]]})
+            if behavior is not None and field in ('parent_rollout', 'candidate_rollout'):
+                group = host_result.get('behavior_evidence_refs', [])
+                if not group or any(ref.get('sha256') not in references or
+                                    references[ref['sha256']] != ref for ref in group):
+                    raise ValueError('review_behavior_action_evidence_required')
+                behavior_groups[field] = {ref['sha256'] for ref in group}
+        if behavior is not None and len(behavior_groups) != 2:
+            raise ValueError('review_behavior_paired_rollouts_required')
 
         def dispatch(name, arguments):
+            nonlocal reads
+            reads += 1
+            if behavior is not None and reads > 64:
+                raise ValueError('review_behavior_read_limit_reached')
             if name != 'review_read':
                 raise ValueError('review_tool_unknown')
             if arguments['subject'] == 'evidence':
@@ -428,6 +451,7 @@ class BenchmarkHost:
                 reference = references[arguments['resource']]
                 raw = verify(reference)
                 path = Path(reference['path'])
+                read_evidence.add(reference['sha256'])
             else:
                 base = roots[arguments['subject']]
                 path = (base / arguments['resource']).resolve()
@@ -446,13 +470,16 @@ class BenchmarkHost:
                     'next_offset': end if end < len(text) else None,
                     'evidence_index': list(references.values())}
 
+        response_format = ('{"accepted":true or false,"reason":"evidence-grounded reason"}' if behavior is None else
+            '{"accepted":true or false,"reason":"evidence-grounded reason",'
+            '"behavior_evidence":[{"sha256":"read evidence identifier","observation":"actual action and difference"}]}')
         model = self.agent({'mode': 'independent_review',
             'system': 'Independently review the proposed skill against original evaluation evidence.',
             'prompt': 'Review this candidate. Inspect the parent, candidate and reviewer policy with review_read. '
                       'Use subject evidence with a SHA256 identifier to inspect original evaluation, '
                       'rollout, request and cost records. Relevant references:\n' + json.dumps(list(references.values()))
                       + '\nEvaluate substantive changes, activation and the stated hypothesis. Return exactly JSON '
-                      '{"accepted":true or false,"reason":"evidence-grounded reason"}.\n'
+                      + response_format + '.\n'
                       + json.dumps({key: value for key, value in request.items()
                                     if key not in ('parent_skill_directory', 'candidate_skill_directory')}, ensure_ascii=False),
             'tools': [{'name': 'review_read', 'description': 'Read a resource in the independent review scope.',
@@ -460,10 +487,40 @@ class BenchmarkHost:
                            'subject': {'type': 'string', 'enum': ['parent', 'candidate', 'policy', 'evidence']},
                            'resource': {'type': 'string'}, 'offset': {'type': 'integer', 'minimum': 0},
                            'limit': {'type': 'integer', 'minimum': 1, 'maximum': 64000}}, 'required': ['subject', 'resource'],
-                           'additionalProperties': False}}], 'available_skill_cards': []}, dispatch)
+                           'additionalProperties': False}}], 'available_skill_cards': [],
+            'timeout_seconds': 300 if behavior is not None else 28800}, dispatch)
+        def review_error(reason):
+            error = ValueError(reason)
+            error.review_model_record = file_ref(Path(model['directory']) / 'result.json')
+            return error
         if model.get('status') != 'completed':
-            raise ValueError('benchmark_review_failed_or_incomplete')
-        verdict = parse_proposal(model['text'])
+            raise review_error('benchmark_review_failed_or_incomplete')
+        try:
+            verdict = parse_proposal(model['text'])
+        except ValueError as error:
+            error.review_model_record = file_ref(Path(model['directory']) / 'result.json')
+            raise
+        if behavior is not None:
+            verify(policy_ref)
+            citations = verdict.get('behavior_evidence')
+            if (type(verdict.get('accepted')) is not bool or not isinstance(verdict.get('reason'), str)
+                    or not verdict['reason'].strip() or not isinstance(citations, list)):
+                raise review_error('review_behavior_verdict_invalid')
+            witnessed = []
+            for citation in citations:
+                if (not isinstance(citation, dict) or set(citation) != {'sha256', 'observation'}
+                        or citation['sha256'] not in read_evidence
+                        or not isinstance(citation['observation'], str) or not citation['observation'].strip()):
+                    raise review_error('review_behavior_citation_not_read')
+                ref = references[citation['sha256']]
+                verify(ref)
+                witnessed.append({'evidence': ref, 'observation': citation['observation']})
+            cited = {item['sha256'] for item in citations}
+            if verdict['accepted'] and (len(cited) < 2 or
+                    any(not cited.intersection(group) for group in behavior_groups.values())):
+                raise review_error('review_behavior_paired_action_citations_required')
+            verdict.update(verified_behavior_evidence=witnessed,
+                           behavior_review_scope='independent_action_trace_review; causality_not_established')
         return {**verdict, 'model_record': file_ref(Path(model['directory']) / 'result.json')}
 
 

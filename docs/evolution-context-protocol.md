@@ -26,6 +26,10 @@
 
 ## 一、目标与反思
 
+**架构原则：Evolution 属于 GeneLoop Core，Paper 是提供真实经历与评价环境的首个场景 Adapter。** 公共 `evolution_cycle.py` 复用原调查、候选 handlers、后继评价回调及 `continue_with` 累积反馈；它不依赖具体任务名、场景导入或评分规则。`scenarios/paper_proofreading/evolution_adapter.py`保留论文输入、原oracle、容器任务、行为评价和场景结果解释。脚本只解析配置、连接Adapter、原Harness与账本并启动公共cycle。
+
+场景以普通方法或回调提供`load_experiences`、`inspect_experience`、`build_receivers`和`evaluate_followup`，无需继承基类。公共cycle按实际handlers工作，可追加当前Capability快照；不固定为task_strategy。第二个最小诊断Adapter已覆盖不同receiver、新能力及反馈累积；它只验证代码复用。真实论文实验与Builder自应用的效果分别验收。
+
 目标是让真实执行和能力构造反馈推动抽象与求解方式共同变化。质量、完整成本和后继能力获取过程分别评价。已有执行收益作为起点，新增机制的贡献通过后继行为和结果检验。
 
 旧调查曾把已封装能力内部的`C,C,report`误作模型每次重新编排的负担。另一些任务存在真实质量问题，却没有进入那轮调查输入。因此，本协议把当前能力、实际经历和质量/费用反馈放在同一证据空间，并保留观察层级。
@@ -83,9 +87,11 @@ Evolution自主选择问题、调查反例并决定是否提交候选。具体�
 
 具备调用接口只支持“可用”。输入被拒绝时保留调用尝试；成功回执支持实际执行；当前质量与后续用途仍按对应证据评价。折叠内部实现是展示选择，能力目录和已解决工作在概览中分别呈现。
 
-真实 Creation-Efficiency 调查须同时输入一份已认证、仍有效的 Capability 快照和至少两份独立 Builder 构造经历。经历必须由原 `record_construction_decision` 投影生成，注明构造时可见的 Capability，并沿 `inspect_decision` 回查原尝试、费用和验证证据；完整轨迹仍留在原件层，Agent 先看经历卡，再按需读证据。输入清单绑定同一 owner、scope、Capability 精确版本及历史暴露角色。缺任一类材料时只允许预览，不发真实模型请求；这不会要求后继任务一定调用 C。
+真实执行经历可以独立触发 Evolution。已有 Capability 和 Builder 经历按实际可用情况加入同一调查空间；缺少构造经历时明确相应限制，不阻止任务执行策略调查。Builder 专项输入审计可显式使用 `--require-builder-evidence`，要求认证且有效的 C 及两条不同构造任务记录；该开关只检查输入，不代表已经配置 Builder 产物接收器。
 
-入口清单 `capability_evolution_builder_inputs_v1` 仅含 `owner`、`scope`、`exposure=historically_exposed`、snapshot FileRef、`focus_capability` 精确引用及 `construction_observations` FileRef 数组。路径、内容摘要和owner都在运行前校验；至少两条记录必须映射到不同原始构造任务。当前论文入口以此为硬门，沿原 `Investigation`、`ResearchHarness` 和接收器执行，不增加新的学习/发布生命周期。
+可选清单 `capability_evolution_builder_inputs_v1` 绑定 owner、scope、历史暴露声明、snapshot FileRef、C 精确引用和构造观察 FileRef。经历由原 `record_construction_decision` 投影并沿 `inspect_decision` 核验原尝试、费用、质量角色和版本；C 是当时可用材料，不要求实际调用。不同任务摘要只支持任务身份不同，来源家族独立性仍需宿主核对。历史暴露的依据是宿主清单声明与原角色复核，不将字符串校验写成独立证明。
+
+后继视图通过原 `Investigation.continue_with` 累积原经历、原读取方式、能力快照、调查笔记、候选/评价历史和新运行。宿主可传入包含新能力及历史引用的新快照；缺失旧经历引用的版本会拒绝续接。没有候选或新运行时同样保留原上下文。已消耗的评价角色只有在宿主显式暴露后才进入下一轮；该转移留记录，后续独立评价需要新材料。
 
 历史完整`C,C,report`重复图在学习/编译中有拒绝记录，局部`C→report`学习、发布和后继执行已有历史证据。完整高层图闭包保持已知限制，具体范围见主线交接原记录；本轮未重跑该编译器问题。语义经历调查可以先沿原事件投影推进，完整图闭包单独追踪。
 

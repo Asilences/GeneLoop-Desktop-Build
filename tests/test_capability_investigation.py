@@ -85,6 +85,53 @@ def test_empty_history_can_be_investigated_without_paid_proposal(tmp_path, data)
     assert service.search('experience')['items'] == []
 
 
+def test_continuation_keeps_capabilities_original_builder_inspector_notes_and_new_outcomes(tmp_path, data):
+    service = make(tmp_path, data)
+    service.note('A hypothesis about the witnessed interface', [next(iter(service.observations))], ['Check next actions'])
+    new = {'task_id': 'successor-task', 'source_identity': 'successor-source', 'relation': 'later-execution',
+           'stage': 'execution', 'status': 'passed', 'capabilities': [], 'evidence': [],
+           'observed_cost_usd': None}
+    ref = put(tmp_path / 'new-row.json', new)
+    inspected = []
+    def successor_inspector(reference, owner):
+        inspected.append(reference)
+        assert reference == ref and owner == data[0]['owner']
+        return json.loads(verify(reference))
+    next_view = service.continue_with(tmp_path / 'next',
+        entries=[{'split': 'training', 'scope': 'study', 'evidence': ref}], inspector=successor_inspector)
+    assert inspected == [ref]
+    assert next_view.snapshot == service.snapshot
+    assert next_view.capability_cards == service.capability_cards
+    assert next_view.overview()['experiences']['stages'] == {'construction': 3, 'execution': 1}
+    assert any(item['value']['format'] == 'capability_investigation_note_v1' for item in next_view.history.values())
+    unchanged = next_view.continue_with(tmp_path / 'no-change-next')
+    assert unchanged.snapshot == next_view.snapshot
+    assert unchanged.overview()['experiences'] == next_view.overview()['experiences']
+
+
+def test_continuation_preserves_sealed_material_until_explicit_role_transition(tmp_path, data):
+    sealed = put(tmp_path / 'sealed-answer.json', {'answer': 'hidden'})
+    service = make(tmp_path, data, sealed_evidence=[sealed], development_evidence=[sealed])
+    service.expose_development()  # A shared sealed hash must remain sealed.
+    next_view = service.continue_with(tmp_path / 'still-sealed')
+    assert 'evidence_' + sealed['sha256'] not in next_view.evidence
+    exposed = next_view.continue_with(tmp_path / 'exposed', expose_evaluation=True)
+    assert exposed.read('evidence', 'evidence_' + sealed['sha256'])['content']
+    transition = json.loads((tmp_path / 'exposed/transition.json').read_text())
+    assert transition['evaluation_exposed'] is True
+    assert transition['next_independent_evaluation'] == 'fresh_material_required'
+    third = exposed.continue_with(tmp_path / 'third-generation')
+    assert third.read('evidence', 'evidence_' + sealed['sha256'])['content']
+
+
+def test_continuation_cannot_silently_drop_capability_refs_used_by_earlier_experience(tmp_path, data):
+    from src.adapters.capability_contract import create_capability_snapshot
+    service = make(tmp_path, data)
+    with pytest.raises(ValueError, match='capability_not_visible'):
+        service.continue_with(tmp_path / 'lost-C',
+            snapshot=create_capability_snapshot(data[0]['owner'], [], []))
+
+
 def test_search_pages_and_filters_return_stable_cards(tmp_path, data):
     service = make(tmp_path, data)
     first = service.search('experience', 'conversion', limit=1)

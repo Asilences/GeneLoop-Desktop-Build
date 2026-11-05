@@ -66,6 +66,7 @@ class Investigation:
         self._unexposed_development = {ref['sha256'] for ref in self.development_evidence}
         self.sequence = 0
         self._inspector = inspector
+        self._catalog = copy.deepcopy(catalog or {})
         self._entries = {}
         history = list(history)
         for entry in entries:
@@ -114,6 +115,59 @@ class Investigation:
         save(self.directory / 'index.json', {'format': 'capability_investigation_index_v1',
              'owner': self.snapshot['owner'], 'scope': scope, 'snapshot_sha256': self.snapshot['digest'],
              'entries': list(self._entries.values()), 'history': list(history)})
+
+    def continue_with(self, directory, *, entries=(), inspector=None, snapshot=None,
+                      history=(), expose_evaluation=False, objective=None):
+        """Accumulate host-approved outcomes without dropping earlier context.
+
+        The caller explicitly exposes a consumed evaluation role before the
+        next investigation. An unchanged sealed role stays excluded. Original
+        observations retain their original inspector and exact source bytes.
+        """
+        if type(expose_evaluation) is not bool:
+            raise ValueError('investigation_exposure_transition_invalid')
+        current = validate_capability_snapshot(self.snapshot if snapshot is None else snapshot, self.snapshot['owner'])
+        previous = list(self._entries.values())
+        original_refs = {(row['evidence']['path'], row['evidence']['sha256']) for row in previous}
+        additional = list(entries)
+        def inspect(reference, owner):
+            if (reference['path'], reference['sha256']) in original_refs:
+                return self._inspector(reference, owner)
+            if inspector is None:
+                raise ValueError('investigation_continuation_inspector_required')
+            return inspector(reference, owner)
+        directory = Path(directory)
+        directory.mkdir(parents=True, mode=0o700, exist_ok=False)
+        inherited_evidence = list(self.evidence.values())
+        exposed = [ref for ref in self.development_evidence
+                   if ref['sha256'] not in self._unexposed_development
+                   and (expose_evaluation or (ref['sha256'] not in self._sealed_hashes
+                        and str(Path(ref['path']).resolve()) not in self._sealed_paths))]
+        if expose_evaluation:
+            exposed.extend(self.sealed_evidence)
+        transition = {'format': 'capability_investigation_continuation_v1',
+            'owner': current['owner'], 'scope': self.scope,
+            'previous_index': file_ref(self.directory / 'index.json'),
+            'previous_snapshot': self.snapshot['digest'], 'snapshot': current['digest'],
+            'original_observations': len(previous), 'added_observations': len(additional),
+            'inherited_evidence': inherited_evidence,
+            'exposed_evidence': exposed, 'evaluation_exposed': expose_evaluation,
+            'next_independent_evaluation': 'fresh_material_required' if expose_evaluation else 'sealed_role_preserved'}
+        save(directory / 'transition.json', transition)
+        inherited_history = [item['reference'] for item in self.history.values()]
+        inherited_history.extend(item['reference'] for item in self.notes)
+        inherited_history.extend([*history, file_ref(directory / 'transition.json')])
+        combined = {(item['evidence']['path'], item['evidence']['sha256']): item
+                    for item in [*previous, *additional]}
+        unique_history = {item['sha256']: item for item in inherited_history}
+        next_view = Investigation(current, list(combined.values()), self.scope, directory / 'view',
+            inspector=inspect, history=list(unique_history.values()), catalog=self._catalog,
+            sealed_evidence=() if expose_evaluation else self.sealed_evidence,
+            development_evidence=[ref for ref in self.development_evidence
+                                  if ref['sha256'] in self._unexposed_development],
+            objective=objective or self.objective)
+        next_view._index_evidence([*inherited_evidence, *exposed])
+        return next_view
 
     def _index_evidence(self, references):
         for reference in references:
