@@ -135,11 +135,11 @@ def test_text_inputs_are_preserved_without_synthetic_task_interpretation(tmp_pat
     examples = []
     for index in range(2):
         path = tmp_path / ('mesh-' + str(index) + '.obj')
-        path.write_text('v 0 0 ' + str(index) + '\n', encoding='utf-8')
+        path.write_bytes(('v 0 0 ' + str(index) + ('\n' if index == 0 else '\r\n')).encode('utf-8'))
         examples.append(file_ref(path))
     service.acquire(program, examples, source, 'actual-obj-files')
     values = [json.loads(verify(case['inputs'][0]['source'])) for case in calls['learn'][0]['cases']]
-    assert values == [{'text': 'v 0 0 0\n'}, {'text': 'v 0 0 1\n'}]
+    assert values == [{'text': 'v 0 0 0\n'}, {'text': 'v 0 0 1\r\n'}]
 
 
 def test_wrapper_uses_native_json_wire_for_integral_floats_and_key_order(tmp_path, data):

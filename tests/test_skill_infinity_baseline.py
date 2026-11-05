@@ -350,7 +350,7 @@ def test_folded_skill_description_is_discoverable(tmp_path, skills):
 
 def test_host_evidence_is_readable_in_pages_with_original_hash(tmp_path, skills):
     record = tmp_path / 'verifier.stdout.txt'
-    record.write_text('Original failure\n' + 'x' * 40)
+    record.write_bytes(b'Original failure\r\n' + b'x' * 40)
     reference = file_ref(record)
     run = make_run(tmp_path, skills)
     run.evaluate = lambda request: {**evaluate(request), 'evidence_refs': [reference]}
@@ -362,13 +362,13 @@ def test_host_evidence_is_readable_in_pages_with_original_hash(tmp_path, skills)
     assert page['evidence'] == reference
     assert page['next_offset'] == 16
     remainder = run.dispatch('read_evidence', {'evidence_id': reference['sha256'], 'offset': 16})
-    assert page['content'] + remainder['content'] == record.read_text()
+    assert page['content'] + remainder['content'] == record.read_bytes().decode('utf-8')
     assert remainder['next_offset'] is None
 
 
 def test_only_trusted_host_index_can_authorize_nested_records(tmp_path, skills):
     calls = tmp_path / 'tool-calls.jsonl'
-    calls.write_text('{"command":"inspect inputs","stdout":"real tool result"}\n')
+    calls.write_bytes(b'{"command":"inspect inputs","stdout":"real tool result"}\r\n')
     verifier = tmp_path / 'verifier.stdout.txt'
     verifier.write_text('1 failed, 3 passed')
     nested = tmp_path / 'trajectory-index.json'
@@ -382,8 +382,8 @@ def test_only_trusted_host_index_can_authorize_nested_records(tmp_path, skills):
     first = run.dispatch('read_evidence', {'evidence_id': file_ref(index)['sha256']})
     assert first['discovered_evidence_refs'] == [file_ref(nested)]
     run.dispatch('read_evidence', {'evidence_id': file_ref(nested)['sha256']})
-    assert run.dispatch('read_evidence', {'evidence_id': file_ref(calls)['sha256']})['content'] == calls.read_text()
-    assert run.dispatch('read_evidence', {'evidence_id': file_ref(verifier)['sha256']})['content'] == verifier.read_text()
+    assert run.dispatch('read_evidence', {'evidence_id': file_ref(calls)['sha256']})['content'] == calls.read_bytes().decode('utf-8')
+    assert run.dispatch('read_evidence', {'evidence_id': file_ref(verifier)['sha256']})['content'] == verifier.read_bytes().decode('utf-8')
 
 
 def test_model_authored_reference_cannot_authorize_oracle_or_arbitrary_path(tmp_path, skills):
@@ -429,4 +429,5 @@ def test_meta_evaluation_inherits_original_inner_host_evidence(tmp_path, skills)
     assert result['status'] == 'completed'
     assert reference in result['archive']['nodes'][0]['evaluation']['evidence_refs']
     assert reference in result['archive']['evidence_refs']
-    assert any(item['path'].endswith('inner-0/result.json') for item in result['archive']['evidence_refs'])
+    assert any(Path(item['path']).parts[-2:] == ('inner-0', 'result.json')
+               for item in result['archive']['evidence_refs'])

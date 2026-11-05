@@ -201,7 +201,7 @@ def test_completed_assertion_rejection_remains_scored_with_original_nonzero_exit
     assert result['reward'] == float(reward)
     assert result['passed'] is (float(reward) > 0)
     assert result['verifier_outcome'] == 'quality_rejected'
-    assert result['quality_rejection_evidence']['path'].endswith('/verifier/ctrf.json')
+    assert Path(result['quality_rejection_evidence']['path']).parts[-2:] == ('verifier', 'ctrf.json')
     operation = json.loads(Path(result['verification']['path']).read_text())
     assert operation['returncode'] == 1
 

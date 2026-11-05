@@ -243,7 +243,7 @@ def test_final_canonical_trial_keeps_source_and_verifier_bytes_frozen(fixture):
     before = {str(p.relative_to(fixture.test)): p.read_bytes() for p in fixture.test.rglob('*') if p.is_file()}
     result = fixture.host.trial('task-one', split='test', skill_directory=seed(fixture), label='final')
     assert fixture.trials[0].source == fixture.test
-    assert fixture.requests[0]['prompt'] == 'Independent canonical instruction.\n'
+    assert fixture.requests[0]['prompt'] == (fixture.test / 'instruction.md').read_bytes().decode('utf-8')
     assert result['split'] == 'test'
     assert before == {str(p.relative_to(fixture.test)): p.read_bytes() for p in fixture.test.rglob('*') if p.is_file()}
     assert fixture.trials[0].evaluated is True

@@ -155,7 +155,7 @@ def test_real_host_feedback_is_readable_without_echoing_all_references(tmp_path,
         assert reply['outcome']['available_evidence_count'] == 1
         assert 'evidence_refs' not in reply['outcome']
         original = dispatch('evolution_read', {'kind': 'evidence', 'id': 'evidence_' + reference['sha256']})
-        assert original['content'] == diagnostic.read_text()
+        assert original['content'] == diagnostic.read_bytes().decode('utf-8')
         dispatch('evolution_finish', {'reason': 'Actual independent feedback is available for revision'})
         return {}
     result = run_investigation(make(tmp_path, data), call_agent=agent,
