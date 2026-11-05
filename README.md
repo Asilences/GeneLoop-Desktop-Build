@@ -2,6 +2,8 @@
 
 Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
 
+2026-11-04，新增默认关闭的 [Evidence-Grounded Evolution Agent 离线原型](docs/evidence-grounded-evolution-agent.md)：单个跨任务证据包、一次有界模型提案，复用原边界学习与宿主构造/认证入口。运行 `node scripts/project.mjs python scripts/run-evolution-agent.py --help`。两轮真实提案最终为 `no_change`，未产生新认证能力或收益；上下文、失败和费用见[实验记录](docs/experiments/evidence-evolution-20261104.md)。
+
 2026-11-04，新增默认关闭的 [Recursive Abstraction Evolution 研究机制](docs/rae-implementation.md)：真实 Capability 调用可进入原 Motif 学习器，学出的后代仍经原 Store 独立验收；反馈可改变下一轮抽象边界，Builder 的实际解析/绑定轨迹可走同一流程。`npm run rsi:rae:check` 保留机制执行证据，`npm run rsi:rae:learn -- --help` 查看离线入口。当前验收为确定性任务上的实际执行闭环，不等于真实模型自主创造或持续收益；生产路径不变。
 
 PPT新增公共RSI接线。合格单路轨迹与原生认证页面程序自动进入账户材料池，宿主显式配置公共计划后复用Builder、独立验证、Store发布及后继目录。真实模型候选已完成发布、换输入执行与原`create_ppt_page`→`finalize_ppt`交付，学习1请求约USD0.00091104，后继执行新增模型请求0。科研质量、额外净降本和生产部署继续独立验收。配置、失败与恢复见[本轮记录](docs/experiments/ppt-public-rsi-20261104.md)。

@@ -1532,6 +1532,22 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+## Evidence-Grounded Evolution Agent（2026-11-04）
+
+离线研究入口：`node scripts/project.mjs python scripts/run-evolution-agent.py --manifest <private.json> --output <new-.local-directory>`。默认只预检；`--call-model --budget-usd 3 --max-requests 1` 显式执行一个提案请求。复用原累计账本，不修改在线 Runtime。
+
+manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / acceptance / ledger_root`。除 scope 和 ledger_root 外，snapshot、prior_candidate、acceptance 是既有 `{path,sha256}` 证据引用，training/heldout 是引用列表；acceptance 沿用 `validate-recursive-paper-candidate.py` 的原独立验证配置。不是新的 Registry 或执行 IR。
+
+`capability_evolution_agent.packet` 从可信 inspector 的事实按 scope、阶段、关系与能力版本确定性聚合。内置 `inspect_graph` 校验真实调用回执与文件版本；非文件后端由宿主提供相应 inspector，不能提交模型编写的摘要冒充事实。`role=builder` 的真实图使用同一入口。完整索引留在私有目录；最多6条代表记录、默认30,000 UTF-8字节上限，未虚报为模型 tokenizer 精确上限。
+
+`run(..., enabled=False)` 默认不读取或执行。启用后重建证据包，使用固定 Prompt 和原 `propose_json` 传输；外发仅匿名接口/调用结构，保留调用编号的本地反向映射。运行层级与已有容器覆盖信息显式提供，不把 Runtime 节点数当作模型决策数。
+
+候选最多2个，字段为 `kind / burden / evidence_ids / scope / expected_behavior / verification / failure_conditions / proposal`。verification/failure_conditions 可为非空文字或非空文字列表；没有认证权限。空列表是 `no_change`。boundary 的 proposal 是 `{regions:{task_id:[call_id,...]}}`，只接受观察到的连续区域。模型仅使用匿名训练任务标识，不得选择留出输入或验收标准。
+
+`boundary_handler` 接原 `evolve_abstraction`，宿主提供独立留出区域及原认证回调。论文 CLI 以冻结的“能力序列唯一匹配”规则从留出图定位区域，歧义即拒绝；支持的候选走原 Store 与 followup。`construction_handler` 要求宿主独立 admit，返回既有 job 与验收计划，再交原 `run_improvement`。未配置宿主或不可表达的策略保留 pending，不把文本建议直接写进生产执行策略。
+
+费用、修复、失败与无改进保留，`measured_net_benefit` 默认 null。正向机制诊断不等于真实模型改进；当前结果见[实验](experiments/evidence-evolution-20261104.md)。
+
 
 ## GeneLoop Desktop 接入（2026-11-03）
 
@@ -1557,3 +1573,7 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 网页按该排列展示，结果卡片仅显示状态和原始结果；评分、赞踩、复制、下载、分支及轨迹选择使用匿名位置，提交时仍绑定原 lane 和 `output_sha256`。后台原任务与 lane 键继续保存；新增评分/赞踩事件含 `display_order` 和从 1 起计的 `display_position`。排序不参与模型输入、执行准入、预算与任务调度。
 
 结果卡片隐藏方法名称、机制计数和回退标识。原始模型正文、工具内容和交付文件保留，开发 API 也保留真实字段；此接口提供产品界面的匿名比较，证据和版本归属仍可追查。
+
+## 条件化策略演化（2026-11-04）
+
+版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。

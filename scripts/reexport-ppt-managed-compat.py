@@ -100,6 +100,26 @@ if __name__ == '__main__':
         ]
         compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
         compat.ADDITIONAL_LOCKS.add('src/adapters/harless_product_prompt.ts')
+    elif '--strategy-evolution' in sys.argv:
+        sys.argv.remove('--strategy-evolution')
+        reviewed = {
+            'scripts/reexport-ppt-managed-compat.py',
+            'src/adapters/capability_construction_history.py',
+            'src/adapters/capability_proposal.py',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v77', 'ppt-master-v78', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v79', 'paper-web-v80', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= {
+            'src/adapters/capability_strategy.py',
+            'src/adapters/capability_decision_evidence.py',
+            'src/adapters/capability_evolution_agent.py',
+            'src/adapters/capability_goal_proposal.py',
+            'scripts/run-strategy-evolution.py',
+        }
     elif '--rae-integration' in sys.argv:
         sys.argv.remove('--rae-integration')
         reviewed = {
