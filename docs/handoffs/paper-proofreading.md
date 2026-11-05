@@ -10,7 +10,7 @@
 ## 2026-11-05 通用Core与真实调查003
 
 - 生命周期抽到`src/adapters/evolution_cycle.py`；Paper证据、oracle、任务与结果解释在`scenarios/paper_proofreading/evolution_adapter.py`，脚本仅配置/启动。原则写入AGENTS和通用协议，第二最小Adapter覆盖非task_strategy路由和新能力回流。
-- 模型源码25383ae6已完成真实G1/G2：2个自主task_strategy、两对4次任务，候选均未准入，原决定inconclusive。98请求/代理USD0.18567348，原账本5156–5253全结算。两候选存在真实断言失败，行为review均不确定；没有新增收益或Creation Efficiency结论。
+- 模型源码25383ae6已完成真实G1/G2：同一自主task_strategy两次提交、两对4次任务，候选均未准入，原决定inconclusive。98请求/代理USD0.18567348，原账本5156–5253全结算。两候选存在真实断言失败，行为review均不确定；没有新增收益或Creation Efficiency结论。
 - 真实运行暴露日志晚结算导致FileRef失效、重复开发暴露掩盖错误、CTRF缺失raw_status三项。24b3effc修复为不可变日志捕获、暴露幂等及断言拒绝兼容；通用`accumulate_evolution_feedback`支持原决定FileRef约束的零模型恢复。原失败保留，G5重放22条经历、第三视图22条、4份独立输入，快照不变，模型0。
 - 原始运行和恢复已关联私有`evolution-core-003-evidence.tar`，不含dsh凭证目录或.env。详见[本轮真实记录](../experiments/evolution-core-20261105-003.md)。真实运行与恢复分别用code-evolution-core-005/006，禁止覆盖它们或重写原状态。
 - 下一步优先审阅通用边界、动作review的返回可靠性，再在原frontier owner开展局部Builder后继试验。只存在同任务两次Builder尝试时不作跨任务独立证据；不为追求成功继续手工改论文解析细节。PR156仍草稿，不合并/部署。

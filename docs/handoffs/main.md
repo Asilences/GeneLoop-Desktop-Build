@@ -3,7 +3,7 @@
 - 已完成：通用调查、候选路由与反馈生命周期在`src/adapters/evolution_cycle.py`；Paper特定证据、oracle与评价留在`scenarios/paper_proofreading/evolution_adapter.py`。脚本只配置启动，Builder输入可选，原能力与新旧经历连续保留。原则已写入AGENTS、接口和通用协议。
 - 分支`codex/evolution-overnight-20261105`，最终代码`24b3effc`，PR156草稿；未合并、部署。真实模型运行使用`25383ae6`独立快照，修复后仅零模型恢复，不覆盖原记录。
 - 已验证：定向192、本地3010 Python/1662 Node、Linux356通过；最终代码smoke、Motif、RSI、效率RSI和RAE均通过，全部为诊断检查。第二最小Adapter证明相同Core可接不同receiver和反馈，不代表场景收益。
-- 真实结果：003自主提出2个task_strategy候选、完成4次评价任务，均未准入；98请求，代理USD0.18567348，原决定inconclusive。G5修复恢复22条经历，第三次续接仍22条，4份独立输入，原快照保持。见[真实记录](../experiments/evolution-core-20261105-003.md)。
+- 真实结果：003两次提交同一task_strategy、完成4次评价任务，均未准入；98请求，代理USD0.18567348，原决定inconclusive。G5修复恢复22条经历，第三次续接仍22条，4份独立输入，原快照保持。见[真实记录](../experiments/evolution-core-20261105-003.md)。
 - 数据与权限：原始来源、驱动、日志、费用和恢复证据保存在忽略的`.local/debug/evolution-artifact-routing-20261105/`；原账本不清零，原数据不改写，新机制默认研究模式。旧C属于frontier owner，两份Builder资料是同任务重试，不拼接为独立Paper证据。
 - 接手下一步：先核对动作reviewer返回可靠性；在原frontier owner接真实Builder策略评价，观察后继构造行为和完整投入；Paper仍仅task_strategy，其他产物pending，不宣称净收益或Creation Efficiency。
 - 回退：停止使用独立研究入口即可，生产路径未接管。远端检查和账户计费状态需按当前PR头核对，不用本地回归代替CI。
