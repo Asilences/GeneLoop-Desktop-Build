@@ -1,4 +1,4 @@
-> 2026-11-02落地更新：Source已完成真实模型Compose、新Runtime渲染、独立检查、本地版本保存及新任务复用；正常取消路径已实测。当前是单场景实验入口，未部署或证明持续收益。后续优先补共同改进协议、流程控制器、C进入Builder并参与D构造，以及失败/贡献反馈；机制验收后再考虑聊天入口，丰富实验后补。入口与证据见[当前交接](handoffs/efficiency-rsi.md)。
+> 2026-11-02落地更新：Source已完成真实模型Compose、新Runtime渲染、独立检查、本地版本保存及新任务复用；正常取消路径已实测。当前是单场景实验入口，未部署或证明持续收益。后续优先补共同改进协议、流程控制器、C进入Builder并参与D构造，以及失败/贡献反馈；机制验收后再考虑聊天入口，丰富实验后补。入口与证据见[当前交接](../../handoffs/efficiency-rsi.md)。
 
 # 效率驱动 RSI：实施任务表
 
@@ -36,7 +36,7 @@ T7基本观测与反馈升级为本轮P0；复杂价值估计与再投资对照�
 |---|---|---|---|---|
 | T0 / 已完成 | 主集成 + 三个子智能体 | 核对 main/PR117、保留旧工作、代码审计、本文 | 无 | 当前目录处于新主线基线，旧工作可恢复；现有能力与缺口有代码依据 |
 | T1 / 基础已实现 | `capability_contract` | 最小 Capability 契约、旧能力映射；已新增 `schemas/capability-v1.schema.json`、`src/adapters/capability_contract.py/.ts` 与专用测试 | T0；与 T2 对齐身份和证据字段 | Python/TS 一致读取；先映射 Source Program 与另一既有后端；旧 ID/证书/库字节不变；错误摘要、跨 owner、缺依赖拒绝 |
-| T2 / 离线已实现 | `evaluation_protocol` | 效率与可达性评价协议、全成本测量；已新增 `docs/efficiency-rsi-evaluation.md`、`schemas/efficiency-rsi-study-v1.schema.json`、`src/adapters/efficiency_rsi_measurement.py` 及测试 | T0；与 T1 对齐契约 | 成功/失败四种组合、未知费用、预算耗尽、重复请求、所有失败尝试均保留；独立评估者不受 Builder 修改 |
+| T2 / 离线已实现 | `evaluation_protocol` | 效率与可达性评价协议、全成本测量；已新增 `docs/research/rsi/efficiency-rsi-evaluation.md`、`schemas/efficiency-rsi-study-v1.schema.json`、`src/adapters/efficiency_rsi_measurement.py` 及测试 | T0；与 T1 对齐契约 | 成功/失败四种组合、未知费用、预算耗尽、重复请求、所有失败尝试均保留；独立评估者不受 Builder 修改 |
 | T3 / 内核已实现 | `runtime_migration` | 固定依赖闭包、真实子能力执行与回执；已新增 `src/adapters/capability_runtime.ts` 及测试；必要旧 Source bridge/MCP 接线由此角色独占 | T1 契约冻结 | 固定版本真实调用至少两个子能力；输出参与后继；版本漂移/权限失效/取消阻止新调用；不重放已发生的外部副作用 |
 | T4 / P0 | `runtime_migration`，主集成协助 | 新隔离研究 runner，拟新增 `scripts/run-efficiency-rsi.py`；复用现有 Harness、场景执行和成本接口 | T1/T2/T3 | 同题新旧路径在独立会话/目录真实执行；完整配置和账本归属；取消/失败可追溯；不以换 arm 名或历史成品冒充新路径 |
 | T5 / 离线部分已实现 | `capability_contract` | Compose 优先、Specialize 随后；已新增 `src/adapters/capability_builder.py`、`scripts/build-capability.py` 及测试 | T1；真实联调需 T3/T4 | 模型自主提出组合和必要胶合逻辑；程序实际调用固定版本；C 经认证供下一轮构造 D；保留无解和修复，不能只有 prompt 中的引用 |

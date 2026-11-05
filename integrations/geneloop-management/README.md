@@ -1,4 +1,4 @@
-> 历史迁移归档：本目录保留此前分支变更的原补丁与摘要；不是当前 main 的安装方式。当前集成见 `docs/management-local.md`，不要把此旧补丁直接应用到新 main。
+> 历史迁移归档：本目录保留此前分支变更的原补丁与摘要；不是当前 main 的安装方式。当前集成见 `docs/product/files/management-local.md`，不要把此旧补丁直接应用到新 main。
 
 # GeneLoop /management 原始接入补丁
 

@@ -155,9 +155,9 @@ PPT已通过`scenarios/ppt_master/capability_adapter.py`接入公共`CapabilityI
 File 公共种子的历史 `runtime_source` 作为来源记录保留，安装不再要求它与当前整份源码快照相同。Python 安装路径使用已有 `policy_current()` 核对当前工具契约与执行版本；TypeScript 验证发布载荷与当前注册表源码绑定，实际接管仍核对任务的工具契约、执行版本和权限。证书及旧库载荷不改写。
 ## F02 执行与更新协议（审核候选）
 
-新增显式 opt-in 的 `geneloop.rsi/v1` 信封、Python 离线校验/导出及 TypeScript 在线准入/更新接缝；共同例子、最短命令、可信宿主要求与兼容表见 [F02 协议说明](rsi-protocol-v1.md)。运行 `npm run rsi:demo` / `npm run rsi:check`。当前只验证局部计数和协议接缝，候选检索、自动学习、生产适配和实际净收益未据此成立；旧库证书不能由新信封自动升级。
+新增显式 opt-in 的 `geneloop.rsi/v1` 信封、Python 离线校验/导出及 TypeScript 在线准入/更新接缝；共同例子、最短命令、可信宿主要求与兼容表见 [F02 协议说明](research/rsi/rsi-protocol-v1.md)。运行 `npm run rsi:demo` / `npm run rsi:check`。当前只验证局部计数和协议接缝，候选检索、自动学习、生产适配和实际净收益未据此成立；旧库证书不能由新信封自动升级。
 
-2026-10-25 补充显式机会评估/启动/配对验证：Python `assess_opportunities`、`evaluate_optimization`，TS `startRsiOptimization`、`publishOptimizedRsiUpdate`。最短入口 `npm run rsi:optimize`；[输入信任、成本公式与组件责任](rsi-optimization-v1.md)明确证据不足不启动，以及先独立效果审核再通过原认证。当前 v1 尚未冻结，新增六类 `optimization_*` 记录；没有迁移旧认证、改上游 Harness 或生产入口。
+2026-10-25 补充显式机会评估/启动/配对验证：Python `assess_opportunities`、`evaluate_optimization`，TS `startRsiOptimization`、`publishOptimizedRsiUpdate`。最短入口 `npm run rsi:optimize`；[输入信任、成本公式与组件责任](research/rsi/rsi-optimization-v1.md)明确证据不足不启动，以及先独立效果审核再通过原认证。当前 v1 尚未冻结，新增六类 `optimization_*` 记录；没有迁移旧认证、改上游 Harness 或生产入口。
 
 ## 不限额Web与模型容量（2026-10-20）
 
@@ -181,7 +181,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 
 ## 正式网站服务生命周期（2026-10-19）
 
-`npm run service -- <start|status|check|restart|rollback>` 通过 `scripts/project.mjs` 调用 `scripts/geneloop_service.py`。Linux 私有计划 version=1 指定 owner/gateway 配方和持久路径，使用 `GENELOOP_SERVICE_CONFIG` 或 `--config`；不通过 HTTP 接收启动配置，不输出凭证。`start` 幂等，认证同步与健康检查强制执行；`restart`/`rollback` 校验现有进程身份、活动任务和持久路径，启动失败尝试上一份冻结计划。模型预算服务和累计账本不在其启停范围。准备场景配置/证书和维护窗口仍须按[统一流程](service-lifecycle.md)完成，内部检查不能代替公网与场景验证。
+`npm run service -- <start|status|check|restart|rollback>` 通过 `scripts/project.mjs` 调用 `scripts/geneloop_service.py`。Linux 私有计划 version=1 指定 owner/gateway 配方和持久路径，使用 `GENELOOP_SERVICE_CONFIG` 或 `--config`；不通过 HTTP 接收启动配置，不输出凭证。`start` 幂等，认证同步与健康检查强制执行；`restart`/`rollback` 校验现有进程身份、活动任务和持久路径，启动失败尝试上一份冻结计划。模型预算服务和累计账本不在其启停范围。准备场景配置/证书和维护窗口仍须按[统一流程](operations/service-lifecycle.md)完成，内部检查不能代替公网与场景验证。
 
 ## PPT/PPTX 风格输入（2026-10-18）
 
@@ -197,7 +197,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 
 ## PDF 上传 OCR 与图片输入（2026-10-18）
 
-- `sceneAttachmentContext` 在已验证的本任务原件上运行公共 PDF 读取器；每页返回原件 SHA、页号、文字来源、OCR 状态和视觉覆盖。文字层直接读取，扫描页自动 OCR；PPT/Paper 的版本化逐页工具使用同一读取器。完整约定见[附件输入](attachment-input-behavior.md)。
+- `sceneAttachmentContext` 在已验证的本任务原件上运行公共 PDF 读取器；每页返回原件 SHA、页号、文字来源、OCR 状态和视觉覆盖。文字层直接读取，扫描页自动 OCR；PPT/Paper 的版本化逐页工具使用同一读取器。完整约定见[附件输入](product/web/attachment-input-behavior.md)。
 - `GENELOOP_PDF_OCR_ROOT/tessdata` 只保存固定摘要的 `eng`、`chi_sim`，由 `scripts/install-pdf-ocr.py` 安装。成员部署使用 `pdfOcrRoot` 验证后只读挂载；文件解析子进程不继承模型密钥。
 - 辅助图像分析固定 Flash Off，整页像素连同图注、当前/相邻正文及独立于当前问题的来源观察指令进入 `/v1/vision/<owning-session>/chat/completions`。账号网关检查该账号持有的会话，broker 映射到已激活 task，预算 gate 验证内联 JPEG、模型与无工具请求。只有此路由允许 Pro 任务使用辅助 Flash；正常模型请求仍必须与任务确认模型一致。
 - 图片分析与最终回复同属原任务计费；账本回执保留实际 `model` 与 `kind=pdf_vision`。取消可中断准备过程；已发生的上游请求继续结算。视觉分析仅为来源绑定的模型观察，不可作为 Motif 可复用的科学判断或独立事实认证。
@@ -239,7 +239,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 - `ppt_master` 的 provider-length 恢复观察原生 finish reason；仅在 `max-tokens` 或该截断恢复中的 tool-calls 结束时，通过 Harness steering 续做同一任务。记录 `provider_length_continuations`，取消/权限检查及累计预算保持。该能力两侧相同，不计为 verified skip，也不以 task completed 单独证明 PPT 已生成。
 - Web 白名单包括完整 21 工具及 `read_pending_plan` / `repair_pending_plan`；草稿读取限明确的 1–5 页，更新针对旧版本页号，返回新版本。宿主真实交付后不重复执行原子链。Web 的修复次数由原任务预算控制；CLI 默认有限次数保持兼容。无修改重试、并发未确认结果、来源/权限/实现/旧版本变化仍拒绝。
 - PPT 的 `attachment_context_strategy=versioned_mcp_sources`：完整用户文字、附件原件及来源回执保留，由实际 MCP 读取，不再同时附加一份完整提取文本。其他场景保留只读提取并通过原生已记录消息传给模型，以满足模型请求可重建与只读约束；网页投影只显示用户文字及文件卡片，隐藏带真实文件卡片的自动提取块，适用于新旧记录。不得在 `llm/stream` 修改已冻结的请求或消息。
-- 已绑定附件的原生 Chat 再上传新资料时，通过现有单路任务机制创建独立执行目录，继续同一公开对话；重新核验并复制同一父对话的旧原件，与新附件合并。同名不同版本单独命名，旧任务范围不变。跨场景继承包含 DOCX；普通 Chat 的任务期代码交付和双栏对应侧交付经不可变索引核验后带入。网页排队消息仅投影用户正文和文件卡片，模型证据保留。详见[附件输入与视觉边界](attachment-input-behavior.md)。
+- 已绑定附件的原生 Chat 再上传新资料时，通过现有单路任务机制创建独立执行目录，继续同一公开对话；重新核验并复制同一父对话的旧原件，与新附件合并。同名不同版本单独命名，旧任务范围不变。跨场景继承包含 DOCX；普通 Chat 的任务期代码交付和双栏对应侧交付经不可变索引核验后带入。网页排队消息仅投影用户正文和文件卡片，模型证据保留。详见[附件输入与视觉边界](product/web/attachment-input-behavior.md)。
 - `ppt_read_v2` / `ppt_uploaded_sources_v2` 加载本轮真实轨迹编译的只读结构，支持来源读取与已选成稿页读取。来源工具绑定批准文件 SHA；成稿页工具绑定有序来源版本摘要，另外由实际适配器核验 deck 文件 SHA 与选定页投影。语义选源、选页、内容、修改及所有写步骤由模型/原工具负责。
 - 新库锁定完整 schema 变体、代码、两项训练决定和独立认证证据；审查完成与质量通过分别记录。`quality_cost_promoted=false`，不把结构认证、复用次数或普通脚本的请求减少当作同质成本优势。旧库的原始 library/manifest/certificate 不改，兼容记录单列。
 
@@ -271,7 +271,7 @@ Web 每次发送从本轮序列化文本的前导 `/data`、`/ppt`、`/paper` �
 
 2026-10-14 四分支兼容：`offeredSchemaMatches` 保留第四参数的冻结 Schema 摘要校验；`proposeReadyBatch.closedContinuation` 仅补充论文的闭合结构判定，授权计划仍由独立的 `approvedContinuation` 检查，失效权限不能被论文回调或相似度救回。成员场景的 `/app/.local/web/sessions` 只有在部署根与 `/user/tasks` 的设备/inode 完全相同时才进入原生文件允许范围。详情及验收层级见 [整合记录](debug/four-scenario-main-integration-20261014-v1.md)。
 
-成员账号的文件与工作区 API 在独立 `bubblewrap` 后端中额外校验：`workspaceFiles/{read,readAll,readBytes,readRelated,stat,list}` 经公开 Fetch 路由限制到 header 派生的会话工作区；`workspace/create` 与 `directoryPicker/{list,createDirectory}` 限制到该账号的 workspace/sessions 目录。路径按 realpath 校验，拒绝父目录与符号链接越界；失败以原生 RPC envelope 的 `gateway/forbidden` 返回。公开 `workspaceFileScope` Lookup 限制包括 WebSocket changes feed 在内的根目录，未知/跨账号 Session 不得到 scope。详见 [账号网关](harless-account-gateway.md)。
+成员账号的文件与工作区 API 在独立 `bubblewrap` 后端中额外校验：`workspaceFiles/{read,readAll,readBytes,readRelated,stat,list}` 经公开 Fetch 路由限制到 header 派生的会话工作区；`workspace/create` 与 `directoryPicker/{list,createDirectory}` 限制到该账号的 workspace/sessions 目录。路径按 realpath 校验，拒绝父目录与符号链接越界；失败以原生 RPC envelope 的 `gateway/forbidden` 返回。公开 `workspaceFileScope` Lookup 限制包括 WebSocket changes feed 在内的根目录，未知/跨账号 Session 不得到 scope。详见 [账号网关](operations/harless-account-gateway.md)。
 
 ## GeneLoop Web 产品身份与消息展示（2026-10-15）
 
@@ -748,7 +748,7 @@ V11.2 的 `evidence-focus` 几何选择增加原图面积下限 `min(10平方英
 
 Web 会话归属使用持久 `DSH_HOME` 与可信 `principal` 作为 scope，记录在该 Home 的 `harless-web-ownership-*.json`，不再随代码部署的 `output` 变化。未提供 Home 时保留旧 output scope。记录中的 `sessions/bound` 保持原义，新增可选 `chat_only_sessions` 必须是 `sessions` 的子集；任务索引与模型选择仍使用原运行 scope，不迁移预算或重放任务。
 
-私有 policy 可选 `ownership_legacy_outputs:string[]`，只接受管理员配置的绝对路径。自动迁移当前 output，另只导入与同一个 Home 匹配的旧 scope；不能按客户端 session ID 或标题认领。成员启动器将此列表清空。跨旧 output 导入的已锁定会话以无工具文字模式恢复，`GET /api/harless/settings` 返回 `conversation_only:true`，附件请求返回 `409 new_session_required`。没有逐轮预算 broker 的入口不因此获得多任务复用权限。操作说明见 [账号网关](harless-account-gateway.md)，验证见 [恢复实验](debug/chat-session-recovery-20261014-v1.md)。
+私有 policy 可选 `ownership_legacy_outputs:string[]`，只接受管理员配置的绝对路径。自动迁移当前 output，另只导入与同一个 Home 匹配的旧 scope；不能按客户端 session ID 或标题认领。成员启动器将此列表清空。跨旧 output 导入的已锁定会话以无工具文字模式恢复，`GET /api/harless/settings` 返回 `conversation_only:true`，附件请求返回 `409 new_session_required`。没有逐轮预算 broker 的入口不因此获得多任务复用权限。操作说明见 [账号网关](operations/harless-account-gateway.md)，验证见 [恢复实验](debug/chat-session-recovery-20261014-v1.md)。
 
 ### 场景快捷词、绑定和工作区（2026-10-14）
 
@@ -1250,7 +1250,7 @@ sidecar新增`captureCurrentReport:true`（默认关闭），同时需要`reuseL
 - 覆盖、永久删除和工作区外操作经原生 approval 服务逐计划确认，证明绑定任务摘要、当前树、计划摘要及恢复方向。同一确认的中断重试不再次询问；已拒绝计划留存拒绝记录，不重复弹窗。低风险副本操作直接执行，MCP 仍核对状态、效果和恢复日志。
 - 公共 `file-v*` 种子只含当前重新认证的 IR 与脱敏摘要；原资料、轨迹、私有证书、费用及旧授权不发布。安装与在线执行均核验源码/目录版本，账号后续学习相互独立，未认证或失配时回普通 Harness。
 
-文件内容工具、质量v7、复杂控制流和历史迁移契约见 [使用说明](management-local.md) 与文件场景 `docs/changes/`；本次移植不将所有自然语言目标视为可自动严格验收，未完整解析的目标继续标记复核。
+文件内容工具、质量v7、复杂控制流和历史迁移契约见 [使用说明](product/files/management-local.md) 与文件场景 `docs/changes/`；本次移植不将所有自然语言目标视为可自动严格验收，未完整解析的目标继续标记复核。
 
 文件场景通用 MCP 的注册目录、请求、回执和任务文本均显式 UTF-8。下游 Python MCP 强制 `PYTHONUTF8=1` / `PYTHONIOENCODING=utf-8`，补传 Windows 必需系统变量；凭证仍只通过既有已登记 provider 的显式环境引用绑定，不整包转发主机环境。实际 native MCP 的中文目标/产物往返与独立源版本认证保留在本轮实验记录。
 
@@ -1371,7 +1371,7 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 
 旧 Source 场景新增 `FrozenSourceLibrary`：一次读取并验证任务库字节，后续 catalog/materialize 使用同一字节，runner 保存私有 `source-library.frozen.json`，通过 `REMOTION_SOURCE_LIBRARY_SHA256` / `REMOTION_SOURCE_LIBRARY_DIGEST` 绑定子进程。bridge 保留旧 `library` 路径参数，并支持冻结字节及期望版本；库限制为4 MB且拒绝重复program ID；返回 library 原字节 SHA、原生 digest、program identity 和 certificate digest。`phase=materialized` 只表示源码实例化；场景完成写入/渲染并核对 source_version 后才返回 `source_program_render_receipt_v1`，关联调用 ID、源码及视频摘要。失败留审计，不能生成成功回执。此旧路径已由后述Source Capability adapter接入新内核；其他后端仍待接入。
 
-效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
+效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](research/rsi/efficiency-rsi-evaluation.md)。
 
 当前 registry 为 `efficiency_rsi_registry_v2`，报告为 `efficiency_rsi_measurement_v2`；旧 registry v1 不能直接用于新口径。`StudyRequestRegistry(plan, journal, create=True)` 由宿主在执行前登记 owner，`CumulativeProposalGate(..., study_registry=registry)` 在真实 booking 边界持久绑定 request→attempt/overhead；`export(provider_request_refs)` 对照独立完整请求库存导出。只读 CLI 为 `scripts/export-efficiency-rsi-registry.py`。此接线为可选研究接口，其他 runner 未自动接入。全 cell 支出判预算，双方首成功获取成本算条件节省；无界/未知/未关闭结果只保留质量观察，不计有限预算能力增益。十进制金额边界与精确字符串、原账本保留及故障边界见上述协议。
 
@@ -1389,7 +1389,7 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 
 ## Capability 离线改进流程（2026-11-02）
 
-共同流程由 `src/adapters/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
+共同流程由 `src/adapters/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](research/capability/capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
 
 Store新增`constructionLibrary(seed)`：读取并核验提交历史，保留原语和已发布根，输出`capability_construction_library_v1`及共用Capability Snapshot。完整证据验证失败则拒绝；新候选不能靠模型自报认证进入目录。每个新机会重新读取，修复链内冻结目录。新记录只用于实验改进流程，不伪装成旧`reuse_form`协议或授予生产权限。
 
@@ -1399,12 +1399,12 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 
 ### 模型侧精简构造接口
 
-`capability_compose_draft_v1`由宿主固定版本：模型提交`steps:[{id,use,args}]`及`output`；无预设接口时另提交`contract`。use是冻结目录别名，普通对象/数组及`$input/$step/$literal`编码数据流。宿主展开为原`capability_compose_proposal_v1`后复用原编译/执行/认证，旧完整proposal仍可校验。别名映射与格式纳入修复上下文检查；诊断携带展开proposal坐标和通过的检查。离线重放入口与语法见[共同协议](capability-improvement-v1.md)。
+`capability_compose_draft_v1`由宿主固定版本：模型提交`steps:[{id,use,args}]`及`output`；无预设接口时另提交`contract`。use是冻结目录别名，普通对象/数组及`$input/$step/$literal`编码数据流。宿主展开为原`capability_compose_proposal_v1`后复用原编译/执行/认证，旧完整proposal仍可校验。别名映射与格式纳入修复上下文检查；诊断携带展开proposal坐标和通过的检查。离线重放入口与语法见[共同协议](research/capability/capability-improvement-v1.md)。
 
 
 ### 正常记录、反馈与执行选择（2026-11-02续）
 
-`capability_improvement_plan_v1`新增可选`discovery`和`feedback_directory`，jobs允许为空但须提供discovery；job可携带`source_evidence/feedback_key/execution_scope`。Source适配器复用旧源码见证采集，或消费带独立QA绑定的Capability execute轨迹；生成job进入原控制器。schema与字段示例见[共同协议](capability-improvement-v1.md)。
+`capability_improvement_plan_v1`新增可选`discovery`和`feedback_directory`，jobs允许为空但须提供discovery；job可携带`source_evidence/feedback_key/execution_scope`。Source适配器复用旧源码见证采集，或消费带独立QA绑定的Capability execute轨迹；生成job进入原控制器。schema与字段示例见[共同协议](research/capability/capability-improvement-v1.md)。
 
 `CapabilityFeedback`持久化执行/构造/尝试证据，向Builder提供稳定别名下的展示顺序，向宿主已准入的执行候选提供排序，并影响机会准入与队列；未知收益/费用仍为null。withdraw传递过滤依赖闭包且保存恢复清单，archive只退出执行入口，恢复需新任务独立验证。
 
@@ -1417,7 +1417,7 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 
 共同发现器改为接收可信inspector，不枚举固定场景kind；相同输入失败/成功记录都保留，支持数按不同输入计。发布失败的repairable由宿主场景给出，不在核心扩充场景错误码。`completeCapabilityCycle`共用真实执行、严格Store发布、不同任务/输入/真实路径后继验证；`publicationVerdict`分离QA传输绑定与严格发布字段，未知字段不丢弃。
 
-构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。模型不能直接安装原语；宿主可显式配置下述学习路由。接口、样例和当前边界见[跨场景协议](capability-scenes-v1.md)。
+构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。模型不能直接安装原语；宿主可显式配置下述学习路由。接口、样例和当前边界见[跨场景协议](research/capability/capability-scenes-v1.md)。
 
 ### 原生材料登记与执行轨迹投影（2026-11-02续）
 
@@ -1431,7 +1431,7 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 
 新增`script_motif` legacy_ref backend，由`buildScriptCapabilities(path,owner,expectedSha256?)`经原生loader核验库、身份和证书。`runScriptCapability`使用可信`script_capability_task_v1`，沿原沙箱执行，返回绑定native receipt的`script_capability_trace_v1`。公共材料登记支持该后端。raw bytes的旧`mapLegacyLibrary`仍只映射Source/Artifact；Script应使用原生路径入口核验执行版本。
 
-论文场景共享公共改进控制器和发布生命周期。计划、输入/输出、获取路由及限制见[场景协议](capability-scenes-v1.md#论文-script-接入2026-11-02续)。旧认证编译哈希改为来源记录，执行版本可按仓库精确白名单兼容；不改旧证书、不开放未知执行版本。
+论文场景共享公共改进控制器和发布生命周期。计划、输入/输出、获取路由及限制见[场景协议](research/capability/capability-scenes-v1.md#论文-script-接入2026-11-02续)。旧认证编译哈希改为来源记录，执行版本可按仓库精确白名单兼容；不改旧证书、不开放未知执行版本。
 ## 视频网页发布程序接口（2026-11-02）
 
 video_program_v1 通过原 source-program runtime 加载已接受的发布形式。两侧按实际 mode 派生工具表并核对完整 schema；Baseline 清空 Motif 环境变量，execute 侧加载类型化程序。video_program_reused 是已核对当前交付的审计事件，前端 program_reuses 与 verified_skips 分开。部署字段及边界见[视频双路记录](experiments/video-paired-motif-20261102.md)。
@@ -1475,7 +1475,7 @@ Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{step
 
 `source_callable_interfaces` 对精确 Script JSON ABI 展示领域对象参数/返回值，宿主恢复原生 `value` 包装，完整原契约和映射保存在审计记录。组合能力自身的业务 `value` 字段不剥离。新研究 `creation_value_v1` 使用同一 `source_primary_v1` 作者视图：模型只见语义接口，完整版本、原生包装和证据仍留在 `authoring-context-audit.json`；旧 JSON、旧作者视图和完整普通程序入口保留。C说明卡只提供信息，只有目录中的alias能调用。
 
-新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](recursive-efficiency-protocol-v2.md)。
+新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](research/evolution/recursive-efficiency-protocol-v2.md)。
 
 ### 能力更新后的机会重新评价（2026-11-03，默认关闭）
 
@@ -1492,7 +1492,7 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 单次Harness提案须由研究宿主提供有限预算gate；可通过`opportunity_gate_factory`在该次提案期间持有原账本锁，或在同一研究gate内提供`opportunity_gate`。缺失时不调用模型。原平台null、累计账本与正常任务授权不变；当前不生成节余信用。
 
-私有账本保留`claim/request/response/decisions/result`及每次构造outcome。预期依赖和编译依赖不等于实际调用；只有绑定当前候选的Runtime trace可填actual_dependencies，缺失为null。真实任务证据的零模型重放入口为`examples/capability-scenes/replay-opportunities.py`，固定旧提案/算法不能作为自主目标发现或创造效率收益证据。详细设计及验收见[协议](capability-aware-opportunities-v1.md)。
+私有账本保留`claim/request/response/decisions/result`及每次构造outcome。预期依赖和编译依赖不等于实际调用；只有绑定当前候选的Runtime trace可填actual_dependencies，缺失为null。真实任务证据的零模型重放入口为`examples/capability-scenes/replay-opportunities.py`，固定旧提案/算法不能作为自主目标发现或创造效率收益证据。详细设计及验收见[协议](research/capability/capability-aware-opportunities-v1.md)。
 
 ### 公共构造与原生材料接线（2026-11-03续）
 
@@ -1510,7 +1510,7 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 
 ### 网页大文件传输（2026-11-03）
-`POST /api/harless/uploads?action=begin|chunk|complete|abort&session=...` 是已登录所属会话的分块传输接口。begin 提交名称/总字节并取得随机上传 ID；chunk 携 ID/offset 顺序提交最多 8 MiB，完全相同的最近块可幂等重放；complete 要求收到声明全部字节并调用原生 fileUploads.uploadStream，返回原生 `{ok:true,value:{receiptId,file}}`；abort 只清理该会话的上传。仍校验来源、会话归属、长度和取消；不接受私有对照子会话。完整容量规则见 [upload-rules](upload-rules.md)。
+`POST /api/harless/uploads?action=begin|chunk|complete|abort&session=...` 是已登录所属会话的分块传输接口。begin 提交名称/总字节并取得随机上传 ID；chunk 携 ID/offset 顺序提交最多 8 MiB，完全相同的最近块可幂等重放；complete 要求收到声明全部字节并调用原生 fileUploads.uploadStream，返回原生 `{ok:true,value:{receiptId,file}}`；abort 只清理该会话的上传。仍校验来源、会话归属、长度和取消；不接受私有对照子会话。完整容量规则见 [upload-rules](product/web/upload-rules.md)。
 ## 构造经历与做法重新选择（2026-11-03）
 
 离线`capability_improvement_plan_v1`可选：
@@ -1563,7 +1563,7 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 0.1.3桌面协议转发按Electron/Chromium提供的可信 `initiatorOrigin` 核对服务器同源，再恢复转发中的 `Origin`；不从页面可控的referrer推断、不允许跨源或不透明源冒用服务器来源。未携带任何来源的有副作用请求同样拒绝，显式 `credentials:omit` 仍被尊重。原服务器网关的Origin检查不修改；网页登录与桌面登录使用同一账号API和服务器配置，Cookie各自保存。`npm --prefix apps/desktop run smoke:account` 用本机临时合成账号验证表单登录、密码拒绝、刷新与退出，不代替正式账号验收。
 
-当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](desktop.md)。
+当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](product/desktop/desktop.md)。
 
 
 ## 匿名双栏展示与审计绑定（2026-11-04）
@@ -1576,4 +1576,4 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 ## 条件化策略演化（2026-11-04）
 
-版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。
+版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](research/evolution/strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。

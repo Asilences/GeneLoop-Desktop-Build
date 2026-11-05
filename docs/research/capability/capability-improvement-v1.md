@@ -45,7 +45,7 @@ Source检查器支持宿主冻结的 `outputs[].result_path`，用于从嵌套�
 
 免费诊断：`npm run rsi:efficiency:check`，覆盖候选排除、旧发布证据损坏、目录累积、修复/暂缓、已提交失败禁止重放，以及构造贡献与执行贡献分离。诊断的合成适配器不代表真实模型行为。
 
-真实验收需观察C发布后自动进入Builder、模型自行选择C构造D、D实际执行并独立验证；未选择C、构造失败、负收益全部保留。完整机制收益仍需后续匹配质量与资源的对照。本轮真实运行状态见[实验记录](experiments/efficiency-rsi-recursive-20261102.md)。
+真实验收需观察C发布后自动进入Builder、模型自行选择C构造D、D实际执行并独立验证；未选择C、构造失败、负收益全部保留。完整机制收益仍需后续匹配质量与资源的对照。本轮真实运行状态见[实验记录](../../experiments/efficiency-rsi-recursive-20261102.md)。
 
 ## 构造接口与定位修复（2026-11-02续）
 
@@ -65,7 +65,7 @@ node scripts/project.mjs python scripts/replay-capability-proposal.py \
   --output "$NEW_PRIVATE_OUTPUT" --repair-object-wrappers
 ```
 
-可选开关只在独立诊断副本中，为已经带类型的子绑定补缺失的对象包装，保存变更路径并重新编译；不改选择、绑定或原始文件，不修补非法JSON。该修改不是Agent自主修复。重放结果见[短记录](debug/efficiency-rsi-authoring-replay-20261102.md)。
+可选开关只在独立诊断副本中，为已经带类型的子绑定补缺失的对象包装，保存变更路径并重新编译；不改选择、绑定或原始文件，不修补非法JSON。该修改不是Agent自主修复。重放结果见[短记录](../../debug/efficiency-rsi-authoring-replay-20261102.md)。
 
 
 ## 正常记录到机会、双价值到选择（2026-11-02续）

@@ -2,7 +2,7 @@
 
 > **状态**：G0 评审稿<br>
 > **Owner**：@jingyio｜**Reviewer**：第二位合作者<br>
-> **仓库路径**：`docs/research-contract.md`<br>
+> **仓库路径**：`docs/research/research-contract.md`<br>
 > **论文定位**：AI Agent 方法研究，以可复现的效率收益和自进化行为为核心，不以完成通用产品为前提。
 
 ## 1. 研究定位与问题

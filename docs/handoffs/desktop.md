@@ -99,4 +99,4 @@
 - 权限与预算：已授权桌面开发及测试真实API，平台费用/请求累计不限且原账本不得清零；本次未调用模型，费用0。没有外部发布、实际投稿或私人原件修改授权。
 - 回退与风险：旧0.1.5标签 `geneloop-desktop-v0.1.5-baseline`、分支 `codex/geneloop-desktop-baseline` 保持 `15af73e`，源码/安装包未改；冻结安装器SHA256 `7f34de8bd9b590424214c15a8d1a830b47aef5f0fc68f62849393765263cb006` 已重核。0.2.0未签名、无自动更新，不代表本机执行或任意未来服务器版本兼容。
 
-入口与复现见[桌面说明](../desktop.md)，本轮记录见[独立前端诊断](../debug/geneloop-desktop-independent-20261103.md)。旧版本历史通过Git保留。
+入口与复现见[桌面说明](../product/desktop/desktop.md)，本轮记录见[独立前端诊断](../debug/geneloop-desktop-independent-20261103.md)。旧版本历史通过Git保留。
