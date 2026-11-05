@@ -116,3 +116,5 @@
 修复局部模式工具描述仍要求两来源的不一致。只有被拒且未形成合法候选的尝试，默认结束改为inconclusive；显式proposal需要schema与证据校验通过的候选。结果新增completion_scope=investigation_only、investigation_decision和candidate_counts，独立验收、采用和收益继续读取原结果，不从completed推断。
 
 定向107项通过。本次更新的模型效果待新唯一快照验证，前述73次真实请求仍对应a3e96f59/81b6c306的旧Prompt。当前论文初始能力快照为空、没有Builder构造经历，不能仅靠新目标指令声称观测Creation Efficiency或新高层任务可行性。
+
+4a020696最终完整回归2977 Python/1662 Node通过，Linux308通过，smoke/Motif/RSI全通过，模型0；本地日志abstraction-prompt-full.log、abstraction-prompt-targeted.log及同前缀各检查日志，服务器快照code-paper-evolution-003/.local/linux-regression.log。后续只同步验证与交接文档。首次推送遇GitHub SSL_ERROR_SYSCALL，保留失败后按原分支重试。

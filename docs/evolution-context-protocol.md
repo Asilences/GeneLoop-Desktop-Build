@@ -228,8 +228,10 @@ G1/G2是首轮重点。先使用已有接收器完成可表达候选。多策略
 | T11 终止恢复 | null/0/缺失分别处理，步骤/期限终止，恢复保留已用额度与账本 |
 | T12 反馈闭环 | 新行为与评价能被下一轮查到，no_change分支也有正确终点 |
 
-矩阵已加入确定性回归，141项相关检查通过。真实自主行为、后继采用与测得收益分别验收，最新结果随实验记录追加。过程与历史证据见[集中审计](debug/evolution-artifact-routing-20261105.md)，推进顺序见[实施计划](changes/paper-semantic-evolution-20261105.md)。
+矩阵已加入确定性回归，145项相关检查通过。真实自主行为、后继采用与测得收益分别验收，最新结果随实验记录追加。过程与历史证据见[集中审计](debug/evolution-artifact-routing-20261105.md)，推进顺序见[实施计划](changes/paper-semantic-evolution-20261105.md)。
 
 ### 真实执行修复
 
 首轮原件读取通过evidence默认summary返回正文，完成门禁必须按实际返回content判断，不能要求调用者显式填写content。已经评价候选后仍可决定no_change，调查决定与隔离候选产物分别保存。重投影只改变FileRef路径时，不重开相同内容的已完成调查。修复保留原inconclusive记录，以原工具参数离线重放验证。
+
+用户Prompt审议后的4a020696补强效率/性能压力、成功经历与能力创造目标。调查结果的completion_scope为investigation_only，候选校验、独立验收、采用及效果分别记录；新版模型效果待真实验证。最终本地2977 Python/1662 Node、Linux308及smoke/Motif/RSI通过，模型0。
