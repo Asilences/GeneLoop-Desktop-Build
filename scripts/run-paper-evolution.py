@@ -21,6 +21,7 @@ from src.adapters.evolution_benchmark import BenchmarkHost
 from src.adapters.evolution_benchmark_gene import _skill
 from src.adapters.research_harness import ResearchHarness
 from src.adapters.rsi_quality import compare_research_outcomes
+from src.adapters.skillsbench_trial import task_manifest
 from scenarios.paper_proofreading.evolution_history import index_history, inspect_history, OWNER, SCOPE
 
 
@@ -53,10 +54,17 @@ def main():
         development_evidence=sealed['development'], history=[policy_ref],
         objective='Investigate these real historical task experiences and current available materials. '
                   'Autonomously choose whether any change would improve later work; preserving the current method is valid.')
+    root = args.history.resolve().parent / 'evaluation-tasks'
+    task_snapshots = {role: [task_manifest(path, task_id=path.name,
+        split='test' if role == 'evaluation' else 'training',
+        source_version='original-five-paper-historical-replay')
+        for path in sorted((root / role).iterdir())] for role in ('development', 'evaluation')}
     frozen = {'history': history_ref, 'policy': policy_ref, 'policy_values': policy,
               'snapshot': snapshot, 'model': 'deepseek-flash', 'reasoning_effort': 'off',
               'max_tokens': 393216, 'budget_usd': None, 'max_requests': None,
               'max_investigation_tool_calls': args.max_tool_calls, 'timeout_seconds': args.timeout_seconds,
+              'evaluation_task_snapshots': task_snapshots, 'initial_strategies': [],
+              'max_root_candidates': 2, 'max_repairs_per_root': 2,
               'source_code': file_ref(ROOT / '.research-code-snapshot.json')
                              if (ROOT / '.research-code-snapshot.json').is_file() else None,
               'data_role': 'historically_exposed_replay', 'supported_receivers': ['task_strategy'],
@@ -68,7 +76,6 @@ def main():
         save(output / 'result.json', {'status': 'preview', 'model_requests': 0})
         print(json.dumps({'status': 'preview', 'observations': len(entries)}))
         return
-    root = args.history.resolve().parent / 'evaluation-tasks'
     validation = sorted(path.name for path in (root / 'development').iterdir())
     evaluation = sorted(path.name for path in (root / 'evaluation').iterdir())
     feedback = CapabilityFeedback(output / 'feedback', OWNER)

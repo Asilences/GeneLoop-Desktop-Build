@@ -12,6 +12,16 @@ from .capability_contract import capability_digest
 from .capability_improvement import save
 
 
+def _content_identity(value):
+    """Reference locations may change when the same evidence is reprojected."""
+    if isinstance(value, list):
+        return [_content_identity(child) for child in value]
+    if isinstance(value, dict):
+        return {key: _content_identity(child) for key, child in value.items()
+                if not (key == 'path' and 'sha256' in value)}
+    return value
+
+
 SYSTEM = '''You are GeneLoop's Evidence-Grounded Evolution Agent.
 Investigate how current capabilities are used in actual execution and construction.
 Use the overview, search and read tools to choose your own local investigation.
@@ -76,7 +86,8 @@ def run_investigation(investigation, *, call_agent, handlers, output,
     directory.mkdir(parents=True, mode=0o700, exist_ok=False)
     identity = capability_digest({'scope': investigation.scope, 'snapshot': investigation.snapshot,
         'objective': investigation.objective,
-        'entries': sorted(ref['evidence']['sha256'] for ref in investigation._entries.values()),
+        'entries': sorted(capability_digest(_content_identity(json.loads(verify(ref['evidence']))))
+                          for ref in investigation._entries.values()),
         'history': sorted(row['reference']['sha256'] for row in investigation.history.values()),
         'sealed': sorted(ref['sha256'] for ref in investigation.sealed_evidence),
         'development': sorted(ref['sha256'] for ref in investigation.development_evidence),
@@ -265,11 +276,11 @@ def run_investigation(investigation, *, call_agent, handlers, output,
                     records = [json.loads(verify(ref)) for ref in tool_calls]
                     original_read = any(call['name'] == 'evolution_read' and call['status'] == 'succeeded'
                         and call['arguments'].get('kind') == 'evidence'
-                        and call['arguments'].get('section') == 'content' for call in records)
+                        and isinstance(call.get('result', {}).get('content'), str) for call in records)
                     supported_note = any(note['evidence_ids'] for note in investigation.notes)
                     if not original_read or not supported_note:
                         raise ValueError('evolution_no_change_investigation_incomplete: read original evidence and note support, or finish inconclusive')
-                if decision == 'proposal' and not submissions or decision == 'no_change' and submissions:
+                if decision == 'proposal' and not submissions:
                     raise ValueError('evolution_investigation_decision_submission_conflict')
                 finish = {'reason': arguments['reason'], 'submissions': len(submissions),
                           'decision': 'inconclusive' if exhausted else decision}

@@ -90,3 +90,11 @@
 主批次30次记录恢复提升为当前事实，后续从skeleton、质量与动作关联推进；旧逐论断搜索为历史。完整C,C,report拒绝与局部C→report成功按主线历史记录分别保留，本次未重跑。首轮优先G1/G2，后端和长期研究缺口分列pending。
 
 修订2私有快照、审议原文位于同问题私有protocol-review-v3目录。本次只编辑文档，新增模型请求0，源码及旧实验原件未修改。T1—T12为拟补检查矩阵，本次仅检查Markdown、链接和概念覆盖。文档仍待用户核查，未宣布冻结。
+
+## paper-evolution-20261105-001真实执行与门禁定位
+
+真实源码a3e96f59，前后3632文件一致。34次工具动作、1个真实策略、3次容器评价，原账本61请求/USD0.10151940代理观测费。最终inconclusive及3次结束拒绝保留。默认summary原本就返回content，门禁按参数字面判断导致误拒，修正为检查真实成功返回正文。另允许已试验候选后作维持决定，重投影FileRef仅路径变化不导致重访。修复回归103项通过，完整回归及原工具重放另追加。
+
+私有完整结果位于.local/debug/evolution-artifact-routing-20261105/server-results/paper-evolution-20261105-001，根result.json、agent/tool-*.json、candidate-evaluation-0/result.json及host/trials保留原字节。预热manifest在真实API前冻结了两份评价器/题面/环境摘要；新CLI进一步将其纳入effective.json。原记录不追改。
+
+本地受限沙箱的端口拒绝、Linux首次误列不存在测试文件的收集失败、GitHubAPI暂时EOF均留日志。允许回环端口后本地2971Python/1662Node通过，Linux纠正列表后302项通过。GitHub当前a3e96f59的job注解明确付款/消费额度导致未启动，steps为0。

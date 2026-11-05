@@ -204,3 +204,47 @@ def test_t9_shared_development_and_sealed_bytes_remain_sealed(tmp_path, data):
     service.expose_development()
     with pytest.raises(ValueError, match='sealed_evidence_excluded'):
         service._index_evidence([shared])
+
+
+def test_t12_default_evidence_read_and_evaluated_hypothesis_allow_no_change(tmp_path, data):
+    def agent(request, dispatch):
+        rows = dispatch('evolution_search', {'kind': 'experience'})['items']
+        identifiers = [row['id'] for row in rows[:2]]
+        evidence = dispatch('evolution_read', {'kind': 'experience', 'id': identifiers[0],
+                                             'section': 'evidence'})['items'][0]
+        read = dispatch('evolution_read', {'kind': 'evidence', 'id': evidence['id']})
+        assert read['content']
+        dispatch('evolution_note', {'hypothesis': 'Tested method has no measured advantage',
+                                   'evidence_ids': identifiers, 'next_questions': []})
+        submitted = dispatch('evolution_submit', {'candidate': candidate(identifiers),
+                                                 'observation_ids': identifiers})
+        assert submitted['status'] == 'submitted'
+        finished = dispatch('evolution_finish', {'reason': 'Neutral independent result, retain current method',
+                                                'decision': 'no_change'})
+        assert finished['status'] == 'finished'
+        return {}
+    result = run_investigation(make(tmp_path, data), call_agent=agent,
+        handlers={'construction_strategy': lambda *_: {'status': 'evaluated', 'effect': 'neutral'}},
+        output=tmp_path / 'default-read', require_no_change_evidence=True)
+    assert result['status'] == 'no_change'
+    assert len(result['submissions']) == 1
+    assert result['actual_adoption'] is None
+
+
+def test_t12_relocated_reference_does_not_repeat_completed_investigation(tmp_path, data):
+    original = json.loads(file_ref_value(data[1][0]['evidence']))
+    material = put(tmp_path / 'material.json', {'original': 'same bytes'})
+    original['projection_reference'] = material
+    data[1][0]['evidence'] = put(tmp_path / 'projection-one.json', original)
+    def agent(request, dispatch):
+        dispatch('evolution_finish', {'reason': 'No further supported change', 'decision': 'no_change'})
+        return {}
+    first = run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'first')
+    relocated = put(tmp_path / 'relocated.json', {'original': 'same bytes'})
+    original['projection_reference'] = relocated
+    data[1][0]['evidence'] = put(tmp_path / 'projection-two.json', original)
+    service = Investigation(data[0], data[1], 'study', tmp_path / 'again', inspector=inspect, catalog=data[2])
+    second = run_investigation(service, call_agent=lambda *_: pytest.fail('must reuse completed decision'),
+        handlers={}, output=tmp_path / 'second', prior_results=[file_ref(tmp_path / 'first/result.json')])
+    assert first['investigation_identity'] == second['investigation_identity']
+    assert second['status'] == 'revisit_skipped'
