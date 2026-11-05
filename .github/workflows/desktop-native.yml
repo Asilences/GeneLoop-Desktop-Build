@@ -9,6 +9,10 @@ on:
       timeout:
         type: number
         default: 50
+      packageMode:
+        type: choice
+        options: [installers, app]
+        default: installers
 concurrency:
   group: private-macos-checks
   cancel-in-progress: false
@@ -53,7 +57,7 @@ jobs:
       - name: Package on target architecture
         id: package
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
-        run: npm run dist
+        run: ${{ inputs.packageMode == 'app' && 'npm run pack' || 'npm run dist' }}
       - name: Verify ASAR runtime in packaged app
         if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         run: |
@@ -63,5 +67,19 @@ jobs:
           export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
           export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
           "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-remotion.mjs
+      - name: Verify ASAR PPT in packaged app
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        run: |
+          export ELECTRON_RUN_AS_NODE=1
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
+          export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
           "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
+      - name: Packaged DSH Agent start, tools and cancellation (no model)
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          node scripts/probe-local-runtime.mjs --installed "$APP"
       # Intentionally no upload-artifact or release publishing step.
