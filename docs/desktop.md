@@ -93,4 +93,8 @@ npm --prefix apps/desktop run smoke:packaged
 
 本机工具构建另需 `GENELOOP_DESKTOP_BROWSER` 指向 Remotion `ensureBrowser()` 准备的配套浏览器。纯 JS 封入运行时 ASAR，原生 compositor、esbuild、FFmpeg、Office、Python 和浏览器保留实体文件。包内 `manifest.json` 记录平台、架构、浏览器摘要和 ppt-master 锁。Windows 本机复杂渲染使用 Chromium 渲染沙箱，固定工具进程由 DSH 管理取消，不能将其称为全面文件/网络隔离。
 
-Mac 在目标平台原生执行 `node scripts/prepare-macos-tools.mjs`（工作目录 `apps/desktop`），再运行 `npm run dist`。它获取固定版本与校验和的便携 Python/LibreOffice，验证锁定 ppt-master，并准备配套 Chromium 和 Remotion 原生组件；输出 ARM64 或 x64 的 DMG/ZIP。`.github/workflows/desktop-native.yml` 在两类 Mac 构建机上运行原生文件、PPT/PDF、实际 Remotion、取消及 ASAR 检查；没有安装包上传步骤。当前只是构建候选，Mac 验证状态以交接和 CI 实际结果为准。六个 Windows 合成小任务的真实模型证据见 [preview.11 记录](experiments/desktop-preview11-20261106.md)。
+Mac 在目标平台原生执行 `node scripts/prepare-macos-tools.mjs`（工作目录 `apps/desktop`），再运行 `npm run dist`。它获取固定版本与校验和的便携 Python/LibreOffice，验证锁定 ppt-master，并准备配套 Chromium 和 Remotion 原生组件；输出 ARM64 或 x64 的 DMG/ZIP。`.github/workflows/desktop-native.yml` 在两类 Mac 构建机上运行原生文件、PPT/PDF、实际 Remotion、取消及 ASAR 检查；没有安装包上传步骤。2026-11-06 两种架构的原生与包内检查均已通过；最终复验采用 `.app` 模式，前一轮候选的 DMG/ZIP 构建成功不替代最终版本的安装验收。尚未完成 Apple Developer 签名、公证、人工界面与 Mac 真实模型场景验收。六个 Windows 合成小任务的真实模型证据见 [preview.11 记录](experiments/desktop-preview11-20261106.md)。
+
+ppt-master 构建来源固定为上游提交 `440557b8dc7c7257b69c04a0b014d5c50a78e6cb` 的 `skills/ppt-master/` 子目录，逐字节保持既有 13,016 文件锁；仓库根目录和同名版本标签不能替代该安装来源。Mac 的 FFmpeg/FFprobe 及相邻动态库在构建时重定位为 `@loader_path` 并恢复 ad-hoc 签名，避免依赖当前工作目录。系统动态库路径保留。该签名不是 Apple Developer 签名或公证。
+
+Mac 包内的 Agent 启动与工具探针使用 `node scripts/probe-local-runtime.mjs --installed "<GeneLoop Desktop.app 路径>"`，Windows 使用同一入口并传入安装目录。探针启动真实 DSH SDK、读取/搜索文本、写报告、拒绝越界访问、取消等待及正常关闭；模型响应来自回环协议夹具，真实模型请求为零。手动 Mac CI 可选择 `app` 模式，只生成 `.app` 并执行包内检查；`installers` 模式继续生成 DMG/ZIP，两种模式都不上传安装包。

@@ -21,8 +21,14 @@ const {bundle} = await import('@remotion/bundler');
 const serveUrl = await bundle({entryPoint:join(config.directory, 'entry.tsx'),
   publicDir:join(config.directory,'public'), outDir:join(config.directory,'bundle'),
   rootDir:config.directory, enableCaching:false, symlinkPublicDir:false,
-  webpackOverride:previous => ({...previous, resolve:{...previous.resolve,
-    modules:[join(runtime,'node_modules'),...(previous.resolve?.modules || [])]}}),
+  webpackOverride:previous => ({...previous,
+    // Resolve real POSIX ASAR paths before webpack's server-root fallback.
+    // A fabricated scratch/path/to/archive.asar raises Invalid package instead
+    // of ENOENT in Electron and prevents the valid absolute-path fallback.
+    resolve:{...previous.resolve,preferAbsolute:true,
+      modules:[join(runtime,'node_modules'),...(previous.resolve?.modules || [])]},
+    resolveLoader:{...previous.resolveLoader,preferAbsolute:true},
+  }),
 });
 const options = {serveUrl, id:'Main', browserExecutable:config.browser,
   binariesDirectory:config.binaries, timeoutInMilliseconds:30_000, logLevel:'error',

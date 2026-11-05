@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync, mkdirSync, writeFileSync, readFileSync, symlinkSync, linkSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync, mkdirSync, writeFileSync, readFileSync, symlinkSync, linkSync, statSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openWorkspaceReader, openReportWriter } from '../runtime/local-files.mjs';
@@ -28,6 +28,10 @@ try {
     const second = writer.writeMarkdown('# 第二份');
     assert.notEqual(first.name,second.name);
     assert.equal(readFileSync(join(workspace,'GeneLoop 输出',first.name),'utf8'),'# 本机验证');
+    if (process.platform !== 'win32') {
+      assert.equal(statSync(join(workspace,'GeneLoop 输出',first.name)).mode & 0o777,0o600,'产物须可由当前用户读写且不向其他用户开放');
+      assert.equal(statSync(join(workspace,'GeneLoop 输出')).mode & 0o777,0o700,'输出目录仅对当前用户开放');
+    }
     assert.equal(readFileSync(join(workspace,'source.txt'),'utf8'),'original');
   } finally {reader.close();writer.close();}
   assert.throws(()=>reader.list());

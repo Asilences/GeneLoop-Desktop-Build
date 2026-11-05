@@ -1,5 +1,6 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { dirname, isAbsolute, join, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,6 +52,30 @@ for (const base of ['ffmpeg', 'ffprobe']) {
   const name = base + (process.platform === 'win32' ? '.exe' : '');
   // Dereference a package-manager link into a real app-owned executable.
   cpSync(realpathSync(join(media,name)), join(destination, 'ffmpeg', name));
+}
+if (process.platform === 'darwin') {
+  // The native package's bare dylib names depend on the working directory.
+  // Relocate only app-owned library references, then restore ad-hoc signatures
+  // required by Apple Silicon. System library references remain untouched.
+  const directory=join(destination,'ffmpeg');
+  const run=(bin,args)=>{
+    const result=spawnSync(bin,args,{encoding:'utf8'});
+    if(result.status!==0)throw Error('Mac 媒体工具重定位失败：'+bin+' '+result.stderr);
+    return result.stdout;
+  };
+  for(const name of readdirSync(directory).filter(name=>['ffmpeg','ffprobe','remotion'].includes(name)||name.endsWith('.dylib'))) {
+    const file=join(directory,name);
+    const libraries=run('/usr/bin/otool',['-L',file]).split('\n').slice(1)
+      .map(line=>line.trim().split(' (')[0]).filter(Boolean);
+    let changed=false;
+    for(const library of libraries) {
+      if(library.startsWith('/usr/lib/')||library.startsWith('/System/Library/')||library.startsWith('@loader_path/'))continue;
+      const sibling=basename(library);
+      if(!existsSync(join(directory,sibling)))throw Error('Mac 媒体工具缺少相邻动态库：'+sibling);
+      run('/usr/bin/install_name_tool',['-change',library,'@loader_path/'+sibling,file]);changed=true;
+    }
+    if(changed)run('/usr/bin/codesign',['--force','--sign','-',file]);
+  }
 }
 cpSync(dirname(browser),join(destination,'chromium'),{recursive:true,verbatimSymlinks:true});
 for (const name of ['LICENSE', 'LICENSE.txt', 'README.txt']) {

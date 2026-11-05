@@ -3,23 +3,25 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
-import { cpSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stageRuntime } from './runtime-bundle.mjs';
 
-assert.equal(process.platform, 'win32', '探针仅面向 Windows x64');
-assert.equal(process.arch, 'x64');
+assert.ok(['win32','darwin'].includes(process.platform), '请在 Windows 或 macOS 本机运行探针');
+assert.ok(process.arch==='x64'||process.platform==='darwin'&&process.arch==='arm64');
 const app = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
 const runInstalled = args[0] === '--installed';
 if (runInstalled) args.shift();
-const packed = resolve(args[0] || join(app, 'release/win-unpacked'));
+const defaultPacked=process.platform==='win32'?'release/win-unpacked':
+  join(process.arch==='arm64'?'release/mac-arm64':'release/mac','GeneLoop Desktop.app');
+const packed = resolve(args[0] || join(app, defaultPacked));
 const dependencies = resolve(args[1] || app);
-const root = mkdtempSync(join(tmpdir(), 'GeneLoop 本机探针 '));
-const install = runInstalled ? packed : join(root, 'GeneLoop Desktop');
+const root = realpathSync(mkdtempSync(join(tmpdir(), 'GeneLoop 本机探针 ')));
+const install = runInstalled ? packed : join(root, process.platform==='darwin'?'GeneLoop Desktop.app':'GeneLoop Desktop');
 const workspace = join(root, '工作区');
 const home = join(root, 'home');
 const reports = join(workspace, 'GeneLoop 输出');
@@ -40,14 +42,15 @@ symlinkSync(outside, join(blocked, 'GeneLoop 输出'), 'junction');
 console.log('隔离诊断目录：' + root);
 if (!runInstalled) cpSync(packed, install, { recursive: true });
 
-const archive = join(install, 'resources/geneloop-runtime.asar');
+const resources=process.platform==='darwin'?join(install,'Contents/Resources'):join(install,'resources');
+const archive = join(resources, 'geneloop-runtime.asar');
 const packagedAsar = existsSync(archive);
-const bundled = packagedAsar ? archive : join(install, 'resources/geneloop-runtime');
+const bundled = packagedAsar ? archive : join(resources, 'geneloop-runtime');
 const packagedRuntime = packagedAsar || existsSync(join(bundled, 'local-worker.mjs'));
 assert.ok(!runInstalled || packagedRuntime, '实际安装目录必须包含运行时');
 const runtime = packagedRuntime ? bundled : join(install, 'resources/runtime');
 const staged = packagedRuntime ? 0 : stageRuntime(app, runtime, dependencies);
-const executable = join(install, 'GeneLoop Desktop.exe');
+const executable = join(install, process.platform==='darwin'?'Contents/MacOS/GeneLoop Desktop':'GeneLoop Desktop.exe');
 const cli = join(runtime, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
 const plugin = join(root, 'local-runtime-probe.mjs');
 const fixtureModule = readFileSync(join(app, 'test/local-runtime-probe.mjs'), 'utf8');
@@ -124,7 +127,7 @@ const child = spawn(executable, [cli, '--profile', 'sdk-minimal', '--patch', pat
   cwd: workspace, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
   env: {
     SystemRoot: process.env.SystemRoot,
-    TEMP: root, TMP: root, USERPROFILE: home, HOME: home, APPDATA: home, LOCALAPPDATA: home,
+    TEMP: root, TMP: root, TMPDIR:root, USERPROFILE: home, HOME: home, APPDATA: home, LOCALAPPDATA: home,
     DSH_HOME: join(home, 'dsh'),
     ELECTRON_RUN_AS_NODE: '1',
     GENELOOP_PROBE_RESULT: result, GENELOOP_PROBE_TEXT: sample, GENELOOP_PROBE_MODEL_PENDING: modelPending,
@@ -171,7 +174,7 @@ try {
   await rpc(2, 'shutdown');
   child.stdin.end();
   assert.deepEqual(await closed, [0, null]);
-  console.log(JSON.stringify({ kind: 'packaged_windows_harness_probe', ...outcome, inventorySearchReport: true, initialized: true, gracefulShutdown: true, packagedRuntime, packagedAsar, runInstalled, stagedDependencies: staged, fixtureRequests, streamAborted, realModelRequests: 0 }));
+  console.log(JSON.stringify({ kind: process.platform==='win32'?'packaged_windows_harness_probe':'packaged_macos_harness_probe',platform:process.platform,arch:process.arch,...outcome, inventorySearchReport: true, initialized: true, gracefulShutdown: true, packagedRuntime, packagedAsar, runInstalled, stagedDependencies: staged, fixtureRequests, streamAborted, realModelRequests: 0 }));
 } catch (error) {
   if (stderr) console.error(stderr);
   throw error;

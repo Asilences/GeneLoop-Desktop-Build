@@ -1,6 +1,11 @@
 name: Desktop native macOS checks
 on:
   workflow_dispatch:
+    inputs:
+      packageMode:
+        type: choice
+        options: [installers, app]
+        default: installers
   push:
     branches: ['codex/desktop-local-runtime']
     paths:
@@ -45,16 +50,22 @@ jobs:
       - name: Native file permission checks (no model)
         run: npm run smoke:native
       - name: Prepare pinned offline tools
+        id: tools
         run: node scripts/prepare-macos-tools.mjs
       - name: Native Remotion render and full video decode (no model)
         run: npm run runtime:stage && npm run smoke:remotion
       - name: Native PPT template and LibreOffice PDF export (no model)
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: npm run smoke:ppt
       - name: Credential scrubbing and cancellation of descendants
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: node scripts/check-native-process.mjs
       - name: Package on target architecture
-        run: npm run dist
+        id: package
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: ${{ inputs.packageMode == 'app' && 'npm run pack' || 'npm run dist' }}
       - name: Verify ASAR runtime in packaged app
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         run: |
           export ELECTRON_RUN_AS_NODE=1
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
@@ -62,5 +73,19 @@ jobs:
           export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
           export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
           "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-remotion.mjs
+      - name: Verify ASAR PPT in packaged app
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        run: |
+          export ELECTRON_RUN_AS_NODE=1
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
+          export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
           "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
+      - name: Packaged DSH Agent start, tools and cancellation (no model)
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          node scripts/probe-local-runtime.mjs --installed "$APP"
       # Intentionally no upload-artifact or release publishing step.

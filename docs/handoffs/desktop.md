@@ -8,8 +8,10 @@
 - Windows 真实模型使用原 V100 试用账号和累计账本、Flash/off、任务预算及输出不限，chat/files/data/paper/ppt/video 分别 1/3/3/3/5/4 次，共19次。视频未上传 Linux 渲染；源摘要均保持。私有记录 `.local/desktop-preview11-real-1793910776167/summary.json`。合成小任务通过不等于完整科研场景与收益验收。
 - 定向桌面12项、渲染器17项、视频5项通过；视频Linux容器探针在Windows跳过1项。全量Python为132失败/2125通过/273跳过/30错误；Node为1539通过/35失败/57跳过。新增3项Python失败单独复验2项通过，文献Agent的Windows rename EPERM仍复现。保留 `.local/npm-test-preview11-native.log`、`.local/node-test-preview11-native.log`、`.local/preview11-three-tests.log`，不能宣称全量通过。
 - 新本地安装包 `.local/desktop-preview11-verified/GeneLoop-Desktop-0.3.0-preview.11-x64-Setup.exe`，647218688字节，SHA-256 `79648c9fff0f26c4e85f72be0f5f62fb888cc2cdc7392e13929b7a88e88a195c`，内嵌引擎摘要匹配。未覆盖用户日常安装。
-- macOS 新增POSIX文件能力、原生菜单、ARM64/Intel依赖和DMG/ZIP入口，锁定便携Python与LibreOffice版本/摘要。首次[Mac CI](https://github.com/jingyio/GeneLoop/actions/runs/42105245995)两个任务均因GitHub账号账单锁定在启动前终止，步骤为空；不是Mac测试通过或代码测试失败。当前连接为Asilences，正在确认是否允许在其名下新建独立构建仓库；不得默默创建、替用户修改账单或宣称Mac已验收。
-- Motif旧认证不自动继承本轮代码/运行时摘要；安装版保持普通Harness。下一步先取得可用Mac runner，再扩大真实任务并逐场景重新认证。实验边界见 [preview.11](../experiments/desktop-preview11-20261106.md)。正式服务未更改。
+- macOS 15 ARM64、Intel 最终无模型诊断均通过：原生文件守卫、PPTX/PDF、Remotion 实际渲染/完整解码、凭证过滤与取消孙进程，以及 `.app` 内 ASAR DSH Agent 的启动、读写报告、取消和关闭。每侧 3 次回环协议请求、0 次真实模型请求。前轮 DMG/ZIP 实际构建成功，最终轮为 `.app` 模式，尚未验收最终安装体验；无上传产物，收尾关闭私有仓库 Actions。Apple Developer 签名、公证和 Mac 真实模型六场景待完成。
+- Mac跟进修复：libc `openat` 使用可变参数传创建权限；Intel目录接口匹配64位inode；ppt-master固定精确上游提交的`skills/ppt-master/`，13016文件与原锁一致；FFmpeg相邻dylib改为`@loader_path`并ad-hoc重签。精简FFmpeg显式选择rawvideo/PCM做完整解码；webpack优先真实绝对路径，避免把ASAR路径拼进临时网页根目录。回退可用`25c4c72f`及原Windows安装包。
+- Windows桌面12项、原生文件、视频5项、新临时ASAR真实渲染/完整解码与包内Agent探针通过；Linux探针跳过1项。最终全量Python为2190通过/68失败/272跳过/30错误；Node为1545通过/23失败/63跳过。Python无新增失败名称；Node新增文献Agent的Windows rename EPERM用例单独复验通过。全量仍未通过。日志与私有Mac任务/额度台账见[追加记录](../experiments/desktop-preview11-20261106.md#2026-11-06-mac-原生跟进)。
+- Motif旧认证不自动继承本轮代码/运行时摘要；安装版保持普通Harness。下一步扩大真实任务并逐场景重新认证，再补 Mac 人工界面和签名公证验收。实验边界见 [preview.11](../experiments/desktop-preview11-20261106.md)。正式服务未更改。
 
 ## 2026-11-05 本机为主的混合执行候选 preview.10
 
