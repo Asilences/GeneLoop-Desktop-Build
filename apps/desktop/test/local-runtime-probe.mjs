@@ -24,7 +24,7 @@ async function probe(local) {
   }
   assert.equal((await call('pwsh', '资料.txt')).isError, true);
 
-  local.submit('Windows runtime transport diagnostic');
+  local.submit('Native runtime transport diagnostic');
   const deadline = Date.now() + 10_000;
   while (!existsSync(process.env.GENELOOP_PROBE_MODEL_PENDING)) {
     assert.ok(Date.now() < deadline, 'Loopback stream never entered waiting state');
@@ -62,7 +62,7 @@ export function apply(ctx) {
       }
       assert.throws(() => reader.readText('资料.txt'), /授权已关闭/);
       const blocked = openReportWriter(resolve(directory, '../重解析测试'));
-      try { assert.throws(() => blocked.writeMarkdown('禁止越界写入'), /重解析点/); }
+      try { assert.throws(() => blocked.writeMarkdown('禁止越界写入'), /重解析点|链接/); }
       finally { blocked.close(); }
       const writer = openReportWriter(directory);
       writer.close();
