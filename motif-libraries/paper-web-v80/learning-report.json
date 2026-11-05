@@ -579,21 +579,32 @@
     "public_native_tools_in_certified_mcp_schema": false,
     "public_native_tools_learned_or_certified": false,
     "changed_code_locks": [
+      "scripts/harness-web.py",
       "scripts/reexport-ppt-managed-compat.py",
       "src/adapters/capability_construction_history.py",
-      "src/adapters/capability_proposal.py"
+      "src/adapters/capability_proposal.py",
+      "src/adapters/dsh_web_tasks.ts"
     ],
     "additional_code_locks": [
       "scripts/run-strategy-evolution.py",
+      "src/adapters/capability_contract.py",
+      "src/adapters/capability_contract.ts",
       "src/adapters/capability_decision_evidence.py",
       "src/adapters/capability_evolution_agent.py",
       "src/adapters/capability_goal_proposal.py",
-      "src/adapters/capability_strategy.py"
+      "src/adapters/capability_strategy.py",
+      "src/adapters/capability_strategy.ts",
+      "src/adapters/capability_strategy_usage.py",
+      "src/adapters/harless_task_strategy.ts"
     ],
     "previous_code_lock_differences": {
+      "scripts/harness-web.py": {
+        "previous": "0222846ef2d962af0f6397b0365d4cae5662335871da7c60f10fa72b1c6c49a5",
+        "current": "04e3bb997cc76f974312dcbb05fc4aa01dadf01428500258ff187bdc8f26f5ef"
+      },
       "scripts/reexport-ppt-managed-compat.py": {
         "previous": "c69a4967a7f777820f891becb1f99eb336dceee74fed3005c52ada560111faf1",
-        "current": "6ed1dffd354a4e339e888f429d2356b32cc608e89cab99dae44192590517f45a"
+        "current": "19c3cbb9b1b5b8cec2c02cc5786b6d36e13fb50ff4391e01b823f606312381cc"
       },
       "src/adapters/capability_construction_history.py": {
         "previous": "6d747316dd5c0cd410f4ec8f1d8dc9480d7f4de39621abb85f8f126b4381a88c",
@@ -602,6 +613,10 @@
       "src/adapters/capability_proposal.py": {
         "previous": "f6f57aad40bb2472c9183599f4074c699ba1d6c31e287ff261937aa3117ca865",
         "current": "26b9fe45909001bd8f0a36352be20d8406b49a7d5a2fed11028d710ea2b44a59"
+      },
+      "src/adapters/dsh_web_tasks.ts": {
+        "previous": "dd69df54c9a610bd5f6b972a4caa066d24f209d9ef73be2118e686da8994dd55",
+        "current": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284"
       }
     },
     "unchanged_artifact_sha256": {
@@ -623,17 +638,20 @@
       "immutable_single_task_learning_sources",
       "independent_page_program_certification",
       "version_guarded_component_revision",
-      "final_component_delivery_lineage"
+      "final_component_delivery_lineage",
+      "main_release_lineage_preserved",
+      "default_off_strategy_inheritance_and_usage",
+      "python_typescript_capability_contract_dependency_locks"
     ],
     "raw_traces_replayed": false,
     "new_training_tasks": 0,
     "model_requests": 0,
     "quality_cost_promoted": false,
     "net_cost_reduction_proven": false,
-    "validation_record": "docs/changes/strategy-evolution-20261104.md",
+    "validation_record": "docs/debug/overnight-library-compat-20261105.md",
     "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
-    "release_scope": "managed_ppt_delivery_and_account_local_learning_on_current_main",
-    "runtime_delta": "The original read IR, evidence and MCP schemas are retained. Learned page programs require separate Artifact certification and future-task validation."
+    "release_scope": "main_and_strategy_evolution_runtime_integration",
+    "runtime_delta": "Main release bytes are retained for the original read IR, sources and MCP schemas. Research strategy inheritance and usage are bound to current code; the original Runtime remains the default execution path."
   },
   "matching_cleanup_compatibility": {
     "method": "reexport_certified_serialized_library",

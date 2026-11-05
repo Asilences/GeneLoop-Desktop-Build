@@ -15,6 +15,7 @@ from .capability_feedback import file_ref, verify
 from .capability_improvement import save
 from .capability_trajectory import project_web_task
 from .capability_construction_history import build_history
+from .rsi_quality import quality_status, verify_quality_files
 
 CONTEXT_FORMAT = 'capability_decision_context_v1'
 FORMAT = 'capability_decision_evidence_v1'
@@ -93,11 +94,19 @@ def _web(directory, owner):
         if path.exists():
             evidence.append(file_ref(path))
     identity = capability_digest({'owner': owner, 'decision_root': root})
-    return {'task_id': trace['task_id'], 'source_identity': identity,
+    from .capability_strategy_usage import inspect_task_strategy_usage
+    usage = inspect_task_strategy_usage(directory, owner)
+    if usage is not None:
+        evidence = list({capability_digest(ref): ref for ref in [*evidence, *usage['evidence']]}.values())
+    row = {'task_id': trace['task_id'], 'source_identity': identity,
             'stage': 'execution', 'status': 'passed' if trace['status'] == 'completed' else 'failed',
             'quality': trace['quality'], 'counterexample': False,
             'evidence': evidence, 'interaction_evidence': interactions,
             'observed_cost_usd': None, 'cost_attribution': 'unknown; task terminal status is not a quality review'}
+    if usage is not None:
+        row['strategy_usage'] = {key: usage[key] for key in
+                                 ('subject', 'target', 'scope', 'exposure', 'task_status', 'semantic_adoption', 'quality_status')}
+    return row
 
 
 def _construction(records, task):
@@ -122,6 +131,45 @@ def _construction(records, task):
                                       for row in rows]}
 
 
+def _quality_review(review, source, row):
+    """Attach the host's original RSI quality record to witnessed decisions."""
+    fields = {'evaluation', 'rubric', 'artifact', 'required_checks', 'evidence_root', 'role'}
+    if (not isinstance(review, dict) or set(review) != fields
+            or review['role'] not in ('discovery', 'evaluation')
+            or review['artifact'] not in row['evidence']):
+        raise ValueError('decision_quality_binding_invalid')
+    required = review['required_checks']
+    if (not isinstance(required, list) or not required
+            or any(not isinstance(key, str) or not key.strip() for key in required)
+            or len(set(required)) != len(required)):
+        raise ValueError('decision_quality_checks_invalid')
+    evaluation = json.loads(verify(review['evaluation']))
+    verify(review['rubric'])
+    verify(review['artifact'])
+    task = (file_ref(Path(source['directory']) / 'task.json')
+            if source['kind'] == 'web_task' else source['task'])
+    if evaluation.get('payload', {}).get('task_id') != row['task_id']:
+        raise ValueError('decision_quality_task_changed')
+    status = quality_status(evaluation, task_sha256=task['sha256'],
+        artifact_sha256=review['artifact']['sha256'], rubric_sha256=review['rubric']['sha256'],
+        required_checks=required)
+    verify_quality_files(evaluation, review['evidence_root'])
+    root = Path(review['evidence_root']).resolve()
+    references = [review['evaluation'], review['rubric'], review['artifact']]
+    findings = []
+    for check in evaluation['payload']['checks']:
+        evidence = [{'path': str((root / item['ref']).resolve()), 'sha256': item['sha256']}
+                    for item in check['evidence']]
+        references.extend(evidence)
+        findings.append({**copy.deepcopy(check), 'evidence': evidence})
+    return {'quality': status, 'evaluation_role': review['role'], 'quality_findings': findings,
+            'quality_review': {'evaluator': evaluation['payload']['evaluator'],
+                              'scope': evaluation['payload']['scope'],
+                              'limitations': evaluation['payload']['limitations'],
+                              'evidence_id': 'evidence_' + review['evaluation']['sha256']},
+            'evidence': list({capability_digest(ref): ref for ref in [*row['evidence'], *references]}.values())}
+
+
 def inspect_decision(reference, owner):
     """Rebuild source facts and approved semantic context before every use."""
     record = json.loads(verify(reference))
@@ -140,14 +188,18 @@ def inspect_decision(reference, owner):
     if row['evidence'] != record['source_evidence']:
         raise ValueError('decision_source_evidence_changed')
     context = _context(record['approved_context'], owner, row['evidence'], row['interaction_evidence'])
+    if row.get('strategy_usage') is not None:
+        context['strategy_usage'] = copy.deepcopy(row['strategy_usage'])
     row.update(relation=record['relation'], capabilities=record['capabilities'], steps=[],
                observation_level='host_approved_decision_context', model_decision_count=None,
                decision_context=context)
+    if record.get('quality_review') is not None:
+        row.update(_quality_review(record['quality_review'], source, row))
     row['evidence'] = [*row['evidence'], record['approved_context'], reference]
     return row
 
 
-def _record(source, owner, relation, approved_context, output, capabilities):
+def _record(source, owner, relation, approved_context, output, capabilities, quality_review):
     row = _web(source['directory'], owner) if source['kind'] == 'web_task' else _construction(source['records'], source['task'])
     _context(approved_context, owner, row['evidence'], row['interaction_evidence'])
     if not isinstance(relation, str) or not relation.strip():
@@ -157,18 +209,21 @@ def _record(source, owner, relation, approved_context, output, capabilities):
     value = {'format': FORMAT, 'owner': owner, 'relation': relation, 'source': source,
              'source_evidence': row['evidence'], 'approved_context': approved_context,
              'capabilities': list(capabilities)}
+    if quality_review is not None:
+        _quality_review(quality_review, source, row)
+        value['quality_review'] = copy.deepcopy(quality_review)
     path = Path(output)
     save(path, value)
     return file_ref(path)
 
 
-def record_web_decision(task, owner, *, relation, approved_context, output, capabilities=()):
+def record_web_decision(task, owner, *, relation, approved_context, output, capabilities=(), quality_review=None):
     """Index an approved task projection; no raw task text is added to context."""
     return _record({'kind': 'web_task', 'directory': str(Path(task).resolve())}, owner, relation,
-                   approved_context, output, capabilities)
+                   approved_context, output, capabilities, quality_review)
 
 
-def record_construction_decision(records, task, owner, *, relation, approved_context, output, capabilities=()):
+def record_construction_decision(records, task, owner, *, relation, approved_context, output, capabilities=(), quality_review=None):
     """Reuse captured attempts and their original ownership-aware accounting."""
     return _record({'kind': 'construction', 'records': list(records), 'task': task}, owner, relation,
-                   approved_context, output, capabilities)
+                   approved_context, output, capabilities, quality_review)

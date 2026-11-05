@@ -1,4 +1,55 @@
+## 2026-11-05 组合输入与反馈连续性审议
+
+- 修正 `bf15185a` 的过度启动限制。真实执行经历可以独立调查，Capability/Builder清单可选；`--require-builder-evidence`仅用于专项输入检查。当前论文入口准确标为Task Strategy Pilot，`construction_strategy`仍等待真实Builder评价器。
+- 原 `Investigation.continue_with` 保留能力快照、原任务与Builder inspector、笔记、候选/评价和已暴露证据，再追加新运行。无候选和多代续接均覆盖；消费评价角色需显式暴露并要求后续新评价材料。纯记账续接不触发同证据no_change重查。
+- Task Strategy采用增加既有独立reviewer的配对动作证据检查。接受需要实际读取并引用两侧动作证据；语义评审校准仍待真实运行。后继选择按预冻质量/成本规则，neutral/negative/unknown保留原方法，候选不再按最后提交顺序选择。
+- 已只读恢复真实C，seed摘要与原引用一致，`cap_dc3832ee6ce8f4f6e4fa9cf7`认证且active，snapshot有4个能力。owner为`frontier-20261103`，不同于五篇任务`script-motif-real`；恢复的两份Builder记录为同一`frontier-D`任务两次尝试，不能作两份独立构造问题。原证据不改身份、不写入原始论文实验。
+- 下一步真实Builder验收应在原owner及独立Store中复用`strategy_handler(target='construction')`、原`inherited_strategy_context`、Builder和检查器。先明确局部任务范围与新的评价资料，再比较后继构造动作、质量和完整投入。两次重试不能支持家族级推广；新任务/新能力发现仍由Evolution决定。
+- 本输入接线阶段新增模型请求0，原73次请求及其neutral/no_change结论保留；后续真实003另列如下，未合并或部署。
+
+## 2026-11-05 通用Core与真实调查003
+
+- 生命周期抽到`src/adapters/evolution_cycle.py`；Paper证据、oracle、任务与结果解释在`scenarios/paper_proofreading/evolution_adapter.py`，脚本仅配置/启动。原则写入AGENTS和通用协议，第二最小Adapter覆盖非task_strategy路由和新能力回流。
+- 模型源码25383ae6已完成真实G1/G2：同一自主task_strategy两次提交、两对4次任务，候选均未准入，原决定inconclusive。98请求/代理USD0.18567348，原账本5156–5253全结算。两候选存在真实断言失败，行为review均不确定；没有新增收益或Creation Efficiency结论。
+- 真实运行暴露日志晚结算导致FileRef失效、重复开发暴露掩盖错误、CTRF缺失raw_status三项。24b3effc修复为不可变日志捕获、暴露幂等及断言拒绝兼容；通用`accumulate_evolution_feedback`支持原决定FileRef约束的零模型恢复。原失败保留，G5重放22条经历、第三视图22条、4份独立输入，快照不变，模型0。
+- 原始运行和恢复已关联私有`evolution-core-003-evidence.tar`，不含dsh凭证目录或.env。详见[本轮真实记录](../experiments/evolution-core-20261105-003.md)。真实运行与恢复分别用code-evolution-core-005/006，禁止覆盖它们或重写原状态。
+- 下一步优先审阅通用边界、动作review的返回可靠性，再在原frontier owner开展局部Builder后继试验。只存在同任务两次Builder尝试时不作跨任务独立证据；不为追求成功继续手工改论文解析细节。PR156仍草稿，不合并/部署。
+- 最终源码24b3effc验证。定向192、本地3010 Python/1662 Node、Linux356通过，3639源码摘要不变。真实G1–G3与修复后零模型G5分别报告；独立动作review仍未形成可靠采用结论，完整研究收益和Builder真实接收器未通过。
+
+## 2026-11-05 Evolution修订3真实执行
+
+- 范围与状态。a3e96f59已推送草稿PR156，未合并部署。用户授权的修订3冻结补丁、原论文历史适配与隔离接收已实现。
+- 真实结果。自主调查18次/3来源，产生1个task_strategy，Prefix同条件两侧原oracle均5/5，费用差-0.00093408按冻结标准neutral。DDPM后继5/5，部分策略行为可查，完整遵守待验。首轮61请求/USD0.10151940；反馈轮12请求/USD0.01977294，总73请求/USD0.12129234代理观测。原账本5083—5155全部结算，实付未知。
+- 失败与修复。原no_change结束误拒，真实最终inconclusive保留。修复默认summary返回正文的判定及试验后维持决定，另避免纯路径重投影重访。81b6c306已完成原工具离线重放及真实反馈轮no_change，相同快照重访0请求。模型把模型工具修复误判为Runtime内部等解释问题保留为下一轮输入语义检查。
+- 验证与入口。已有a3e96f59本地2971 Python/1662 Node、Linux302项及smoke/Motif/RSI通过，最终81b6c306本地2973 Python/1662 Node、Linux304项及smoke/Motif/RSI通过。Linux私有快照code-paper-evolution-001和同名results保留，入口scripts/run-paper-evolution.py；加载既有remote-env，沿原累计账本。原始日志不入Git。
+- 接手。优先复核门禁修复的原工具重放与最终回归，随后审阅真实行为与研究边界。仅task_strategy接收可用，其余pending，跨进程额度恢复与完整高层图闭包继续待验。
+- 证据与权限。见[正式实验](../experiments/paper-evolution-20261105-001.md)及[集中调试](../debug/evolution-artifact-routing-20261105.md)。费用/请求null授权、账本与生产不改；GitHub job因付款/消费额度未启动，不能标CI通过。
+
 # 论文校对 当前交接
+
+## 2026-11-05 当前审议入口（修订3，待用户核查）
+
+当前研究HEAD为`7fd8c1fd`。向solver交付[通用上下文与产物协议](../evolution-context-protocol.md)及[完整推进方案](../changes/paper-semantic-evolution-20261105.md)。本轮核对恢复清单中30次任务、原事件和输入摘要一致；下一步为通用skeleton、分层调查和产物采用验收。本轮文档未提交/推送，模型调用0，尚未启动新的Evolution或judge实验。
+
+## 2026-11-05 用户校正主批次
+
+当前需复用的是10月21日五篇论文各两次的修复后实验`paper-multipaper-retest-20261021-v1`及其原对照。完整材料已在原`paper-script-motif`工作区的私有`.local/`恢复。已核对原20次对照及复测10次的事件与输入绑定，5份独立论文输入。定位清单为当前私有`.local/overnight-20261105/multipaper-20261021-recovered/manifest.json`，包含旧评价来源，仅供宿主审计，尚未送入本轮Evolution或judge校准。S4误报的两次后续检查使用同一份中间解析数据，未提供独立复核。
+
+后续优先使用该批原确定性oracle，定位S4误报、旧QLoRA冲突证据聚合、选择与接管后剩余工作。原请求195→110、核心9/10为既有成果；两次重复按同论文输入保留，旧回放与新留出分开。详细判断见[计划校正](../changes/paper-semantic-evolution-20261105.md#当前主批次校正)。10月10日逐论断原件搜索退出当前优先级，作为历史记录保留。本次恢复与审计新增模型调用0。
+
+## 2026-11-05 历史语义失败审计与质量反馈接线
+
+- 本次范围为用户要求的旧轨迹定位，基于`codex/evolution-overnight-20261105`、HEAD `6499d32c`。只追加本节及[原实验复核](../experiments/evidence-evolution-20261104.md#2026-11-05-历史轨迹复核与瓶颈定位)，保留工作区已有R13未提交改动；本次未提交或推送。
+- 已核对11月4日两轮原模型输入与输出，以及11月3日构造方法原认证。两轮Evolution仅有两份Runtime关系记录，无失败或反例，费用未知；补充已有容器信息后返回空候选。旧方法程序未认证，实际后继采用为0。
+- 语义失败前史包括逐论断支持错误，但本次仅取得原公开报告，尚未重新取得完整原事件。论文参考评分92.5/93.5为同一评估者核验，不能写作独立LLM judge性能演化成果。
+- 当前瓶颈为语义质量问题及其实际求解决策尚未与上述Evolution输入接通。下一步先恢复旧语义失败证据，确认任务独立性、具体未解决判断与既有能力边界，再定最小候选及留出验收；不自动恢复旧18格运行。
+- 本轮模型请求0、模型费0，旧账本与原件未改。仅文档变更，检查Git diff和引用；无生产切换、合并、部署或外部写入。
+
+后续按用户授权开始实现，先保存[关键判断与实施计划](../changes/paper-semantic-evolution-20261105.md)，再补原RSI质量协议到语义经历、分层调查与旧策略CLI的接线。`rsi_quality.review_quality`保留宿主固定的任务/工件/标准绑定与原判断；调用模型的回调及账本由原宿主提供。执行完成但质量失败可独立检索，具体检查及原件按需读取。PPT81/Paper83仅为来源兼容导出，生产未部署。
+
+当前机制提交为`c4d86145`，上阶段证据封装修复为`34fb0b44`。最终本地全量Python2947通过/261跳过、Node1662通过/23跳过/0失败，smoke、Motif、RSI、效率和RAE检查通过。Linux冻结源码23文件597通过、418.57秒；3608文件SHA一致。模型调用0。原件定位已核对本地和V100的项目目录及7个相关结果/工作归档，未找到完整逐论断原运行。真实judge校准、Evolution语义候选与后继质量仍pending。接手先恢复可追溯语义评价材料，再校准裁判并运行最小真实后继对照。工作区另有其他会话的产物分配审计文档，本轮保留，不混入本次源码提交。
+
+上述源码及结果记录已推送至[草稿PR156](https://github.com/jingyio/GeneLoop/pull/156)，结果记录提交为`3a14109e`。PR保持draft，未合并或部署。该head最后读取的Ubuntu/Windows检查为queued，本地和Linux结果分别保留，不能写成GitHub CI已通过。
 
 ## 2026-11-03：停止场景细节优化，回到公共机制
 

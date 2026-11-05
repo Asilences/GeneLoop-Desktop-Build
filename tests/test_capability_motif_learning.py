@@ -16,6 +16,34 @@ from src.adapters.capability_contract import capability_digest, capability_ref
 from src.adapters.capability_feedback import file_ref
 from src.adapters.capability_motif_learning import capture_capability_trace, learn_capability_motifs
 
+
+def test_execution_evidence_has_a_separate_bounded_envelope(tmp_path):
+    from src.adapters.capability_motif_learning import _checked, _trajectory_digest
+    snapshot = run_driver({'action': 'seed', 'owner': 'large-execution-evidence'})
+    original = call_trace(tmp_path, snapshot, [snapshot['roots'][0]], 'large-evidence-task', 7)
+    task_input = {'value': 7, 'source_context': 'x' * 4_100_000}
+    trace = capture_capability_trace(snapshot, task_id=original['task_id'],
+        task_input=task_input, task_fingerprint=original['task_fingerprint'], calls=original['calls'])
+    assert _checked(trace, snapshot['owner']) == trace
+    assert trace['steps'] == original['steps']
+    with pytest.raises(ValueError, match='capability_too_large'):
+        capability_digest(task_input)
+    ordinary = {'values': [None, True, 1.25, -0.0, '汉字']}
+    assert _trajectory_digest(ordinary) == capability_digest(ordinary)
+    with pytest.raises(ValueError, match='trajectory_too_large'):
+        _trajectory_digest({'payload': 'x' * 32_000_001})
+
+
+def test_wire_hash_bounds_apply_to_each_runtime_value():
+    import hashlib
+    from src.adapters.capability_motif_learning import _wire_hashes
+    values = [{'text': 'a' * 2_100_000}, {'text': 'b' * 2_100_000}]
+    expected = [hashlib.sha256(json.dumps(value, separators=(',', ':')).encode()).hexdigest()
+                for value in values]
+    assert _wire_hashes(values) == expected
+    with pytest.raises(ValueError, match='capability_too_large'):
+        _wire_hashes([{'text': 'a' * 4_000_001}])
+
 ROOT = Path(__file__).resolve().parents[1]
 DRIVER = ROOT / 'tests/fixtures/rae_graph_driver.mjs'
 

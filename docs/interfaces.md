@@ -1566,6 +1566,30 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 当前本机文件只能经明确选择上传或保存下载；没有授权本机工具执行接口。配置/资源版本、开发入口和限制见 [桌面说明](product/desktop/desktop.md)。
 
 
+## 条件化策略演化（2026-11-04）
+
+版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](research/evolution/strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。
+
+### 分层自主调查与同条件benchmark（2026-11-05）
+
+`capability_investigation.Investigation`提供overview/search/read/note，按需读取当前能力、真实经历及构造反馈。`capability_evolution_investigation.run_investigation`向原Harness注册提交与结束工具，候选仍由原策略、Script认证、Motif学习及Store流程处理。下一代continuation保留能力快照、经历及构造反馈的原FileRef，调查费用按研究范围记录。
+
+`node scripts/project.mjs python scripts/run-evolution-benchmark.py --help`提供trial、geneloop及skill-infinity三种隔离入口。真实调用需`--call-model`，费用沿原`--ledger-root`累计。根目录、公开来源版本、任务划分和输出目录必须显式提供。`--prewarm-dependencies`仅对精确匹配的原评分脚本准备公共依赖，时长和版本另存，原评分脚本及限时保留。论文复现差异见[基线记录](debug/skill-infinity-reproduction-20261105.md)。
+
+`--validation-split TASK=test`可将一个官方变体用于验证，最终题仍须保留未观察输入。`dataset_split`记录原数据划分，`evaluation_role`记录本次用途，输入内容摘要用于识别重复。历史观察不能重新标成独立最终评测。
+
+原生材料后端提供`evolution_example_files`分页查询可用于认证的执行前文件，返回合法文件ID、相对路径和来源观察，不默认发送文件正文。候选的格式、来源与权限预检通过后才计入实际候选构造次数。原始证据继续通过`evolution_read`按需读取。
+
+`evolution_submit`可用`repair_of`指向此前真实构造失败的提交，保留原scope及观察集合。单轮最多两个独立候选，每个候选累计最多两次真实修订，分叉引用不重置次数。格式或来源预检失败保留诊断，实际构造及每次修订均沿原认证和费用归属记录。
+
+任务工具`capability_call.input_binding`沿用原Binding，将前次真实调用结果传入后继能力。可选`export_result={path:[结果字段],container_path:绝对容器路径}`把结果直接交付当前任务文件并返回摘要，普通调用继续返回结果。文件交接失败单独记录，保留原Runtime执行状态与参数流。见[交接记录](debug/benchmark-capability-result-export-20261105.md)。
+
+跨代学习逐条按原快照检查真实轨迹，再以实际执行的能力和递归依赖版本形成学习输入。无关能力新增不会拆散同版本图，发布前仍按当前catalog独立重核。原快照和回执完整保留。原生认证拒绝的行列、短片段及诊断FileRef会返回同轮调查，原文件可按需读取，见[闭包诊断](debug/recursive-snapshot-closure-20261105.md)。
+
+原评分器退出码1与官方0分同时出现时，只有完整原CTRF证实调用阶段质量断言失败，才记录`quality_rejected`并继续优化。环境失败、超时及不完整报告仍保留未知评分，原退出码和评分日志可追溯。
+
+模型任务结束后先冻结产物，再注入原评分器。超时保留部分产物和实际费用。真实能力调用轨迹可进入原Motif学习器及Store，后继行为与净收益需按实际结果判断。当前boundary与construction-strategy的benchmark宿主仍待接通，生产默认关闭。实施及失败记录见[今晚记录](debug/evolution-overnight-20261105.md)。
+
 ## 匿名双栏展示与审计绑定（2026-11-04）
 
 `/api/harless/comparisons` 在 paired 结果中新增 `display_order`，为 `baseline`、`motif` 的一次随机排列。服务器在本轮准入时保存排列，GET、SSE、重试与重启恢复沿用同一值；旧记录首次读取其 store 时补齐并持久化。single 的排列为 `['baseline']`。
@@ -1574,6 +1598,44 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 结果卡片隐藏方法名称、机制计数和回退标识。原始模型正文、工具内容和交付文件保留，开发 API 也保留真实字段；此接口提供产品界面的匿名比较，证据和版本归属仍可追查。
 
-## 条件化策略演化（2026-11-04）
+## 离线语义质量反馈与Evolution调查
 
-版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](research/evolution/strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。
+`rsi_quality.review_quality`接受宿主固定的任务、工件、评分标准与来源FileRef，通过宿主提供的`call_judge`调用原模型和账本，生成已有`quality_evaluation`协议记录。模型只填写检查结果、观察与已提供的证据ID，任务、工件和标准摘要由宿主绑定。请求、原回复及失败保存到研究目录，不授予能力认证。真实裁判仍须独立校准。
+
+`record_web_decision`和`record_construction_decision`新增可选`quality_review`。该对象包含`evaluation`、`rubric`、`artifact`、`required_checks`、`evidence_root`及`role`。前三项为FileRef；artifact必须属于原始任务或构造证据。role为`discovery`或`evaluation`。旧记录不提供该字段时，原行为保留，缺失质量仍为未知或未评审。
+
+`inspect_decision`复核原RSI质量记录及来源字节，保留执行status与独立quality的区别，提供逐项`quality_findings`和按需原始证据引用。评价记录不声明语义判断必然正确。
+
+原`evolution_search`新增quality过滤，原`evolution_read`新增`section="quality"`的分页检查结果和来源ID。只有主动读取才返回局部发现与原文；默认概览仍为统计。标为evaluation的经历不能进入原Investigation或单轮packet的发现输入。旧策略CLI沿原inspect_decision接收这些反馈，无新增Registry、IR或Agent循环。
+
+## Evolution修订3离线调查（2026-11-05）
+
+- `Investigation(..., sealed_evidence=(), development_evidence=())`沿原证据视图增加宿主冻结的排除范围。`expose_development()`仅供可信宿主更新开发暴露，封存摘要、索引和原件仍排除。
+- `run_investigation`沿原Harness接入有限工具/期限、显式局部范围、完成no_change重访及原件/笔记检查。原调用默认兼容，生产接管与候选认证沿旧入口。
+- `compare_research_outcomes`读取预冻FileRef策略，分别返回effect与研究发布建议。实际认证及生产默认版本沿旧权限，未知保持pending。
+- 首轮论文历史入口为`scripts/run-paper-evolution.py`。Linux加载原私有环境后传入`--history`、`--policy`、`--output`、原`--ledger-root`、`--max-tool-calls 100 --timeout-seconds 5400`，真实调用使用`--call-model`。有效配置冻结源码、能力、策略、评价任务摘要及数据角色，费用/请求null沿原账本。
+- 当前真实调查Prompt位于`src/adapters/capability_evolution_investigation.py`的`SYSTEM`及request构造处；每轮`agent/request.json`保留完整实际文本与工具。用户选择沿现有代码形式讨论。
+
+完整语义见[通用协议](evolution-context-protocol.md)，实际候选、失败、费用及接收器边界见[真实实验](experiments/paper-evolution-20261105-001.md)。
+
+### 调查完成语义补充
+
+`completion_scope=investigation_only`与`investigation_decision`明确调查结束维度。`candidate_counts`分别统计尝试、schema/证据通过、宿主评价已启动、pending和拒绝。只有非法尝试时默认inconclusive；合法候选的独立验收失败仍保留失败，调查结束不授予认证或后继采用。局部模式来源工具说明按单来源生成，家族模式沿两独立来源检查。
+
+### 组合输入与后继连续性
+
+`src/adapters/evolution_cycle.py::run_evolution_cycle(investigation, call_agent=..., handlers=..., output=..., limits=..., followup_evaluator=None, load_current_capabilities=None, prior_results=())`是场景无关的薄编排。它沿原`run_investigation`接收候选结果，调用宿主后继评价，并将回调返回的entries、inspector、history和可选snapshot合入原调查。公共层不定义具体工具、benchmark、质量分数或产物后端。场景回调不能覆盖原调查status/submissions/identity，失败保留cycle-error及原调查证据。
+
+`accumulate_evolution_feedback`复用同一个反馈完成阶段，可在新目录中以原始调查结果FileRef恢复G5，不再调用模型或任务。原status与investigation_identity必须匹配，不能将原inconclusive改写为成功。开发暴露操作幂等；BenchmarkHost索引捕获时的不可变日志副本，晚到的请求结算留在原追加日志中，不改变已登记摘要。捕获点和源路径由独立索引保留，捕获时未知费用仍保持未知。
+
+现用pytest-json-ctrf0.3.5可能省略raw_status、合并参数化用例名称。对于已完成pytest退出1、reward为零或部分分且报告有明确AssertionError的情况，沿原独立检查识别质量拒绝；setup/import/不完整报告继续unknown。该修正不改变题目、gold或成功要求，旧实验状态不原地改写。
+
+Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责经历解析、实际receivers、论文评分及后继评价。`scripts/run-paper-evolution.py`仅负责配置/启动；`--investigation-history`可追加宿主已经批准的原研究证据FileRef，实际清单写入effective.json。其它场景复用同一cycle，不复制Paper main中的生命周期。
+
+论文历史入口的 `--evolution-input-manifest` 为可选 Builder 输入，普通执行经历可独立调查。`--require-builder-evidence` 仅用于额外要求 C/Builder 材料的专项输入检查。当前入口的 receiver 仍为 `task_strategy`，有效配置固定 `experiment_scope=task_strategy_pilot`，Creation Efficiency 等待真实 Builder 评价器。
+
+`Investigation.continue_with(directory, entries=(), inspector=None, snapshot=None, history=(), expose_evaluation=False)`沿同一调查器保留旧经历及其 inspector、能力目录、笔记和历史，再追加新证据。默认保留旧 snapshot；显式更新必须同 owner 并保留旧经历引用版本。开发材料的已暴露状态继续保留；消费最终评价后须显式暴露该角色，`transition.json`记下数据角色转移及需要新独立评价材料。
+
+`BenchmarkHost(..., owner='overnight-research')`允许调用方从创建时绑定同一研究owner，旧记录不改写。`review_skill`可选 `behavior_expectation`，使用既有独立review工具按需读配对动作。接受行为变化时必须引用两侧已经读取的宿主动作证据；输出 `verified_behavior_evidence`，质量仍走原oracle。此评审是有来源的模型判断，语义校准与因果归因另外验证。论文试验冻结300秒/64次读取，费用及请求沿原无限额账本。
+
+后继候选选择冻结为通过独立质量及行为检查、符合原质量/费用政策后，按质量降序、任务模型成本升序和策略摘要确定顺序。neutral、negative、unknown不改默认选择。选择只用于隔离后继，完整研究成本与正式发布仍分别判断。

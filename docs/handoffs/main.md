@@ -1,5 +1,59 @@
 # 主线当前交接
 
+## 2026-11-05：PR156 整合 main 候选
+
+- 以 PR156 `8e697e51` 为起点，合入 #158 后的 main `a71e30ce`；在隔离检出处理冲突，共享工作区与原研究检出的未提交改动未覆盖。保留 main 的精简 AGENTS、文档分类与 README 布局，Evolution 研究进展仍在 docs。
+- PPT78/Paper80 两组同名库的 IR、online manifest、来源、工具 schema 和任务五份文件逐字节一致；采用 PR156 认证元数据以保持后续 PPT79–82/Paper81–84 的证书哈希链。main 原元数据由 Git 历史保留，未修改实验原始记录。
+- 本地验证：Python 全量先得 3009 通过、261 跳过、2 项后续证书哈希失败；调整同名元数据后对应认证库 38 项通过。Node 1662 通过、23 跳过；`motif:check` 与无模型 `smoke` 通过，付费模型请求 0。完整 Python 全量未在最终元数据选择后重新运行。
+- GitHub Actions 因账户计费限制未运行，用户决定待学生认证后统一修复 CI；本次不能标记 CI 通过。研究机制默认关闭，正式服务未发布。
+
+## 2026-11-05 通用 Evolution Core 与真实反馈恢复
+
+- 已完成：通用调查、候选路由与反馈生命周期在`src/adapters/evolution_cycle.py`；Paper特定证据、oracle与评价留在`scenarios/paper_proofreading/evolution_adapter.py`。脚本只配置启动，Builder输入可选，原能力与新旧经历连续保留。原则已写入AGENTS、接口和通用协议。
+- 分支`codex/evolution-overnight-20261105`，最终代码`24b3effc`，PR156草稿；未合并、部署。真实模型运行使用`25383ae6`独立快照，修复后仅零模型恢复，不覆盖原记录。
+- 已验证：定向192、本地3010 Python/1662 Node、Linux356通过；最终代码smoke、Motif、RSI、效率RSI和RAE均通过，全部为诊断检查。第二最小Adapter证明相同Core可接不同receiver和反馈，不代表场景收益。
+- 真实结果：003两次提交同一task_strategy、完成4次评价任务，均未准入；98请求，代理USD0.18567348，原决定inconclusive。G5修复恢复22条经历，第三次续接仍22条，4份独立输入，原快照保持。见[真实记录](../experiments/evolution-core-20261105-003.md)。
+- 数据与权限：原始来源、驱动、日志、费用和恢复证据保存在忽略的`.local/debug/evolution-artifact-routing-20261105/`；原账本不清零，原数据不改写，新机制默认研究模式。旧C属于frontier owner，两份Builder资料是同任务重试，不拼接为独立Paper证据。
+- 接手下一步：先核对动作reviewer返回可靠性；在原frontier owner接真实Builder策略评价，观察后继构造行为和完整投入；Paper仍仅task_strategy，其他产物pending，不宣称净收益或Creation Efficiency。
+- 回退：停止使用独立研究入口即可，生产路径未接管。远端检查和账户计费状态需按当前PR头核对，不用本地回归代替CI。
+
+## 2026-11-05 用户Prompt审议后的更新
+
+SYSTEM已补效率/性能压力、成功经历、能力带来的新可行性与Builder构造反馈；局部来源工具描述、非法候选结束语义和investigation_only多维结果已修正。定向107项通过，最终4a020696完整2977 Python/1662 Node、Linux308以及smoke/Motif/RSI均通过。新增Prompt模型效果待真实验证，先前73请求均为旧Prompt。本轮初始能力目录为空且没有Builder经历，下一步优先恢复有认证能力与真实构造记录的输入，避免再次在同批执行记录上寻求Creation Efficiency。
+
+## 2026-11-05 Evolution修订3真实执行
+
+- 范围与状态。a3e96f59已推送草稿PR156，未合并部署。用户授权的修订3冻结补丁、原论文历史适配与隔离接收已实现。
+- 真实结果。自主调查18次/3来源，产生1个task_strategy，Prefix同条件两侧原oracle均5/5，费用差-0.00093408按冻结标准neutral。DDPM后继5/5，部分策略行为可查，完整遵守待验。首轮61请求/USD0.10151940；反馈轮12请求/USD0.01977294，总73请求/USD0.12129234代理观测。原账本5083—5155全部结算，实付未知。
+- 失败与修复。原no_change结束误拒，真实最终inconclusive保留。修复默认summary返回正文的判定及试验后维持决定，另避免纯路径重投影重访。81b6c306已完成原工具离线重放及真实反馈轮no_change，相同快照重访0请求。模型把模型工具修复误判为Runtime内部等解释问题保留为下一轮输入语义检查。
+- 验证与入口。已有a3e96f59本地2971 Python/1662 Node、Linux302项及smoke/Motif/RSI通过，最终81b6c306本地2973 Python/1662 Node、Linux304项及smoke/Motif/RSI通过。Linux私有快照code-paper-evolution-001和同名results保留，入口scripts/run-paper-evolution.py；加载既有remote-env，沿原累计账本。原始日志不入Git。
+- 接手。优先复核门禁修复的原工具重放与最终回归，随后审阅真实行为与研究边界。仅task_strategy接收可用，其余pending，跨进程额度恢复与完整高层图闭包继续待验。
+- 证据与权限。见[正式实验](../experiments/paper-evolution-20261105-001.md)及[集中调试](../debug/evolution-artifact-routing-20261105.md)。费用/请求null授权、账本与生产不改；GitHub job因付款/消费额度未启动，不能标CI通过。
+
+
+
+### 当前协议修订3
+
+用户要求本轮继续概念修订并再次核查。已按冻结前审计重整[通用协议](../evolution-context-protocol.md)和[推进方案](../changes/paper-semantic-evolution-20261105.md)。当前版本尚未冻结。四维结果、三种数据角色、证据强度、当前能力适用、选择来源、抽象贡献及有限逻辑终止分别明确；no_change属于调查决定。原30次记录已恢复，下一步为skeleton与质量动作关联，完整重复图闭包保留独立pending。
+
+本轮只更新文档并保留修订2私有快照，模型调用0，源码未改。本轮文档未提交或推送。待用户核查修订3后再按G1/G2优先的路线推进。
+
+## 2026-11-05 Evolution协议与solver审议
+
+- 用户要求逐层核对产物去向。本次基于研究HEAD `6499d32c`及当前未提交补丁只读审计，未新增模型调用或改动源码。四类产物的接收位置已核对，实际入口覆盖与采用证据详见[检视记录](../debug/evolution-artifact-routing-20261105.md)。
+- 当前重点缺口为策略仍依赖显式selection、SkillsBench缺construction_strategy及boundary宿主，以及策略展示后实际行为变化与价值的验收。真实OBJ检查程序已入池，两个接口属于同一程序，后继小样本试用和任务质量分开记录。
+- 当前研究HEAD为`7fd8c1fd`。用户要求先交solver审议，已固化[通用上下文与产物协议](../evolution-context-protocol.md)及[完整推进方案](../changes/paper-semantic-evolution-20261105.md)。来源/任务/运行、可展开skeleton、四层上下文、产物匹配、采用及价值分级分别列明已有和拟补。
+- 真实优化起点为原五篇重复实验。新恢复清单`.local/overnight-20261105/multipaper-20261021-recovered/manifest.json`中30次任务、原事件和输入摘要核对一致，5份论文资料。下一步将原事件投影为skeleton并接入调查。
+- 本轮仅编辑文档和核对私有材料，模型调用0；本轮文档未提交/推送，未合并或部署。既有工作区改动保留，后续按solver审议结果实施。
+
+## 2026-11-05 分层调查与SkillsBench隔离研究
+
+- 更新时间与交接人为2026-11-05，Codex；用户指定00:08至08:08持续实施。基线main为`f3289a21`，整合commit为`f46d0e64`，分支`codex/evolution-overnight-20261105`，本段记录源码冻结前状态，最终提交与实验结果继续追加。
+- 已接原Harness分层调查、原生策略发现、原Script学习/认证/调用、原Motif学习/Store出版与下一代反馈。公开benchmark共用任务、模型与原评分器，Skill∞为明确标注差异的论文复现版。[草案](../changes/evolution-agent-tonight-draft-20261104.md)及[运行记录](../debug/evolution-overnight-20261105.md)含入口、数据版本和失败。
+- 整合全量2710 Python通过/261跳过、1662 Node通过/23跳过，smoke/Motif/RSI/效率/RAE检查通过。随后deadline、产物保留及反馈回流另有定向回归，最终冻结版本仍须复核。首个Three.js真实任务reward1.0、86请求、代理计量USD0.12637326；旧post-verification索引已排除于演化输入。制造业基线首轮因评分依赖下载超时失败，130请求/USD0.19500395，未进入优化提案。
+- 服务器研究目录通过私有环境定位，原账本沿用不清零；实际deepseek-flash/off/393216，费用与请求不限。依赖预热两组一致，原tests字节与限时保留。原始轨迹仅在私有`.local/`，公开输入来自固定版本benchmark。
+- 未完成为真实演化后继采用与完整效率对照、benchmark中的boundary/构造策略宿主，以及真实Builder自应用收益。新机制不进入生产，不自行合并或部署。接手按当前实验运行ID继续，保留所有失败与未知费用。
+
 ## 2026-11-05：文档目录分类候选
 
 - 从 #135 已合并的 `main`（`f8179fa`）建立独立 `codex/docs-taxonomy-20261105`；共享开发工作区的未提交改动不覆盖。本轮只整理文档和其链接，不修改运行代码、认证 JSON 或历史快照。
