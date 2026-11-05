@@ -19,6 +19,28 @@ export function apiPurpose(path: string, diagnostic = false): 'account' | 'task'
   return undefined;
 }
 
+export async function sharingControlAllowed(request: Request): Promise<boolean> {
+  const query = new URL(request.url).searchParams;
+  if ([...query.keys()].some(key => key !== 'preview_id') || query.getAll('preview_id').length > 1) return false;
+  if (query.has('preview_id') && !/^[a-f0-9-]{36}$/.test(query.get('preview_id')!)) return false;
+  if (request.method === 'GET') return true;
+  if (query.size) return false;
+  if (request.method !== 'POST' || !request.headers.get('content-type')?.startsWith('application/json')) return false;
+  try {
+    const raw = await request.clone().text();
+    if (Buffer.byteLength(raw) > 4096) return false;
+    const body = JSON.parse(raw);
+    const fields: Record<string, string[]> = {preview: ['action','task_id'],
+      send: ['action','preview_id','sha256','consent'], cancel: ['action','preview_id']};
+    const allowed = fields[body?.action];
+    if (!allowed || Object.keys(body).some(key => !allowed.includes(key))) return false;
+    if (body.action === 'preview') return typeof body.task_id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(body.task_id);
+    if (typeof body.preview_id !== 'string' || !/^[a-f0-9-]{36}$/.test(body.preview_id)) return false;
+    return body.action === 'cancel' ||
+      body.consent === true && typeof body.sha256 === 'string' && /^[a-f0-9]{64}$/.test(body.sha256);
+  } catch {return false;}
+}
+
 /** Covers HTTP and WebSocket egress, including requests outside the local protocol handler. */
 export function desktopNetworkAllowed(candidate: string, server: string, diagnostic = false): boolean {
   let url: URL;

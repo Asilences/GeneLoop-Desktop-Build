@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import type { Session } from 'electron';
 import { sameServer } from './policy.ts';
-import {apiPurpose} from './privacy.ts';
+import {apiPurpose,sharingControlAllowed} from './privacy.ts';
 type RequestWithOrigin = Request & { readonly initiatorOrigin?: string };
 type Options = { session: Session; server: string; assets: string; ui: string; fail: (message: string) => void; diagnostic?: boolean };
 const FILES = ['app.js','api.js','conversation.js','components.js','lucide-icons.js','composer.js','scene-picker.js','panels.js','comparison.js','deliveries.js','privacy.js','desktop.css'];
@@ -35,7 +35,7 @@ export class LocalFrontendHost {
       }
       if(!path.startsWith('/api/'))return new Response('Desktop resource not found',{status:404});
       const purpose = apiPurpose(path, this.options.diagnostic);
-      if (!purpose) {
+      if (!purpose || purpose === 'sharing' && !(await sharingControlAllowed(request))) {
         this.egress.denied++;
         return Response.json({error:{code:'desktop/privacy',message:'此数据出口未获准启用。'}},{status:403});
       }

@@ -35,6 +35,23 @@ test('网络错误保持独立界面可用，返回可重试API错误',async()=>
   const host=new LocalFrontendHost({server:'https://fixture.example/',ui:'unused',assets:'unused',fail:assert.fail,session:{fetch:async()=>{throw Error('offline');}}});
   const response=await host.fetch(new Request('https://fixture.example/api/account/me'));assert.equal(response.status,503);assert.equal((await response.json()).error.code,'desktop/network');
 });
+
+test('共享控制请求在桌面拒绝原文、嵌套字段和未同意请求，只有固定控制字段可以转发',async()=>{
+  const forwarded=[],host=new LocalFrontendHost({server:'https://fixture.example/',ui:'unused',assets:'unused',
+    fail:assert.fail,session:{fetch:async request=>{forwarded.push(await request.text());return Response.json({ok:true});}}});
+  const send=body=>host.fetch(new Request('https://fixture.example/api/harless/rsi-sharing',{
+    method:'POST',headers:{Origin:'https://fixture.example','Content-Type':'application/json'},body:JSON.stringify(body),
+  }));
+  for(const body of [
+    {action:'preview',task_id:'owned',source:{content:'private@example.com'}},
+    {action:'preview',task_id:'/private/trace'},
+    {action:'send',preview_id:'a'.repeat(36),sha256:'b'.repeat(64),consent:false},
+  ])assert.equal((await send(body)).status,403);
+  assert.equal((await host.fetch(new Request('https://fixture.example/api/harless/rsi-sharing?source=private'))).status,403);
+  assert.deepEqual(forwarded,[]);
+  assert.equal((await send({action:'preview',task_id:'owned-task'})).status,200);
+  assert.deepEqual(forwarded,[JSON.stringify({action:'preview',task_id:'owned-task'})]);
+});
 test('独立日志投影处理快照、流式增量、持久替换及重连，不重复消息',()=>{
   const c=new Conversation(),event=(seq,type,data,surfaceOp)=>({type:'event',event:{seq,type,data,surfaceOp,time:1}});
   const user=event(1,'user/message',{source:{kind:'user'},content:[{type:'text',text:'问题'}]});

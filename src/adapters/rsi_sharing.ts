@@ -55,7 +55,10 @@ export function createRsiSharing(options: Options) {
     async handle(request: Request): Promise<Response> {
       if (disposed) return rejected('rsi_sharing_unavailable', 410);
       if (request.method === 'GET') {
-        const id = new URL(request.url).searchParams.get('preview_id');
+        const query = new URL(request.url).searchParams;
+        if ([...query.keys()].some(key => key !== 'preview_id') || query.getAll('preview_id').length > 1)
+          return rejected('rsi_sharing_rejected', 400);
+        const id = query.get('preview_id');
         if (id) {
           const row = find(id);
           return row ? response(view(row)) : rejected('rsi_sharing_unavailable', 410);
@@ -63,6 +66,7 @@ export function createRsiSharing(options: Options) {
         return response({defaults: PRIVATE_DEFAULTS, enabled: !!endpoint, target: endpoint ?? null,
           allowed_objects: ['tool_flow'], semantic_sharing: false});
       }
+      if (request.method !== 'POST' || new URL(request.url).search) return rejected('rsi_sharing_rejected', 400);
       try {
         const raw = await request.text();
         if (Buffer.byteLength(raw) > 4096) return rejected('rsi_sharing_rejected', 400);
