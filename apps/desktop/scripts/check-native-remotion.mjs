@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -34,12 +34,18 @@ const Scene=()=>{const frame=useCurrentFrame();return <AbsoluteFill style={{back
 registerRoot(()=> <Composition id="Main" component={Scene} durationInFrames={12} fps={12} width={640} height={360}/>);`;
 try {
   process.chdir(root);
+  // A generated entry must never become a Node-side webpack inline loader.
+  const marker=join(root,'forbidden-loader-marker');
+  const loaderSource=`require('node:fs').writeFileSync(${JSON.stringify(marker)},'loader executed');
+module.exports=()=>''; require('!!./entry.tsx!./entry.tsx');`;
+  await assert.rejects(renderNativeRemotion(ctx,reader,writer,tools,loaderSource,'[]',AbortSignal.timeout(30_000)));
+  assert.equal(existsSync(marker),false,'生成的视频代码不得作为 Node 加载器执行');
   const receipt = await renderNativeRemotion(ctx,reader,writer,tools,source,'[]',AbortSignal.timeout(180_000));
   assert.equal(receipt.execution,process.platform+'-local-remotion');
   assert.equal(receipt.output.width,640);assert.equal(receipt.output.height,360);
   assert.equal(receipt.output.fullyDecoded,true);assert.equal(receipt.artifacts.length,3);
   assert.ok(readFileSync(join(root,'workspace','GeneLoop 输出',receipt.artifacts[0].name)).length>1000);
-  console.log(JSON.stringify({diagnostic:true,...receipt}));
+  console.log(JSON.stringify({diagnostic:true,inlineLoaderRejected:true,...receipt}));
 } finally {
   reader.close();writer.close();await ctx.fiber.dispose();process.chdir(app);
   assert.ok(root.startsWith(realpathSync(tmpdir())));
