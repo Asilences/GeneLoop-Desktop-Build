@@ -70,7 +70,16 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
-    if '--tool-schema-media-compat' in sys.argv:
+    if '--execution-evidence-envelope-compat' in sys.argv:
+        sys.argv.remove('--execution-evidence-envelope-compat')
+        reviewed = {'src/adapters/capability_motif_learning.py', 'scripts/reexport-ppt-managed-compat.py'}
+        compat.RELEASES = [
+            ('ppt-master-v79', 'ppt-master-v80', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v81', 'paper-web-v82', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+    elif '--tool-schema-media-compat' in sys.argv:
         sys.argv.remove('--tool-schema-media-compat')
         reviewed = {'src/adapters/deepseek_cost_gate.py', 'scripts/reexport-ppt-managed-compat.py'}
         compat.RELEASES = [

@@ -77,6 +77,35 @@ def acquire(data):
     return service.acquire(program, examples, source, 'observed-interface-work')
 
 
+def test_invalid_runtime_input_is_located_before_native_dispatch(tmp_path, data):
+    service, _, _, _, calls = data
+    result = acquire(data)
+    with pytest.raises(ValueError, match='input_schema_invalid_before_dispatch') as caught:
+        service.execute(result['value_refs'][0], 'wrong input shape', tmp_path / 'invalid-input', 'actual-task')
+    detail = json.loads(str(caught.value).split(':', 1)[1])
+    assert detail['errors'][0]['path'] == ['value']
+    assert detail['errors'][0]['expected'] == '"object"'
+    assert detail['errors'][0]['actual_type'] == 'str'
+    assert calls['execute'] == []
+
+
+def test_json_file_wrapper_diagnostic_is_bounded_and_explains_text_input():
+    from src.adapters.benchmark_script_materials import _validate_execution_arguments
+    capability = {'contract': {'input_schema': {'type': 'object', 'properties': {
+        'value': {'type': 'object', 'properties': {'text': {'type': 'string'}},
+                  'required': ['text'], 'additionalProperties': False}}, 'required': ['value']}}}
+    text = 'v 0 0 0\n' * 100_000
+    with pytest.raises(ValueError, match='before_dispatch') as caught:
+        _validate_execution_arguments(capability, {'value': {'data': {'text': text}}}, 'json_value')
+    message = str(caught.value)
+    detail = json.loads(message.split(':', 1)[1])
+    assert detail['errors'][0]['path'] == ['value']
+    assert any(error['validator'] == 'required' and 'text' in error['expected'] for error in detail['errors'])
+    assert 'original text file' in detail['hint']
+    assert len(message) < 2000 and text not in message
+    _validate_execution_arguments(capability, {'value': {'text': text}}, 'utf8_text')
+
+
 def test_acquisition_uses_original_material_store_and_mechanical_wrappers(data):
     service, program, examples, source, calls = data
     result = acquire(data)

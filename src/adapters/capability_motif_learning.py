@@ -15,7 +15,7 @@ import subprocess
 from jsonschema import Draft202012Validator
 
 from .capability_builder import compile_proposal
-from .capability_contract import capability_digest, capability_ref, validate_capability_snapshot, _binding
+from .capability_contract import capability_digest, capability_ref, validate_capability_snapshot, _binding, _tag
 from .capability_improvement import evidence
 from .dsh_trajectory import DshTrace, ToolContract, ToolRecord, mine_dsh_traces
 from .rsi_protocol import validate_record
@@ -24,6 +24,19 @@ from src.motif_core.offline.trace_compiler import compile_read_motif, certify_re
 
 def _fail(reason):
     raise ValueError('capability_motif_' + reason)
+
+
+def _trajectory_digest(value):
+    """Hash bounded execution evidence using the existing canonical encoding.
+
+    A trajectory retains inputs and witnessed arguments, so its envelope can be
+    larger than one Capability definition or one Runtime value. Their existing
+    limits remain enforced separately.
+    """
+    encoded = json.dumps(_tag(value), ensure_ascii=False, separators=(',', ':')).encode()
+    if len(encoded) > 32_000_000:
+        _fail('trajectory_too_large')
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _at(value, path):
@@ -45,7 +58,8 @@ def _bind(binding, task_input, results):
 
 def _wire_hashes(values):
     """Use the Runtime's exact JSON.stringify hash, including numeric keys/floats."""
-    capability_digest(values)
+    for value in values:
+        capability_digest(value)
     result = subprocess.run(['node', '-e',
         "const fs=require('fs'),c=require('crypto');const v=JSON.parse(fs.readFileSync(0,'utf8'));"
         "process.stdout.write(JSON.stringify(v.map(x=>c.createHash('sha256').update(JSON.stringify(x)).digest('hex'))));"],
@@ -219,7 +233,7 @@ def capture_capability_trace(snapshot, *, task_id, task_input, task_fingerprint,
              'snapshot': copy.deepcopy(snapshot), 'calls': copy.deepcopy(calls), 'steps': steps,
              'evidence': [copy.deepcopy(c['execution_ref']) for c in calls],
              'quality': 'unreviewed', 'benefit': None}
-    value['digest'] = capability_digest(value)
+    value['digest'] = _trajectory_digest(value)
     return value
 
 
@@ -332,7 +346,7 @@ def capture_composition_trace(snapshot, *, execution_ref, task_input, task_finge
         value['validation_manifest_ref'] = copy.deepcopy(validation_manifest_ref)
         value['evidence'].append(copy.deepcopy(validation_manifest_ref))
         value['container_certification'] = 'candidate'
-    value['digest'] = capability_digest(value)
+    value['digest'] = _trajectory_digest(value)
     return value
 
 

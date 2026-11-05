@@ -10,6 +10,9 @@ import copy
 import json
 from pathlib import Path
 import subprocess
+from itertools import islice
+
+from jsonschema import Draft202012Validator
 
 from .capability_contract import (
     capability_digest, create_capability_snapshot, validate_capability_snapshot,
@@ -54,6 +57,22 @@ def _payload(reference):
     except json.JSONDecodeError:
         return {'text': text}, 'utf8_text'
     return {'data': value}, 'json_value'
+
+
+def _validate_execution_arguments(capability, arguments, encoding):
+    errors = list(islice(Draft202012Validator(
+        capability['contract']['input_schema']).iter_errors(arguments), 3))
+    if not errors:
+        return
+    details = [{'path': list(error.absolute_path), 'validator': error.validator,
+                'expected': json.dumps(error.validator_value, ensure_ascii=False)[:240],
+                'actual_type': type(error.instance).__name__,
+                'message': error.message[:320]} for error in errors]
+    raise ValueError('benchmark_capability_input_schema_invalid_before_dispatch:' + json.dumps({
+        'encoding': encoding, 'errors': details,
+        'hint': 'Tool value is the run(value) input. input_file wraps JSON as {data:...} '
+                'and other UTF-8 files as {text:...}. Use the listed input schema and '
+                'the original text file when the function requires text.'}, ensure_ascii=False))
 
 
 def _witnesses_source(text, source):
@@ -327,6 +346,7 @@ class BenchmarkScriptMaterials:
         args = {'value': value} if set(properties) == {'value'} else {'paths': ['/work/inputs/value.json']}
         save(directory / 'input-provenance.json', {'source': source, 'encoding': encoding,
              'value_file': file_ref(payload), 'scope': 'host_input_binding_to_certified_script'})
+        _validate_execution_arguments(cap, args, encoding)
         return self._run(catalog, cap_ref, args, inputs, directory, task_id, source)
 
     def execute_arguments(self, cap_ref, arguments, directory, task_id, *, inputs=()):
@@ -334,6 +354,8 @@ class BenchmarkScriptMaterials:
         catalog = self.catalog()
         if cap_ref not in catalog['snapshot']['roots']:
             raise ValueError('benchmark_script_capability_not_registered')
+        capability = next(cap for cap in catalog['snapshot']['capabilities'] if cap['id'] == cap_ref['id'])
+        _validate_execution_arguments(capability, arguments, 'explicit_capability_arguments')
         capability_digest(arguments)
         for item in inputs:
             verify(item['source'])
