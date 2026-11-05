@@ -8,5 +8,6 @@
 - 失败与处理：DSH Windows ACL 后端不支持受限进程用 libuv 命名管道启动孙进程，也阻断 Chromium Mojo，原方案实际失败。固定编译工具改由 DSH 管理生命周期；Windows 浏览器桥去除 Remotion 的 `--no-sandbox`，使用 Chromium 渲染沙箱。不能把它描述为整个编译进程的文件读取/网络隔离。ASAR 中 esbuild 的执行路径改为相邻实体文件；Office/Chromium 在私有临时目录创建只读目录，清理仅遍历本次目录且不跟随链接。
 - 全量回归：`npm test` 的 Python 部分为 132 失败、2125 通过、273 跳过、30 错误，保留 `.local/npm-test-preview11-native.log`。与 preview.10 名单比较，新增三项失败中两项单独复验通过，文献 Agent 的 Windows rename EPERM 仍复现；该模块未在本轮修改。不能据失败总数减少认定无回归，不能宣称全量测试通过。Node 全量日志另保留 `.local/node-test-preview11-native.log`。
 - 成本：19 次为本轮这组成功验收的请求增量；累计账本保留了此前失败/调试调用。此记录未核对服务商账单，未据请求数推算人工修订费用或端到端节省。
-- Mac 边界：已准备 macOS 15 ARM64、macOS 15 Intel 的 GitHub Actions 原生构建、文件守卫、PPT/PDF、Remotion 和取消测试。Python 便携包与 LibreOffice 下载均固定版本和 SHA-256；Mac 工具尚无运行结果。构建流程没有安装包上传步骤。
+- Mac 边界：已准备 macOS 15 ARM64、macOS 15 Intel 的 GitHub Actions 原生构建、文件守卫、PPT/PDF、Remotion 和取消测试。Python 便携包与 LibreOffice 下载均固定版本和 SHA-256。源码 `6ada3a13` 已推送；[首次 CI](https://github.com/jingyio/GeneLoop/actions/runs/42105245995) 的两台机器均未启动，GitHub 注释为账号因账单问题被锁定，步骤为空。Mac 工具尚无运行结果，不能把该状态写为代码测试失败或验证通过。构建流程没有安装包上传步骤。
+- 本地安装包：647218688字节，SHA-256 `79648c9fff0f26c4e85f72be0f5f62fb888cc2cdc7392e13929b7a88e88a195c`，内嵌Engine摘要匹配。保留 `.local/desktop-preview11-verified/installer-verification.json`，未上传或覆盖日常安装。
 - Motif：代码与打包摘要发生变化，旧认证不自动适用于本候选。安装版继续普通 Harness 执行。后续需要在新版本上重新编译/认证，且扩大无字段模板、数据任务、论文核验与视频测试；本记录不支持所有场景迁移完成或成本下降的结论。
