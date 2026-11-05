@@ -47,13 +47,13 @@ npm run web -- --scenario file-management --budget-usd 5 --request-limit 96
 
 Web 的 DeepSeek 模型提供推理 **Off / On**，默认 Off；On 对应官方 `thinking.enabled` 与 `reasoning_effort: high`，按会话保存，并应用到本轮两侧任务。附件入口不按场景限制扩展名，PDF、Word 和需求文本可随数据一起上传。平台会向模型提供可提取的正文和表格文本；未知二进制、损坏文件或未识别的扫描文字会明确标记，不能冒充已读。统计工具仍以真实数据表为依据，不从资料中臆造统计值。
 
-普通聊天默认展示最终回答，工具调用、上下文和早期回复收在可展开的过程区；生成中继续显示真实文字增量和简明状态。原生 Markdown、图片、文件入口以及最终回复的复制、分支操作保留。对照标题统一为 Baseline / Motif，影子模式另标“影子评估”。Web 共用 GeneLoop 产品身份；旧会话也在公开读取与实时输出时隐藏内部环境信息，原始 journal、用户消息和文件字节保持不变。代码行为、定向检查、真实浏览器及正式部署验收记录在 [本轮说明](docs/experiments/geneloop-message-privacy-20261015-v1.md)。
+普通聊天默认展示最终回答，工具调用、上下文和早期回复收在可展开的过程区；生成中继续显示真实文字增量和简明状态。原生 Markdown、图片、文件入口以及最终回复的复制、分支操作保留。对照标题统一为 Baseline / Motif，影子模式另标“影子评估”。Web 共用 GeneLoop 产品身份；旧会话也在公开读取与实时输出时隐藏内部环境信息，原始 journal、用户消息和文件字节保持不变。代码行为、定向检查、真实浏览器及正式部署验收记录在 [本轮说明](docs/debug/geneloop-message-privacy-20261015-v1.md)。
 
 已有 PPT、论文、数据分析 Motif 库已统一到版本化的 [motif-libraries/](motif-libraries/README.md)。管理员在成员 Web policy 配置 `comparison_scenes: ["ppt", "paper-proofreading", "research-data-analysis"]` 后，原生 `/ppt`、`/paper`、`/data` 聊天分别执行 Baseline 与 Motif 两路，保留各自多轮历史、交付文件与 1–5 分评分；论文原库按其授权运行 Shadow。资料通过原生附件上传，账号隔离与预算沿用现有服务。库缺失或兼容锁失效会明确回退，不能把回退记为优化成功。
 
-持续部署可使用 `scripts/serve-web-budget.py`，显式指定私有 output、现有累计 checkpoint 和获准上限；缺少 checkpoint 会拒绝启动，禁止因重启清零。用户于 2026-10-15 取消当前共享服务器累计 1 美元费用上限，配置使用 `--budget-usd 0`（policy 的 `run_budget_usd: null`），请求次数也不限；每任务 0.23 美元继续保留。按后续指示，Web 单次文字输入不设应用长度上限，输出使用 `max_output_tokens: null` 并省略请求 `max_tokens`，保留服务商原生容量边界。调用前持久化预约费用，未知使用量继续占用任务预算，累计账本照常记录。Linux 服务器的真实三场景功能验收和失败边界见 [联调记录](docs/experiments/trained-three-scenes-20261014-v1.md)。
+持续部署可使用 `scripts/serve-web-budget.py`，显式指定私有 output、现有累计 checkpoint 和获准上限；缺少 checkpoint 会拒绝启动，禁止因重启清零。用户于 2026-10-15 取消当前共享服务器累计 1 美元费用上限，配置使用 `--budget-usd 0`（policy 的 `run_budget_usd: null`），请求次数也不限；每任务 0.23 美元继续保留。按后续指示，Web 单次文字输入不设应用长度上限，输出使用 `max_output_tokens: null` 并省略请求 `max_tokens`，保留服务商原生容量边界。调用前持久化预约费用，未知使用量继续占用任务预算，累计账本照常记录。Linux 服务器的真实三场景功能验收和失败边界见 [联调记录](docs/debug/trained-three-scenes-20261014-v1.md)。
 
-四场景研究代码的分支整合与兼容验收见 [当前整合记录](docs/experiments/four-scenario-main-integration-20261014-v1.md)。论文生成工具/轨迹 RSI 的显式实验入口在 [论文场景](scenarios/paper-submission/README.md)，文献处理在 [文献场景](scenarios/literature-notes/README.md)。研究 CLI 与统一 Web 的工具契约不同，分支合并不会自动赋予旧实验库产品 Execute 权限；文献的任务级 Web 绑定和双栏评分仍需单独验收。
+四场景研究代码的分支整合与兼容验收见 [当前整合记录](docs/debug/four-scenario-main-integration-20261014-v1.md)。论文生成工具/轨迹 RSI 的显式实验入口在 [论文场景](scenarios/paper-submission/README.md)，文献处理在 [文献场景](scenarios/literature-notes/README.md)。研究 CLI 与统一 Web 的工具契约不同，分支合并不会自动赋予旧实验库产品 Execute 权限；文献的任务级 Web 绑定和双栏评分仍需单独验收。
 
 Web 场景快捷入口支持 `/ppt`、`/paper`、`/data`、`/chat`，输入前缀即可选择并显示有色标识，也可直接输入完整短命令和请求；`/harless` 保留场景、模式与 RSI 控制。启用三场景对照的账号部署允许在同一可见对话中先 `/data` 再 `/ppt`，无需新建聊天；后台按场景轮换独立任务子会话，承接有界历史，并重新核验可用来源与交付文件。正在运行的回复须完成或取消后再切换。删除未发送的场景标记会切回普通对话；正常发送后的编辑器清空不取消已选场景。详见 [场景与账号控制](docs/harless-controls.md)。
 
@@ -65,7 +65,7 @@ GeneLoop 是本项目的产品名称，界面使用依据用户参考图绘制�
 
 工作区名称行可再次点击折叠，右侧菜单与新建按钮独立操作；聊天可从标题栏或侧栏菜单移入回收站，并在“最近删除”恢复原会话及文件。网页数据报告测试包位于 [examples/web-data-report-demo/](examples/web-data-report-demo/)，包含 40 行合成材料实验数据、研究说明和可直接粘贴的 `/data` 提示词；它用于软件验证，不代表实际实验结论。
 
-既有论文/DeepSeek 对照继续使用真实 DeepSeek API；共享 Web 现在可按服务器配置选择 GLM。服务器先加载 `.local/remote-env.sh`，在私有 `.env` 配置所需模型密钥（SDK 场景仍需 `DEEPSEEK_API_KEY`）；Web 用 `npm run web:real`，SDK 场景用 `npm run scenario:real -- --scenario scenarios/example/scenario.json --budget-usd 0.25`。Web 每任务与整次启动均默认上限 0.25 美元；SDK 每次运行默认上限 0.25 美元，运行前核对预览与有效配置，超出既有上限另行确认。已完成一次 SDK/Harness/MCP 的真实 API 闭环：3 次 HTTP 200、4 次工具、来源引用一致，见[最小真实调用记录](docs/experiments/deepseek-real-api-smoke-20261009-v1.md)。3080 的历史服务为模拟模式；3086 真实 Web 后端两项任务已通过，浏览器点击体验仍待确认，见[连接恢复与真实 Web 验收](docs/experiments/web-real-recovery-20261009-v1.md)。
+既有论文/DeepSeek 对照继续使用真实 DeepSeek API；共享 Web 现在可按服务器配置选择 GLM。服务器先加载 `.local/remote-env.sh`，在私有 `.env` 配置所需模型密钥（SDK 场景仍需 `DEEPSEEK_API_KEY`）；Web 用 `npm run web:real`，SDK 场景用 `npm run scenario:real -- --scenario scenarios/example/scenario.json --budget-usd 0.25`。Web 每任务与整次启动均默认上限 0.25 美元；SDK 每次运行默认上限 0.25 美元，运行前核对预览与有效配置，超出既有上限另行确认。已完成一次 SDK/Harness/MCP 的真实 API 闭环：3 次 HTTP 200、4 次工具、来源引用一致，见[最小真实调用记录](docs/debug/deepseek-real-api-smoke-20261009-v1.md)。3080 的历史服务为模拟模式；3086 真实 Web 后端两项任务已通过，浏览器点击体验仍待确认，见[连接恢复与真实 Web 验收](docs/experiments/web-real-recovery-20261009-v1.md)。
 
 `npm test`、无模型 `smoke`、故障注入及旧模拟回归继续检查协议、权限和失败恢复。它们仅是开发诊断；不能作为模型回答、科研交付或真实降本的验收依据。真实 API 失败时记录失败，不切回固定模拟回复来报告通过。
 
@@ -73,7 +73,7 @@ GeneLoop 是本项目的产品名称，界面使用依据用户参考图绘制�
 
 ## 十分钟启动
 
-当前 SDK 场景入口使用 `import.meta.main`，需要 Node.js 22.18+；安装清单的宽松 engine 范围不能代替实际启动验证。Python 3.10.8 与 3.12 均已通过主线免费运行验收；科研 PPT 场景在服务器使用 Python 3.12，额外渲染依赖按场景说明安装。服务器 3.10.8 的主线验收见[验收记录](docs/experiments/server-python310-free-loop-20261009-v1.md)。先安装固定依赖，再跑不付费的检查：
+当前 SDK 场景入口使用 `import.meta.main`，需要 Node.js 22.18+；安装清单的宽松 engine 范围不能代替实际启动验证。Python 3.10.8 与 3.12 均已通过主线免费运行验收；科研 PPT 场景在服务器使用 Python 3.12，额外渲染依赖按场景说明安装。服务器 3.10.8 的主线验收见[验收记录](docs/debug/server-python310-free-loop-20261009-v1.md)。先安装固定依赖，再跑不付费的检查：
 
 ```sh
 npm ci
@@ -114,7 +114,7 @@ ssh -N -L 3080:127.0.0.1:3080 -p SSH_PORT USER@SERVER
 
 默认动态运行时使用 `scenarios/general/`（New Scene），免费模拟模型、Shadow（RSI On），监听 `127.0.0.1:3080`。从本次 `.local/web/runs/<RUN_ID>/access-url.txt` 复制官方认证地址到本地浏览器，打开聊天首页即可。认证地址/token 为私有数据。原生 `/harless` 菜单的 PPT、Paper Proofreading、Research Data Analysis、Files 和 New Scene 分别加载服务器登记的 MCP、白名单与 Prompt：PPT 使用既有19工具；论文提供PDF/文本与静态LaTeX检查；数据提供CSV/TSV描述统计与Pearson相关；Files 盘点、读取、查重和索引任务上传文件，可显式授权整理副本；New Scene读取本Session上传文本。模式和RSI独立，菜单不调用模型，选择影响下一任务。PPT菜单可设置页数、模板及生成新副本权限；Files 菜单可设置只读或整理任务副本。免费和真实任务从聊天直接发送，服务端保留费用、请求上限与工具权限；旧页面跳回聊天，任务 API 保留。
 
-PPT先安装 `scenarios/research_ppt/requirements.txt`，在该目录 `npm ci && npm run build`；需要兼容的LibreOffice、中文字体与静态Fontconfig才能输出。仅部署论文PDF读取时安装 `scenarios/paper_proofreading/requirements.txt`，纯文本校对/数据CSV分析不需渲染依赖。管理员在私有环境设置 `HARLESS_PPT_RENDERER_ROOT/HARLESS_PPT_FONT_ROOT`，缺失时只读可用、输出明确拒绝。`HARLESS_PPT_RUNTIME_BUNDLE` 指向已认证且代码锁有效的五文件包，当前仅接管闭合pin/read；没有库的场景可用Origin/Shadow，Execute On拒绝。部署成员能力只增加网关 `memberSceneDeployment` 只读挂载，输入、Session、产物和预算继续隔离。完整配置、范围与诊断见 [控制协议](docs/harless-controls.md)、[账号网关](docs/harless-account-gateway.md) 和 [上线准备记录](docs/experiments/harless-launch-readiness-20261014-v1.md)。V100 Ubuntu18/Node22.23.3/Python3.10.21已验证；完整模型自主PPT生成与科研质量未在本轮验收。
+PPT先安装 `scenarios/research_ppt/requirements.txt`，在该目录 `npm ci && npm run build`；需要兼容的LibreOffice、中文字体与静态Fontconfig才能输出。仅部署论文PDF读取时安装 `scenarios/paper_proofreading/requirements.txt`，纯文本校对/数据CSV分析不需渲染依赖。管理员在私有环境设置 `HARLESS_PPT_RENDERER_ROOT/HARLESS_PPT_FONT_ROOT`，缺失时只读可用、输出明确拒绝。`HARLESS_PPT_RUNTIME_BUNDLE` 指向已认证且代码锁有效的五文件包，当前仅接管闭合pin/read；没有库的场景可用Origin/Shadow，Execute On拒绝。部署成员能力只增加网关 `memberSceneDeployment` 只读挂载，输入、Session、产物和预算继续隔离。完整配置、范围与诊断见 [控制协议](docs/harless-controls.md)、[账号网关](docs/harless-account-gateway.md) 和 [上线准备记录](docs/debug/harless-launch-readiness-20261014-v1.md)。V100 Ubuntu18/Node22.23.3/Python3.10.21已验证；完整模型自主PPT生成与科研质量未在本轮验收。
 
 原生模型选择可切换服务器已启用的 DeepSeek Flash 与 GLM；默认免费模拟仍使用 DeepSeek。真实 Web 可在服务器私有 `.env` 配置 GLM 模型、密钥和价格。选定模型会绑定任务和预算账本；GLM 当前只接文字输入，真实 GLM 请求仍待验收。Codex 登录入口已撤销，当前不提供 GPT 登录。
 
@@ -156,7 +156,7 @@ Mode 菜单显示 Origin、Shadow、Execute；Origin 在协议中仍为 `baselin
 npm run web:real
 ```
 
-这个显式入口只开放真实连接。官方聊天发送后立即登记并执行任务，不显示预算确认页面；任务 API 仍保留显式预览和提交操作。发送前可在输入框旁选择场景、RSI 与模式，服务端继续限制每任务及全启动费用和请求数。此前的[确认流程验收](docs/experiments/native-chat-confirm-20261009-v1.md)记录的是旧界面；SDK 的真实 API 基本连通已通过，真实 Web 后端最小闭环已通过；当前直接发送的浏览器体验和科研交付质量仍待验收。
+这个显式入口只开放真实连接。官方聊天发送后立即登记并执行任务，不显示预算确认页面；任务 API 仍保留显式预览和提交操作。发送前可在输入框旁选择场景、RSI 与模式，服务端继续限制每任务及全启动费用和请求数。此前的[确认流程验收](docs/debug/native-chat-confirm-20261009-v1.md)记录的是旧界面；SDK 的真实 API 基本连通已通过，真实 Web 后端最小闭环已通过；当前直接发送的浏览器体验和科研交付质量仍待验收。
 
 GLM 请求通过本地预算代理绑定已提交任务；`HARLESS_GLM_BASE_URL` 仅接受智谱官方 HTTPS API 根地址。价格由管理员按所用模型与账户填写，代理估值不等于账单实付。当前 GLM 已完成假密钥启动、模型目录与任务预览验证，真实 GLM 请求和工具调用仍待配置有效密钥后验收。
 
@@ -175,9 +175,9 @@ npm run web -- --frozen --scenario portfolio-v1 --mode execute
 node scripts/project.mjs python scripts/stop-harness-web.py RUN_ID
 ```
 
-服务器已通过 146 项 Python、44 项 Node、13 组动态 HTTP/MCP、11 组冻结协议诊断，以及 18 题/83 来源 smoke；Motif 样例闭环也已通过。实际付费为零，详见[动态任务验收](docs/experiments/dynamic-web-tasks-20261009-v1.md)与[Web 交接](docs/handoffs/harness-web.md)。HTTP 诊断不代替浏览器体验和真实质量评审。每个动态任务的数据独立位于 `.local/web/runs/<RUN_ID>/tasks/<TASK_ID>/`，含输入/配置快照、会话事件、答案、ledger 和 Motif 审计；启动目录另保留全局预算账本。goal 续轮、队列编辑、fork 或 steer 不能绕过既有任务绑定，改变要求需创建新任务。
+服务器已通过 146 项 Python、44 项 Node、13 组动态 HTTP/MCP、11 组冻结协议诊断，以及 18 题/83 来源 smoke；Motif 样例闭环也已通过。实际付费为零，详见[动态任务验收](docs/debug/dynamic-web-tasks-20261009-v1.md)与[Web 交接](docs/handoffs/harness-web.md)。HTTP 诊断不代替浏览器体验和真实质量评审。每个动态任务的数据独立位于 `.local/web/runs/<RUN_ID>/tasks/<TASK_ID>/`，含输入/配置快照、会话事件、答案、ledger 和 Motif 审计；启动目录另保留全局预算账本。goal 续轮、队列编辑、fork 或 steer 不能绕过既有任务绑定，改变要求需创建新任务。
 
-当前适用于同一获授权操作人的服务器联调，没有多人账号隔离、跨启动任务恢复或论文工具闭环；官方文件浏览能力也不是多人文件沙箱。具体实现与限制见[接口文档](docs/interfaces.md)、[Web 交接](docs/handoffs/harness-web.md)及[冻结入口验收](docs/experiments/harness-web-v1-20261009.md)。
+当前适用于同一获授权操作人的服务器联调，没有多人账号隔离、跨启动任务恢复或论文工具闭环；官方文件浏览能力也不是多人文件沙箱。具体实现与限制见[接口文档](docs/interfaces.md)、[Web 交接](docs/handoffs/harness-web.md)及[冻结入口验收](docs/debug/harness-web-v1-20261009.md)。
 
 ## 代码从哪里读
 
