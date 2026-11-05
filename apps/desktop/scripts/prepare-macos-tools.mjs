@@ -16,6 +16,10 @@ const targets = {
   x64:{cpu:'x86_64',officeCpu:'x86-64',officeSha:'0af062779cc17f6f852918b2424c745f7dd2d20d51d7fb8a0925eb92ec0417a7',sha:'37c38fda76fec1fbf310adcbafb7f0d96af13b5511bf8ea954c3aa8eec185734'},
 };
 const target=targets[process.arch];assert.ok(target,'不支持此 Mac 架构。');
+// The installable skill lives under skills/ppt-master, not the repository root.
+// Preserve the existing byte lock instead of replacing it with a nearby tag.
+const pptMaster={commit:'440557b8dc7c7257b69c04a0b014d5c50a78e6cb',
+  archiveSha256:'080565fa68ab0cf4c8f75dbb3e0095a8ddd636298766bea394a9daf21c94de4d'};
 function run(bin,args,options={}) {
   const result=spawnSync(bin,args,{cwd:repo,stdio:'inherit',...options});
   if(result.error) throw result.error;
@@ -38,11 +42,11 @@ run(python,['-m','pip','install','--only-binary=:all:',
 
 const skill=join(root,'ppt-master');
 if(!existsSync(skill)) {
-  const archive=join(root,'ppt-master.tar.gz');
-  run('curl',['--fail','--location','--retry','3','--output',archive,'https://github.com/hugohe3/ppt-master/archive/refs/tags/v6.6.0.tar.gz']);
+  const archive=join(root,'ppt-master-'+pptMaster.commit+'.tar.gz');
+  await download('https://codeload.github.com/hugohe3/ppt-master/tar.gz/'+pptMaster.commit,archive,pptMaster.archiveSha256);
   const extracted=join(root,'upstream');mkdirSync(extracted,{recursive:true});
   run(python,['-c',"import tarfile,sys;tarfile.open(sys.argv[1]).extractall(sys.argv[2],filter='data')",archive,extracted]);
-  run(python,['scripts/install-ppt-master.py','--source',join(extracted,'ppt-master-6.6.0'),'--destination',skill]);
+  run(python,['scripts/install-ppt-master.py','--source',join(extracted,'ppt-master-'+pptMaster.commit,'skills/ppt-master'),'--destination',skill]);
 }
 const officeArchive=join(root,'libreoffice.dmg');
 const officeUrl='https://download.documentfoundation.org/libreoffice/stable/26.8.2/mac/'+target.cpu+
@@ -62,4 +66,4 @@ try {
 } finally {run('hdiutil',['detach',mount]);}
 writeFileSync(join(root,'build-inputs.json'),JSON.stringify({platform:process.platform,arch:process.arch,
   python:{version:'3.12.16+20261026',sha256:target.sha},libreoffice:{version:'26.8.2',sha256:officeHash},
-  remotion:'4.0.539',pptMaster:'6.6.0'},null,2)+'\n');
+  remotion:'4.0.539',pptMaster:{version:'6.6.0',...pptMaster}},null,2)+'\n');
