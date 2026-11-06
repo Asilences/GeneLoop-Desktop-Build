@@ -85,6 +85,22 @@ def test_env_model_addition_reaches_catalog_route_and_budget_gate():
     subprocess.run([sys.executable, '-c', script], env=env, check=True)
 
 
+def test_models_file_replaces_default_without_duplicate_flash(monkeypatch, tmp_path):
+    rows = [dict(model_api.KOURI_MODELS[0]),
+            {'id': 'another-model', 'context_window': 16000, 'max_output_tokens': 4000,
+             'input_usd_per_million': 1.0, 'output_usd_per_million': 2.0}]
+    path = tmp_path / 'models.json'
+    path.write_text(json.dumps(rows), encoding='utf-8')
+    monkeypatch.setenv('KOURI_MODELS_FILE', str(path))
+    assert model_api.model_ids() == {'deepseek-flash', 'another-model'}
+    assert model_api.model_wire_id('another-model') == 'another-model'
+    monkeypatch.setenv('KOURI_MODELS_FILE', 'config/kouri-models.json')
+    assert model_api.model_ids() == {'deepseek-flash'}
+    monkeypatch.setenv('KOURI_MODELS_FILE', str(tmp_path / 'missing.json'))
+    with pytest.raises(ValueError, match='cannot read KOURI_MODELS_FILE'):
+        model_api.model_routes()
+
+
 @pytest.mark.parametrize('value', [
     'not json', '{}', '[]',
     json.dumps([{'id': 'example-model'}]),

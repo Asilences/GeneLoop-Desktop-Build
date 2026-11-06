@@ -5,6 +5,7 @@ import math
 import json
 import os
 import re
+from pathlib import Path
 from urllib.parse import urlsplit
 
 
@@ -16,33 +17,18 @@ MODEL_WIRE_ID = 'deepseek-v4.1-flash'
 MODEL_CATALOG_PATH = '/v1/models'
 MODEL_CHAT_PATH = '/v1/chat/completions'
 EXTRA_MODELS_ENV = 'KOURI_EXTRA_MODELS_JSON'
+MODELS_FILE_ENV = 'KOURI_MODELS_FILE'
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Default Kouri route. Additional private models come from
-# KOURI_EXTRA_MODELS_JSON. The first id is retained for existing Harness
-# sessions. Prices are reservation estimates, not verified Kouri billing rates.
-KOURI_MODELS = (
-    {'id': MODEL_SDK_ID, 'wire_id': MODEL_WIRE_ID,
-     'label': 'DeepSeek V4.1 Flash',
-     'context_window': 1_000_000, 'max_output_tokens': 393_216,
-     'input_modalities': ('text', 'image'),
-     'supported_reasoning_efforts': ('off', 'low', 'high', 'max'),
-     'input_usd_per_million': 0.30, 'cache_hit_usd_per_million': 0.006,
-     'output_usd_per_million': 1.20},
-)
-
-
-def _extra_model_routes() -> tuple[dict, ...]:
-    raw = os.environ.get(EXTRA_MODELS_ENV, '').strip()
-    if not raw:
-        return ()
+def _parse_model_routes(raw: str, source: str) -> tuple[dict, ...]:
     if len(raw) > 65_536:
-        raise ValueError(f'{EXTRA_MODELS_ENV} is too large')
+        raise ValueError(f'{source} is too large')
     try:
         rows = json.loads(raw)
     except json.JSONDecodeError as error:
-        raise ValueError(f'{EXTRA_MODELS_ENV} must be a JSON array') from error
+        raise ValueError(f'{source} must be a JSON array') from error
     if not isinstance(rows, list) or not 1 <= len(rows) <= 32:
-        raise ValueError(f'{EXTRA_MODELS_ENV} must contain 1 to 32 models')
+        raise ValueError(f'{source} must contain 1 to 32 models')
     allowed = {'id', 'wire_id', 'label', 'context_window', 'max_output_tokens',
                'input_modalities', 'supported_reasoning_efforts',
                'input_usd_per_million', 'cache_hit_usd_per_million',
@@ -52,7 +38,7 @@ def _extra_model_routes() -> tuple[dict, ...]:
     result = []
     for row in rows:
         if not isinstance(row, dict) or required - row.keys() or row.keys() - allowed:
-            raise ValueError(f'invalid model entry in {EXTRA_MODELS_ENV}')
+            raise ValueError(f'invalid model entry in {source}')
         model = row['id']
         result.append({**row,
                        'wire_id': row.get('wire_id', model),
@@ -64,8 +50,27 @@ def _extra_model_routes() -> tuple[dict, ...]:
     return tuple(result)
 
 
+def _file_model_routes(name: str) -> tuple[dict, ...]:
+    path = Path(name).expanduser()
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    try:
+        with path.open('r', encoding='utf-8') as source:
+            raw = source.read(65_537)
+    except (OSError, UnicodeError) as error:
+        raise ValueError(f'cannot read {MODELS_FILE_ENV} model configuration') from error
+    return _parse_model_routes(raw, MODELS_FILE_ENV)
+
+
+# Shared default template; prices remain estimates, not verified Kouri rates.
+KOURI_MODELS = _file_model_routes('config/kouri-models.json')
+
+
 def model_routes() -> tuple[dict, ...]:
-    routes = (*KOURI_MODELS, *_extra_model_routes())
+    filename = os.environ.get(MODELS_FILE_ENV, '').strip()
+    extra = os.environ.get(EXTRA_MODELS_ENV, '').strip()
+    base = _file_model_routes(filename) if filename else KOURI_MODELS
+    routes = (*base, *(_parse_model_routes(extra, EXTRA_MODELS_ENV) if extra else ()))
     ids = [row['id'] for row in routes]
     if not ids or any(not isinstance(model, str) for model in ids) or len(ids) != len(set(ids)):
         raise ValueError('Kouri model ids must be unique and nonempty')

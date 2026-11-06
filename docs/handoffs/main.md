@@ -14,6 +14,8 @@
 - 追加模型可在项目私有 `.env` 配置 `KOURI_EXTRA_MODELS_JSON`，不再要求修改 `model_api.py`；字段与默认能力见 `.env.example` 和 `docs/interfaces.md`。模型配置在进程启动时进入网页目录与预算费率，正式服务还须在私有启动计划及独立预算进程传入相同配置并按统一入口发布；本轮没有修改运行中的服务。
 - 本次验证：环境变量模型/预算 Python 专项 34/34；Harness 推理/模型适配 Node 7/7（允许本机回环端口后）。全量 `npm test` 在受限本地环境为 2914 通过、261 跳过、94 失败、15 错误，主要是回环端口 `EPERM` 及旧能力包源码锁；相关专项已单独通过。Kouri 真实冒烟使用 SkillFlow Healthcare 第 3 题 baseline 首请求、`off`、输出诊断上限 1024，HTTP 200、输入 1362/输出 56 token、1 个可解析工具调用；代理估费约 USD 0.0004758，账单实付未知。它不含工具执行或官方 verifier，不代表整题通过。原始请求/响应仅在忽略的 `.local/debug/kouri-baseline-smoke/`；正式服务未重启。
 
+- Flash 完整模板已放入 `config/kouri-models.json`，成为默认模型目录；`KOURI_MODELS_FILE` 可指定替代文件。模板保留内部 `deepseek-flash` 与上游 `deepseek-v4.1-flash` 映射，`KOURI_EXTRA_MODELS_JSON` 可继续追加，重复 ID 会拒绝。主工作区仅新增同内容模板供用户审阅，未覆盖已有源码或重启服务。模板读取、缺失文件拒绝和模型/预算相关 Python 专项 35/35 通过。
+
 ## 2026-11-05：PR156 整合 main 候选
 
 - 以 PR156 `8e697e51` 为起点，合入 #158 后的 main `a71e30ce`；在隔离检出处理冲突，共享工作区与原研究检出的未提交改动未覆盖。保留 main 的精简 AGENTS、文档分类与 README 布局，Evolution 研究进展仍在 docs。
