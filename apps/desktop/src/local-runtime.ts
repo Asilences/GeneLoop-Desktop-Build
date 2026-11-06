@@ -21,7 +21,7 @@ export function startLocalWorker(options: {
   executable: string; runtime: string; home: string; directory: string;
   endpoint: string; token: string; model: string; prompt: string;
   sessionId?: string; resume?: boolean; scene?: LocalScene; media?: LocalMediaTools;
-  ppt?: LocalPptTools;
+  ppt?: LocalPptTools; legacyTools?: boolean;
   approveVideo?: (request: VideoApproval) => Promise<boolean>;
   onUpdate: (event: LocalTaskUpdate) => void;
 }) {
@@ -80,7 +80,7 @@ export function startLocalWorker(options: {
       options.onUpdate({ kind: 'ready' });
       send({ kind: 'run', directory: options.directory, model: options.model, prompt: options.prompt,
         sessionId: options.sessionId, resume: options.resume, scene: options.scene, media: options.media,
-        ppt: options.ppt, videoRendering: !!options.approveVideo });
+        ppt: options.ppt, legacyTools:options.legacyTools===true,videoRendering: !!options.approveVideo });
     } else if (message.kind === 'video-approval') {
       const answer = (allowed: boolean) => send({ kind: 'video-approved', id: message.id, allowed: allowed && !canceled && !ending });
       if (canceled || !options.approveVideo) answer(false);

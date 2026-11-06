@@ -98,3 +98,20 @@ Mac 在目标平台原生执行 `node scripts/prepare-macos-tools.mjs`（工作�
 ppt-master 构建来源固定为上游提交 `440557b8dc7c7257b69c04a0b014d5c50a78e6cb` 的 `skills/ppt-master/` 子目录，逐字节保持既有 13,016 文件锁；仓库根目录和同名版本标签不能替代该安装来源。Mac 的 FFmpeg/FFprobe 及相邻动态库在构建时重定位为 `@loader_path` 并恢复 ad-hoc 签名，避免依赖当前工作目录。系统动态库路径保留。该签名不是 Apple Developer 签名或公证。
 
 Mac 包内的 Agent 启动与工具探针使用 `node scripts/probe-local-runtime.mjs --installed "<GeneLoop Desktop.app 路径>"`，Windows 使用同一入口并传入安装目录。探针启动真实 DSH SDK、读取/搜索文本、写报告、拒绝越界访问、取消等待及正常关闭；模型响应来自回环协议夹具，真实模型请求为零。手动 Mac CI 可选择 `app` 模式，只生成 `.app` 并执行包内检查；`installers` 模式继续生成 DMG/ZIP，两种模式都不上传安装包。
+
+## preview.12 跨平台场景工具
+
+| 场景 | 本轮补齐能力 |
+| --- | --- |
+| 通用对话 | 与其他五场景共用来源固定及 PDF、PPTX、DOCX、XLSX、JSON、TeX/BibTeX、文本分页读取 |
+| 文件管理 | 根据明确来源版本与目标目录名称，将文件副本整理为 ZIP，并交付来源回执；保留原件 |
+| 数据分析 | CSV/TSV、XLSX、JSON、PDF/DOCX/文本显式表格的选择、统计、Pearson 相关和 CSV 副本导出；复用网页 DatasetEvidence |
+| 论文材料核验 | 多文件 LaTeX input/include、缺失/重复引用键、重复 label 与浮动位置静态检查；复用原 paper_static_checks，不执行任意 TeX |
+| 演示文稿 | 读取普通 PPTX 文本框 ID/文字摘要，修改副本，不要求预加 {{FIELD}}；保留未改部件、位置、母版主题，交付 PPTX/PDF |
+| 视频编辑 | Windows 沿用原生 FFmpeg 时间线；Mac 将同一片段计划交给随包 Remotion 裁剪拼接，复杂合成仍在本机 |
+
+依赖复用现有 Python、Office 和媒体包，没有再引入一套 Agent 执行器或新增 Python 库。新增 CSV/ZIP 产物仍经原生目录句柄发布，只允许生成的文件名由界面打开。CSV 对公式样文字进行显式转义，含公式的工作簿不作为统计观察值使用。
+
+`node scripts/check-native-scenes.mjs` 是新增工具的无模型定向检查；可用 `GENELOOP_NATIVE_RUNTIME` / `GENELOOP_NATIVE_TOOLS` 指向实际应用包。与实际模型行为、人审质量、网页全工具等价及 Motif 重新认证分别验收。普通模板编辑使用原文本首段样式，不承诺复杂逐字富文本完全保真。
+
+资源包拆分尚未实施。当前仍为离线工具随包分发；用户讨论的主应用与按需下载工具包属于后续交付方式，六场景入口和技能不需要改成外部插件。正式网关须同步本轮源码才能声明新版工具协议；旧网关保持原能力，不擅自发布正式服务。

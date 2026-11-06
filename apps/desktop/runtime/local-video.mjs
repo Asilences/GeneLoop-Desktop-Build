@@ -53,7 +53,7 @@ export async function probeLocalVideo(reader, tools, path, signal) {
   });
 }
 
-export async function renderNativeRemotion(ctx, reader, writer, tools, source, assetList, signal, onReport) {
+export async function renderNativeRemotion(ctx, reader, writer, tools, source, assetList, signal, onReport, {assetBytes=16*1024*1024}={}) {
   if (!tools.remotion || typeof source !== 'string' || !source.trim() || Buffer.byteLength(source) > 128*1024 ||
       typeof assetList !== 'string' || assetList.length > 16_384) throw Error('本机 Remotion 未安装或工程超出限制。');
   const paths = JSON.parse(assetList);
@@ -64,7 +64,7 @@ export async function renderNativeRemotion(ctx, reader, writer, tools, source, a
   return inSceneScratch(async directory => {
     const {mkdirSync} = await import('node:fs');
     mkdirSync(join(directory,'public'));
-    let remaining = 16*1024*1024;
+    let remaining = assetBytes;
     const assets = paths.map((path,index)=>{
       const bytes = reader.readBytes(path,remaining);
       if (!bytes.length) throw Error('渲染素材为空。');
@@ -88,7 +88,7 @@ export async function renderNativeRemotion(ctx, reader, writer, tools, source, a
         Math.abs(media.duration-rendered.composition.frames/rendered.composition.fps) > 0.15) throw Error('本机渲染规格核验失败。');
     await execute(tools.ffmpeg,['-v','error','-nostdin','-xerror',...input,'-i','video.mp4',
       '-map','0:v:0','-map','0:a?',...decodedOutput],directory,signal);
-    for (const asset of assets) if (sha(reader.readBytes(asset.path,16*1024*1024)) !== asset.sha256) throw Error('来源素材已变化，请重新渲染。');
+    for (const asset of assets) if (sha(reader.readBytes(asset.path,assetBytes)) !== asset.sha256) throw Error('来源素材已变化，请重新渲染。');
     const output = join(directory,'video.mp4');
     if (statSync(output).size > maxSourceBytes) throw Error('本机渲染产物过大。');
     const bytes = readFileSync(output);
@@ -170,7 +170,7 @@ async function fetchRenderedVideo(source, assets, signal) {
   return video;
 }
 
-export async function renderLocalVideo(reader, writer, tools, plan, signal, onReport) {
+export async function renderLocalVideo(reader, writer, tools, plan, signal, onReport, nativeContext) {
   if (typeof plan !== 'string' || plan.length > 16_384) throw Error('时间线过长。');
   const segments = JSON.parse(plan);
   if (!Array.isArray(segments) || segments.length < 1 || segments.length > 8 ||
@@ -207,6 +207,23 @@ export async function renderLocalVideo(reader, writer, tools, plan, signal, onRe
       pads.push('[v'+index+'][a'+index+']');
     }
     // Concatenate decoded audio and encode AAC once, avoiding per-clip encoder delay.
+    if(process.platform==='darwin') {
+      if(!nativeContext||!tools.remotion)throw Error('Mac 剪辑需要随安装包提供的本机 Remotion，不会转到服务器。');
+      const paths=[...sources.keys()];let frame=0;
+      const clips=segments.map(row=>{
+        const duration=Math.max(1,Math.round((row.end-row.start)*30));
+        const clip={from:frame,duration,start:Math.round(row.start*30),
+          name:'asset-'+(paths.indexOf(row.path)+1)+row.path.slice(row.path.lastIndexOf('.')).toLowerCase()};
+        frame+=duration;return clip;
+      });
+      const source=`import React from 'react';import {registerRoot,Composition,AbsoluteFill,Sequence,OffthreadVideo,staticFile} from 'remotion';
+const clips=${JSON.stringify(clips)};
+const Scene=()=> <AbsoluteFill style={{background:'black'}}>{clips.map((c,i)=><Sequence key={i} from={c.from} durationInFrames={c.duration}><OffthreadVideo src={staticFile(c.name)} trimBefore={c.start} trimAfter={c.start+c.duration} style={{width:'100%',height:'100%',objectFit:'contain'}} /></Sequence>)}</AbsoluteFill>;
+registerRoot(()=> <Composition id="Main" component={Scene} durationInFrames={${frame}} fps={30} width={1280} height={720}/>);`;
+      for(const row of segments)if(sha(reader.readBytes(row.path,maxSourceBytes))!==row.sha256)throw Error('素材内容已变化，请重新探测。');
+      const receipt=await renderNativeRemotion(nativeContext,reader,writer,tools,source,JSON.stringify(paths),signal,onReport,{assetBytes:240*1024*1024});
+      return{...receipt,segments,timelineBackend:'native-remotion'};
+    }
     filters.push(pads.join('')+'concat=n='+segments.length+':v=1:a=1[vcat][audio]', '[vcat]fps=30[video]');
     await execute(tools.ffmpeg, ['-v','error','-nostdin','-xerror','-filter_complex_threads','2', ...inputs,
       '-filter_complex',filters.join(';'),'-map','[video]','-map','[audio]','-map_metadata','-1','-map_chapters','-1',

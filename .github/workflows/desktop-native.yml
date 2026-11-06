@@ -57,6 +57,9 @@ jobs:
       - name: Native PPT template and LibreOffice PDF export (no model)
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: npm run smoke:ppt
+      - name: Native document, table, paper and archive tools (no model)
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/check-native-scenes.mjs
       - name: Credential scrubbing and cancellation of descendants
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: node scripts/check-native-process.mjs
@@ -82,6 +85,7 @@ jobs:
           export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
           export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
           "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
+          "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-scenes.mjs
       - name: Packaged DSH Agent start, tools and cancellation (no model)
         if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         run: |

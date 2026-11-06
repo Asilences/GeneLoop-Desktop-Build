@@ -1538,4 +1538,10 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 `local_video_render(plan)` 保留工具名和单字符串参数。JSON 数组沿用片段协议；JSON 对象 `{source,assets}` 为完整 Remotion TSX 与本机素材相对路径数组，注册 `Main`，素材顺序映射为 `asset-N.扩展名`。两种计划均在本机交付，不因依赖缺失或失败自动转服务器。读取源摘要、复制快照、渲染后复核、FFmpeg 完整解码与输出摘要继续保留。服务器路径仍需独立明确同意。
 
-Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使用自身渲染沙箱。macOS 候选使用平台原生目录句柄与 DSH Seatbelt，尚待真实 Mac 运行。构建用 Python、Office、FFmpeg、Chromium 在构建阶段获取并随工具资源打包，任务阶段不自动安装依赖。构建入口见 `apps/desktop/scripts/build-installer.mjs`，Mac 流程见 `.github/workflows/desktop-native.yml`；均不自动发布安装包。
+Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使用自身渲染沙箱。macOS 使用平台原生目录句柄与 DSH Seatbelt；preview.11 已完成 macOS 15 ARM64/Intel 原生及包内无模型检查，不能据此宣称全面文件读取/网络隔离。构建用 Python、Office、FFmpeg、Chromium 在构建阶段获取并随工具资源打包，任务阶段不自动安装依赖。构建入口见 `apps/desktop/scripts/build-installer.mjs`，Mac 流程见 `.github/workflows/desktop-native.yml`；均不自动发布安装包。
+
+## 桌面跨平台工具补齐（preview.12）
+
+所有六场景共用 `local_document_pin(path)` / `local_document_read(source_id,page)`，凭证绑定当前会话和来源 SHA-256。新增 `local_data_inspect` / `local_data_analyze`、`local_files_export`、`local_paper_audit_sources`、`local_ppt_edit_template`。工具目录见 [桌面说明](desktop.md#preview12-跨平台场景工具)。表格只使用显式单元格，不执行工作簿公式；CSV 副本对公式样文字加前导单引号，并在回执记录数量，统计仍使用原值。文件整理仅创建 ZIP 副本；原件不移动或删除。
+
+模型授权仍使用原 `/lease`，响应新增 `toolsetVersion:2`，账号、计量、撤回和超时协议不变。新版客户端连接未声明版本的旧网关时，仅注册 preview.11 的工具集，保留旧功能并说明新增能力需要更新网关；不把新名称发给旧网关导致所有对话被拒绝，也不自动切换云端执行。客户端和网关共用 `localSceneTools` 目录，旧 Motif 证书不会因此自动获得新工具权限。

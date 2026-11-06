@@ -19,7 +19,7 @@ type SavedTask = {
   sessionId?: string;
   updates: Extract<LocalTaskUpdate, { kind: 'answer' | 'report' | 'done' }>[];
 };
-const reportName = /^GeneLoop-[a-f0-9-]{36}\.(?:md|pptx|pdf|mp4|json|tsx)$/;
+const reportName = /^GeneLoop-[a-f0-9-]{36}\.(?:md|pptx|pdf|mp4|json|tsx|csv|zip)$/;
 const supportedScenes: readonly LocalScene[] = ['chat', 'files', 'data', 'paper', 'ppt', 'video'];
 const localRuntime = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime.asar') : join(here, '../runtime-bundle');
 const bundledTools = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-tools') : join(here, '../desktop-tools-bundle');
@@ -124,7 +124,7 @@ export class LocalWorkspaceConversation {
     if (unavailable) throw Error(unavailable);
     const runtime = localRuntime();
     const media = localScene === 'video' ? mediaTools() : undefined;
-    const ppt = localScene === 'ppt' ? pptTools() : undefined;
+    const ppt = pptTools();
     if (localScene === 'video' && !media) throw Error('本机媒体工具不可用。');
     const { history, directory, home } = location(workspace);
     const approved = reopenDirectory(directory);
@@ -187,7 +187,7 @@ export class LocalWorkspaceConversation {
       token = lease.token;
       abort.signal.throwIfAborted();
       this.controller = startLocalWorker({
-        ...task, executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
+        ...task, legacyTools:lease.toolsetVersion!==2,executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
         token: lease.token, model: lease.model,
         approveVideo: task.scene === 'video' && lease.videoRendering === true ? this.options.approveVideo : undefined,
         onUpdate: event => {

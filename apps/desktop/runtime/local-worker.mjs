@@ -25,7 +25,7 @@ export function apply(ctx) {
     let off, end;
     try {
       local = await openLocalFileAgent(ctx, {
-        directory: task.directory, signal: cancellation.signal, sessionId: task.sessionId, resume: task.resume, scene: task.scene, media: task.media,
+        directory: task.directory, signal: cancellation.signal, sessionId: task.sessionId, resume: task.resume, scene: task.scene, media: task.media,legacyTools:task.legacyTools===true,
         model: { provider: 'deepseek-official', model: task.model, reasoningEffort: 'off' },
         onReport: report => send({ kind: 'report', report }),
         approveVideo: task.videoRendering === true ? approveVideo : undefined, ppt: task.ppt,
