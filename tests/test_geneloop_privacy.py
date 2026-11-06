@@ -131,6 +131,13 @@ def test_code_comment_literal_is_kept_while_private_file_path_is_removed():
     assert '/home/private-owner' not in result['file_path']
 
 
+@pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual local Presidio and Gitleaks')
+def test_english_task_text_covers_chinese_phone_without_a_chinese_label():
+    result=privacy.learning_view({'text':'Please call 13800138000. Keep RMSE and 24 fps.'})
+    assert '13800138000' not in result['text']
+    assert 'RMSE' in result['text'] and '24 fps' in result['text']
+
+
 @pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual local Presidio/spaCy models and Gitleaks')
 @pytest.mark.parametrize('scene,prompt,keep', CASES)
 def test_all_registered_and_future_scenes_keep_task_semantics(scene, prompt, keep):

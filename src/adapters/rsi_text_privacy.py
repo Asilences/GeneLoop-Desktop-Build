@@ -56,6 +56,7 @@ def _presidio():
         supported_entity="EMAIL_ADDRESS", patterns=EmailRecognizer.PATTERNS,
     ))
     analyzer.registry.add_recognizer(PhoneRecognizer(supported_language="zh", supported_regions=["CN"]))
+    analyzer.registry.add_recognizer(PhoneRecognizer(supported_language="en", supported_regions=["CN"]))
     for entity, patterns in EXTRA_PATTERNS.items():
         analyzer.registry.add_recognizer(PatternRecognizer(
             supported_language="en", supported_entity=entity,

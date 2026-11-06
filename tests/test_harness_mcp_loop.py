@@ -1,5 +1,6 @@
 """Real SDK + MCP + spending proxy round trip against a local fake provider."""
 import json
+import os
 import re
 import tempfile
 import threading
@@ -74,6 +75,16 @@ def test_native_harness_loop_executes_only_demo_mcp_through_budget_proxy():
             assert kinds.count('tool/call') == 2
             assert kinds.count('tool/result') == 2
             assert state.request_count == 3
+            if os.environ.get('SSS_RSI_GITLEAKS'):
+                # Actual pinned SDK notifications, not hand-built trace rows.
+                assert len(harness.privacy_views) == 1
+                view = json.loads((harness.privacy_views[0]/'privacy-learning.json').read_text())
+                assert view['format'] == 'geneloop.rsi-learning-trace/v4'
+                assert view['status'] == 'completed'
+                assert len(view['nodes']) == 2
+                assert all(row['outcome'] == 'observed_success' for row in view['nodes'])
+                source = json.loads((harness.privacy_views[0]/'source-private.json').read_text())
+                assert source['execution_witness'] is False
             rows = [json.loads(line) for line in state.record.read_text(encoding="utf-8").splitlines()]
             assert len(rows) == 3
             assert all(row['response_usage']['prompt_cache_hit_tokens'] == 50 for row in rows)
