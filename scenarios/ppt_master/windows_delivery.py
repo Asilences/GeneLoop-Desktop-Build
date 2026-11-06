@@ -175,6 +175,15 @@ def desktop_environment(stage, renderer):
     env.update(TEMP=str(stage), TMP=str(stage), TMPDIR=str(stage), HOME=str(stage),
                USERPROFILE=str(stage), APPDATA=str(stage), LOCALAPPDATA=str(stage),
                PATH=str(renderer.parent), PATHEXT='.COM', NoDefaultCurrentDirectoryInExePath='1')
+    if sys.platform == 'darwin':
+        from xml.sax.saxutils import escape
+        fonts = Path(__file__).resolve().parents[3] / 'fonts'
+        config = Path(stage) / 'fontconfig.xml'
+        cache = Path(stage) / 'font-cache'
+        cache.mkdir(exist_ok=True)
+        config.write_text('<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>' +
+                          escape(str(fonts)) + '</dir><cachedir>' + escape(str(cache)) + '</cachedir></fontconfig>', encoding='utf-8')
+        env.update(FONTCONFIG_FILE=str(config), SAL_FONTPATH_PRIVATE=str(fonts))
     return env
 
 
