@@ -99,6 +99,12 @@ ppt-master 构建来源固定为上游提交 `440557b8dc7c7257b69c04a0b014d5c50a
 
 Mac 包内的 Agent 启动与工具探针使用 `node scripts/probe-local-runtime.mjs --installed "<GeneLoop Desktop.app 路径>"`，Windows 使用同一入口并传入安装目录。探针启动真实 DSH SDK、读取/搜索文本、写报告、拒绝越界访问、取消等待及正常关闭；模型响应来自回环协议夹具，真实模型请求为零。手动 Mac CI 可选择 `app` 模式，只生成 `.app` 并执行包内检查；`installers` 模式继续生成 DMG/ZIP，两种模式都不上传安装包。
 
+## preview.13 原场景 MCP 工具
+
+在 preview.12 基础上复用原 MCP 工具目录和校验，接入统计报告、引用证据与审校 PDF、文件预览/确认/恢复、PPT 模板与源材料、Office 交付/恢复以及原生 Remotion。通用代码改用 QuickJS WASM，固定中英文 OCR 数据随包提供。全部仍由 DSH Agent 和工具生命周期管理，实际执行不要求 WSL。源文件进入明确授权的任务快照，结果回到工作区「GeneLoop 输出」。
+
+文件整理目前作用于副本并交付 ZIP，工作区原件不被移动或删除；模型的长时上下文与本轮临时 MCP 句柄也需区分，跨任务重开时重新固定来源。原工具 Schema 已接入不等于所有文档质量、平台认证或真实模型验收通过。当前证据见[完整工具适配记录](experiments/desktop-preview13-full-tools-20261106.md)。
+
 ## preview.12 跨平台场景工具
 
 | 场景 | 本轮补齐能力 |

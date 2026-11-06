@@ -4,7 +4,7 @@ PPT新增公共RSI接线。合格单路轨迹与原生认证页面程序自动�
 
 GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
 
-本机工作区 preview.12 继续复用 DSH Agent，六场景共用文档来源固定与分页读取；新增 Excel/JSON 等显式表格分析、文件副本归档、多文件论文静态核验和普通 PPT 模板编辑。Windows 使用本机工具，Mac 剪辑也走本机 Remotion，不要求用户另装系统滤镜。原生检查、真实模型与人工验收分别记录，见[桌面说明](docs/desktop.md#本机工作区-windows-预览)及[本轮记录](docs/experiments/desktop-preview12-tools-20261106.md)。
+本机工作区 preview.13 继续复用 DSH Agent，接入原场景 MCP 的统计报告、论文证据、文件方案和 PPT 交付/修复流程，使用 QuickJS WASM 与原生 Office/媒体工具替换 Linux 底座。包含固定中英文 OCR 数据，不要求用户使用 WSL。工具诊断、真实模型与人工验收分别记录，见[桌面说明](docs/desktop.md#本机工作区-windows-预览)及[本轮记录](docs/experiments/desktop-preview13-full-tools-20261106.md)。
 
 离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
 

@@ -10,6 +10,7 @@ const {Context} = await imports('node_modules/@deepseek-ai/cordis/lib/index.js')
 const {LocalSandboxProvider} = await imports('node_modules/@deepseek-ai/dsh-sandbox-local/lib/index.js').catch(()=>import('@deepseek-ai/dsh-sandbox-local'));
 const {LocalSubprocessRuntime} = await imports('node_modules/@deepseek-ai/dsh-subprocess-local/lib/index.js').catch(()=>import('@deepseek-ai/dsh-subprocess-local'));
 const {renderNativeRemotion,renderLocalVideo,probeLocalVideo} = await imports('local-video.mjs');
+const {nativeVideoTools}=await imports('local-video-workflow.mjs');
 const {removeScratchDirectory} = await imports('local-artifacts.mjs');
 const {openWorkspaceReader,openReportWriter} = await imports('local-files.mjs');
 const toolRoot=resolve(process.env.GENELOOP_NATIVE_TOOLS || 'desktop-tools-bundle');
@@ -34,6 +35,17 @@ const Scene=()=>{const frame=useCurrentFrame();return <AbsoluteFill style={{back
 registerRoot(()=> <Composition id="Main" component={Scene} durationInFrames={12} fps={12} width={640} height={360}/>);`;
 try {
   process.chdir(root);
+  const samples=8000,wav=Buffer.alloc(44+samples*2);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);
+  wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(16000,24);wav.writeUInt32LE(32000,28);
+  wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
+  for(let i=0;i<samples;i++)wav.writeInt16LE(Math.round(16384*Math.sin(2*Math.PI*440*i/16000)),44+i*2);
+  writeFileSync(join(root,'workspace/tone.wav'),wav);
+  const videoTools=nativeVideoTools(ctx,reader,writer,tools,AbortSignal.timeout(180000));
+  const invoke=(name,args)=>videoTools.find(t=>t.name==='mcp__native_video__'+name).execute(args);
+  const asset=await invoke('pin_asset',{path:'tone.wav'});
+  const audio=await invoke('run_command',{command:JSON.stringify({operation:'audio_stats',asset_id:asset.asset_id,duration:0.25})});
+  assert.ok(Math.abs(audio.rms-Math.sqrt(0.125))<0.005);assert.equal(audio.samples,4000);
+  await assert.rejects(invoke('run_command',{command:'powershell Get-ChildItem'}));
   // A generated entry must never become a Node-side webpack inline loader.
   const marker=join(root,'forbidden-loader-marker');
   // A mislabeled image is still untrusted input and must not execute in Node.
@@ -54,7 +66,7 @@ try {
   ]),AbortSignal.timeout(180_000),undefined,ctx);
   assert.equal(clip.output?.width??clip.width,1280);assert.equal(clip.output?.height??clip.height,720);
   assert.ok(Math.abs((clip.output?.duration??clip.duration)-0.5)<0.12);
-  console.log(JSON.stringify({diagnostic:true,inlineLoaderRejected:true,timelineTrimAndConcat:true,...receipt}));
+  console.log(JSON.stringify({diagnostic:true,inlineLoaderRejected:true,timelineTrimAndConcat:true,nativeAudioAnalysis:true,...receipt}));
 } finally {
   reader.close();writer.close();await ctx.fiber.dispose();process.chdir(app);
   assert.ok(root.startsWith(realpathSync(tmpdir())));

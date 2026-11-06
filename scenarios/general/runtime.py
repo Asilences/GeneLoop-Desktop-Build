@@ -37,11 +37,23 @@ def create_server(work):
     def runtime_capabilities()->dict:
         """Check actual tools and sandbox availability; registration is not a readiness claim."""
         import shutil
-        try:d=subprocess.run(['docker','image','inspect','node@sha256:9f6d5975c7dca860947d3915877f85607946403fc55349f39b4bc3688448bb6e'],capture_output=True,timeout=10).returncode==0
-        except (OSError,subprocess.SubprocessError):d=False
-        return {'code':{'available':d,'language':'typescript/javascript','network':False,'isolation':'Docker + upstream worker','cpu_ms':10000,'wall_ms':60000,'memory_mib':256},
+        native = bool(os.environ.get('GENELOOP_NATIVE_CODE_RUNNER') and os.environ.get('SSS_PPT_NODE_EXECUTABLE'))
+        try:
+            command = ([os.environ['SSS_PPT_NODE_EXECUTABLE'], os.environ['GENELOOP_NATIVE_CODE_RUNNER'], '--capabilities']
+                       if native else ['docker','image','inspect','node@sha256:9f6d5975c7dca860947d3915877f85607946403fc55349f39b4bc3688448bb6e'])
+            probe = subprocess.run(command, capture_output=True, timeout=15)
+            d = probe.returncode == 0 and (not native or json.loads(probe.stdout).get('available') is True)
+        except (OSError,subprocess.SubprocessError,ValueError):d=False
+        ocr = bool(shutil.which('tesseract'))
+        if native:
+            try:
+                import pymupdf
+                from src.adapters.geneloop_pdf import tessdata_directory
+                ocr = bool(tessdata_directory())
+            except (ImportError, OSError, ValueError, KeyError):ocr=False
+        return {'code':{'available':d,'language':'typescript/javascript','network':False,'isolation':'QuickJS WASM' if native else 'Docker + upstream worker','cpu_ms':10000,'wall_ms':60000,'memory_mib':64 if native else 256},
             'content_editing':{'available':True,'scope':'new output versions; source files remain unchanged'},
-            'ocr':{'available':bool(shutil.which('tesseract')),'provider':'management.open_document(mode=ocr)'},
+            'ocr':{'available':ocr,'provider':'PyMuPDF + pinned tessdata' if native else 'management.open_document(mode=ocr)'},
             'vision':{'available':True,'provider':'Harness native image attachments and management.view_document_page',
                 'requirement':'active model catalog must declare image input; actual request admission remains enforced'},
             'inputs':files.list_files()}
@@ -62,16 +74,25 @@ def create_server(work):
         """Create a new text/report artifact under this task's private output directory."""
         return artifact(destination,text,{'kind':'model_authored_text_v1'})
     def execute_code(program:str)->dict:
-        """Run TypeScript/JavaScript inside the actual isolated upstream Docker worker.
+        """Run TypeScript/JavaScript in the configured isolated worker (native QuickJS or Web Docker).
         Use await inputs.list({}), inputs.read_text({name}), inputs.read_base64({name}),
         outputs.write_text({name,text}); console.log is captured. No host files/network.
         Sources are read-only; new artifacts remain separate from file organization.
         """
         if len(program.encode())>256*1024:raise ToolError('code program exceeds 256KiB')
         allowed=output_allowed()
-        try:r=subprocess.run(['node','--experimental-strip-types',str(ROOT/'scenarios/general/runtime_code.ts')],
+        native = os.environ.get('GENELOOP_NATIVE_CODE_RUNNER')
+        argv = ([os.environ['SSS_PPT_NODE_EXECUTABLE'], native] if native else
+                ['node','--experimental-strip-types',str(ROOT/'scenarios/general/runtime_code.ts')])
+        child_env={'PATH':os.environ.get('PATH','/usr/bin:/bin:/opt/homebrew/bin'),'LANG':'en_US.UTF-8'}
+        if native:
+            child_env.update(ELECTRON_RUN_AS_NODE='1', HOME=str(work), USERPROFILE=str(work),
+                             TEMP=str(work), TMP=str(work), TMPDIR=str(work))
+            for name in ('SystemRoot','SYSTEMROOT','WINDIR'):
+                if name in os.environ: child_env[name]=os.environ[name]
+        try:r=subprocess.run(argv,
             input=json.dumps({'workspace':str(work),'program':program,'allow_output':allowed}),text=True,capture_output=True,timeout=75,
-            env={'PATH':os.environ.get('PATH','/usr/bin:/bin:/opt/homebrew/bin'),'LANG':'en_US.UTF-8'})
+            env=child_env)
         except (OSError,subprocess.SubprocessError) as e:raise ToolError('code runtime unavailable: '+type(e).__name__) from e
         if r.returncode:raise ToolError('isolated code bridge failed: '+r.stderr[-1200:])
         result=json.loads(r.stdout)

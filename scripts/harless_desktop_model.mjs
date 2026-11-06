@@ -103,7 +103,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       }
       byToken.set(lease.tokenHash, lease);
       lease.timer = setTimeout(() => void close(lease), lease.expiresAt - Date.now()).unref();
-      return json(res, 200, { token, model, expiresAt: lease.expiresAt, toolsetVersion:2,
+      return json(res, 200, { token, model, expiresAt: lease.expiresAt, toolsetVersion:3,
         ...(video && tools.has('hybrid_video_render') ? { videoRendering: true } : {}),
       });
     } catch {

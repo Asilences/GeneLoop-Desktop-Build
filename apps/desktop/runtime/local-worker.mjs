@@ -1,11 +1,13 @@
 import { openLocalFileAgent } from './local-agent.mjs';
 import { randomUUID } from 'node:crypto';
+import {LocalAttachmentStore} from '@deepseek-ai/dsh-attachment-local';
 
 export const name = 'geneloop-desktop-file-worker';
 export const inject = ['agents', 'agentLoop', 'tools', 'sandbox', 'subprocess'];
 
 export function apply(ctx) {
   if (!process.send) throw Error('Desktop worker requires a private parent IPC channel');
+  if(!ctx.get('attachments'))new LocalAttachmentStore(ctx,{dshHome:process.env.DSH_HOME});
   const send = message => { if (process.connected) process.send(message, () => {}); };
   const cancellation = new AbortController();
   let started = false, local, videoDenied = false;
@@ -20,12 +22,16 @@ export function apply(ctx) {
     approvals.set(id, resolve);
     send({ kind: 'video-approval', id, request });
   });
+  const approveFilePlan=request=>new Promise(resolve=>{
+    if(approvals.size||cancellation.signal.aborted||!process.connected)return resolve(false);
+    const id=randomUUID();approvals.set(id,resolve);send({kind:'file-approval',id,request});
+  });
 
   async function run(task) {
     let off, end;
     try {
       local = await openLocalFileAgent(ctx, {
-        directory: task.directory, signal: cancellation.signal, sessionId: task.sessionId, resume: task.resume, scene: task.scene, media: task.media,legacyTools:task.legacyTools===true,
+        directory: task.directory, signal: cancellation.signal, sessionId: task.sessionId, resume: task.resume, scene: task.scene, media: task.media,legacyTools:task.legacyTools===true,fullWorkflows:task.fullWorkflows===true,approveFilePlan,
         model: { provider: 'deepseek-official', model: task.model, reasoningEffort: 'off' },
         onReport: report => send({ kind: 'report', report }),
         approveVideo: task.videoRendering === true ? approveVideo : undefined, ppt: task.ppt,
@@ -58,6 +64,9 @@ export function apply(ctx) {
     if (message?.kind === 'run' && !started) {
       started = true;
       void run(message);
+    } else if(message?.kind==='file-approved') {
+      const resolve=approvals.get(message.id);if(!resolve)return;
+      approvals.delete(message.id);resolve(message.allowed===true);
     } else if (message?.kind === 'video-approved') {
       const resolve = approvals.get(message.id);
       if (!resolve) return;

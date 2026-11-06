@@ -4,17 +4,19 @@ import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
-export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false }) {
+export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false, fullWorkflows = false, approveFilePlan }) {
   if (ppt) ppt = {...ppt,nativeContext:ctx};
   const reader = openWorkspaceReader(directory);
-  let writer, handle;
+  let writer, handle, sceneTools;
   try {
     writer = openReportWriter(directory);
     const options = {
       agentOptions: model,
       signal,
       setup(scope) {
-        registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx,legacyTools);
+        sceneTools=registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx,legacyTools,fullWorkflows,approveFilePlan);
+        if(fullWorkflows&&scene!=='video')scope.systemPrompt.section({name:'geneloop:desktop-full-workflows',order:10230,
+          text:'完整场景任务优先使用 local_workflow_open 返回的实际MCP目录，再直接调用加入当前Agent的mcp__native_*工具，不用基础工具冒充完整流程。数据报告的统计设计、选图、正文仍由你基于实际证据判断；论文保留引用与外部元数据核验、审校草稿与PDF；PPT保留原图、模板、局部修订、真实PDF核验和交付。PPT官方技能和PDF转换还可用workflow=skill。文件整理先预览副本的具体动作、请求用户确认，再执行和交付整理包，不声称已修改原文件。每个工作流只操作其明确固定的材料快照；材料变化时重新打开。'});
         if(legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-compatibility',order:10200,
           text:'当前网关尚未声明新版场景工具协议，本轮只提供旧版本工具。若任务需要Excel、多文件静态核验或普通PPT模板编辑，请说明需要更新GeneLoop网关；不要声称已使用这些未提供的工具。现有本机工具仍可使用，不转为云端执行。'});
         if(ppt&&!legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-documents',order:10200,
@@ -44,6 +46,7 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
       ? await ctx.agents.resume({ ...options, resumeSessionId: sessionId })
       : await ctx.agents.create({ ...options, sessionId, meta: { cwd: directory } });
   } catch (error) {
+    await sceneTools?.close();
     writer?.close();
     reader.close();
     throw error;
@@ -67,7 +70,7 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
       if (!closing) {
         writer?.close();
         reader.close();
-        closing = Promise.resolve().then(() => handle.dispose());
+        closing = Promise.resolve().then(async () => {await sceneTools?.close();await handle.dispose();});
       }
       return closing;
     },

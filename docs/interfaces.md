@@ -1,5 +1,11 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## Desktop 原场景工具接线（preview.13）
+
+桌面模型 lease `toolsetVersion:3` 与宿主共用 `apps/desktop/runtime/native-workflow-catalog.mjs` 白名单。版本 2 和未声明版本保持原工具集合。`local_workflow_open` 固定授权资料快照并发现原场景 MCP Schema，以 `mcp__native_*` 直接注册到现有 DSH scope；不新增 Agent 循环，不自动转云端。提供通用 4、报告 17、论文 20、文件 13、PPT 21、官方源材料 5 项入口，另有 11 项原生视频入口。`local_workflow_close` 释放本轮工具状态，已交付文件保留。
+
+纯代码执行只向 QuickJS WASM 提供固定输入/新文本输出绑定；图像回传使用 DSH 附件存储并核验模型图像能力。文件方案由主进程展示并确认，作用于任务副本，交付 ZIP；不会移动或删除工作区原件。Python/Office 子进程沿 DSH 生命周期，凭证不传入。源码存在不代表正式站已部署，跨平台旧 Motif 认证不自动继承。详情及当前验证边界见[preview.13 记录](experiments/desktop-preview13-full-tools-20261106.md)。
+
 ## 成员PPT学习/验证传输（2026-11-04修复）
 
 页面参数化提案复用`PptCapabilityBudget`：成员模型`session-UUID`在发送前绑定原账户`turn-任务ID`，结束时取消预算任务并解绑，保留null预算与unknown用量。Owner无账户前缀时沿原直连身份。

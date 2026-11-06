@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { dirname, isAbsolute, join, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {stageWorkflowSource} from './stage-workflow-source.mjs';
+import {stageOcrData} from './stage-ocr-data.mjs';
 
 const app = fileURLToPath(new URL('../', import.meta.url));
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
@@ -30,7 +32,9 @@ if (existsSync(destination)) {
 mkdirSync(destination, { recursive: true });
 writeFileSync(marker, 'staging');
 cpSync(python, join(destination, 'python'), { recursive: true, verbatimSymlinks:true });
-cpSync(skill, join(destination, 'ppt-master'), { recursive: true });
+cpSync(skill, join(destination, 'ppt-master'), { recursive: true,filter:path=>{
+  const name=basename(path);return name!=='.env'&&!name.startsWith('.env.')&&name!=='.git'&&name!=='.local';
+}});
 cpSync(office, join(destination, 'libreoffice'), { recursive: true, verbatimSymlinks:true, filter: path => {
   const [top, folder, item] = relative(office, path).toLowerCase().split(/[\\/]/);
   if (top.endsWith('.msi')) return false;
@@ -96,10 +100,12 @@ for (const path of [
   mkdirSync(dirname(target), { recursive: true });
   cpSync(join(repo, path), target);
 }
+stageWorkflowSource(repo,join(destination,'source'));
+stageOcrData(join(app,'.local/ocr-data'),join(destination,'ocr'));
 if (process.platform === 'win32') {
   const pth = join(destination, 'python', 'python312._pth');
   if (!readFileSync(pth, 'utf8').includes('python312.zip')) throw Error('需要 Windows Python 3.12 嵌入式分发。');
-  writeFileSync(pth, 'python312.zip\n.\nsite\n../source\n');
+  writeFileSync(pth, 'python312.zip\n.\nsite\nsite/win32\nsite/win32/lib\nsite/pythonwin\nsite/pywin32_system32\n../source\n../ppt-master/scripts\n../ppt-master/scripts/source_to_md\n');
 } else {
   // python-build-standalone is relocatable; preserve its library layout and
   // expose a real file in place of python3's internal symlink.

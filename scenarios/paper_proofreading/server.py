@@ -130,9 +130,9 @@ class PaperEvidence(SessionFiles):
                 'coverage': 'extracted_text_for_model_review_not_fact_or_venue_certification'}
 
 
-def create_server(directory, renderer_root=None):
+def create_server(directory, renderer_root=None, *, native_renderer=None):
     files = PaperEvidence(directory)
-    output = PaperOutput(files, renderer_root)
+    output = PaperOutput(files, renderer_root, native_renderer=native_renderer)
     citation_state = {'epoch': None, 'service': None}
     def citations():
         # The preset may start before task admission. Read the live admission
@@ -367,9 +367,10 @@ class UnavailableCitationEvidence:
 
 
 class PaperOutput:
-    def __init__(self, files: PaperEvidence, renderer_root):
+    def __init__(self, files: PaperEvidence, renderer_root, *, native_renderer=None):
         self.files = files
         self.renderer_root = Path(renderer_root).resolve(strict=True) if renderer_root else None
+        self.native_renderer = native_renderer
 
     @staticmethod
     def _private_bytes(path, limit=256*1024):
@@ -764,6 +765,15 @@ class PaperOutput:
     def export(self, report_sha256):
         workspace, grant, raw, digest, report, scope = self._audit(writable=True)
         if report_sha256 != digest: raise ValueError('stale_audit_export')
+        if self.native_renderer is not None:
+            target = workspace / 'outputs' / (grant['task_id'] + '-' + uuid4().hex)
+            target.mkdir(mode=0o700, parents=True)
+            with (target / 'audit.json').open('xb') as stream: stream.write(raw)
+            receipt = self.native_renderer(report, target)
+            if self._audit(writable=True)[3] != digest:
+                raise ValueError('paper_audit_changed_during_export')
+            return {**receipt, 'audit_source_scope': scope,
+                    'artifact_file': (target / 'reference-check-report.pdf').relative_to(workspace).as_posix()}
         if self.renderer_root is None: raise ValueError('paper_renderer_not_deployed')
         cert = json.loads((self.renderer_root / 'deployment.json').read_text())
         package = self.renderer_root / 'package'
