@@ -11,7 +11,7 @@ on:
         default: 50
       packageMode:
         type: choice
-        options: [installers, app]
+        options: [installers, app, tools]
         default: installers
 concurrency:
   group: private-macos-checks
@@ -38,6 +38,10 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
+      - uses: actions/setup-python@v5
+        if: ${{ inputs.packageMode == 'tools' }}
+        with:
+          python-version: '3.12'
       - run: node -e "if(process.arch !== '${{ matrix.arch }}')process.exit(1)"
       - run: npm ci
       - run: npm run build && npm run check
@@ -45,8 +49,19 @@ jobs:
         run: npm run smoke:native
       - name: Prepare pinned offline tools
         id: tools
+        if: ${{ inputs.packageMode != 'tools' }}
         run: node scripts/prepare-macos-tools.mjs
+      - name: Prepare incremental native MCP dependencies
+        if: ${{ inputs.packageMode == 'tools' }}
+        run: node scripts/prepare-macos-core-tools.mjs && npm run runtime:stage
+      - name: Native MCP audit PDF, code, data and file workflows (no model)
+        if: ${{ inputs.packageMode == 'tools' }}
+        run: |
+          node scripts/check-native-workflows.mjs --core
+          node scripts/check-native-code.mjs
+          desktop-tools-bundle/python/bin/geneloop-python scripts/check-native-ocr.py desktop-tools-bundle
       - name: Native Remotion render and full video decode (no model)
+        if: ${{ inputs.packageMode != 'tools' }}
         run: npm run runtime:stage && npm run smoke:remotion
       - name: Native PPT template and LibreOffice PDF export (no model)
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
