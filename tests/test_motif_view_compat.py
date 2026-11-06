@@ -26,8 +26,10 @@ def test_read_only_display_compatibility_preserves_program_and_exact_code_guards
         'scripts/reexport-motif-view-compat.py', 'scripts/harless_motif_view.ts',
         'src/adapters/motif_evidence_projection.ts', 'config/motif-evidence-v1.schema.json',
     }
+    pairs = read(ROOT / 'config/rsi-privacy-code-compat.json')
     for name, value in after.items():
-        assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == value, name
+        actual = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+        assert actual == value or pairs.get(name) == {'certified': value, 'current': actual}, name
     record = read(new / 'learning-report.json')['motif_view_compatibility']
     assert record['same_online_program'] and record['same_library_and_evidence'] and record['same_mcp_schema']
     assert record['model_requests'] == record['new_training_tasks'] == 0

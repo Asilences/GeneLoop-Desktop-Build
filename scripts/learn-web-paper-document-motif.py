@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scenarios.research_ppt.motif_v6 import learn, schema_tools, validate_compilation
 from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+from src.adapters.rsi_learning_trace import import_trace, compilation_trace, export_projected_identity
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
 from src.adapters.tool_contract_loader import parse_tool_contracts
 
@@ -116,7 +117,11 @@ def reconcile(state, request, ledger, *, qualifying):
             'pending_requests': stats.get('pending_requests', 0)}
 
 
-def structural_review(task, request, contracts):
+def structural_review(task, request, contracts, *, sample=None):
+    if sample is not None:
+        trace = compilation_trace(sample, contracts, scene='paper-proofreading',
+                                  trace_id='actual-task', fingerprint=request['task_id'])
+        return review_trace(trace)
     effective = read(task / 'effective-config.json')
     lines = (task / 'events.jsonl').read_text(encoding='utf-8').splitlines()
     start = effective.get('trace_start_index', 0)
@@ -127,6 +132,10 @@ def structural_review(task, request, contracts):
         raise ValueError('不能把派生的分析事件当原始采集事件')
     trace = extract_dsh_trace(events, contracts, trace_id='actual-task', task_fingerprint=request['task_id'],
                               provenance_by_call_id=infer_dsh_provenance(events, contracts))
+    return review_trace(trace)
+
+
+def review_trace(trace):
     # 单条采集只检查是否有原始 provenance；跨决定挖掘/认证仍仅由公共
     # witnessed compiler 完成，不能降低它至少两个独立任务的支持门槛。
     witnessed = [row for row in trace.records if row.eligible and row.name == PAIR[1]
@@ -156,7 +165,7 @@ def schema_compatibility(observed, current):
             'scope': 'Recompile the witnessed read edge against the captured current complete tool set; not old whole-schema equivalence.'}
 
 
-def export_run(row, ledger, out, current, contracts, base, *, reuse_task_files=False):
+def export_run(row, ledger, out, current, contracts, base, *, reuse_task_files=False, privacy_projection=False):
     if not isinstance(row, dict) or not isinstance(row.get('decision_id'), str):
         raise ValueError('每条训练/留出记录必须有 task_dir 和 decision_id')
     task = private(row['task_dir'], relative_to=base)
@@ -167,38 +176,46 @@ def export_run(row, ledger, out, current, contracts, base, *, reuse_task_files=F
         raise ValueError('需要同一真实 completed Paper Baseline 任务的冻结文件')
     accounting = reconcile(state, request, ledger, qualifying=True)
     compatibility = schema_compatibility(native_schemas(effective.get('tools')), current)
-    review = structural_review(task, request, contracts)
+    sample = (import_trace(private(task / 'events.jsonl'), 'paper-proofreading', state['status'],
+                           effective.get('trace_start_index', 0)) if privacy_projection else None)
+    review = structural_review(task, request, contracts, sample=sample)
     if not review['observed_parameter_edge_present']:
         raise ValueError('真实事件没有可见证的文档参数边；应保留为 excluded_collection，不伪造轨迹')
     question = '\n'.join(part['text'] for part in request.get('content', []) if part.get('type') == 'text')
     if not question.strip():
         raise ValueError('真实任务必须含非空问句')
     out.mkdir()
-    # 完整原始字节保留私有；不从答案、工具参数或人工脚本重建事件。
-    for name in ('effective-config.json', 'task-state.json', 'task.json', 'events.jsonl', 'answer.md'):
-        source = private(task / name)
-        (os.link if reuse_task_files else shutil.copyfile)(source, out / name)
-    if (task / 'answer.json').is_file():
-        (os.link if reuse_task_files else shutil.copyfile)(private(task / 'answer.json'), out / 'answer.json')
-    # Preserve original event bytes; previous conversation turns are context, not new witnesses.
-    event_lines = (task / 'events.jsonl').read_bytes().splitlines(keepends=True)
-    start = effective.get('trace_start_index', 0)
-    if reuse_task_files and start == 0:
-        os.link(task / 'events.jsonl', out / 'agent-events.jsonl')
+    if privacy_projection:
+        write(out / 'structural-review.json', review)
+        identity = export_projected_identity(out, sample, task_id=request['task_id'],
+                                             decision_id=row['decision_id'], question=question,
+                                             local_root=ROOT / '.local', write=write)
     else:
-        (out / 'agent-events.jsonl').write_bytes(b''.join(event_lines[start:]))
-    write(out / 'structural-review.json', review)
-    manifest = {'schema_version': 1, 'task_id': request['task_id'], 'question': question,
-                'source_effective_sha256': sha(task / 'effective-config.json'),
-                'source_state_sha256': sha(task / 'task-state.json'), 'source_request_sha256': sha(task / 'task.json'),
-                'original_events_sha256': sha(task / 'events.jsonl'), 'task_event_start_index': start, 'answer_sha256': sha(task / 'answer.md'),
-                'review_sha256': sha(out / 'structural-review.json'), 'provider_mode': effective['provider_mode'],
-                'model': state.get('model'), 'reasoning_effort': state.get('reasoning_effort'),
-                'stats': state['stats'], 'schema_compatibility': compatibility}
-    write(out / 'manifest.json', manifest)
-    write(out / 'task-identity.json', {'schema_version': 1, 'research_decision_id': row['decision_id'],
-                                     'manifest_sha256': sha(out / 'manifest.json'), 'events_sha256': sha(out / 'agent-events.jsonl')})
-    identity = load_trace_identity(out / 'task-identity.json', out / 'agent-events.jsonl', ROOT / '.local')
+        # 完整原始字节保留私有；不从答案、工具参数或人工脚本重建事件。
+        for name in ('effective-config.json', 'task-state.json', 'task.json', 'events.jsonl', 'answer.md'):
+            source = private(task / name)
+            (os.link if reuse_task_files else shutil.copyfile)(source, out / name)
+        if (task / 'answer.json').is_file():
+            (os.link if reuse_task_files else shutil.copyfile)(private(task / 'answer.json'), out / 'answer.json')
+        # Preserve original event bytes; previous conversation turns are context, not new witnesses.
+        event_lines = (task / 'events.jsonl').read_bytes().splitlines(keepends=True)
+        start = effective.get('trace_start_index', 0)
+        if reuse_task_files and start == 0:
+            os.link(task / 'events.jsonl', out / 'agent-events.jsonl')
+        else:
+            (out / 'agent-events.jsonl').write_bytes(b''.join(event_lines[start:]))
+        write(out / 'structural-review.json', review)
+        manifest = {'schema_version': 1, 'task_id': request['task_id'], 'question': question,
+                    'source_effective_sha256': sha(task / 'effective-config.json'),
+                    'source_state_sha256': sha(task / 'task-state.json'), 'source_request_sha256': sha(task / 'task.json'),
+                    'original_events_sha256': sha(task / 'events.jsonl'), 'task_event_start_index': start, 'answer_sha256': sha(task / 'answer.md'),
+                    'review_sha256': sha(out / 'structural-review.json'), 'provider_mode': effective['provider_mode'],
+                    'model': state.get('model'), 'reasoning_effort': state.get('reasoning_effort'),
+                    'stats': state['stats'], 'schema_compatibility': compatibility}
+        write(out / 'manifest.json', manifest)
+        write(out / 'task-identity.json', {'schema_version': 1, 'research_decision_id': row['decision_id'],
+                                         'manifest_sha256': sha(out / 'manifest.json'), 'events_sha256': sha(out / 'agent-events.jsonl')})
+        identity = load_trace_identity(out / 'task-identity.json', out / 'agent-events.jsonl', ROOT / '.local')
     return {**identity, **accounting, 'reviewer_kind': review['reviewer_kind'],
             'review_sha256': sha(out / 'structural-review.json'), 'readonly_provenance_passed': True,
             'scientific_review_complete': False, 'visual_review_complete': False,
@@ -208,7 +225,8 @@ def export_run(row, ledger, out, current, contracts, base, *, reuse_task_files=F
 
 
 def code_paths():
-    paths = [Path(__file__).resolve(), CONTRACTS, VERSIONS, SCENE / 'scenario.json']
+    paths = [Path(__file__).resolve(), CONTRACTS, VERSIONS, SCENE / 'scenario.json',
+             ROOT / 'src/adapters/rsi_learning_trace.py', ROOT / 'docs/schemas/rsi-learning-trace.schema.json']
     paths += [ROOT / value for value in (
         'src/adapters/dsh_web_tasks.ts', 'src/adapters/ppt_master_recovery.ts', 'src/adapters/harless_scenarios.py', 'src/adapters/harless_task_scope.ts',
         'src/adapters/harless_rsi_binding.ts', 'src/adapters/harless_rsi_bundle.py', 'src/adapters/harless_legacy_motif.ts',
@@ -245,7 +263,7 @@ def collection_commit():
     return result.stdout.strip() if result and result.returncode == 0 else None
 
 
-def main(argv=None, *, private_publish_root=None, reuse_task_files=False):
+def main(argv=None, *, private_publish_root=None, reuse_task_files=False, privacy_projection=False):
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dataset', type=Path, required=True)
@@ -287,7 +305,7 @@ def main(argv=None, *, private_publish_root=None, reuse_task_files=False):
         evidence[split], runs[split] = [], []
         for index, row in enumerate(dataset[split], 1):
             dest = output / (split + '-' + str(index))
-            item = export_run(row, ledger, dest, current, contracts, dataset_path.parent, reuse_task_files=reuse_task_files)
+            item = export_run(row, ledger, dest, current, contracts, dataset_path.parent, reuse_task_files=reuse_task_files, privacy_projection=privacy_projection)
             if item['task_id'] in source_tasks:
                 raise ValueError('训练与留出不能复用同一个真实任务')
             source_tasks.add(item['task_id']);evidence[split].append(item);runs[split].append(str(dest))
@@ -312,7 +330,8 @@ def main(argv=None, *, private_publish_root=None, reuse_task_files=False):
     guards = code_paths()
     manifest_path = learn(output / 'dataset.json', contracts_path=CONTRACTS, version_fields_path=VERSIONS,
                           tool_schema_path=output / 'schema.json', out_dir=output / 'compiled',
-                          guard_paths=guards, mining='witnessed_edges')
+                          guard_paths=guards, mining='witnessed_edges',
+                          projected_scene='paper-proofreading' if privacy_projection else None)
     validate_compilation(manifest_path)
     manifest, library = read(manifest_path), read(manifest_path.parent / 'library.json')
     if (len(manifest.get('artifacts', [])) != 1 or len(library.get('artifacts', [])) != 1

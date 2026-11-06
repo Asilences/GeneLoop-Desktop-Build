@@ -69,7 +69,8 @@ def advance(request_path):
                     raise ValueError('accounting identity mismatch')
                 compiler.reconcile(state,req,accounting['request_receipts'],qualifying=True)
                 for name in ['events.jsonl','answer.md']:file(output,task/name)
-                review=compiler.structural_review(task,req,contracts)
+                sample=compiler.import_trace(task/"events.jsonl","paper-proofreading",state["status"],effective.get("trace_start_index",0))
+                review=compiler.structural_review(task,req,contracts,sample=sample)
                 if not review['observed_parameter_edge_present']:raise ValueError('no_original_read_edge')
                 tools=compiler.native_schemas(effective['tools']);schemas=[row for row in tools if row['name'] in allowed]
                 if len(schemas)!=len(allowed):raise ValueError('incomplete_scene_schema')
@@ -83,7 +84,7 @@ def advance(request_path):
                 candidates.append({'task_dir':str(task),'decision_id':'web-'+source,'task_id':identity,'schemas':schemas,
                     'accounting':accounting['request_receipts'],'events_sha256':sha(task/'events.jsonl')})
             except (ValueError,KeyError,OSError,TypeError) as error:
-                excluded.append({'task_id':identity,'reason':str(error)[:160]})
+                excluded.append({'task_id':identity,'reason':'learning_evidence_rejected'})
         if len(candidates)<3:
             save(store/'status.json',{'status':'waiting_for_evidence','eligible_tasks':len(candidates),'minimum_tasks':3,'excluded':excluded});return
         # Keep the held-out decision reserved; select the latest two compatible
@@ -112,7 +113,7 @@ def advance(request_path):
         save(folder/'ledger.json',[row for item in selected for row in item['accounting']])
         save(store/'status.json',{'status':'compiling','round':folder.name,'excluded':excluded})
         compiler.main(['--dataset',str(folder/'dataset.json'),'--schemas',str(folder/'schemas.json'),
-            '--out',str(folder/'compile'),'--publish',str(folder/'release')],private_publish_root=store,reuse_task_files=True)
+            '--out',str(folder/'compile'),'--publish',str(folder/'release')],private_publish_root=store,privacy_projection=True)
         runtime=load_product_bundle(ROOT,folder/'release','paper-proofreading',private_root=store)
         save(folder/'admission.json',{'user':request['user'],'scope':request['scope'],'runtime':runtime})
         # Publish last: old readers retain their byte-bound immutable release.

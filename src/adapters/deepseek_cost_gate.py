@@ -25,17 +25,21 @@ from urllib.parse import urlparse
 
 if __package__:
     from .model_transport import MODEL_REQUEST_MAX_BYTES, MODEL_REQUEST_TOO_LARGE
+    from .model_api import model_api_root, model_chat_path, model_wire_id, model_upstream_headers, model_price_rates
 else:  # Preserve direct CLI execution from a different working directory.
     from model_transport import MODEL_REQUEST_MAX_BYTES, MODEL_REQUEST_TOO_LARGE
+    from model_api import model_api_root, model_chat_path, model_wire_id, model_upstream_headers, model_price_rates
 
 
 PEAK_USD_PER_MILLION = {
     "deepseek-flash": (0.30, 1.20),
     "deepseek-v4-pro": (1.32, 3.96),
+    **model_price_rates()[0],
 }
 CACHE_HIT_PEAK_USD_PER_MILLION = {
     "deepseek-flash": 0.006,
     "deepseek-v4-pro": 0.044,
+    **model_price_rates()[1],
 }
 HOP_HEADERS = {"host", "connection", "content-length", "transfer-encoding",
                "accept-encoding", "keep-alive", "proxy-connection"}
@@ -336,12 +340,13 @@ class StreamUsage:
 
 def create_server(host: str, port: int, upstream: str, state: State, *,
                   state_selector=None, allowed_models: set[str] | None = None,
-                  chat_path: str = '/v1/chat/completions', allow_files: bool = True,
+                  chat_path: str | None = None, allow_files: bool = True,
                   gate_token: str | None = None,
                   omit_sdk_output_limit: bool = False, allow_search: bool = False,
                   allow_vision: bool = False) -> ThreadingHTTPServer:
     if omit_sdk_output_limit and state.output_cap is not None:
         raise ValueError('SDK output defaults can only be omitted with an uncapped output policy')
+    chat_path = model_chat_path() if chat_path is None else chat_path
     # macOS can supply system proxies even with no *_PROXY environment variables.
     # Never send a local mock/loopback upstream through an external proxy.
     opener = (urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -442,6 +447,10 @@ def create_server(host: str, port: int, upstream: str, state: State, *,
                        if key.lower() not in HOP_HEADERS | {'x-sss-model-gate-token'}
                        and not (stream and key.lower() == 'accept-encoding')}
             if stream: headers['Accept-Encoding'] = 'identity'
+            try:
+                headers = model_upstream_headers(upstream, headers)
+            except ValueError:
+                return 503, 'application/json', b'{"error":"Kouri credential unavailable"}'
             target_path = ('/anthropic/v1/messages' if allow_search and self.path.startswith('/v1/search/') else
                            chat_path if self.path == '/v1/chat/completions' or (allow_vision and self.path.startswith('/v1/vision/')) else self.path)
             request = urllib.request.Request(upstream.rstrip('/') + target_path, data=body,
@@ -576,8 +585,10 @@ def create_server(host: str, port: int, upstream: str, state: State, *,
                 self._reply(429, "approved research budget exhausted", error_code='GENELOOP_BUDGET_EXHAUSTED')
                 return
             request_id, model, dollars, ceiling = booked
-            if search:
-                payload['model'] = 'deepseek-v4-flash' if model == 'deepseek-flash' else model
+            if search or upstream.rstrip('/') == model_api_root():
+                payload = json.loads(body) if not search else payload
+                payload['model'] = (model_wire_id(model) if upstream.rstrip('/') == model_api_root()
+                                    else 'deepseek-v4-flash' if model == 'deepseek-flash' else model)
                 body = json.dumps(payload, ensure_ascii=False).encode('utf-8')
             started = time.monotonic()
             self.stream_started = False
@@ -621,7 +632,7 @@ def serve(host: str, port: int, upstream: str, state: State) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, required=True)
-    parser.add_argument("--upstream", default="https://api.deepseek.com")
+    parser.add_argument("--upstream", default=model_api_root())
     parser.add_argument("--cap-usd", type=cost_cap_argument, required=True,
                         help="cumulative cost cap; 0 means unlimited with accounting retained")
     parser.add_argument("--max-output", type=output_limit_argument, default=None,

@@ -8,9 +8,49 @@ import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createMotifViewRoute} from '../../../scripts/harless_motif_view.ts';
+import {createRsiSharing} from '../../../src/adapters/rsi_sharing.ts';
+import {projectPrivateLearningTrace} from '../../../src/adapters/harless_learning_trace.ts';
 const require=createRequire(import.meta.url),{WebSocketServer}=require('ws');
 const app=fileURLToPath(new URL('../',import.meta.url));
 const output=join(app,'.local/validation/renderer-'+randomUUID());mkdirSync(output,{recursive:true});
+const privacyDiagnostic=process.env.GENELOOP_PRIVACY_DIAGNOSTIC==='1';
+const sharingBodies=[],sharingAudit=[];
+let receiverMode='accept',receiver;
+if(privacyDiagnostic){
+ if(!process.env.SSS_PYTHON)throw Error('SSS_PYTHON is required for the real local privacy projector');
+ receiver=createServer(async(req,res)=>{
+  const chunks=[];for await(const chunk of req)chunks.push(chunk);
+  sharingBodies.push(Buffer.concat(chunks).toString());
+  if(receiverMode==='drop')res.destroy();else res.end('ok');
+ });
+ receiver.listen(0,'127.0.0.1');await once(receiver,'listening');
+}
+const shareSources=new Map();
+for(const [scene,names] of [
+ ['paper-proofreading',['mcp__paper_checks__pin_document','mcp__paper_checks__read_pinned_document']],
+ ['ppt',['mcp__ppt_master__pin_source','mcp__ppt_master__convert_source','mcp__ppt_master__read_converted_source']],
+]){
+ const source='source-'+'a'.repeat(32),converted='result-'+'b'.repeat(32),raw='Synthetic Alice Carter alice-private@example.com /mnt/private/draft.pdf';
+ const events=[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:raw}]}}];
+ for(const [i,name] of names.entries()){
+  const args=i===0?{name:raw,sha256:'c'.repeat(64)}:i===1?{source_id:source}:{converted_id:converted};
+  events.push({type:'tool/call',data:{callId:'private-'+i,name,arguments:JSON.stringify(args)}});
+  events.push({type:'tool/result',data:{message:{source:{kind:'tool',callId:'private-'+i},content:[
+   {type:'tool-result',isError:false,content:[{type:'text',text:JSON.stringify(i===0?{source_id:source}:{converted_id:converted,text:raw})}]},
+  ]}}});
+ }
+ const path=join(output,scene+'-events.jsonl');
+ writeFileSync(path,events.map(event=>JSON.stringify(event)).join('\n')+'\n',{mode:0o600});
+ shareSources.set(scene,path);
+}
+const sharing=createRsiSharing({
+ endpoint:receiver?'http://127.0.0.1:'+receiver.address().port+'/private-privacy-receiver':undefined,
+ allowLoopback:true,audit:event=>sharingAudit.push(event),
+ async prepare(taskId){
+  if(!shareSources.has(taskId))throw Error('unknown diagnostic task');
+  return projectPrivateLearningTrace(process.env.SSS_PYTHON,shareSources.get(taskId),taskId,'completed',0,{share:true});
+ },
+});
 const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFileSync(join(app,'ui/desktop/motif-example.json')));
 const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'}]});
 let motifAuthenticated=true;
@@ -52,7 +92,7 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
-  if(path==='/api/harless/tasks')return json(res,{tasks:workspaceTasks});
+  if(path==='/api/harless/tasks')return json(res,{tasks:[...workspaceTasks,...(privacyDiagnostic?[...shareSources.keys()].map(scene=>({task_id:scene,scene,status:'completed'})):[])]});
   if(path==='/api/fixture/task-progress'&&req.method==='POST'){workspaceTasks[0].duration_ms=2400;return json(res,{ok:true});}
   if(path==='/api/fixture/workspace-task'&&req.method==='POST'){
    const time='2026-11-06T00:00:00.000Z';
@@ -61,6 +101,15 @@ const server=createServer(async(req,res)=>{
     progress:{label:'正在核对交付入口（合成进度）',status:'running'},trace:[{id:'ui-read',kind:'tool',label:'已读取目录信息（合成记录）',status:'completed',time},{id:'ui-motif',kind:'motif',label:'界面协议回执（合成）',status:'completed',optimized:true,verified_skip:false,time},{id:'ui-output',kind:'tool',label:'正在整理交付入口（合成记录）',status:'running',time}]},
     {task_id:'foreign-ui-task',session_id:'foreign-session',input_summary:'另一工作区的任务不得显示',status:'running',created_at:time}];
    return json(res,{ok:true});
+  }
+  if(path==='/api/harless/rsi-sharing'){
+   const response=await sharing.handle(new Request('http://local'+req.url,{
+    method:req.method,...(req.method==='POST'?{body:raw.toString()}:{}),
+   }));
+   res.writeHead(response.status,{'content-type':'application/json'});return res.end(await response.text());
+  }
+  if(path==='/api/fixture/privacy-receiver'){
+   receiverMode=body.mode;return json(res,{received:sharingBodies.length});
   }
   if(path==='/api/harless/session-trash'||path==='/api/fixture/external-trash'){
    const id=path==='/api/fixture/external-trash'?'history':body.session_id;
@@ -106,7 +155,7 @@ const server=createServer(async(req,res)=>{
 const ws=new WebSocketServer({server,path:'/api/remote.mux'});
 ws.on('connection',socket=>{socket.on('message',data=>{const frame=JSON.parse(data);if(frame.type==='cancel'){streams.delete(frame.streamId);return;}const row={socket,endpoint:frame.endpoint,sessionId:frame.payload.args.request?.address?.sessionId};streams.set(frame.streamId,row);const item=value=>socket.send(JSON.stringify({type:'item',streamId:frame.streamId,value}));if(frame.endpoint==='workspace/follow')item({type:'baseline',value:{items:[{workspaceId:'workspace',title:'诊断工作区',sessionIds:['history','menu-fixture']},{workspaceId:'empty-workspace',title:'空工作区',sessionIds:[]}],archivedSessionIds:[...archived]}});else if(frame.endpoint==='$events')item({type:'ready',clientId:'fixture-client'});else if(frame.endpoint==='session/control')item({type:'baseline',value:{}});else if(frame.endpoint==='session/follow')item({type:'snapshot',header:{id:row.sessionId},cursor:2,records:row.sessionId==='history'?records:[],hasMore:false,projections:{asOfSeq:2,values:{}}});});socket.on('close',()=>{for(const [id,row]of streams)if(row.socket===socket)streams.delete(id);});});
 server.listen(0,'127.0.0.1');await once(server,'listening');
-const fixture=join(output,'fixture.json');writeFileSync(fixture,JSON.stringify({diagnostic:true,server:`http://127.0.0.1:${server.address().port}/`,output}));
+const fixture=join(output,'fixture.json');writeFileSync(fixture,JSON.stringify({diagnostic:true,privacy:privacyDiagnostic,server:`http://127.0.0.1:${server.address().port}/`,output}));
 const env={...process.env,GENELOOP_RENDERER_FIXTURE:fixture};delete env.ELECTRON_RUN_AS_NODE;
 let result=1;
 try{const child=spawn(require('electron'),['test/renderer.cjs'],{cwd:app,env,stdio:'inherit',windowsHide:true});const [code,signal]=await once(child,'exit');result=code??1;console.log(JSON.stringify({diagnostic_child_exit:code,signal}));if(!JSON.parse(readFileSync(join(output,'summary.json'))).ok)throw Error('Renderer diagnostic failed before quit');
@@ -119,5 +168,16 @@ try{const child=spawn(require('electron'),['test/renderer.cjs'],{cwd:app,env,std
  const selected=requests.findIndex(row=>row.path==='/api/session/selectModel'),sent=requests.findIndex(row=>row.path==='/api/session/prompt');if(selected<0||selected>sent)throw Error('Prompt did not await model selection');
  const reply=requests.find(row=>row.path==='/api/$events/result');if(reply?.body.payload.args.outcome.value!=='allowed-once')throw Error('Explicit approval reply missing');
  const answered=requests.find(row=>row.path==='/api/harless/questions'&&row.method==='POST');if(JSON.stringify(answered?.body.answers[0].selected)!==JSON.stringify(['保留来源','生成副本']))throw Error('Human answer labels or multiSelect did not match server contract');
-}catch(error){console.error(error);result=1;}finally{for(const client of ws.clients)client.terminate();await new Promise(done=>ws.close(done));await new Promise(done=>server.close(done));writeFileSync(join(output,'requests.json'),JSON.stringify({kind:'synthetic-protocol-diagnostic',real_model_requests:0,requests},null,2));}
+ if(privacyDiagnostic){
+  if(sharingBodies.length!==2)throw Error('Expected one confirmed upload and one interrupted upload');
+  if(sharingBodies.some(body=>/Alice|alice-private|\/mnt\/private|draft.pdf/.test(body)))throw Error('Sensitive synthetic marker reached receiver');
+  const report=JSON.parse(readFileSync(join(output,'summary.json')));
+  if(sharingBodies[0]!==report.sharing_payload)throw Error('Uploaded bytes differ from the visible preview');
+  const restarted=spawn(require('electron'),['test/privacy-restart.cjs'],{cwd:app,env,stdio:'inherit',windowsHide:true});
+  const [restartCode]=await once(restarted,'exit');
+  if(restartCode!==0||!JSON.parse(readFileSync(join(output,'privacy-restart-summary.json'))).ok)
+   throw Error('Desktop restart privacy check failed');
+  if(sharingBodies.length!==2)throw Error('Desktop restart repeated a sharing request');
+ }
+}catch(error){console.error(error);result=1;}finally{sharing.dispose();if(receiver){receiver.closeAllConnections();await new Promise(done=>receiver.close(done));}for(const client of ws.clients)client.terminate();await new Promise(done=>ws.close(done));await new Promise(done=>server.close(done));writeFileSync(join(output,'requests.json'),JSON.stringify({kind:'synthetic-protocol-diagnostic',real_model_requests:0,requests},null,2));writeFileSync(join(output,'sharing-receiver.json'),JSON.stringify({kind:'synthetic-private-receiver',bodies:sharingBodies,audit:sharingAudit},null,2));}
 process.exitCode=result;

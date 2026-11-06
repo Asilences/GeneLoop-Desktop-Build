@@ -67,3 +67,9 @@ npm --prefix apps/desktop run smoke:renderer
 ```
 
 最后一项在回环协议服务中调用实际只读路由，验证工作区五视图、全局目录、样例标识以及浅深色页面。它不启动模型任务；原始回执和截图在 `apps/desktop/.local/validation/renderer-*`，不提交。完整回归状态见本模块交接。
+
+## 当前界面
+
+下图来自 Electron 回环界面的合成任务协议验收；任务、步骤和进度均已标明合成。能力目录使用 #150 的公开脱敏历史样例。它用于审阅布局，不是新的真实模型执行或收益对照。
+
+![Motif 工作区与最右侧任务详情](assets/motif-workspace-light.png)

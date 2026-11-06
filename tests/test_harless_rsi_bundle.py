@@ -34,8 +34,12 @@ def test_new_ppt_release_keeps_artifact_and_current_source_locks():
     assert report['compilation_model_requests']==0 and report['quality_cost_promoted'] is False
     assert report['trace_collection_requests']>0
     for name,version in entry['files'].items():assert sha(bundle/name)==version,name
-    for name,version in cert['code_locks'].items():assert sha(root/name)==version,name
     admitted=load_product_bundle(root,bundle,'ppt')
+    pairs=json.loads((root/'config/rsi-privacy-code-compat.json').read_text(encoding='utf-8'))
+    for name,version in cert['code_locks'].items():
+        actual=sha(root/name)
+        assert actual==version or pairs.get(name)=={'certified':version,'current':actual},name
+        assert admitted['certified_code_locks'][str((root/name).resolve())]==actual,name
     assert admitted['binding_policy']=='ppt_master_sources_v1'
     assert len(admitted['certified_tool_schemas'])==5
     assert admitted['runtime_kind']=='ppt_master_v2'

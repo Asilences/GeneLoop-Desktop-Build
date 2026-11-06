@@ -727,8 +727,8 @@ if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).
         ? createSharedInvite(offline, body).code : createInvites(offline, body.count).join('\n'));
     }
   } else {
-    const sourceEnv = process.env.DEEPSEEK_API_KEY;
-    if (!sourceEnv) throw Error('DEEPSEEK_API_KEY required for user workspaces');
+    const sourceEnv = process.env.KOURI_API_KEY;
+    if (!sourceEnv) throw Error('KOURI_API_KEY required for user workspaces');
     const gateway = createGateway({ ...config, apiKey: sourceEnv });
     if (gateway.scopedBudget) gateway.scopedBudget.listen(config.scopedBudgetPort, '127.0.0.1');
     gateway.server.listen(config.port, '127.0.0.1', () => console.log('Harless account gateway ready on loopback'));

@@ -117,7 +117,7 @@ def test_missing_corrupt_or_changed_plan_evidence_is_not_reconstructed(tmp_path)
 
 def test_gate_books_original_counter_and_persists_pending_owner_before_forwarding(tmp_path, monkeypatch):
     plan, _, registry, paths = registered(tmp_path)
-    monkeypatch.setenv('DEEPSEEK_API_KEY', 'diagnostic-not-a-real-key')
+    monkeypatch.setenv('KOURI_API_KEY', 'diagnostic-not-a-real-key')
     pilot.write(tmp_path/'budget-checkpoint.json', {'request_count': 7, 'reserved_usd': 2.0})
     ledger = tmp_path/'cost-ledger.jsonl'
     original = b'{"request_id":7,"observed_peak_usd":2.0}\n'
@@ -146,7 +146,7 @@ def test_gate_books_original_counter_and_persists_pending_owner_before_forwardin
 
 def test_journal_write_failure_aborts_booking_without_resetting_reservation(tmp_path, monkeypatch):
     _, _, registry, paths = registered(tmp_path)
-    monkeypatch.setenv('DEEPSEEK_API_KEY', 'diagnostic-not-a-real-key')
+    monkeypatch.setenv('KOURI_API_KEY', 'diagnostic-not-a-real-key')
     pilot.write(tmp_path/'budget-checkpoint.json', {'request_count': 7, 'reserved_usd': 2.0})
     (tmp_path/'cost-ledger.jsonl').write_bytes(b'')
     monkeypatch.setattr(pilot, 'create_server', lambda *args: SimpleNamespace(

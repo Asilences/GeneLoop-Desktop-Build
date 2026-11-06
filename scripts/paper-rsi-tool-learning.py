@@ -20,6 +20,7 @@ import threading
 import time
 from uuid import uuid4
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
 from src.adapters.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State,create_server
@@ -82,7 +83,7 @@ def paid(label,prompt,policy,config,env_extra):
     record=auth['record']
     local_allowed=(record.get('execution_environment')=='local' and
                    record.get('authorized_root')==str(ROOT.resolve()))
-    if (ROOT!=Path('/root/autodl-tmp/jjy') and not local_allowed) or not os.environ.get('DEEPSEEK_API_KEY'):
+    if (ROOT!=Path('/root/autodl-tmp/jjy') and not local_allowed) or not model_api_key_configured():
         raise ValueError('configured_authorized_execution_host_required')
     if config.get('mode')=='execute' and record.get('execute_allowed') is not True:
         raise ValueError('execute_requires_explicit_authorization_record')
@@ -103,9 +104,9 @@ def paid(label,prompt,policy,config,env_extra):
             return result
     state=Recorded(cap_usd=cap,output_cap=8192,request_limit=None,record=out/'cost-ledger.jsonl')
     state.request_count=len(rows);state.reserved_usd=prior
-    gate=create_server('127.0.0.1',0,'https://api.deepseek.com',state)
+    gate=create_server('127.0.0.1',0,model_api_root(),state)
     worker=threading.Thread(target=gate.serve_forever,daemon=True);worker.start()
-    env={'DSH_HOME':str(out/'dsh'),'DSH_TELEMETRY_MODE':'none','DSH_MAX_TOKENS_AS_SUCCESS':'false',
+    env={'DSH_HOME':str(out/'dsh'),'DEEPSEEK_API_KEY':model_sdk_key(),'DSH_TELEMETRY_MODE':'none','DSH_MAX_TOKENS_AS_SUCCESS':'false',
       'DSH_PERMISSION_MODE':'danger-full-access','DEEPSEEK_BASE_URL':f'http://127.0.0.1:{gate.server_port}/v1',
       'SSS_BUDGET_GATE_ACTIVE':'1','SSS_BUDGET_CAP_USD':str(cap),'SSS_BUDGET_LEDGER':str(out/'cost-ledger.jsonl'),
       **{k:str(out/'config.json') for k in env_extra}}

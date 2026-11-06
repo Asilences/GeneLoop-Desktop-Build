@@ -466,6 +466,10 @@ Harness 原生 `SessionPromptRequest.content` 的实际格式为：
 
 ### 预算、模型与记录
 
+Python 的模型上游入口为 `src/adapters/model_api.py`：`model_api_base_url()` 当前为 `https://api.kourichat.com/v1`，`model_wire_id()` 将 Harness 内部 `deepseek-flash` 映射到 `deepseek-v4.1-flash`，`model_api_key()` 只读取 `KOURI_API_KEY`。Web、File、预算代理与独立场景从这里取得上游；模拟模式仍用本地 provider，GLM 等显式配置的其他 provider 保留各自入口。旧 SDK 字段名只用作本地网关兼容占位，网关出站以 Kouri 密钥替换。当前模型选项由指定模型 ID 静态配置，不调用未确认兼容的 Kouri `/models`。SkillFlow baseline 首请求的真实 Chat/工具调用已返回 HTTP 200；价格沿 DeepSeek 费率代理估算，Kouri 实付和文件/搜索/思考接口待验证。
+
+网页聊天的可选模型默认读取 `config/kouri-models.json`；私有 `KOURI_MODELS_FILE` 可替换完整列表，路径相对项目根目录解析。私有环境变量 `KOURI_EXTRA_MODELS_JSON` 可在其后追加模型。后者为单行 JSON 数组，每项必须写明 `id`、`context_window`、`max_output_tokens`、`input_usd_per_million`、`output_usd_per_million`；可选 `wire_id`、`label`、`input_modalities`、`supported_reasoning_efforts`、`cache_hit_usd_per_million`。未填的模态与推理能力按文字、`off` 处理，缓存估费按输入价处理；重名、未知字段或非法容量/单价在启动前拒绝。网页 `/api/harless/models` 和原生模型下拉从策略列表读取，Harness 适配器使用显式元数据接纳非内置模型，预算网关按同一 ID 白名单和费率记账，再映射到上游 ID。当前仅有 Flash 的真实 ID；双模型测试使用离线诊断 ID，不对用户开放。Flash 仍按 393216 输出容量发请求；新增模型使用其配置容量，有限应用上限取较小值。独立 File 管理场景的 Flash/Off 限制维持原状。
+
 通用 Web 入口每任务、全启动费用和请求次数默认均为 `null`，表示不限。Web 不对单次用户文字另设长度上限；输出配置 `max_output_tokens: null` 时没有应用层输出额度；按2026-10-20最新要求，Web普通和文件转发请求统一使用官方真实最大单次容量393216 tokens作为 `max_tokens`，避免省略参数触发非思考默认8K截断，不裁剪模型返回。明确设置的有限诊断参数保持原值。服务商自身上下文和最大输出容量仍适用。上传容量、账号/路径权限及 HTTP 协议安全边界继续保留。前端预算只能下调服务器任务费用上限；`harness-web.py --budget-usd` 定任务上限，`--run-budget-usd` 定全启动上限，两者显式 `0` 均表示取消对应费用限制。累计 cap 在 policy/effective config/统计中以 `null` 表示不限，禁止使用 Infinity 或巨大数代替；内部 `State(cap_usd=0)` 仍代表零费用预算。可选 `--request-limit/--run-request-limit` 正整数保留次数限制；CLI `0`、配置/统计中的 `null` 表示不限次数，仍完整累计请求与费用。`TaskBudgetRegistry` 支持任务与累计费用分别设为 `null`；有限服务器上限仍禁止客户端提交不限或越界的任务；先不可变注册，原生聊天随发送激活，显式 API 经 submit 激活。预算代理根据 `x-deepseek-harness-session-id` 路由，同一次请求原子记录任务与累计费用，检查仍有效的上限，完整成功用量两层结算，新任务不重置累计账本。
 
 私有控制服务仅监听 loopback，`/tasks/register/activate/cancel/stats` 均要求 `X-SSS-Control-Token`。该 token 由启动器生成，不提供给浏览器。每任务冻结已选 provider/model、思考档位（`off/low/high/max`，旧 On=`high`）和输出配置（允许 `null`），关闭标题模型、辅助请求和压缩；UI 模型菜单不能绕过预算连接。
@@ -1532,6 +1536,13 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+
+## RSI 学习数据投影
+
+Web 结算诊断、离线导入和 Paper/PPT 账号内学习共用同一投影器。隔离 Web 和离线导入可显式选择 v3，使用本地 Presidio 和 Gitleaks 处理当前任务指令。现有账号内结构编译使用 v2。入口、依赖和授权范围见 [RSI 数据边界盘点](rsi-data-privacy.md)。
+
+新增默认私有的 `/api/harless/rsi-sharing`。仅允许从账号内已完成 Paper/PPT 任务生成 v2 工具流程对象，经过完整 JSON 预览、SHA256 绑定和逐次同意后发送给部署方配置的接收端。预览十分钟失效，退出/重启不恢复授权，异常无自动重传。桌面设置提供预览、保存本地副本及取消。接口动作、出网边界与诊断见[可选共享](rsi-data-privacy.md#默认私有与可选共享)。
+
 ## Evidence-Grounded Evolution Agent（2026-11-04）
 
 离线研究入口：`node scripts/project.mjs python scripts/run-evolution-agent.py --manifest <private.json> --output <new-.local-directory>`。默认只预检；`--call-model --budget-usd 3 --max-requests 1` 显式执行一个提案请求。复用原累计账本，不修改在线 Runtime。

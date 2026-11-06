@@ -8,6 +8,15 @@ from pathlib import Path
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _reviewed_code_version(name, expected, actual):
+    """Bind only explicitly reviewed old/current byte pairs to the loaded runtime."""
+    if actual == expected:
+        return True
+    path = Path(__file__).resolve().parents[2] / 'config/rsi-privacy-code-compat.json'
+    pair = json.loads(path.read_text(encoding='utf-8')).get(name)
+    return pair == {'certified': expected, 'current': actual}
+
+
 def load_product_bundle(root: Path, directory: Path, scene: str, *, private_root: Path | None = None):
     base = directory.resolve(strict=True)
     if private_root is not None:
@@ -77,9 +86,12 @@ def load_product_bundle(root: Path, directory: Path, scene: str, *, private_root
         locks = {}
         for name, version in binding['code_locks'].items():
             p = (root / name).resolve(strict=True)
-            if Path(name).is_absolute() or '..' in Path(name).parts or not p.is_relative_to(root.resolve()) or sha(p) != version:
+            if Path(name).is_absolute() or '..' in Path(name).parts or not p.is_relative_to(root.resolve()):
                 raise ValueError('existing PPT runtime code changed')
-            locks[str(p)] = version
+            actual = sha(p)
+            if not _reviewed_code_version(name, version, actual):
+                raise ValueError('existing PPT runtime code changed')
+            locks[str(p)] = actual
         schemas = json.loads((base / 'tool-schemas.json').read_text(encoding='utf-8'))
         variants_path = base / 'tool-schema-variants.json'
         if variants_path.name not in entry['files']: raise ValueError('missing verified whole schema variants')
@@ -332,12 +344,16 @@ def load_uploaded_bundle(root: Path, directory: Path, scene: str, *, approved_re
             [*cert['code_locks'].values(),*cert['file_locks'].values(),cert.get('source_evidence_sha256'),cert.get('learning_report_sha256')])):
         raise ValueError('unsupported runtime certification')
     code_locks={}
+    registered = base.is_relative_to((root / 'motif-libraries').resolve())
     for name,expected in cert['code_locks'].items():
         if not isinstance(name,str):raise ValueError('invalid code lock')
         p=(root/name).resolve(strict=True)
-        if Path(name).is_absolute() or '..' in Path(name).parts or not p.is_relative_to(root.resolve()) or sha(p)!=expected:
+        if Path(name).is_absolute() or '..' in Path(name).parts or not p.is_relative_to(root.resolve()):
             raise ValueError('certified runtime code changed')
-        code_locks[str(p)]=expected
+        actual = sha(p)
+        if actual != expected and (not registered or not _reviewed_code_version(name, expected, actual)):
+            raise ValueError('certified runtime code changed')
+        code_locks[str(p)]=actual
     names={'manifest':'online-manifest.json','task':'task.json','tool_schemas':'tool-schemas.json'}
     for name in (*names.values(),'library.json'):
         p=base/name

@@ -70,3 +70,13 @@ Windows / Node 24.19.0 / Python 3.11.7。当前工程检查不调用模型，不
 最终构建、12项桌面检查及16组Electron检查通过，控制台错误0。新增覆盖当前任务范围过滤、公开计划2/3项、任务进度从1.2s到2.4s的协议刷新、收起状态保留、右栏页面导航/开合、窄窗默认隐藏、401清空详情；原PPT预览和菜单/草稿检查保留。全部任务步骤/回执明确标记合成，只证明界面协议，不是新增真实模型执行或Motif效果实验。
 
 日志为`.local/debug/motif-library-ui/inspector-build-final.log`、`inspector-check-final.log`、`inspector-renderer-final.log`。截图与回执为`apps/desktop/.local/validation/renderer-1a453f12-7d32-49b9-9e0f-920012e7bfe7/`，包含整体浅深色/窄窗、`workspace-inspector-light.png`、`workspace-inspector-resources.png`及`workspace-runtime-details.png`。没有修改认证代码锁或新增在线执行逻辑，本轮不重跑全量回归，既有全量失败边界继续保留。安装包未构建或上传，生产服务和并行工具迁移工作树未改。
+
+## PR 提交前整合 main
+
+用户授权推送 Motif 前后端并创建 PR、在 #137–#140 分别评论进度，不使用自动关闭关键词。提交前整合 main `cdc3a6a9`（#159/#160），保留隐私设置、逐次共享确认、诊断检查及集中模型配置。四处文本冲突按各自数据流合并；任务 fixture 同时保留 Motif 工作区任务和可选隐私任务，认证失效检查放在其他操作之后。
+
+桌面网络用途白名单只追加本次 GET 入口，并检查相似未知路径继续拒绝。新注册的 Paper v85/PPT v83 仍保持原提交的所有原件；沿用 main 的精确兼容表，将该网关的已认证摘要与合并后摘要显式绑定。其他 main 审阅过的源码摘要对保留，未加入通配允许或改写原证书。新兼容检查既接受精确原摘要，也接受此表中的精确摘要对；旧 v84/v82 因网关摘要不匹配继续拒绝。
+
+合并后桌面构建、13项检查、网关32项、Paper/PPT53项、Electron16组通过，控制台错误0。日志为 `merge-build.log`、`merge-desktop-check-unrestricted.log`、`merge-gateway.log`、`merge-compat.log`、`merge-renderer.log`。受限沙箱的桌面临时文件 rename EPERM 日志另存，正常权限重跑同一检查通过。最新截图目录为 `apps/desktop/.local/validation/renderer-9b3f3ed5-8dab-4727-a154-45b37a5ef70b/`；产品文档仅纳入明确标记合成任务的总览截图，不提交私人原始日志。
+
+本轮重新启动完整 `npm test`，并单独核对项目 `tests/test_*.mjs` 清单的 Node 阶段，结果另记；当前定向通过不代替完整结论。没有真实模型请求、生产部署或安装包构建/上传。
