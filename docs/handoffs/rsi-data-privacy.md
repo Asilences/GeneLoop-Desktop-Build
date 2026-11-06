@@ -8,7 +8,7 @@
 - 本轮服务器验证：最终源码 1fa48a94 的 Python 定向 97 项、Web/离线对照 4 项、共享/桌面 Node 定向 19 项通过；`npm test` 为 Python 3081 通过/214 跳过、Node 1687 通过/9 跳过，退出码 0。续接策略、无模型 MCP smoke 18 例及 Motif 重放 4 例通过，测试后检出仍干净。最终本机证据在私有 `.local/privacy-issues-141-144/server-final/logs-final/`；此前 b1c7906e 的完整通过记录和更早失败记录也保留。
 - 本轮配置与失败：独立 Linux 检出保留真实 Git 元数据，Node 22.23.2、Python 3.12.15、SDK 0.1.5rc1、DSH 0.1.5-rc.3、Presidio 2.2.365、spaCy 3.8.7、Gitleaks 8.30.0。首次隔离 Python 缺少完整 PyMuPDF 路径，已在本轮独立虚拟环境复用完整 PyMuPDF 1.26.7 修正，初次失败记录保留。沿用已验证的字体、Tesseract 语言数据与 Node 兼容配置；包和正式环境未改。有效环境、源码版本与日志归入私有实验 ID `privacy-issues-141-144-20261106`。模型请求和付费均为 0。
 - Issue 143 边界：Mac 真实 Coding 产品链路仍依赖未关闭的 DESK-01/04（155、136），当前结果为真实桌面进程与合成协议工程验收。四项 Issue 按实际证据跟踪，不把依赖项视为完成。
-- 分支：继续使用 codex/rsi-privacy，本轮开始的已推送版本为 0c6f339；已验证源码 1fa48a94 已推送，[草稿 PR 159](https://github.com/jingyio/GeneLoop/pull/159) 未合并，其后仅补本轮文档记录。历史 v2 阶段起点为 36ccf00，当时注册证书基线为 main 5d73a4b，本轮兼容基线以首段为准。
+- 分支：继续使用 codex/rsi-privacy，本轮开始的已推送版本为 0c6f339；已验证源码 1fa48a94 已推送，[PR 159](https://github.com/jingyio/GeneLoop/pull/159) 已于 2026-11-06 合并到 main（`5e21c754`），其后仅补本轮文档记录。历史 v2 阶段起点为 36ccf00，当时注册证书基线为 main 5d73a4b，本轮兼容基线以首段为准。
 - v2 已完成：投影校验参数形状、绑定和原始事件边界。现有学习器只把结构样本交给原编译、独立留出认证和发布流程。原任务、权限、费用与交付审阅继续由宿主私有证据核验。兼容表只接受指定路径的旧/新字节摘要组合，在线使用当前字节摘要复核。
 - v2 历史验证：Windows 短路径隔离副本。45 项证书与投影定向测试、v2 投影和 Paper/PPT worker 合计 39 项、4 项带锁定 PyMuPDF 的跨语言生命周期测试。无模型 smoke 覆盖 18 例，motif:check 重放 4 个认证 Motif。Web 与离线投影对照通过。付费请求 0。
 - v2 Windows 历史全量失败：固定快照的 Python 为 2127 通过、249 跳过、34 失败、30 项 setup 等错误。Node 独立全量为 1501 通过、55 跳过、17 失败，均为测试创建符号链接时的 EPERM。私有日志位于隔离验证副本的 .local/rsi-privacy-npm-v2.log 和 .local/rsi-privacy-node-final.log。早期混用 v1/v2 的全量结果已由固定快照取代。

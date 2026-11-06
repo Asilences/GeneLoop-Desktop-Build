@@ -2,6 +2,8 @@
 
 ## 2026-11-06 模型上游地址集中与 Kouri 接入
 
+- 联合整合：#159 已以 `5e21c754` 合入 main；#160 纳入隐私分支并更新八个模型迁移相关文件的精确证书兼容摘要，原证书、Motif IR/schema/来源和累计账本均未修改。联合专项 Python 98 通过/11 跳过、Node 13/13、Web 场景 4/4，详见 `docs/debug/kouri-env-models-20261106.md`。正式服务未重启。
+
 - 范围：将运行代码中散落的 DeepSeek 官方 API 地址收敛到 `src/adapters/model_api.py`；按用户提供的 Kouri `https://api.kourichat.com/v1`、`deepseek-v4.1-flash` 接入。Harness 内部模型别名沿原路由到本地计费网关，出站模型 ID 在集中模块映射；私有上游凭证变量为 `KOURI_API_KEY`，旧 DeepSeek 密钥值不再读取。原账本保留。
 - 从最新 `origin/main` 的 `d1863342` 建立隔离分支 `codex/kouri-api-20261106`；原研究工作区及未跟踪 `reference/` 未动。README 与 `docs/interfaces.md` 已同步入口说明。
 - Kouri 密钥值只由私有环境加载，未展示或提交；现已完成一次真实 Chat/工具调用冒烟，细节见 `docs/debug/kouri-env-models-20261106.md`。Kouri 文件/搜索/思考协议、输出容量与实际价格尚未验收。既有 DeepSeek 单价仅作代理费用估算，不代表 Kouri 实付；旧密钥不再读取。未修改旧能力包证书。

@@ -9,7 +9,7 @@
   },
   "scripts/harness-web.py": {
     "certified": "04e3bb997cc76f974312dcbb05fc4aa01dadf01428500258ff187bdc8f26f5ef",
-    "current": "228dd80387ca3e41ae4ac9fcf0ba1479c94623d3fbce41a117f811b759639245"
+    "current": "a9d2a1b0e1bbf8f4706cc01664b442993df067b178f695b633e8fed387b8223b"
   },
   "scripts/learn-ppt-master-motif.py": {
     "certified": "42b928b1df3eb83b6c096823651afe8e1c82885c57f6b772500eb630e327dfe0",
@@ -29,7 +29,7 @@
   },
   "src/adapters/dsh_web_tasks.ts": {
     "certified": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284",
-    "current": "f85236f4070d6dba409f53e1dd084d1707f5c9e75ca772a2bf2cf98abbaf0b3c"
+    "current": "7b230e08ce49578a61280427f7dd5eaedab2e792b10119d220782b9b460f77f3"
   },
   "src/adapters/harless_rsi_bundle.py": {
     "certified": "06af97b2a465a439dd4323a37f764c492cd3927bb1bed232afeef8f389f5fe91",
@@ -42,5 +42,29 @@
   "src/motif_core/offline/edge_compiler.py": {
     "certified": "1ef4dda018d33e5120e37c2951928d617f582306e7f69552fcd343ab941c4261",
     "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
+  },
+  "scripts/harless_gateway.mjs": {
+    "certified": "d0905b88d5e489f6d83e410eb44d32b7cbff518461aa6c89a99754d48a5ca2c4",
+    "current": "b654822faa5de0041afd76b50df732bc9af62f0cfc273c1a7669ec7d726a035f"
+  },
+  "scripts/prepare-native-host.mjs": {
+    "certified": "c4f9b1bf04712d361e6364600dcf2bd75a20d5410a09aaa92a028ea9ee94658f",
+    "current": "9ff3b7d2788eff56278adb61ac827587ff638e070f948e4a2572afd07ea4e13e"
+  },
+  "scripts/serve-web-budget.py": {
+    "certified": "516b39bfd04365fd3cd9f0ccce1b16705c71bc8b1385b178c7bfc579604acc9a",
+    "current": "a8f35702a97ed44d270f07a0cccbf1c6161b843a2f287026d19431d8745ff239"
+  },
+  "src/adapters/capability_proposal.py": {
+    "certified": "26b9fe45909001bd8f0a36352be20d8406b49a7d5a2fed11028d710ea2b44a59",
+    "current": "3a5b38403779607ebb25f583bf35693b928335c91d15ba66096009b065e78c0e"
+  },
+  "src/adapters/deepseek_cost_gate.py": {
+    "certified": "b42ea0cdcf2f2ebc4ddf7efb42761270a98a7d204868caea35b6550523875675",
+    "current": "2de53acfbf29d4849e3a729a285b85454875318cede93826abec3219d1a373f3"
+  },
+  "src/adapters/harless_reasoning.ts": {
+    "certified": "7e734662ea4169ac8a94154a65ea226f3f6d933675a0557c59cd445601bb4967",
+    "current": "e02a83bea475ff7e5e2e62d4eedf718ef2f69730971ef70ce321ff9034a53461"
   }
 }
