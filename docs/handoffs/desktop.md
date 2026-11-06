@@ -1,5 +1,15 @@
 # GeneLoop Desktop 当前交接
 
+## 2026-11-07 preview.15 Windows安装提速（本地交付）
+
+- 范围：用户报告preview.14安装／写入约11分钟后成功。仅修改Windows分发；保留原界面、本机Agent、PR161/162整合及Mac preview.14包，不部署正式服务。
+- 修改：生成的Windows工具副本裁剪测试与不匹配缓存，保留NumPy运行辅助模块和408个匹配Python缓存。文件数40,321→30,763，减少9,558个。NSIS生命周期继续复用；`build-windows-engine.mjs`通过公开`customFiles_x64`调用`ExtractPayload.cs`，完整SHA校验后由.NET直接解压Unicode载荷，避免整套临时解压后复制。原进程、权限、卸载、快捷方式和注册逻辑保留。
+- 验证：实际预打包目录80项DSH工具注册及文件／数据／论文／PPT、Office交付和源材料转换通过；最终解压核心文件、13,016个锁定PPT文件哈希及实际Python导入通过。新增解压器的中文、越界、哈希和目录链接检查通过。全部为合成或文件校验，真实模型请求0；没有重跑整仓测试。
+- 性能：原NSIS隔离流程在1,022.2秒时停止，未完成，写入约5.09GB；最终.NET流程129.68秒完成。该计时不含外层准备、旧版本清理和注册表，不能当完整覆盖安装时间或计算精确提升倍数。首次覆盖仍需移除旧版文件，待用户实际试用。
+- 交付：私有`.local/deliveries/GeneLoop-Desktop-0.3.0-preview.15/Windows/GeneLoop-Desktop-0.3.0-preview.15-x64-Setup.exe`，976,437,760字节，SHA256 `a26ef20f975750817a194dae8828a3f1016b70a26d0dc234bddd64cead27bc93`；同目录有摘要，总目录有使用说明及`delivery-receipt.json`。保留旧包，未上传、未推送本轮源码或开新PR。
+- 失败：NumPy辅助文件误裁、冷缓存启动超时、旧ZIP插件中文乱码，以及NSIS引导编译／辅助目录错误均保留记录，最终不使用旧ZIP插件。源码、检查、预算与边界见[本轮记录](../debug/desktop-preview15-install-20261106.md)。本轮新增付费0，Mac Actions保持关闭。
+- 接手下一步：用户从托盘退出旧版后覆盖试用，记录完整安装时间；若仍慢，分别取旧版清理与写盘阶段证据。无需先卸载或清空账户数据。
+
 ## 2026-11-06 preview.14 联合候选（本地交付）
 
 - 用户要求尽快把本地并行工作接入预览并交付 Windows x64 EXE、Mac ARM64 DMG、Mac Intel DMG。在独立桌面分支整合 Draft PR161 `998cb505` 与 Draft PR162 `7fbe8874`，保留原提交和核心模块，不合并远端 PR、不部署正式服务。合并提交 `ebcb4b62`、`f5514ad8`；原 preview.13 产物保留。

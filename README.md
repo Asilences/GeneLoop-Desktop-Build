@@ -8,6 +8,8 @@
 
 GeneLoop Desktop `0.3.0-preview.14` 提供 Windows x64 EXE、macOS ARM64 DMG 和 Intel DMG 本机执行预览。在 preview.13 基础上接入 Draft PR161 的 Motif 库／工作区展示和 Draft PR162 的数据隐私接口，保留独立桌面界面、本机工作区及统一输入框。六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[交接](docs/handoffs/desktop.md)。正式服务器未随安装包部署，不发布 Release。
 
+Windows 安装提速候选 `0.3.0-preview.15` 已本地交付：裁剪无关测试及旧缓存，由NSIS管理安装并通过Unicode解压器直接写入，保留完整离线工具。隔离写盘129.68秒，完整覆盖安装耗时尚待用户试用；Mac继续使用preview.14。失败与验证边界见[安装记录](docs/debug/desktop-preview15-install-20261106.md)。
+
 桌面 Motif 展示候选在工作区首页融入运行、能力组合、评估、演化和版本，并提供全局库入口。它复用同伴的脱敏证据协议，通过账号隔离的只读接口展示，不授予执行权或虚构节省。接入配置、构建和验证边界见[工作区 Motif 说明](docs/product/desktop/motif-workspace.md)与[模块交接](docs/handoffs/motif-visualization.md)；尚未部署正式服务。
 
 模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。SkillFlow baseline 首请求的 Kouri Chat/工具调用冒烟已返回 HTTP 200，见[记录](docs/debug/kouri-env-models-20261106.md)；文件、搜索、思考能力、容量和实际费率仍待真实兼容性验收。当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。

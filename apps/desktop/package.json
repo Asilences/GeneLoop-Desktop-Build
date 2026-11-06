@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.14",
+  "version": "0.3.0-preview.15",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -19,6 +19,7 @@
     "smoke:account": "npm run build && node scripts/check-account-login.mjs",
     "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
+    "check:installer-payload": "node scripts/check-installer-payload.mjs",
     "pack": "npm run build && npm run runtime:stage && electron-builder --dir --publish never",
     "dist": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs",
     "check:motif": "node scripts/build-motif-evidence.mjs && node --test ../../tests/test_desktop_motif_library.mjs",

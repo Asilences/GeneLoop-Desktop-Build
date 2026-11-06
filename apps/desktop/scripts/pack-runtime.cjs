@@ -8,6 +8,7 @@ module.exports = async ({ appOutDir, electronPlatformName }) => {
   const source = join(__dirname, '../runtime-bundle');
   const resources = electronPlatformName === 'darwin'
     ? join(appOutDir,'GeneLoop Desktop.app','Contents','Resources') : join(appOutDir,'resources');
+  if (electronPlatformName === 'win32') require('./prune-windows-tools.cjs')(resources);
   const archive = join(resources, 'geneloop-runtime.asar');
   await asar.createPackageWithOptions(source, archive, { unpack: '*.{node,dll,exe,dylib,so}',
     unpackDir:'{node_modules/@remotion/compositor-*,node_modules/@esbuild/*,node_modules/esbuild}' });
