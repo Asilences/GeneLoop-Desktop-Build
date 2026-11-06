@@ -232,9 +232,12 @@ def prepare(args, output, endpoint):
             certified_input_sha256=canonical_prompt_sha, resources=resources,
             embedding_model=args.embedding_model)
         catalog = (getattr(args, 'deepseek_catalog', None) if args.real_model else
-                   {'data': [{'id': 'deepseek-flash'}]})
+                   {'data': [{'id': 'deepseek-flash'},
+                             *([{'id': 'deepseek-v4-pro'}] if getattr(args, 'preview_model_picker', False) else [])]})
         policy['models'] = (model_options(catalog, budget_usd=args.budget_usd,
                             max_output_tokens=public['max_output_tokens']) if catalog else [])
+        if getattr(args, 'preview_model_picker', False):
+            policy['models'][1]['label'] = '本地模拟 · 第二模型'
         if args.glm:
             policy['models'].append({'provider': 'harless-glm', 'model': args.glm['model'],
                                      'label': args.glm['model'].upper(), 'available': True})
@@ -352,7 +355,9 @@ def main():
     parser.add_argument('--case', default='')
     parser.add_argument('--scene-registry', default='config/harless-scenes.json', help='server-owned versioned scene registry')
     parser.add_argument('--frozen', action='store_true', help='legacy single-task mock regression entry')
-    parser.add_argument('--real-model', action='store_true', help='enable real DeepSeek connection; native chat sends tasks immediately')
+    parser.add_argument('--real-model', action='store_true', help='enable real Kouri connection; native chat sends tasks immediately')
+    parser.add_argument('--preview-model-picker', action='store_true',
+                        help='show a second mock-only model in the local picker; never enables real API calls')
     parser.add_argument('--manifest', help='certified online manifest for this capability profile')
     parser.add_argument('--task', help='certified task/version binding, paired with --manifest')
     parser.add_argument('--resources', help='private server-owned resource registry JSON: ID -> {text_file}')
@@ -402,6 +407,8 @@ def main():
     if bool(args.manifest) != bool(args.task): parser.error('--manifest and --task must be supplied together')
     if args.real_model and (args.frozen or args.fixture != 'normal'):
         parser.error('real provider cannot use frozen/failure fixtures')
+    if args.preview_model_picker and (args.real_model or args.frozen):
+        parser.error('model picker preview requires the dynamic mock Web mode')
     try: args.glm = configured_glm(args.real_model and not args.frozen)
     except ValueError as error: parser.error(str(error))
     if args.real_model and not (model_api_key_configured() or args.glm):
