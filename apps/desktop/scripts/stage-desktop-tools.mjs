@@ -88,6 +88,8 @@ for (const path of [
   'scenarios/research_ppt/documents.py', 'scenarios/research_ppt/validation.py', 'scenarios/research_ppt/web_scope.py',
   'src/adapters/geneloop_upload_limits.py', 'src/adapters/geneloop_upload_limits.json',
   'src/adapters/harless_attachment_text.py', 'src/adapters/ppt_delivery_runner.py',
+  'src/adapters/desktop_scene_tools.py', 'src/adapters/paper_static_checks.py', 'src/adapters/session_files.py',
+  'scenarios/data_analysis/evidence.py', 'scenarios/data_analysis/table_inputs.py',
   'src/adapters/ppt_design_preflight.py', 'src/adapters/ppt_annotation_repair.py',
 ]) {
   const target = join(destination, 'source', path);

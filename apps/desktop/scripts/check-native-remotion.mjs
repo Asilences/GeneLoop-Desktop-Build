@@ -9,7 +9,7 @@ const imports = file => import(pathToFileURL(join(runtime,file)).href);
 const {Context} = await imports('node_modules/@deepseek-ai/cordis/lib/index.js').catch(()=>import('@deepseek-ai/cordis'));
 const {LocalSandboxProvider} = await imports('node_modules/@deepseek-ai/dsh-sandbox-local/lib/index.js').catch(()=>import('@deepseek-ai/dsh-sandbox-local'));
 const {LocalSubprocessRuntime} = await imports('node_modules/@deepseek-ai/dsh-subprocess-local/lib/index.js').catch(()=>import('@deepseek-ai/dsh-subprocess-local'));
-const {renderNativeRemotion} = await imports('local-video.mjs');
+const {renderNativeRemotion,renderLocalVideo,probeLocalVideo} = await imports('local-video.mjs');
 const {removeScratchDirectory} = await imports('local-artifacts.mjs');
 const {openWorkspaceReader,openReportWriter} = await imports('local-files.mjs');
 const toolRoot=resolve(process.env.GENELOOP_NATIVE_TOOLS || 'desktop-tools-bundle');
@@ -46,7 +46,15 @@ try {
   assert.equal(receipt.output.width,640);assert.equal(receipt.output.height,360);
   assert.equal(receipt.output.fullyDecoded,true);assert.equal(receipt.artifacts.length,3);
   assert.ok(readFileSync(join(root,'workspace','GeneLoop 输出',receipt.artifacts[0].name)).length>1000);
-  console.log(JSON.stringify({diagnostic:true,inlineLoaderRejected:true,...receipt}));
+  writeFileSync(join(root,'workspace','source.mp4'),readFileSync(join(root,'workspace','GeneLoop 输出',receipt.artifacts[0].name)));
+  const media=await probeLocalVideo(reader,tools,'source.mp4',AbortSignal.timeout(30_000));
+  const clip=await renderLocalVideo(reader,writer,tools,JSON.stringify([
+    {path:'source.mp4',sha256:media.sha256,start:0,end:0.25},
+    {path:'source.mp4',sha256:media.sha256,start:0.5,end:0.75},
+  ]),AbortSignal.timeout(180_000),undefined,ctx);
+  assert.equal(clip.output?.width??clip.width,1280);assert.equal(clip.output?.height??clip.height,720);
+  assert.ok(Math.abs((clip.output?.duration??clip.duration)-0.5)<0.12);
+  console.log(JSON.stringify({diagnostic:true,inlineLoaderRejected:true,timelineTrimAndConcat:true,...receipt}));
 } finally {
   reader.close();writer.close();await ctx.fiber.dispose();process.chdir(app);
   assert.ok(root.startsWith(realpathSync(tmpdir())));

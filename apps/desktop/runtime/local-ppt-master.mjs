@@ -37,7 +37,7 @@ function sourcesFor(reader, sources = []) {
   });
 }
 
-async function pptPython(tools, scratch, signal, module, args) {
+export async function pptPython(tools, scratch, signal, module, args) {
   try {
     const bootstrap = "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));runpy.run_module(sys.argv.pop(1),run_name='__main__')";
     const argv = ['-E','-s','-B','-X','utf8','-c',bootstrap,tools.sourceRoot,module,...args];
@@ -51,7 +51,7 @@ async function pptPython(tools, scratch, signal, module, args) {
     return JSON.parse(stdout);
   } catch (error) {
     signal.throwIfAborted();
-    try { return JSON.parse(error.stdout); } catch { throw Error('本机 PPT 工具未完成，请检查运行依赖。'); }
+    try { return JSON.parse(error.stdout); } catch { throw Error('本机场景工具未完成，请检查运行依赖或输入文件。'); }
   }
 }
 
@@ -84,7 +84,7 @@ export async function readPptMaterial(path, page, reader, tools, signal) {
   if (typeof path !== 'string' || !Number.isInteger(page) || page < 1) throw Error('请输入资料相对路径和正整数页码。');
   const extension = path.slice(path.lastIndexOf('.')).toLowerCase();
   if (extension === '.pdf') return readPaperPage(reader,{path,page});
-  if (!['.pptx','.docx','.txt','.md','.csv','.tsv'].includes(extension)) throw Error('支持 PDF、PPTX、DOCX、文本和 CSV/TSV。');
+  if (!['.pptx','.docx','.xlsx','.txt','.md','.csv','.tsv','.json','.tex','.bib'].includes(extension)) throw Error('支持 PDF、PPTX、DOCX、XLSX、JSON、LaTeX 和文本表格。');
   const bytes = reader.readBytes(path,maxSourceBytes);
   return inSceneScratch(async scratch => {
     const staged = join(scratch,'source'+extension);
@@ -99,7 +99,7 @@ export function createPptSourceReader(reader, tools, signal) {
   const sources = new Map();
   return {
     pin(path) {
-      if (typeof path !== 'string' || !/\.(?:pdf|pptx|docx|txt|md|csv|tsv)$/i.test(path)) {
+      if (typeof path !== 'string' || !/\.(?:pdf|pptx|docx|xlsx|txt|md|csv|tsv|json|tex|bib)$/i.test(path)) {
         throw Error('请选择支持的 PPT 源材料。');
       }
       const version = sha(reader.readBytes(path, maxSourceBytes));
@@ -142,6 +142,23 @@ export async function fillPptTemplate(path, version, planText, reader, writer, t
     sourcesFor(reader,sources);
     return deliverPpt({...receipt,execution:(process.platform === 'win32' ? 'windows' : process.platform)+'-local-ppt-template',template:{path,sha256:version},sources},
       scratch,writer,signal,onReport);
+  });
+}
+
+export async function editPptTemplate(path, version, planText, reader, writer, tools, signal, onReport) {
+  if(typeof path!=='string'||!/\.pptx$/i.test(path)||!limit(planText,128*1024))throw Error('需要 PPTX 模板和文本框修改计划。');
+  const plan=JSON.parse(planText);
+  if(!plan||Object.keys(plan).some(key=>!['edits','sources'].includes(key)))throw Error('无效的模板编辑计划。');
+  const bytes=reader.readBytes(path,maxSourceBytes);
+  if(sha(bytes)!==version)throw Error('模板已变化，请重新读取。');
+  const sources=sourcesFor(reader,plan.sources);
+  return inSceneScratch(async scratch=>{
+    const staged=join(scratch,'source.pptx'),values=join(scratch,'edits.json');
+    writeFileSync(staged,bytes,{flag:'wx'});writeFileSync(values,JSON.stringify(plan.edits??null),{flag:'wx'});
+    const result=await pptPython(tools,scratch,signal,'scenarios.ppt_master.windows_source',
+      ['edit',staged,'--values',values,'--renderer',tools.soffice]);
+    sourcesFor(reader,[{path,sha256:version},...sources]);
+    return deliverPpt({...result,execution:process.platform+'-local-ppt-edit',template:{path,sha256:version},sources},scratch,writer,signal,onReport);
   });
 }
 
