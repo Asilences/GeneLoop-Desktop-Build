@@ -14,7 +14,7 @@ EXTRA_PATTERNS = {
     "BINARY_PAYLOAD": [r"(?i)data:(?:image|audio|video|application/octet-stream)/?[^\s,]*;base64,[A-Za-z0-9+/=_-]+"],
     "PRIVATE_REFERENCE": [
         r"(?i)(?:https?|s3|file|ssh|ftp|smb)://[^\s<>\"',;，。；！？、）\])]+",
-        r"""["'](?:[A-Za-z]:[\\/]|\\\\|~/|/)[^"'\n]+["']""",
+        r"""["'](?:[A-Za-z]:[\\/]|\\\\|~/|/(?!/\s))[^"'\n]+["']""",
         r"(?<![\w/:])(?:[A-Za-z]:[\\/]|\\\\|~/|/)[\w.~-]+(?:[\\/][\w.~-]+)+",
         r"(?i)(?<![\w.-])[\w.-]+\.(?:pdf|pptx?|docx?|xlsx?|csv|tex|bib)(?![\w-]|\.[\w-])",
         r"(?i)(?<![\w])\.local[\\/][^\s<>\"',;，。；！？]+",

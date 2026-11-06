@@ -123,6 +123,14 @@ CASES = [
 LOCAL_TOOLS = bool(os.environ.get('SSS_RSI_GITLEAKS')) and importlib.util.find_spec('presidio_analyzer') is not None
 
 
+@pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual local Presidio and Gitleaks')
+def test_code_comment_literal_is_kept_while_private_file_path_is_removed():
+    source={'code':'literal = "// header"','file_path':'/home/private-owner/main.py'}
+    result=privacy.learning_view(source)
+    assert result['code']==source['code']
+    assert '/home/private-owner' not in result['file_path']
+
+
 @pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual local Presidio/spaCy models and Gitleaks')
 @pytest.mark.parametrize('scene,prompt,keep', CASES)
 def test_all_registered_and_future_scenes_keep_task_semantics(scene, prompt, keep):
