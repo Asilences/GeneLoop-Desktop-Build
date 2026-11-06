@@ -11,3 +11,5 @@
 - PR159 已合入 main，合并提交 `5e21c754056f5db8557d7a20869ec02b228b9741`。两个 PR 的五个共同改动文件可自动合并，没有文本冲突。
 - 模型迁移会改变 Paper/PPT 注册证书绑定的八个运行文件：网关、Web 启动、原生宿主准备、独立预算服务、能力提案、预算代理、Web 任务与模型推理适配。审阅两侧差异后，仅在既有 `config/rsi-privacy-code-compat.json` 中记录精确旧证书/当前源码摘要对；证书、Motif 程序、工具 schema、历史证据和账本未改。后续其他字节变化仍由原守卫拒绝。
 - 联合专项：Python 模型/预算、Paper/PPT 加载与拒绝修改、结构隐私投影 98 通过/11 跳过；跳过项需独立 Presidio/Gitleaks 安装。Node 模型适配与共享同意守卫 13/13，模型选择与隐私结算 Web 场景 4/4。完整回归及 smoke 结果见主线交接。该轮新增真实模型调用 0，正式服务未重启。
+
+- 最终完整回归：本机回环端口获准后的隔离环境运行 `npm test` 退出码 0，Python 3036 通过/272 跳过，Node 1675 通过/25 跳过；`npm run smoke` 退出码 0。日志为 `.local/debug/kouri-env-models/integration-npm-test.log` 与 `integration-smoke.log`。此前受限沙箱的完整失败日志继续保留。
