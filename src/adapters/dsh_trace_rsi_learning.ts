@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { canonical, digest } from './paper_rsi_program.ts';
 import { runTraceTool, validateTraceCandidate } from './trace_rsi_program.ts';
+import {createLearningPrivacyBoundary} from './geneloop_privacy.ts';
 
 export const name = 'sss-trace-rsi-learning';
 export const inject = ['tools', 'agents'];
@@ -258,6 +259,7 @@ export function apply(ctx:any):void {
       parameters:{type:'object',properties:{input:{}},required:['input'],additionalProperties:false},run:learning.trial}
   ];
   // This Harness validates allow-lists against global tools at agent creation.
+  const privacy=createLearningPrivacyBoundary();
   for (const definition of definitions) ctx.tools.register({
     name:definition.name,description:definition.description,parameters:definition.parameters,
     output:{schema:{type:'object'},render:(_:any,value:any) => [{type:'text',text:JSON.stringify(value)}]},
@@ -265,7 +267,7 @@ export function apply(ctx:any):void {
       if (exec?.agent?.session?.id !== config.session_id) throw Error('trace_learning_session_not_authorized');
       if (exec.signal?.aborted) throw Error('trace_learning_cancelled');
       if (definition.name === 'rsi_trace_list') exactArgs(args,[]);
-      return definition.run(args);
+      return privacy.show(await definition.run(privacy.resolve(args)));
     }});
   ctx.provide('sssTraceRsi',{install:learning.install,installProgram:learning.installProgram});
   ctx.on('agent/created',({agent}:any) => {

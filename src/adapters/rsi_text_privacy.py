@@ -79,15 +79,16 @@ def _has_han(text):
     return any("\u3400" <= char <= "\u9fff" for char in text)
 
 
-def redact_task_intent(text):
-    if not 0 < len(text) <= MAX_INTENT_CHARS:
-        raise ValueError("invalid_task_intent_size")
-    text = unicodedata.normalize("NFKC", text).replace("\r\n", "\n").replace("\r", "\n")
-    text = "".join(char for char in text
-                   if char in "\n\t" or unicodedata.category(char) not in {"Cc", "Cf"})
-    if not text.strip() or len(text) > MAX_INTENT_CHARS:
-        raise ValueError("invalid_task_intent_size")
-    _scan(text)
+def anonymize_text(text, *, alias=None):
+    """Shared Presidio operation, independent of scenes and JSON transport.
+
+    Callers scan the complete material before and after this operation. Keep
+    Unicode and whitespace unchanged for code, equations and structured text.
+    """
+    if not isinstance(text, str) or len(text) > 1_000_000:
+        raise ValueError("invalid_privacy_text")
+    if not text:
+        return text
     analyzer, anonymizer = _presidio()
     statistical_spans = {match.span(1) for match in STAT_ABBREVIATION.finditer(text)}
     findings = []
@@ -102,6 +103,23 @@ def redact_task_intent(text):
                 if (start, end) in statistical_spans or _has_han(text[start:end]) != (language == "zh"):
                     continue
             findings.append(finding)
-    redacted = anonymizer.anonymize(text=text, analyzer_results=findings).text
+    operators = None
+    if alias is not None:
+        from presidio_anonymizer.entities import OperatorConfig
+        operators = {entity: OperatorConfig("custom", {"lambda": lambda value, entity=entity: alias(entity, value)})
+                     for entity in {finding.entity_type for finding in findings}}
+    return anonymizer.anonymize(text=text, analyzer_results=findings, operators=operators).text
+
+
+def redact_task_intent(text):
+    if not 0 < len(text) <= MAX_INTENT_CHARS:
+        raise ValueError("invalid_task_intent_size")
+    text = unicodedata.normalize("NFKC", text).replace("\r\n", "\n").replace("\r", "\n")
+    text = "".join(char for char in text
+                   if char in "\n\t" or unicodedata.category(char) not in {"Cc", "Cf"})
+    if not text.strip() or len(text) > MAX_INTENT_CHARS:
+        raise ValueError("invalid_task_intent_size")
+    _scan(text)
+    redacted = anonymize_text(text)
     _scan(redacted)
     return redacted

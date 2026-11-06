@@ -153,7 +153,8 @@ def model_context(catalog, task, snapshot):
             for ref in declaration.get('expected_dependencies',[])]
     context['history']=history
     context['historical_alias_scope']='Old uses aliases belong to each historical snapshot; use current aliases shown separately.'
-    return context
+    from .geneloop_privacy import learning_view
+    return learning_view(context)
 
 
 def unwrap_strategy(draft, output, snapshot, enabled):
@@ -194,4 +195,5 @@ def inherited_strategy_context(catalog, snapshot):
                                      if ref in context['capability_refs']]
     if len(json.dumps(context, ensure_ascii=False, allow_nan=False).encode('utf-8')) > 12000:
         raise ValueError('construction_inherited_strategy_context_too_large')
-    return context
+    from .geneloop_privacy import learning_view
+    return learning_view(context)

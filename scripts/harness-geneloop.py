@@ -120,6 +120,8 @@ def prepare(args, output, endpoint):
     save(preset / 'preset.yml', {'name': f'GeneLoop · {prepared["name"]}（{"真实模型" if args.real_model else "免费模拟"}）'})
     canonical_prompt_sha = hashlib.sha256(prepared['prompt'].strip().encode()).hexdigest()
     policy = {'output': str(output), 'prompt_sha256': canonical_prompt_sha,
+              'learning_python':sys.executable,
+              'rsi_sharing_endpoint':os.environ.get('GENELOOP_RSI_SHARING_ENDPOINT'),
               'allowed_tools': prepared['allowed_tools'], 'endpoint': endpoint,
               'max_output_tokens': public['max_output_tokens'], 'mode': args.mode,
               'embedding_endpoint': args.embedding_endpoint,

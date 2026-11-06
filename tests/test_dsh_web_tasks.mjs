@@ -3098,7 +3098,7 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
         ]},
       ]}});
     }
-    session.append('tool/call', {callId: 'unknown', name: secret, arguments: JSON.stringify({secret})});
+    session.append('tool/call', {callId: 'unknown', name: secret, arguments: JSON.stringify({unapproved_input:secret})});
     await f.complete(task);
     const output = join(f.directory, 'tasks', task.task_id);
     const samplePath = join(output, 'rsi-learning-trace.json');
@@ -3138,9 +3138,11 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
     assert.equal((await share(undefined,false)).status,401);
     assert.equal((await share({action:'preview',task_id:'foreign'})).status,409);
     const preview=await(await share({action:'preview',task_id:task.task_id})).json();
-    const expectedShared={...sample,format:'geneloop.rsi-learning-trace/v2'};
-    delete expectedShared.task_intent;
-    assert.deepEqual(JSON.parse(preview.payload).trace,expectedShared);
+    const sharedOffline=execFileSync(python,['-m','src.adapters.geneloop_learning_trace','--authorized',
+      '--input',eventsPath,'--scene',scene,'--status','completed','--start',String(start),
+      '--catalog',join(output,'effective-config.json'),'--share-object'],{encoding:'utf8'});
+    assert.deepEqual(JSON.parse(preview.payload),JSON.parse(sharedOffline));
+    assert.equal(JSON.parse(preview.payload).trace.format,'geneloop.rsi-learning-trace/v4');
     assert.equal(createHash('sha256').update(preview.payload).digest('hex'),preview.sha256);
     assert.equal(received.length,0);
     assert.equal((await share({action:'send',preview_id:preview.preview_id,sha256:preview.sha256,consent:false})).status,409);

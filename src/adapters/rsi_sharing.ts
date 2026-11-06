@@ -90,7 +90,7 @@ export function createRsiSharing(options: Options) {
           if (disposed || request.signal.aborted) return rejected('rsi_sharing_unavailable', 410);
           const value = JSON.parse(payload), bytes = Buffer.byteLength(payload);
           if (value.format !== 'geneloop.rsi-shared-object/v1' || value.kind !== 'tool_flow' ||
-              value.trace?.format !== 'geneloop.rsi-learning-trace/v2' || bytes > MAX_BYTES)
+              !['geneloop.rsi-learning-trace/v2','geneloop.rsi-learning-trace/v4'].includes(value.trace?.format) || bytes > MAX_BYTES)
             throw Error('invalid_projected_sharing_object');
           const row: Preview = {id: randomUUID(), body: payload, bytes,
             sha256: createHash('sha256').update(payload).digest('hex'), expires: Date.now() + EXPIRY_MS, state: 'preview'};

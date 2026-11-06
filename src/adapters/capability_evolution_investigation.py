@@ -357,14 +357,21 @@ def run_investigation(investigation, *, call_agent, handlers, output,
         path = directory / ('tool-' + str(len(tool_calls)) + '.json')
         save(path, record)
         tool_calls.append(file_ref(path))
-        return result
+        from .geneloop_privacy import learning_view, PrivacyRejected
+        try:
+            return learning_view(result)
+        except PrivacyRejected:
+            return {'status':'error','error':'geneloop_privacy_rejected'}
 
     result = {'status': 'incomplete', 'submissions': submissions, 'finish': None,
               'tool_calls': tool_calls, 'measured_net_benefit': None, 'actual_adoption': None,
               'production_enabled': False}
     result['investigation_identity'] = identity
     try:
-        result['agent_result'] = call_agent(request, dispatch)
+        from .geneloop_privacy import learning_view
+        safe_request = dict(request)
+        safe_request['prompt'] = learning_view(request['prompt'])
+        result['agent_result'] = call_agent(safe_request, dispatch)
         result['finish'] = finish
         if finish is not None:
             result['status'] = ('completed' if finish['decision'] == 'proposal' else finish['decision'])
