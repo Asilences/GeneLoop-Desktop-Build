@@ -1532,6 +1532,13 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+
+## RSI 学习数据投影
+
+Web 结算诊断、离线导入和 Paper/PPT 账号内学习共用同一投影器。隔离 Web 和离线导入可显式选择 v3，使用本地 Presidio 和 Gitleaks 处理当前任务指令。现有账号内结构编译使用 v2。入口、依赖和授权范围见 [RSI 数据边界盘点](rsi-data-privacy.md)。
+
+新增默认私有的 `/api/harless/rsi-sharing`。仅允许从账号内已完成 Paper/PPT 任务生成 v2 工具流程对象，经过完整 JSON 预览、SHA256 绑定和逐次同意后发送给部署方配置的接收端。预览十分钟失效，退出/重启不恢复授权，异常无自动重传。桌面设置提供预览、保存本地副本及取消。接口动作、出网边界与诊断见[可选共享](rsi-data-privacy.md#默认私有与可选共享)。
+
 ## Evidence-Grounded Evolution Agent（2026-11-04）
 
 离线研究入口：`node scripts/project.mjs python scripts/run-evolution-agent.py --manifest <private.json> --output <new-.local-directory>`。默认只预检；`--call-model --budget-usd 3 --max-requests 1` 显式执行一个提案请求。复用原累计账本，不修改在线 Runtime。

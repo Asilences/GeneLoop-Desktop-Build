@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "scene",
+    "status",
+    "nodes",
+    "bindings"
+  ],
+  "if": {
+    "properties": {"format": {"const": "geneloop.rsi-learning-trace/v3"}}
+  },
+  "then": {"required": ["task_intent"]},
+  "else": {"not": {"required": ["task_intent"]}},
+  "properties": {
+    "format": {
+      "enum": ["geneloop.rsi-learning-trace/v2", "geneloop.rsi-learning-trace/v3"]
+    },
+    "task_intent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "scene": {
+      "enum": [
+        "paper-proofreading",
+        "ppt"
+      ]
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tool",
+          "outcome"
+        ],
+        "properties": {
+          "tool": {
+            "enum": [
+              null,
+              "mcp__paper_checks__pin_document",
+              "mcp__paper_checks__read_pinned_document",
+              "mcp__ppt_master__pin_source",
+              "mcp__ppt_master__convert_source",
+              "mcp__ppt_master__read_converted_source"
+            ]
+          },
+          "outcome": {
+            "enum": [
+              "eligible_read",
+              "unapproved_tool",
+              "invalid_arguments",
+              "missing_required_parameter",
+              "missing_or_failed_result",
+              "missing_parameter_provenance",
+              "invalid_parameter_provenance"
+            ]
+          }
+        }
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "field",
+          "parameter"
+        ],
+        "properties": {
+          "from": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000
+          },
+          "to": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000
+          },
+          "field": {
+            "enum": [
+              "source_id",
+              "converted_id"
+            ]
+          },
+          "parameter": {
+            "enum": [
+              "source_id",
+              "converted_id"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

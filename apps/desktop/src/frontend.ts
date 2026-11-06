@@ -2,13 +2,15 @@ import { readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import type { Session } from 'electron';
 import { sameServer } from './policy.ts';
+import {apiPurpose,sharingControlAllowed} from './privacy.ts';
 type RequestWithOrigin = Request & { readonly initiatorOrigin?: string };
-type Options = { session: Session; server: string; assets: string; ui: string; fail: (message: string) => void };
-const FILES = ['app.js','api.js','conversation.js','components.js','lucide-icons.js','composer.js','scene-picker.js','panels.js','comparison.js','deliveries.js','desktop.css'];
+type Options = { session: Session; server: string; assets: string; ui: string; fail: (message: string) => void; diagnostic?: boolean };
+const FILES = ['app.js','api.js','conversation.js','components.js','lucide-icons.js','composer.js','scene-picker.js','panels.js','comparison.js','deliveries.js','privacy.js','desktop.css'];
 const TYPES: Record<string,string> = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 /** 独立桌面页面与服务器API的传输边界；不读取、组合或执行服务器网页。 */
 export class LocalFrontendHost {
   readonly served = {local:0,network:0,localScripts:[] as string[],networkScripts:[] as string[]};
+  readonly egress = {account: 0, task: 0, sharing: 0, denied: 0};
   private installed=false;
   private options: Options;
   constructor(options:Options){this.options=options;}
@@ -32,11 +34,17 @@ export class LocalFrontendHost {
         if(file){if(/\.(js|css)$/.test(file))this.served.localScripts.push(path);return this.local(join(ui,file),request.method);}
       }
       if(!path.startsWith('/api/'))return new Response('Desktop resource not found',{status:404});
+      const purpose = apiPurpose(path, this.options.diagnostic);
+      if (!purpose || purpose === 'sharing' && !(await sharingControlAllowed(request))) {
+        this.egress.denied++;
+        return Response.json({error:{code:'desktop/privacy',message:'此数据出口未获准启用。'}},{status:403});
+      }
       const headers=new Headers(request.headers);if(request.initiatorOrigin!==undefined)headers.set('origin',request.initiatorOrigin);
       const remember=headers.get('x-geneloop-remember-login')==='1'&&request.method==='POST'&&
         request.credentials!=='omit'&&['/api/account/login','/api/account/register'].includes(path);
       headers.delete('x-geneloop-remember-login');
       this.served.network++;
+      this.egress[purpose]++;
       const remote=await session.fetch(request,{headers,credentials:request.credentials==='omit'?'omit':'include',bypassCustomProtocolHandlers:true,
         ...(remember?{redirect:'error' as const}:{})});
       const next=new Headers(remote.headers);for(const key of ['content-encoding','content-length','transfer-encoding','connection','keep-alive'])next.delete(key);

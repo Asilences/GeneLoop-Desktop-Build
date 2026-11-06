@@ -17,6 +17,10 @@ import {symbols as cordisSymbols} from '@deepseek-ai/cordis';
 import { createOnlineInterceptor, loopbackSimilarity } from './dsh_online_motif.mjs';
 import {createPaperLearning} from './harless_paper_learning.ts';
 import {createPptLearning} from './harless_ppt_learning.ts';
+import {capturePrivateLearningTrace} from './harless_learning_trace.ts';
+import {projectPrivateLearningTrace} from './harless_learning_trace.ts';
+import {createRsiSharing} from './rsi_sharing.ts';
+
 import {installPptProgramLearning} from './ppt_program_learning.ts';
 import {pptComponentScene,pptComponentGraphTools} from './ppt_component_tool.ts';
 import {pptDeliveryScene,pptDeliveryGraphTools,recordPptDeliveryReuse} from './ppt_delivery_pipeline.ts';
@@ -75,6 +79,7 @@ const conversationHost=(ctx:any)=>ctx.sessionController[cordisSymbols.original]?
 /** Internal same-host handoff: ownership is rechecked by the registered reader. */
 export async function publicConversationContext(ctx:object,sessionId:string){return conversationReaders.get(conversationHost(ctx))?.(sessionId);}
 type Policy = {
+  rsi_sharing_endpoint?: string;
   research_strategy?: ResearchTaskStrategy;
   learning_python?: string; output: string; user_id?: string; allowed_tools: string[]; endpoint: string; max_output_tokens: number | null;
   command_resources?: any;
@@ -858,6 +863,7 @@ export function apply(ctx: any) {
         json(join(task.output,'learning-accounting.json'),{task_id:task.request.task_id,session_id:task.budget_session_id,request_receipts:final.request_receipts});
         pptLearning.schedule();
       }
+      await capturePrivateLearningTrace(config, task.output, task.scene.id, task.status, task.trace_start_index);
       active.delete(task.request.task_id);
       finalizeTaskStrategy(task);
     })().catch((error) => { task.failure = 'budget_close_failed: ' + String(error); record(task); });
@@ -2300,6 +2306,28 @@ export function apply(ctx: any) {
       }
     },
   }), 'harless-native-deliveries');
+  const sharing = createRsiSharing({
+    endpoint: config.rsi_sharing_endpoint, allowLoopback: config.provider_mode === 'mock',
+    async prepare(taskId) {
+      const task = get(taskId);
+      await ensureOwned(task.request.session_id);
+      const python = process.env.SSS_PYTHON ?? config.learning_python;
+      if (!python || task.status !== 'completed' || !['paper-proofreading', 'ppt'].includes(task.scene.id) ||
+          !Number.isSafeInteger(task.trace_start_index)) throw Error('sharing_source_unavailable');
+      return projectPrivateLearningTrace(python, join(task.output, 'events.jsonl'), task.scene.id,
+        task.status, task.trace_start_index!, {share: true});
+    },
+    audit: event => appendFileSync(join(config.output, 'rsi-sharing-audit.jsonl'),
+      JSON.stringify({time: utc(), ...event}) + '\n', {mode: 0o600}),
+  });
+  ctx.effect(() => {
+    const release = ctx.connection.fetch.register({path: '/api/harless/rsi-sharing', methods: ['GET', 'POST'],
+      requestBody: 'buffered', async fetch(request: Request) {
+        const rejected = ctx.connection.requestRejection(request);
+        return rejected ? new Response('Unauthorized', {status: rejected}) : sharing.handle(request);
+      }});
+    return async () => {sharing.dispose(); await release();};
+  }, 'harless-rsi-sharing');
   installChunkedUpload(ctx,config.output,async id=>{
     await ensureOwned(id);trash.assertVisible(id);
     if(comparisons?.isLane(id))throw new TaskError('session_not_owned','请在原对话上传文件。',403);

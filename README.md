@@ -1,5 +1,9 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+Paper/PPT 的 [RSI 任务语义脱敏](docs/rsi-data-privacy.md#v3-任务语义诊断)可在隔离 Web 和离线导入中显式启用，使用本地 Presidio 和 Gitleaks。普通运行只需原有依赖。
+
+轨迹、源码共享和可选遥测默认关闭。桌面设置中的[数据与隐私](docs/rsi-data-privacy.md#默认私有与可选共享)提供工具流程预览、逐次授权、保存本地副本与取消；接收端由部署方在私有配置中指定。
+
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
 Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
