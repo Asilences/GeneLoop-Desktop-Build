@@ -15,6 +15,7 @@ const {openWorkspaceReader,openReportWriter}=await load('local-files.mjs');
 const {createPptSourceReader}=await load('local-ppt-master.mjs');
 const {analyzeLocalData,auditLocalPaper,exportLocalFiles}=await load('local-scene-tools.mjs');
 const {localSceneTools}=await load('local-scenes.mjs');
+const {registerLocalFileTools}=await load('local-file-tools.mjs');
 const {removeScratchDirectory}=await load('local-artifacts.mjs');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const previous=process.cwd(),root=realpathSync(mkdtempSync(join(tmpdir(),'geneloop-scene-tools-')));
@@ -24,7 +25,7 @@ const tools={python:join(toolsRoot,process.platform==='win32'?'python/python.exe
   sourceRoot:join(toolsRoot,'source'),nativeContext:ctx};
 const files={
   'source.md':'GeneLoop source evidence.',
-  'table.json':JSON.stringify([{x:1,y:2},{x:2,y:4},{x:3,y:6}]),
+  'table.json':JSON.stringify([{x:1,y:2,note:'=1+1'},{x:2,y:4,note:'literal'},{x:3,y:6,note:''}]),
   'main.tex':'\\input{chapters/intro}\n\\cite{known,missing}\n\\bibliography{refs}',
   'chapters/intro.tex':'\\label{dup}\n\\label{dup}',
   'refs.bib':'@article{known, title={Actual local fixture}}',
@@ -44,10 +45,20 @@ const version=path=>sha(reader.readBytes(path,16*1024*1024));
 try {
   process.chdir(root);const signal=AbortSignal.timeout(180_000);
   for(const scene of ['chat','files','data','paper','ppt','video'])assert.ok(localSceneTools(scene).includes('local_document_read'));
+  for(const legacy of [false,true]) {
+    const names=[];
+    const scope={tools:{restrict(){},guard(){},register(tool){names.push(tool.name);}}};
+    registerLocalFileTools(scope,reader,writer,undefined,'data',signal,undefined,undefined,tools,undefined,ctx,legacy);
+    assert.equal(names.includes('local_document_read'),!legacy);
+    assert.equal(names.includes('local_data_analyze'),!legacy);
+    assert.ok(names.includes('local_data_summarize'));
+  }
   const documents=createPptSourceReader(reader,tools,signal),pinned=documents.pin('table.xlsx');
   assert.match((await documents.read(pinned.source_id,1)).text,/Sheet Evidence/);
-  const json=await analyzeLocalData(reader,tools,signal,{path:'table.json',sha256:version('table.json'),x:'x',y:'y'},writer);
+  const json=await analyzeLocalData(reader,tools,signal,{path:'table.json',sha256:version('table.json'),x:'x',y:'y',export_csv:true},writer);
   assert.equal(json.summary.rows,3);assert.equal(json.correlation.pearson_r,1);
+  assert.equal(json.csv_escaped_text_cells,1);
+  assert.match(readFileSync(join(workspace,'GeneLoop 输出',json.artifacts[0].name),'utf8'),/'=1\+1/);
   const excel=await analyzeLocalData(reader,tools,signal,{path:'table.xlsx',sha256:version('table.xlsx'),x:'x',y:'y',export_csv:true},writer);
   assert.equal(excel.summary.columns[1].missing,1);assert.equal(excel.correlation.complete_pairs,2);
   assert.equal(excel.artifacts.length,2);assert.equal(excel.correlation.pearson_r,1);

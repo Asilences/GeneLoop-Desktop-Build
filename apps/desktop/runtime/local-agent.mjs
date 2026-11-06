@@ -4,7 +4,7 @@ import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
-export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt }) {
+export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false }) {
   if (ppt) ppt = {...ppt,nativeContext:ctx};
   const reader = openWorkspaceReader(directory);
   let writer, handle;
@@ -14,8 +14,10 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
       agentOptions: model,
       signal,
       setup(scope) {
-        registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx);
-        if(ppt)scope.systemPrompt.section({name:'geneloop:desktop-documents',order:10200,
+        registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx,legacyTools);
+        if(legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-compatibility',order:10200,
+          text:'当前网关尚未声明新版场景工具协议，本轮只提供旧版本工具。若任务需要Excel、多文件静态核验或普通PPT模板编辑，请说明需要更新GeneLoop网关；不要声称已使用这些未提供的工具。现有本机工具仍可使用，不转为云端执行。'});
+        if(ppt&&!legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-documents',order:10200,
           text:'Office/PDF等材料先用 local_document_pin 固定版本，再用 local_document_read 分页核对。所有资料与工具在本机处理，模型通过网络调用。数据用 local_data_inspect/analyze 读取显式表格；文件整理用 local_files_export 交付副本。论文可用 local_paper_audit_sources 复用静态检查。只使用当前场景实际提供的工具，不把文本抽取称为视觉检查或把静态核验称为真实编译。'});
         if (scene === 'video' && media?.remotion) scope.systemPrompt.section({
           name:'geneloop:desktop-video',order:10210,

@@ -13,8 +13,8 @@ const jsonOutput = {
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
 };
 
-export function registerLocalFileTools(scope, reader, writer, onReport, scene = 'files', signal, media, approveVideo, ppt, onVideoPhase, nativeContext) {
-  const names = localSceneTools(scene);
+export function registerLocalFileTools(scope, reader, writer, onReport, scene = 'files', signal, media, approveVideo, ppt, onVideoPhase, nativeContext, legacyTools = false) {
+  const names = localSceneTools(scene,legacyTools);
   if (!names) throw Error('不支持该本机场景。');
   const tools = [
     defineTool({
@@ -199,5 +199,5 @@ export function registerLocalFileTools(scope, reader, writer, onReport, scene = 
   // Hide every global tool. Scoped registrations below are unaffected by this mask.
   scope.tools.restrict({ allow: [] });
   scope.tools.guard(call => allowed.has(call.name) ? undefined : '工具不在当前本机场景的权限内。');
-  for (const tool of tools) scope.tools.register(tool);
+  for (const tool of tools) if(allowed.has(tool.name))scope.tools.register(tool);
 }

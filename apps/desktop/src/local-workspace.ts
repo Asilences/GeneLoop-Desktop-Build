@@ -187,7 +187,7 @@ export class LocalWorkspaceConversation {
       token = lease.token;
       abort.signal.throwIfAborted();
       this.controller = startLocalWorker({
-        ...task, executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
+        ...task, legacyTools:lease.toolsetVersion!==2,executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
         token: lease.token, model: lease.model,
         approveVideo: task.scene === 'video' && lease.videoRendering === true ? this.options.approveVideo : undefined,
         onUpdate: event => {

@@ -5,6 +5,7 @@ import csv
 import hashlib
 import io
 import json
+import math
 import re
 import zipfile
 
@@ -94,7 +95,22 @@ def dataset(path, plan):
     if x or y:
         result['correlation'] = files.correlation(source, x, y)
     if plan.get('export'):
-        result['csv'] = value['csv']
+        # 导出 CSV 的文字单元格不得在 Excel 中变成公式；统计仍使用原值。
+        rows, escaped = list(csv.reader(io.StringIO(value['csv']))), 0
+        for row in rows:
+            for index, cell in enumerate(row):
+                if cell.lstrip().startswith(('=', '+', '-', '@')):
+                    try:
+                        numeric = math.isfinite(float(cell))
+                    except ValueError:
+                        numeric = False
+                    if not numeric:
+                        row[index] = "'" + cell
+                        escaped += 1
+        output = io.StringIO(newline='')
+        csv.writer(output, lineterminator='\n').writerows(rows)
+        result.update(csv=output.getvalue(), csv_escaped_text_cells=escaped,
+                      csv_export_policy='formula_like_text_prefixed_with_apostrophe_originals_unchanged')
     return result
 
 

@@ -157,7 +157,7 @@ export async function editPptTemplate(path, version, planText, reader, writer, t
     writeFileSync(staged,bytes,{flag:'wx'});writeFileSync(values,JSON.stringify(plan.edits??null),{flag:'wx'});
     const result=await pptPython(tools,scratch,signal,'scenarios.ppt_master.windows_source',
       ['edit',staged,'--values',values,'--renderer',tools.soffice]);
-    sourcesFor(reader,[{path,sha256:version},...sources]);
+    sourcesFor(reader,[{path,sha256:version}]);sourcesFor(reader,sources);
     return deliverPpt({...result,execution:process.platform+'-local-ppt-edit',template:{path,sha256:version},sources},scratch,writer,signal,onReport);
   });
 }

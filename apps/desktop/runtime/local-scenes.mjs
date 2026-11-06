@@ -8,6 +8,9 @@ const extra = {
   paper: ['local_paper_read_page', 'local_paper_check_citations', 'local_paper_audit_sources'],
 };
 
-export function localSceneTools(scene) {
-  return typeof scene === 'string' && Object.hasOwn(extra, scene) ? [...common, ...extra[scene]] : null;
+const addedInPreview12 = new Set(['local_document_pin','local_document_read','local_files_export',
+  'local_data_inspect','local_data_analyze','local_paper_audit_sources','local_ppt_edit_template']);
+export function localSceneTools(scene, legacy = false) {
+  if(typeof scene !== 'string'||!Object.hasOwn(extra,scene))return null;
+  return [...common,...extra[scene]].filter(name=>!legacy||!addedInPreview12.has(name));
 }
