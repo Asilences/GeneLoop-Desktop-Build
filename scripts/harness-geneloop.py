@@ -23,7 +23,7 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key, model_ids
 from src.adapters.file_scenario import prepare_scenario
 from src.adapters.file_scenarios import prepare_scene_registry
 from src.adapters.harless_product_prompt import product_persona, product_system_prompt
@@ -367,7 +367,7 @@ def main():
         servers.append(control)
     gate = create_server('127.0.0.1', 0, upstream, state,
                          state_selector=registry.state_for if registry else None,
-                         allowed_models={'deepseek-flash'} if args.real_model else {'deepseek-flash', 'deepseek-v4-pro'})
+                         allowed_models=model_ids() if args.real_model else {'deepseek-flash', 'deepseek-v4-pro'})
     servers.append(gate)
     if args.glm:
         args.glm_gate_token = token_hex(32)

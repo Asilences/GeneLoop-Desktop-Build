@@ -1,7 +1,9 @@
 """Single source for the Kouri API address, model ID and credential."""
 from __future__ import annotations
 
+import math
 import os
+import re
 from urllib.parse import urlsplit
 
 
@@ -12,6 +14,54 @@ MODEL_SDK_ID = 'deepseek-flash'
 MODEL_WIRE_ID = 'deepseek-v4.1-flash'
 MODEL_CATALOG_PATH = '/v1/models'
 MODEL_CHAT_PATH = '/v1/chat/completions'
+
+# Add Kouri models here. The first id is retained for existing Harness sessions;
+# new ids may use their Kouri wire id directly. Prices are reservation estimates,
+# not verified Kouri billing rates. Do not list a model without a deliberate rate.
+KOURI_MODELS = (
+    {'id': MODEL_SDK_ID, 'wire_id': MODEL_WIRE_ID,
+     'label': 'Kouri AI · DeepSeek V4.1 Flash',
+     'context_window': 1_000_000, 'max_output_tokens': 393_216,
+     'input_modalities': ('text', 'image'),
+     'supported_reasoning_efforts': ('off', 'low', 'high', 'max'),
+     'input_usd_per_million': 0.30, 'cache_hit_usd_per_million': 0.006,
+     'output_usd_per_million': 1.20},
+)
+
+
+def model_routes() -> tuple[dict, ...]:
+    ids = [row['id'] for row in KOURI_MODELS]
+    if len(ids) != len(set(ids)) or not ids:
+        raise ValueError('Kouri model ids must be unique and nonempty')
+    for row in KOURI_MODELS:
+        if (not re.fullmatch(r'[A-Za-z0-9._-]+', row['id']) or
+                not re.fullmatch(r'[A-Za-z0-9._:/-]+', row['wire_id']) or
+                not isinstance(row['label'], str) or not row['label'] or
+                type(row['context_window']) is not int or row['context_window'] < 1 or
+                type(row['max_output_tokens']) is not int or row['max_output_tokens'] < 1 or
+                not row['input_modalities'] or
+                set(row['input_modalities']) - {'text', 'image'} or
+                len(row['input_modalities']) != len(set(row['input_modalities'])) or
+                not row['supported_reasoning_efforts'] or
+                'off' not in row['supported_reasoning_efforts'] or
+                set(row['supported_reasoning_efforts']) - {'off', 'low', 'high', 'max'} or
+                len(row['supported_reasoning_efforts']) != len(set(row['supported_reasoning_efforts'])) or
+                any(type(row[key]) not in (int, float) or not math.isfinite(row[key]) or row[key] < 0
+                    for key in ('input_usd_per_million', 'cache_hit_usd_per_million', 'output_usd_per_million')) or
+                row['input_usd_per_million'] == 0 or row['output_usd_per_million'] == 0 or
+                row['cache_hit_usd_per_million'] > row['input_usd_per_million']):
+            raise ValueError('invalid Kouri model route configuration')
+    return KOURI_MODELS
+
+
+def model_ids() -> set[str]:
+    return {row['id'] for row in model_routes()}
+
+
+def model_price_rates() -> tuple[dict[str, tuple[float, float]], dict[str, float]]:
+    routes = model_routes()
+    return ({row['id']: (row['input_usd_per_million'], row['output_usd_per_million']) for row in routes},
+            {row['id']: row['cache_hit_usd_per_million'] for row in routes})
 
 
 def model_api_root() -> str:
@@ -59,12 +109,19 @@ def model_upstream_headers(upstream: str, headers: dict[str, str]) -> dict[str, 
 
 
 def model_wire_id(model: str) -> str:
-    return MODEL_WIRE_ID if model in {MODEL_SDK_ID, 'deepseek-v4-flash'} else model
+    if model == 'deepseek-v4-flash':
+        return MODEL_WIRE_ID  # Historical SDK name in saved tasks.
+    return next((row['wire_id'] for row in model_routes() if row['id'] == model), model)
 
 
 def model_catalog_snapshot() -> dict:
-    """Explicitly configured model; no unverified /models call to Kouri."""
-    return {'data': [{'id': MODEL_SDK_ID}], 'source': model_api_base_url(),
+    """Explicitly configured models; no unverified /models call to Kouri."""
+    return {'data': [{'id': row['id'], 'name': row['label'],
+                      'context_window': row['context_window'],
+                      'max_output_tokens': row['max_output_tokens'],
+                      'input_modalities': list(row['input_modalities']),
+                      'supported_reasoning_efforts': list(row['supported_reasoning_efforts'])}
+                     for row in model_routes()], 'source': model_api_base_url(),
             'model_requests': 0, 'catalog_mode': 'configured'}
 
 

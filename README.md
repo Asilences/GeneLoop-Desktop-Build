@@ -4,6 +4,8 @@
 
 模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。Kouri 的文件、搜索、思考能力、容量和实际费率尚待真实兼容性验收；当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。
 
+网页聊天的模型下拉已按服务端列表工作。新增 Kouri 模型时，只需在 `src/adapters/model_api.py` 的 `KOURI_MODELS` 中追加实际模型 ID、名称、容量、模态、推理档位和估费参数；Harness 自定义模型目录、网页列表、预算网关白名单与费率会随新版本生成。当前没有第二个已确认的 Kouri 模型 ID，页面仍只展示现有模型。文件管理独立场景暂沿用 Flash/Off。
+
 Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
 
 2026-11-04，新增默认关闭的 [Evidence-Grounded Evolution Agent 离线原型](docs/research/evolution/evidence-grounded-evolution-agent.md)：单个跨任务证据包、一次有界模型提案，复用原边界学习与宿主构造/认证入口。运行 `node scripts/project.mjs python scripts/run-evolution-agent.py --help`。两轮真实提案最终为 `no_change`，未产生新认证能力或收益；上下文、失败和费用见[实验记录](docs/experiments/evidence-evolution-20261104.md)。

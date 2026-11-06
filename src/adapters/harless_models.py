@@ -5,7 +5,7 @@ Credentials and provider error bodies are never returned or recorded.
 """
 from __future__ import annotations
 
-from .model_api import model_catalog_url, model_api_key
+from .model_api import model_catalog_url, model_api_key, model_routes, model_ids
 
 import json
 import urllib.request
@@ -17,7 +17,8 @@ from src.adapters.deepseek_cost_gate import (
 )
 
 CATALOG_URL = model_catalog_url()
-MODEL_LABELS = {'deepseek-flash': 'Kouri AI · DeepSeek V4.1 Flash', 'deepseek-v4-pro': 'DeepSeek V4 Pro'}
+MODEL_LABELS = {row['id']: row['label'] for row in model_routes()}
+MODEL_LABELS.setdefault('deepseek-v4-pro', 'DeepSeek V4 Pro')
 REASONING_EFFORTS = ('off', 'low', 'high', 'max')
 REASONING_LABELS = {'off': 'Off', 'low': 'Low', 'high': 'High', 'max': 'Max'}
 
@@ -50,10 +51,16 @@ def model_options(catalog: dict, *, budget_usd: float | None, max_output_tokens:
             support = [effort for effort in REASONING_EFFORTS if effort == 'off' or effort in support]
         unavailable = {}
         for effort in support if support is not None else REASONING_EFFORTS:
-            output = max_output_tokens or provider_output_reservation(model, {
-                'thinking': {'type': 'disabled' if effort == 'off' else 'enabled'},
-                **({'reasoning_effort': effort} if effort != 'off' else {}),
-            })
+            capacity = row.get('max_output_tokens')
+            if max_output_tokens is not None:
+                output = min(max_output_tokens, capacity) if type(capacity) is int and capacity > 0 else max_output_tokens
+            elif type(capacity) is int and capacity > 0:
+                output = capacity
+            else:
+                output = provider_output_reservation(model, {
+                    'thinking': {'type': 'disabled' if effort == 'off' else 'enabled'},
+                    **({'reasoning_effort': effort} if effort != 'off' else {}),
+                })
             reserve = output * PEAK_USD_PER_MILLION[model][1] / 1_000_000
             if budget_usd is not None and reserve >= budget_usd:
                 unavailable[effort] = (f'{REASONING_LABELS[effort]} 暂不可用：'
@@ -64,6 +71,7 @@ def model_options(catalog: dict, *, budget_usd: float | None, max_output_tokens:
                 unavailable[effort] += '请先选择 Off，再选择该模型。'
         result.append({'provider': 'deepseek-official', 'model': model, 'label': label,
                        'available': True,
+                       **{key: row[key] for key in ('context_window', 'max_output_tokens', 'input_modalities') if key in row},
                        **({'supported_reasoning_efforts': support} if support is not None else {}),
                        **({'reasoning_unavailable': unavailable} if unavailable else {})})
     if not result:
@@ -78,7 +86,8 @@ def price_basis(models: list[dict]) -> dict:
         'input_cache_miss': PEAK_USD_PER_MILLION[row['model']][0],
         'output': PEAK_USD_PER_MILLION[row['model']][1],
         'off_peak_multiplier': .5,
-        'source': 'https://api-docs.deepseek.com/quick_start/pricing/',
+        'source': ('KOURI_MODELS proxy estimate' if row['model'] in model_ids()
+                   else 'https://api-docs.deepseek.com/quick_start/pricing/'),
         'billing_provider': 'Kouri AI', 'billing_price_verified': False,
     } for row in models if row['provider'] == 'deepseek-official'}
 

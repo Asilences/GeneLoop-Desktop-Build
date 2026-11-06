@@ -12,7 +12,7 @@ from secrets import token_hex
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.model_api import model_api_root, model_api_key
+from src.adapters.model_api import model_api_root, model_api_key, model_ids
 from src.adapters.deepseek_cost_gate import (State, create_server, request_limit_argument,
     cost_cap_argument, output_limit_argument)
 from src.adapters.web_task_budget import TaskBudgetRegistry, create_control_server
@@ -55,7 +55,7 @@ def main():
     gate = create_server('127.0.0.1', 0, model_api_root(), state,
                          state_selector=registry.state_for,
                          allow_search=True, allow_vision=True,
-                         allowed_models={'deepseek-flash'})
+                         allowed_models=model_ids())
     policy = {'endpoint': f'http://127.0.0.1:{gate.server_port}/v1',
               'control_endpoint': f'http://127.0.0.1:{control.server_port}',
               'control_token': token, 'budget_usd': args.task_budget_usd,

@@ -168,6 +168,10 @@ export function apply(ctx: any) {
   const defaultModel = modelOptions.find(option => option.available);
   if (!defaultModel || modelOptions.some(option => !/^[a-z][a-z0-9-]*$/.test(option.provider) || !/^[A-Za-z0-9._-]+$/.test(option.model) ||
         typeof option.label !== 'string' || !option.label || typeof option.available !== 'boolean' ||
+        (option.context_window !== undefined && (!Number.isSafeInteger(option.context_window) || option.context_window < 1)) ||
+        (option.max_output_tokens !== undefined && (!Number.isSafeInteger(option.max_output_tokens) || option.max_output_tokens < 1)) ||
+        (option.input_modalities !== undefined && (!Array.isArray(option.input_modalities) || !option.input_modalities.length ||
+          new Set(option.input_modalities).size !== option.input_modalities.length || option.input_modalities.some(value => !['text','image'].includes(value)))) ||
         (option.supported_reasoning_efforts !== undefined && (!Array.isArray(option.supported_reasoning_efforts) ||
           !option.supported_reasoning_efforts.includes('off') || new Set(option.supported_reasoning_efforts).size !== option.supported_reasoning_efforts.length ||
           option.supported_reasoning_efforts.some(effort => !WEB_REASONING_EFFORTS.includes(effort)))) ||

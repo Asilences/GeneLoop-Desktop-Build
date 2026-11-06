@@ -25,19 +25,21 @@ from urllib.parse import urlparse
 
 if __package__:
     from .model_transport import MODEL_REQUEST_MAX_BYTES, MODEL_REQUEST_TOO_LARGE
-    from .model_api import model_api_root, model_chat_path, model_wire_id, model_upstream_headers
+    from .model_api import model_api_root, model_chat_path, model_wire_id, model_upstream_headers, model_price_rates
 else:  # Preserve direct CLI execution from a different working directory.
     from model_transport import MODEL_REQUEST_MAX_BYTES, MODEL_REQUEST_TOO_LARGE
-    from model_api import model_api_root, model_chat_path, model_wire_id, model_upstream_headers
+    from model_api import model_api_root, model_chat_path, model_wire_id, model_upstream_headers, model_price_rates
 
 
 PEAK_USD_PER_MILLION = {
     "deepseek-flash": (0.30, 1.20),
     "deepseek-v4-pro": (1.32, 3.96),
+    **model_price_rates()[0],
 }
 CACHE_HIT_PEAK_USD_PER_MILLION = {
     "deepseek-flash": 0.006,
     "deepseek-v4-pro": 0.044,
+    **model_price_rates()[1],
 }
 HOP_HEADERS = {"host", "connection", "content-length", "transfer-encoding",
                "accept-encoding", "keep-alive", "proxy-connection"}
