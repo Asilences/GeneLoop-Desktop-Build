@@ -67,7 +67,7 @@ export function prepareNativeHost({planPath,root,apply=false}){
  const same=(a,b,keys)=>keys.every(key=>JSON.stringify(a?.[key])===JSON.stringify(b?.[key]));
  if(policy.output!==plan.owner_output||!same(plan,current.plan,['state_dir','owner_output'])||plan.owner.cwd!==current.plan.owner.cwd||
     !same(plan.owner.env,current.plan.owner.env,['HOME','DSH_HOME'])||
-    !same(config,activeConfig,['dataDir','membersDir','ownerTokenFile','ownerPort','port','publicOrigin','adminToken','apiKey','scopedBudgetPort','upstreamBrokerPort','upstreamControlPort'])||
+    !same(config,activeConfig,['dataDir','membersDir','ownerTokenFile','ownerPort','port','publicOrigin','adminToken','scopedBudgetPort','upstreamBrokerPort','upstreamControlPort'])||
     !same(policy,activePolicy,['output','endpoint','control_endpoint','control_token','budget_broker_endpoint','budget_usd','run_budget_usd','request_limit','run_request_limit','max_output_tokens'])||
     !same(config.memberPolicy,activeConfig.memberPolicy,['output']))throw Error('Candidate persistent data, authentication or budget binding changed');
  const oldPatch=read(refs.patch),nextPatch=composeNativeHost(oldPatch,sourceDir);
