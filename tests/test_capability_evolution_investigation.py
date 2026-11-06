@@ -132,7 +132,8 @@ def test_submission_reply_avoids_echoing_model_source_and_retains_original(tmp_p
         assert 'candidate' not in reply and 'validated_candidate' not in reply
         full = dispatch('evolution_read', {'kind': 'evidence', 'id': reply['evidence_id'], 'limit': 100})
         assert json.loads(full['content'])['candidate'] == proposed
-        assert json.loads(verify(reply['record']))['candidate'] == proposed
+        assert str(tmp_path) not in reply['record']['path']
+        assert json.loads((tmp_path/'run/submission-0.json').read_text())['candidate'] == proposed
         dispatch('evolution_finish', {'reason': 'Original proposal remains available on demand'})
         return {}
     result = run_investigation(make(tmp_path, data), call_agent=agent, handlers={}, output=tmp_path / 'run')
@@ -292,7 +293,8 @@ def test_host_binds_omitted_redundant_candidate_fields(tmp_path, data, omitted):
         Draft202012Validator(tool['parameters']).validate(arguments)
         result = dispatch('evolution_submit', arguments)
         assert result['status'] == 'submitted'
-        recorded = json.loads(verify(result['record']))
+        assert str(tmp_path) not in result['record']['path']
+        recorded = json.loads((tmp_path/'run/submission-0.json').read_text())
         assert recorded['candidate'] == proposal
         assert recorded['validated_candidate']['scope'] == 'study'
         assert recorded['validated_candidate']['evidence_ids'] == ids
@@ -320,7 +322,8 @@ def test_explicit_conflicts_are_rejected_with_usable_observation_ids(tmp_path, d
         proposal[field] = value
         result = dispatch('evolution_submit', {'candidate': proposal, 'observation_ids': ids})
         assert result['status'] == 'rejected' and error in result['reason']
-        assert json.loads(verify(result['record']))['candidate'][field] == value
+        assert str(tmp_path) not in result['record']['path']
+        assert json.loads((tmp_path/'run/submission-0.json').read_text())['candidate'][field] == value
         assert set(ids) <= set(result['diagnostic']['available_observation_ids'])
         assert result['diagnostic']['expected_scope'] == 'study'
         assert 'evidence_*' in result['diagnostic']['message']

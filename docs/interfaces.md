@@ -1535,9 +1535,9 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 ## RSI 学习数据投影
 
-Web 结算诊断、离线导入和 Paper/PPT 账号内学习共用同一投影器。隔离 Web 和离线导入可显式选择 v3，使用本地 Presidio 和 Gitleaks 处理当前任务指令。现有账号内结构编译使用 v2。入口、依赖和授权范围见 [RSI 数据边界盘点](rsi-data-privacy.md)。
+公共 `geneloop_privacy.learning_view` / TypeScript `privacyLearningView` 处理任意场景的学习 JSON；`geneloop_learning_trace` v4 为两个 Web 宿主、公共 SDK 和离线导入生成脱敏派生视图，包含任务正文、模型回答和工具参数/结果。研究学习器的上下文与工具返回使用同一内核；`admit_publication` 提供保留认证字节的公开导出准入。已有 Paper/PPT 结构编译继续使用无语义值的 v2。入口与边界见 [公共脱敏模块](rsi-data-privacy.md)。
 
-新增默认私有的 `/api/harless/rsi-sharing`。仅允许从账号内已完成 Paper/PPT 任务生成 v2 工具流程对象，经过完整 JSON 预览、SHA256 绑定和逐次同意后发送给部署方配置的接收端。预览十分钟失效，退出/重启不恢复授权，异常无自动重传。桌面设置提供预览、保存本地副本及取消。接口动作、出网边界与诊断见[可选共享](rsi-data-privacy.md#默认私有与可选共享)。
+默认私有的 `/api/harless/rsi-sharing` 从账号内任何完成场景生成严格 v4 工具流程，场景和工具名使用样本内代号。完整预览、SHA256 绑定和逐次同意后才发送。十分钟失效、重启不恢复授权、异常无自动重传；桌面支持本地副本与取消。接口动作与边界见[可选共享](rsi-data-privacy.md#默认私有与可选共享)。
 
 ## Evidence-Grounded Evolution Agent（2026-11-04）
 

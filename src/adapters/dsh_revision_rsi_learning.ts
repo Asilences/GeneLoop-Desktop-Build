@@ -152,9 +152,9 @@ export function apply(ctx:any):void {
     name:definition.name,description:definition.description,parameters:definition.parameters,
     output:{schema:{type:'object'},render:(_:any,value:any) => [{type:'text',text:JSON.stringify(value)}]},
     async execute(args:any,exec:any) {
-      try {
       if (exec?.agent?.session?.id !== config.session_id) throw Error('revision_learning_session_not_authorized');
       if (exec.signal?.aborted) throw Error('revision_learning_cancelled');
+      try {
       const result = await definition.run(privacy.resolve(normalizeCandidateSubmission(args,32*1024*1024,100000)));
       if (definition.name === 'rsi_propose') {
         // Creating probe tools before a contract is accepted wastes learning

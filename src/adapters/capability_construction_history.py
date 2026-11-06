@@ -175,7 +175,7 @@ def unwrap_strategy(draft, output, snapshot, enabled):
 
 
 def inherited_strategy_context(catalog, snapshot):
-    """Recheck one host-selected construction policy through original feedback."""
+    """Private host identity. The proposal boundary sanitizes its model copy."""
     config = catalog.get('source_catalog', catalog).get('inherited_strategy')
     if config is None:
         return None
@@ -195,5 +195,4 @@ def inherited_strategy_context(catalog, snapshot):
                                      if ref in context['capability_refs']]
     if len(json.dumps(context, ensure_ascii=False, allow_nan=False).encode('utf-8')) > 12000:
         raise ValueError('construction_inherited_strategy_context_too_large')
-    from .geneloop_privacy import learning_view
-    return learning_view(context)
+    return context

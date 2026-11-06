@@ -72,6 +72,25 @@ def test_json_inside_stdout_cannot_bypass_the_same_recursive_rule(monkeypatch):
     assert result['email'].startswith('<EMAIL_ADDRESS_') and result['count']==2
 
 
+def test_schema_declarations_and_digest_handles_keep_protocol_meaning(monkeypatch):
+    monkeypatch.setattr(privacy,'_scan',lambda value:None)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_: '<PERSON>' if value=='integer' else value)
+    value={'input_schema':{'type':'object','properties':{'email':{'type':'string'},'offset':{'type':'integer'}}},
+           'id':'a'*64,'task_id':'task_'+'b'*24}
+    assert privacy.learning_view(value)==value
+    value['input_schema']['properties']['email']['default']='owner@example.com'
+    assert privacy.learning_view(value)['input_schema']['properties']['email']['default'].startswith('<EMAIL_ADDRESS_')
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'parameters':{'type':'object','properties':{'password':{'type':'string','default':'synthetic'}}}})
+
+
+def test_quoted_json_source_remains_valid_after_path_redaction(monkeypatch):
+    monkeypatch.setattr(privacy,'_scan',lambda value:None)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value.replace('/private/input','<PRIVATE_REFERENCE>'))
+    source=json.dumps('literal = "/private/input"')
+    assert json.loads(privacy.learning_view({'content':source})['content'])=='literal = "<PRIVATE_REFERENCE>"'
+
+
 def events(prompt, arguments, response):
     return [
         {'type':'user/message','data':{'source':{'kind':'user'},'content':[{'type':'text','text':prompt}]}},

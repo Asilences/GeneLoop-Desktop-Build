@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import sys
 import unicodedata
+from jsonschema import Draft202012Validator
 
 from .rsi_text_privacy import _scan, anonymize_text
 
@@ -35,6 +36,8 @@ IDENTITY_FIELDS = {
     **dict.fromkeys(("accountid", "userid", "sessionid", "taskid"), "PRIVATE_ID"),
 }
 _FIELD = re.compile(r"[\s_-]+")
+_PROTOCOL = frozenset(('string','number','integer','object','array','boolean','null'))
+_OPAQUE = re.compile(r'(?:[a-f0-9]{64}|(?:task_|history_|evidence_)[a-f0-9]{24,64}|private-[a-f0-9-]{32,36})\Z')
 
 
 class PrivacyRejected(ValueError):
@@ -81,14 +84,20 @@ def learning_view(value):
 
         def text(value):
             if value not in cache:
+                # JSON types and host digest handles are protocol vocabulary,
+                # not prose. NLP must not turn `integer` into a person's name
+                # or corrupt a version/evidence digest. The whole packet still
+                # passes both credential scans and explicit identity fields.
+                if value in _PROTOCOL or _OPAQUE.fullmatch(value):
+                    return value
                 # Tool stdout and nested packet fields often contain JSON
                 # encoded as text. Parse data only; never evaluate source code.
-                if value.lstrip().startswith(('{','[')):
+                if value.lstrip().startswith(('{','[','"')):
                     try:
                         parsed = json.loads(value)
                     except (ValueError,RecursionError):
                         parsed = None
-                    if isinstance(parsed,(dict,list)):
+                    if isinstance(parsed,(dict,list,str)):
                         clean = walk(parsed,1)
                         cache[value] = value if clean == parsed else _encoded(clean)
                         return cache[value]
@@ -100,7 +109,7 @@ def learning_view(value):
                     raise PrivacyRejected()
             return cache[value]
 
-        def walk(item, depth=0):
+        def walk(item, depth=0, schema=False, property_name=None):
             nonlocal remaining
             remaining -= 1
             if remaining < 0 or depth > MAX_DEPTH:
@@ -114,13 +123,28 @@ def learning_view(value):
             if type(item) is str:
                 return text(item)
             if type(item) is list:
-                return [walk(child, depth + 1) for child in item]
+                return [walk(child, depth + 1, schema=schema) for child in item]
             if type(item) is not dict:
                 raise PrivacyRejected()
             output = {}
             for key, child in item.items():
                 if type(key) is not str:
                     raise PrivacyRejected()
+                # Schema properties declare fields, not identity instances.
+                # Reuse jsonschema's validation before treating them as such;
+                # descriptions and actual defaults/const/enum still sanitize.
+                if schema and key=='properties' and isinstance(child,dict):
+                    output[key]={text(name):walk(definition,depth+2,schema=True,property_name=name)
+                                 for name,definition in child.items()}
+                    continue
+                if schema and key in ('default','const','enum') and property_name:
+                    output[key]=next(iter(walk({property_name:child},depth+1).values()))
+                    continue
+                if key in ('parameters','input_schema','output_schema') and isinstance(child,dict) and any(
+                        name in child for name in ('type','properties','oneOf','anyOf','allOf','$ref')):
+                    Draft202012Validator.check_schema(child)
+                    output[key]=walk(child,depth+1,schema=True)
+                    continue
                 field = _FIELD.sub("", unicodedata.normalize("NFKC", key)).casefold()
                 variants = [field,*([field[:-1]] if field.endswith('s') else []),
                             *([field[:-2]] if field.endswith('es') else [])]
@@ -143,11 +167,15 @@ def learning_view(value):
                 elif identity and child is not None:
                     entity = identity
                     def reference(value):
+                        # Investigation already replaces native task IDs with
+                        # one-way task_<digest> handles before the boundary.
+                        if entity=='PRIVATE_ID' and isinstance(value,str) and re.fullmatch(r'task_[a-f0-9]{24}',value):
+                            return value
                         return value if isinstance(value,str) and re.fullmatch(
                             r"<"+entity+r"_[1-9][0-9]{0,6}>(?:\.[a-z0-9]{1,8})?",value) else alias(entity, value)
                     output[safe_key] = [reference(value) for value in child] if isinstance(child,list) else reference(child)
                 else:
-                    output[safe_key] = walk(child, depth + 1)
+                    output[safe_key] = walk(child, depth + 1, schema=schema)
             return output
 
         result = walk(value)

@@ -4,7 +4,7 @@ import {mkdtempSync,writeFileSync,readFileSync,rmSync,existsSync} from 'node:fs'
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {projectPlatformLearningTrace,privacyLearningView,createLearningPrivacyBoundary} from '../src/adapters/geneloop_privacy.ts';
+import {projectPlatformLearningTrace,privacyLearningView,createLearningPrivacyBoundary,safeLearningError} from '../src/adapters/geneloop_privacy.ts';
 import {capturePlatformLearningTrace} from '../src/adapters/harless_learning_trace.ts';
 import {mountRsiSharing} from '../src/adapters/harless_rsi_sharing.ts';
 
@@ -58,7 +58,11 @@ for(const scene of [...new Set([...scenes,'chat','coding','future-custom-mcp'])]
 
 test('privacy workers fail closed without Python; learning handles preserve private lookup scope',async()=>{
  const prior=process.env.SSS_PYTHON;delete process.env.SSS_PYTHON;
- try{await assert.rejects(()=>privacyLearningView({text:'no raw fallback'}),/geneloop_privacy_rejected/);}
+ try{
+  await assert.rejects(()=>privacyLearningView({text:'no raw fallback'}),/geneloop_privacy_rejected/);
+  const error=await safeLearningError(Error('owner@example.com /private/account'));
+  assert.equal(error.message,'geneloop_privacy_rejected');assert.equal(error.stack,undefined);
+ }
  finally{if(prior!==undefined)process.env.SSS_PYTHON=prior;}
  const boundary=createLearningPrivacyBoundary();
  assert.throws(()=>boundary.resolve({packet_id:'private-unknown'}),/geneloop_privacy_rejected/);
