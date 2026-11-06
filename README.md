@@ -2,9 +2,9 @@
 
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
-模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。Kouri 的文件、搜索、思考能力、容量和实际费率尚待真实兼容性验收；当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。
+模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。SkillFlow baseline 首请求的 Kouri Chat/工具调用冒烟已返回 HTTP 200，见[记录](docs/debug/kouri-env-models-20261106.md)；文件、搜索、思考能力、容量和实际费率仍待真实兼容性验收。当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。
 
-网页聊天的模型下拉已按服务端列表工作。新增 Kouri 模型时，只需在 `src/adapters/model_api.py` 的 `KOURI_MODELS` 中追加实际模型 ID、名称、容量、模态、推理档位和估费参数；Harness 自定义模型目录、网页列表、预算网关白名单与费率会随新版本生成。当前没有第二个已确认的 Kouri 模型 ID，页面仍只展示现有模型。文件管理独立场景暂沿用 Flash/Off。
+网页聊天的模型下拉按服务端列表工作。新增 Kouri 模型可在私有 `.env` 的 `KOURI_EXTRA_MODELS_JSON` 填写单行 JSON 数组，无需改 Python；每项至少有真实模型 ID、上下文容量、输出容量、输入及输出美元/百万 token 估费，格式见 `.env.example`。`wire_id` 和 `label` 可选，默认等于 `id`；`input_modalities` 默认仅文字，`supported_reasoning_efforts` 默认仅 `off`，缓存估费默认等于输入估费。填写已确认的能力和保守估费后，Harness 目录、网页列表、预算白名单与费率在下一次启动时生成。当前没有第二个已确认的 Kouri 模型 ID，页面仍只展示现有模型。正式服务的私有启动计划及独立预算进程也必须取得相同模型配置，并按发布流程切换；修改本机 `.env` 不会改变运行中的正式服务。文件管理独立场景暂沿用 Flash/Off。
 
 本地审阅模型下拉可运行 `npm run web -- --preview-model-picker --port 39080`；此选项只在动态模拟 Web 生效，增加一个标为“本地模拟 · 第二模型”的选择项，不启用真实 API。正式模型目录仍只列出已配置的 Kouri 模型。
 

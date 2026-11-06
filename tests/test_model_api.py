@@ -1,6 +1,8 @@
 """Kouri connection contract; no network or paid model requests."""
 
 import pytest
+import json
+import os
 import subprocess
 import sys
 import textwrap
@@ -60,6 +62,43 @@ def test_one_file_model_addition_reaches_web_catalog_and_budget_gate():
         assert model_api.model_wire_id('kouri-diagnostic') == 'provider-diagnostic'
     ''')
     subprocess.run([sys.executable, '-c', script], check=True)
+
+
+def test_env_model_addition_reaches_catalog_route_and_budget_gate():
+    extra = {'id': 'example-model', 'label': 'Example Model',
+             'context_window': 16_000, 'max_output_tokens': 4_000,
+             'input_usd_per_million': 2.0, 'output_usd_per_million': 8.0}
+    env = {**os.environ, 'KOURI_EXTRA_MODELS_JSON': json.dumps([extra])}
+    env.pop('KOURI_API_KEY', None)
+    script = textwrap.dedent('''
+        from src.adapters import model_api
+        from src.adapters.deepseek_cost_gate import PEAK_USD_PER_MILLION
+        from src.adapters.harless_models import model_options
+        rows = model_api.model_catalog_snapshot()['data']
+        assert [row['id'] for row in rows] == ['deepseek-flash', 'example-model']
+        assert rows[1]['input_modalities'] == ['text']
+        assert rows[1]['supported_reasoning_efforts'] == ['off']
+        assert model_api.model_wire_id('example-model') == 'example-model'
+        assert PEAK_USD_PER_MILLION['example-model'] == (2.0, 8.0)
+        assert model_options(model_api.model_catalog_snapshot(), budget_usd=None)[1]['label'] == 'Example Model'
+    ''')
+    subprocess.run([sys.executable, '-c', script], env=env, check=True)
+
+
+@pytest.mark.parametrize('value', [
+    'not json', '{}', '[]',
+    json.dumps([{'id': 'example-model'}]),
+    json.dumps([{'id': 'deepseek-flash', 'context_window': 16000,
+                 'max_output_tokens': 4000, 'input_usd_per_million': 1,
+                 'output_usd_per_million': 2}]),
+    json.dumps([{'id': 'example-model', 'context_window': 100,
+                 'max_output_tokens': 200, 'input_usd_per_million': 1,
+                 'output_usd_per_million': 2}]),
+])
+def test_invalid_env_models_fail_closed(monkeypatch, value):
+    monkeypatch.setenv('KOURI_EXTRA_MODELS_JSON', value)
+    with pytest.raises(ValueError):
+        model_api.model_routes()
 
 
 def test_only_kouri_credential_reaches_remote_gateway(monkeypatch):

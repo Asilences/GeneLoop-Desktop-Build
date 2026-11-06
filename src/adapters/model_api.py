@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import json
 import os
 import re
 from urllib.parse import urlsplit
@@ -14,10 +15,11 @@ MODEL_SDK_ID = 'deepseek-flash'
 MODEL_WIRE_ID = 'deepseek-v4.1-flash'
 MODEL_CATALOG_PATH = '/v1/models'
 MODEL_CHAT_PATH = '/v1/chat/completions'
+EXTRA_MODELS_ENV = 'KOURI_EXTRA_MODELS_JSON'
 
-# Add Kouri models here. The first id is retained for existing Harness sessions;
-# new ids may use their Kouri wire id directly. Prices are reservation estimates,
-# not verified Kouri billing rates. Do not list a model without a deliberate rate.
+# Default Kouri route. Additional private models come from
+# KOURI_EXTRA_MODELS_JSON. The first id is retained for existing Harness
+# sessions. Prices are reservation estimates, not verified Kouri billing rates.
 KOURI_MODELS = (
     {'id': MODEL_SDK_ID, 'wire_id': MODEL_WIRE_ID,
      'label': 'DeepSeek V4.1 Flash',
@@ -29,20 +31,61 @@ KOURI_MODELS = (
 )
 
 
+def _extra_model_routes() -> tuple[dict, ...]:
+    raw = os.environ.get(EXTRA_MODELS_ENV, '').strip()
+    if not raw:
+        return ()
+    if len(raw) > 65_536:
+        raise ValueError(f'{EXTRA_MODELS_ENV} is too large')
+    try:
+        rows = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise ValueError(f'{EXTRA_MODELS_ENV} must be a JSON array') from error
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 32:
+        raise ValueError(f'{EXTRA_MODELS_ENV} must contain 1 to 32 models')
+    allowed = {'id', 'wire_id', 'label', 'context_window', 'max_output_tokens',
+               'input_modalities', 'supported_reasoning_efforts',
+               'input_usd_per_million', 'cache_hit_usd_per_million',
+               'output_usd_per_million'}
+    required = {'id', 'context_window', 'max_output_tokens',
+                'input_usd_per_million', 'output_usd_per_million'}
+    result = []
+    for row in rows:
+        if not isinstance(row, dict) or required - row.keys() or row.keys() - allowed:
+            raise ValueError(f'invalid model entry in {EXTRA_MODELS_ENV}')
+        model = row['id']
+        result.append({**row,
+                       'wire_id': row.get('wire_id', model),
+                       'label': row.get('label', model),
+                       'input_modalities': row.get('input_modalities', ['text']),
+                       'supported_reasoning_efforts': row.get('supported_reasoning_efforts', ['off']),
+                       'cache_hit_usd_per_million': row.get('cache_hit_usd_per_million',
+                                                            row['input_usd_per_million'])})
+    return tuple(result)
+
+
 def model_routes() -> tuple[dict, ...]:
-    ids = [row['id'] for row in KOURI_MODELS]
-    if len(ids) != len(set(ids)) or not ids:
+    routes = (*KOURI_MODELS, *_extra_model_routes())
+    ids = [row['id'] for row in routes]
+    if not ids or any(not isinstance(model, str) for model in ids) or len(ids) != len(set(ids)):
         raise ValueError('Kouri model ids must be unique and nonempty')
-    for row in KOURI_MODELS:
-        if (not re.fullmatch(r'[A-Za-z0-9._-]+', row['id']) or
+    for row in routes:
+        if (not isinstance(row['id'], str) or
+                not re.fullmatch(r'[A-Za-z0-9._-]+', row['id']) or
+                not isinstance(row['wire_id'], str) or
                 not re.fullmatch(r'[A-Za-z0-9._:/-]+', row['wire_id']) or
-                not isinstance(row['label'], str) or not row['label'] or
+                not isinstance(row['label'], str) or not row['label'].strip() or
                 type(row['context_window']) is not int or row['context_window'] < 1 or
                 type(row['max_output_tokens']) is not int or row['max_output_tokens'] < 1 or
+                row['max_output_tokens'] > row['context_window'] or
+                not isinstance(row['input_modalities'], (list, tuple)) or
                 not row['input_modalities'] or
+                any(not isinstance(value, str) for value in row['input_modalities']) or
                 set(row['input_modalities']) - {'text', 'image'} or
                 len(row['input_modalities']) != len(set(row['input_modalities'])) or
+                not isinstance(row['supported_reasoning_efforts'], (list, tuple)) or
                 not row['supported_reasoning_efforts'] or
+                any(not isinstance(value, str) for value in row['supported_reasoning_efforts']) or
                 'off' not in row['supported_reasoning_efforts'] or
                 set(row['supported_reasoning_efforts']) - {'off', 'low', 'high', 'max'} or
                 len(row['supported_reasoning_efforts']) != len(set(row['supported_reasoning_efforts'])) or
@@ -51,7 +94,7 @@ def model_routes() -> tuple[dict, ...]:
                 row['input_usd_per_million'] == 0 or row['output_usd_per_million'] == 0 or
                 row['cache_hit_usd_per_million'] > row['input_usd_per_million']):
             raise ValueError('invalid Kouri model route configuration')
-    return KOURI_MODELS
+    return routes
 
 
 def model_ids() -> set[str]:

@@ -86,7 +86,7 @@ def price_basis(models: list[dict]) -> dict:
         'input_cache_miss': PEAK_USD_PER_MILLION[row['model']][0],
         'output': PEAK_USD_PER_MILLION[row['model']][1],
         'off_peak_multiplier': .5,
-        'source': ('KOURI_MODELS proxy estimate' if row['model'] in model_ids()
+        'source': ('Kouri configured proxy estimate' if row['model'] in model_ids()
                    else 'https://api-docs.deepseek.com/quick_start/pricing/'),
         'billing_provider': 'Kouri AI', 'billing_price_verified': False,
     } for row in models if row['provider'] == 'deepseek-official'}

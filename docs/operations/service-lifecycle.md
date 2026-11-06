@@ -40,7 +40,7 @@ npm run service -- restart
 1. 阅读 `AGENTS.md`、本文件、相关场景交接；同步 main，在独立版本检出完成代码、`npm test`、smoke 及涉及场景的验证。
 2. 准备新版本的依赖、同检出 host patch/policy、场景 preset 和认证库。现有生成/认证入口继续使用，不能伪造证书或修改库哈希绕过检查。输出到新的私有候选目录，不能覆盖正在运行版本的启动配置、代码、库或 preset。
 3. 以 `config/service.example.json` 为字段示例生成新的私有计划。owner/gateway 命令、cwd、env 来自核验过的启动配方；沿用原 owner Home、工作区、账号、成员、任务输出、预算端口与累计账本。新计划与原计划使用同一 `state_dir`。敏感值只留服务器私有文件。
-   Kouri 迁移时，独立模型预算服务和网页账号网关的私有环境均须配置 `KOURI_API_KEY`；owner 若运行直接读取该变量的场景，也须配置。gateway 的 `env` 是显式白名单，不会继承 owner 的密钥。候选中的上游模型凭证可以更换；账号管理员令牌、持久数据和预算绑定仍须保持一致。
+   Kouri 迁移时，独立模型预算服务和网页账号网关的私有环境均须配置 `KOURI_API_KEY`；owner 若运行直接读取该变量的场景，也须配置。追加模型时，候选准备进程、owner/gateway 私有计划和独立预算服务须使用相同的 `KOURI_EXTRA_MODELS_JSON`，并生成新的模型目录/策略。gateway 的 `env` 是显式白名单，不会继承 owner 的密钥或模型配置。本机 `.env` 的修改不会自动改变已运行服务。候选中的上游模型凭证可以更换；账号管理员令牌、持久数据和预算绑定仍须保持一致。
 4. 安排维护窗口，执行 `npm run service -- restart --config /ABSOLUTE/PRIVATE/CANDIDATE-service.json`。不得再为某项修复另写 Popen/nohup/kill 启动流程。配置生成脚本可以保留，实际启动/切换必须调用本入口。
 5. 执行 `npm run service -- check --config /ABSOLUTE/PRIVATE/CANDIDATE-service.json`，再验公网入口、管理员和测试成员的实际页面与相关场景。内部健康检查不替代公网、注册、模型任务或交付质量验收。
 6. 发布成功后，将私有 `GENELOOP_SERVICE_CONFIG` 指向候选计划；记录 commit、回执、验证与回退方式。按负责人要求提交 PR 并合并 main。
