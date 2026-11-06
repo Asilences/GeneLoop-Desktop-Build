@@ -99,7 +99,9 @@ jobs:
           test -n "$APP"
           export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
           export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
-          if [ '${{ inputs.packageMode }}' = 'delivery' ] || [ '${{ inputs.packageMode }}' = 'dmg-delivery' ]; then
+          if [ '${{ inputs.packageMode }}' = 'dmg-delivery' ]; then
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-workflows.mjs --core
+          elif [ '${{ inputs.packageMode }}' = 'delivery' ]; then
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-workflows.mjs
           else
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
