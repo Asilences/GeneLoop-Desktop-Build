@@ -68,3 +68,14 @@ test('privacy workers fail closed without Python; learning handles preserve priv
  assert.throws(()=>boundary.resolve({packet_id:'private-unknown'}),/geneloop_privacy_rejected/);
  assert.deepEqual(boundary.resolve({input:{count:3}}),{input:{count:3}});
 });
+
+test('opaque references round trip in declared arrays and model views remain stable',
+ {skip:!actualTools,timeout:120000},async()=>{
+ const boundary=createLearningPrivacyBoundary();
+ const visible=await boundary.show({packet_id:'synthetic-owner@example.com'});
+ assert.match(visible.packet_id,/^private-/);
+ assert.deepEqual(await boundary.show(visible),visible);
+ assert.deepEqual(boundary.resolve({source_packet_ids:[visible.packet_id],binding:{packet_id:visible.packet_id}}),
+  {source_packet_ids:['synthetic-owner@example.com'],binding:{packet_id:'synthetic-owner@example.com'}});
+ assert.throws(()=>boundary.resolve({source_packet_ids:['private-unknown']}),/geneloop_privacy_rejected/);
+});

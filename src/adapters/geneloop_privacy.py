@@ -36,7 +36,8 @@ IDENTITY_FIELDS = {
     **dict.fromkeys(("accountid", "userid", "sessionid", "taskid"), "PRIVATE_ID"),
 }
 _FIELD = re.compile(r"[\s_-]+")
-_PROTOCOL = frozenset(('string','number','integer','object','array','boolean','null'))
+_PROTOCOL = frozenset(('string','number','integer','object','array','boolean','null','record_evidence_id'))
+_SCHEMA_KEYS=frozenset(Draft202012Validator.VALIDATORS)|frozenset(('$schema','$defs','$ref','$comment','title','description','default','examples','deprecated','readOnly','writeOnly'))
 _OPAQUE = re.compile(r'(?:[a-f0-9]{64}|(?:task_|history_|evidence_)[a-f0-9]{24,64}|private-[a-f0-9-]{32,36})\Z')
 
 
@@ -160,7 +161,7 @@ def learning_view(value):
                 if secret and child is not None and child != '' and type(child) is not bool and not (
                         secret == 'token' and field.endswith('tokens') and type(child) in (int,float)):
                     raise PrivacyRejected()
-                safe_key = text(key)
+                safe_key = key if schema and key in _SCHEMA_KEYS else text(key)
                 if safe_key in output:
                     raise PrivacyRejected()
                 if field in ('base64','imagedata','audiodata','videodata','binary','blob','bytes') and isinstance(child,(str,list,dict)):

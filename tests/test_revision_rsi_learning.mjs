@@ -257,3 +257,23 @@ test('Cordis definition gate opens only after a successful immutable proposal',a
   await assert.rejects(mounted.registry.get('rsi_propose').execute({proposal:f.proposal},exec),/proposal_already_accepted/);
   assert.equal(released,1);
 });
+
+test('model proposal resolves packet handles and builds patches and hashes after deidentification',
+ {skip:!process.env.SSS_PYTHON||!process.env.SSS_RSI_GITLEAKS,timeout:120000},async t=>{
+ const f=fixture(t);
+ f.training.push({id:'synthetic-next',input:{selected_values:['owner@example.com','development-c']},
+  expected:['owner@example.com','development-c']});
+ f.controller();const mounted=mount(f.config);
+ const listed=await mounted.registry.get('rsi_packet_list').execute({},mounted.exec);
+ const packet=listed.packets[0].packet_id,proposal=clone(f.proposal);
+ proposal.source_packet_ids=[packet];proposal.input_bindings.selected_values.packet_id=packet;
+ proposal.output_bindings.packet_id=packet;
+ const visible=await mounted.registry.get('rsi_propose').execute({proposal},mounted.exec);
+ assert.doesNotMatch(JSON.stringify(visible),/owner@example.com/);
+ assert.deepEqual(visible.training[1].input_changes.map(row=>row.path),['/selected_values/0','/selected_values/1']);
+ assert.equal(visible.training[1].input_sha256,digest({selected_values:visible.training[1].expected}));
+ assert.match(visible.training_protocol,/deidentified model inputs/);
+ const invocation=JSON.parse(readFileSync(join(f.work,'controller-invocation.json')));
+ assert.deepEqual(invocation.proposal.source_packet_ids,['packet-normal']);
+ assert.deepEqual(JSON.parse(readFileSync(join(f.work,'training.json'))),f.training);
+});

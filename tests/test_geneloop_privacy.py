@@ -79,6 +79,7 @@ def test_schema_declarations_and_digest_handles_keep_protocol_meaning(monkeypatc
     monkeypatch.setattr(privacy,'_scan',lambda value:None)
     monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_: '<PERSON>' if value=='integer' else value)
     value={'input_schema':{'type':'object','properties':{'email':{'type':'string'},'offset':{'type':'integer'}}},
+           'record_evidence_id':'evidence_'+'c'*64,
            'id':'a'*64,'task_id':'task_'+'b'*24}
     assert privacy.learning_view(value)==value
     value['input_schema']['properties']['email']['default']='owner@example.com'

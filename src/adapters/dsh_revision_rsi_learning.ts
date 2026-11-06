@@ -110,16 +110,26 @@ export function createRevisionLearning(config:any) {
     return clone({schema_version:1,packet_id:packet.packet_id,packet_sha256:digest(packet),
       training_packets_sha256:packetBytesSha,packet:selected});
   }
-  return {list:guarded(list),read:guarded(read),propose:guarded((args:any)=> {
-    const result=host.propose(args), example=result.training[0].input;
+  function compactFeedback(result:any,modelView=false) {
+    const example=result.training[0].input;
     const compact={...result,example_input:example,
       training:result.training.map((row:any)=>({id:row.id,expected:row.expected,input_sha256:digest(row.input),
         input_changes:revisionInputPatch(example,row.input)})),
-      training_protocol:'Apply each RFC6902 input_changes to a fresh clone of example_input; verify input_sha256. Full training values remain immutable in the controller.'};
-    audit({kind:'development_inputs_projected',case_count:result.training.length,
+      training_protocol:'Apply each RFC6902 input_changes to a fresh clone of example_input; verify input_sha256. '+
+        (modelView?'These hashes describe deidentified model inputs; private controller originals remain immutable.':'Full training values remain immutable in the controller.')};
+    audit({kind:modelView?'model_development_inputs_projected':'development_inputs_projected',case_count:result.training.length,
       full_feedback_bytes:Buffer.byteLength(JSON.stringify(result)),projected_feedback_bytes:Buffer.byteLength(JSON.stringify(compact))});
     return compact;
-  }),
+  }
+  return {list:guarded(list),read:guarded(read),propose:guarded((args:any)=>compactFeedback(host.propose(args))),
+    async proposeView(args:any,view:(value:any)=>Promise<any>) {
+      guard();
+      try {
+        // De-identify complete inputs BEFORE deriving patches and hashes.
+        // Protocol JSON pointers must not be mistaken for filesystem paths.
+        return compactFeedback(await view(host.propose(args)),true);
+      } finally {guard();}
+    },
     install:guarded(host.install),installProgram:guarded((program:any)=> {
       const lowered=lowerRevisionProgram(program);
       audit({kind:'program_lowered',submitted_program_sha256:digest(program),lowered_program_sha256:digest(lowered)});
@@ -155,13 +165,18 @@ export function apply(ctx:any):void {
       if (exec?.agent?.session?.id !== config.session_id) throw Error('revision_learning_session_not_authorized');
       if (exec.signal?.aborted) throw Error('revision_learning_cancelled');
       try {
-      const result = await definition.run(privacy.resolve(normalizeCandidateSubmission(args,32*1024*1024,100000)));
+      const normalized=normalizeCandidateSubmission(args,32*1024*1024,100000);
+      const references=definition.name==='rsi_packet_read'||definition.name==='rsi_propose';
+      const resolved=references?privacy.resolve(normalized):normalized;
+      const result=definition.name==='rsi_propose'
+        ?await learning.proposeView(resolved,value=>privacy.show(value))
+        :await privacy.show(await definition.run(resolved));
       if (definition.name === 'rsi_propose') {
         // Creating probe tools before a contract is accepted wastes learning
         // calls and can bypass the intended bounded submission path.
         proposalGates.get(exec.agent)?.();proposalGates.delete(exec.agent);
       }
-      return await privacy.show(result);
+      return result;
       } catch(error) {throw await safeLearningError(error);}
     },
   });

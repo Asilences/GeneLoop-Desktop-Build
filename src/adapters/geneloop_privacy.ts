@@ -11,25 +11,32 @@ const privateEnv = () => Object.fromEntries(['PATH','SYSTEMROOT','WINDIR','TMP',
  */
 export function createLearningPrivacyBoundary(options:{onBind?:(binding:{field:string;alias:string;source_sha256:string})=>void}={}) {
   const fields=new Set(['run_id','call_id','packet_id']), forward=new Map<string,string>(), backward=new Map<string,string>();
+  const arrays=new Map<string,string>();
+  for(const field of fields){arrays.set(field+'s',field);arrays.set('source_'+field+'s',field);}
+  function identifier(key:string,item:string,expose:boolean):string {
+    const original=backward.get(key+'\0'+item);
+    if(expose){
+      if(original!==undefined)return item;
+      const identity=key+'\0'+item;
+      if(!forward.has(identity)){
+        if(forward.size>=20000)throw Error('geneloop_privacy_rejected');
+        const alias='private-'+randomUUID();
+        options.onBind?.({field:key,alias,source_sha256:createHash('sha256').update(item).digest('hex')});
+        forward.set(identity,alias);backward.set(key+'\0'+alias,item);
+      }
+      return forward.get(identity)!;
+    }
+    if(original===undefined&&item.startsWith('private-'))throw Error('geneloop_privacy_rejected');
+    return original??item;
+  }
   function walk(value:any,expose:boolean):any {
     if(Array.isArray(value))return value.map(row=>walk(row,expose));
     if(!value||typeof value!=='object')return value;
     return Object.fromEntries(Object.entries(value).map(([key,item])=>{
-      if(fields.has(key)&&typeof item==='string'){
-        if(expose){
-          const identity=key+'\0'+item;
-          if(!forward.has(identity)){
-            if(forward.size>=20000)throw Error('geneloop_privacy_rejected');
-            const alias='private-'+randomUUID();
-            options.onBind?.({field:key,alias,source_sha256:createHash('sha256').update(item).digest('hex')});
-            forward.set(identity,alias);backward.set(key+'\0'+alias,item);
-          }
-          return [key,forward.get(identity)];
-        }
-        const original=backward.get(key+'\0'+item);
-        if(original===undefined&&item.startsWith('private-'))throw Error('geneloop_privacy_rejected');
-        return [key,original??item];
-      }
+      if(fields.has(key)&&typeof item==='string')return [key,identifier(key,item,expose)];
+      const field=arrays.get(key);
+      if(field&&Array.isArray(item)&&item.every(row=>typeof row==='string'))
+        return [key,item.map(row=>identifier(field,row,expose))];
       return [key,walk(item,expose)];
     }));
   }
