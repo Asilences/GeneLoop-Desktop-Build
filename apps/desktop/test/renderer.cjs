@@ -10,6 +10,7 @@ app.whenReady().then(async()=>{
  const {DesktopWorkspace}=await import(pathToFileURL(resolve(__dirname,'../dist/workspace.js')).href);
  desktop=new DesktopWorkspace({settings:{version:1,server:fixture.server,window:{width:1280,height:860,maximized:false}},settingsFile:join(fixture.output,'settings.json'),version:'diagnostic',downloadsDirectory:fixture.output,allowLoopback:true});await desktop.ready;desktop.workspace.webContents.setBackgroundThrottling(false);
  const evaluate=code=>desktop.workspace.webContents.executeJavaScript(code);
+ const captureSummary=async name=>{const bounds=await evaluate(`(()=>{const r=document.querySelector('#motif-summary').getBoundingClientRect();return {x:Math.floor(r.x),y:Math.floor(r.y),width:Math.ceil(r.width),height:Math.ceil(r.height)}})()`);writeFileSync(join(fixture.output,name),(await desktop.workspace.webContents.capturePage(bounds)).toPNG());};
  const menusHidden=()=>desktop.window.webContents.executeJavaScript('document.getElementById("desktop-menus").hidden');
  assert.equal(await menusHidden(),true);
  await until(()=>evaluate('!document.getElementById("workspace").hidden'),'独立界面');
@@ -227,7 +228,7 @@ app.whenReady().then(async()=>{
  await until(()=>evaluate(`!!document.querySelector('[data-session-id="menu-fixture"]')`),'恢复用于部分删除的对话');
  await evaluate(`document.querySelector('section[aria-label="诊断工作区"] .workspace-more').click();document.querySelector('[data-action=workspace-home]').click()`);
  await until(()=>evaluate(`!!document.querySelector('.motif-workspace')`),'工作区内的能力视图');
- await until(()=>evaluate(`document.querySelector('#motif-summary').textContent.includes('实际复用 1')`),'后端证据进入当前工作区摘要');
+ await until(()=>evaluate(`document.querySelector('#motif-summary .reuse strong')?.textContent==='1'`),'后端证据进入当前工作区摘要');
  assert.deepEqual(await evaluate(`[...document.querySelectorAll('.motif-workspace [role=tab]')].map(b=>b.textContent)`),['运行','能力组合','评估','演化','版本']);
  const motifTab=label=>evaluate(`[...document.querySelectorAll('.motif-workspace [role=tab]')].find(b=>b.textContent==='${label}').click()`);
  await motifTab('能力组合');
@@ -240,14 +241,18 @@ app.whenReady().then(async()=>{
  await new Promise(done=>setTimeout(done,250));
  assert.equal(await evaluate(`document.querySelector('.motif-workspace [role=tab][aria-selected=true]').textContent`),'能力组合');
  writeFileSync(join(fixture.output,'motif-workspace-light.png'),(await desktop.workspace.webContents.capturePage()).toPNG());
+ await captureSummary('motif-summary-light.png');
  await evaluate(`document.body.setAttribute('data-ds-dark-theme','')`);
  await evaluate(`new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))`);
  assert.equal(await evaluate(`Number(getComputedStyle(document.querySelector('.motif-detail h2')).color.match(/\\d+/)[0])>180`),true,'深色背景中的标题须保持可读对比');
  await new Promise(done=>setTimeout(done,250));
  writeFileSync(join(fixture.output,'motif-workspace-dark.png'),(await desktop.workspace.webContents.capturePage()).toPNG());
+ await captureSummary('motif-summary-dark.png');
  await evaluate(`document.body.removeAttribute('data-ds-dark-theme')`);
  await evaluate(`document.querySelector('[aria-label="收起演化摘要"]').click()`);
  assert.equal(await evaluate(`document.querySelector('#motif-summary .motif-culture').hasAttribute('hidden')`),true);
+ await desktop.workspace.webContents.capturePage();await new Promise(done=>setTimeout(done,200));
+ await captureSummary('motif-summary-collapsed.png');
  await evaluate(`document.querySelector('[aria-label="展开演化摘要"]').click()`);
  await evaluate(`document.querySelector('#motif-summary .motif-evolution-card').click()`);
  await until(()=>evaluate(`document.querySelector('.motif-workspace [role=tab][aria-selected=true]').textContent==='演化'`),'摘要卡片打开工作区演化');

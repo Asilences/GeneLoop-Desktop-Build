@@ -12,6 +12,50 @@ const section=(title,...children)=>node('section',{class:'motif-section'},node('
 const empty=(title,text)=>node('div',{class:'motif-empty'},icon('scenes'),node('h2',{},title),node('p',{},text));
 const hash=(label,value)=>node('div',{class:'motif-hash'},node('span',{},label),node('code',{title:value||'未知'},value||'未知'));
 
+let cultureSequence=0;
+/** 本地 SVG 玻璃插画；球体只投影当前快照中的能力，不生成装饰性能力或关系。 */
+function cultureGraphic(capabilities=[]){
+  const namespace='http://www.w3.org/2000/svg',prefix='motif-culture-'+cultureSequence++;
+  const make=(parent,tag,attrs={})=>{const el=document.createElementNS(namespace,tag);for(const[k,v]of Object.entries(attrs))el.setAttribute(k,v);parent?.append(el);return el;};
+  const svg=make(null,'svg',{viewBox:'0 0 300 210',class:'motif-culture','aria-hidden':'true'}),defs=make(svg,'defs');
+  const url=name=>'url(#'+prefix+'-'+name+')';
+  function gradient(name,radial,attrs,stops){const g=make(defs,radial?'radialGradient':'linearGradient',{id:prefix+'-'+name,...attrs});for(const[offset,color,opacity=1]of stops)make(g,'stop',{offset,'stop-color':color,'stop-opacity':opacity});}
+  gradient('body',false,{x1:'0%',y1:'0%',x2:'100%',y2:'0%'},[['0%','#a6dadd',.68],['7%','#ffffff',.8],['22%','#c4f5ec',.12],['67%','#89d9d4',.15],['94%','#ffffff',.76],['100%','#6fb8c3',.58]]);
+  gradient('water',false,{x1:'0%',y1:'0%',x2:'0%',y2:'100%'},[['0%','var(--culture-water-top)',.4],['52%','var(--culture-water-mid)',.36],['100%','var(--culture-water-bottom)',.63]]);
+  gradient('surface',false,{x1:'0%',y1:'0%',x2:'100%',y2:'50%'},[['0%','#ffffff',.88],['25%','#b8e9e5',.35],['65%','#c2f5eb',.34],['100%','#ffffff',.8]]);
+  gradient('rim',false,{x1:'0%',y1:'0%',x2:'0%',y2:'100%'},[['0%','#ffffff',.96],['28%','#89c7cf',.62],['50%','#ffffff',.96],['80%','#a7e1df',.63],['100%','#ffffff',.8]]);
+  gradient('front',false,{x1:'0%',y1:'0%',x2:'100%',y2:'0%'},[['0%','#ffffff',.5],['12%','#ffffff',.04],['63%','#ffffff',0],['88%','#ffffff',.08],['100%','#ffffff',.48]]);
+  for(const[name,light,mid,edge]of [['certified','#e8ffc3','#66da80','#119a78'],['pending_certification','#e5e9ff','#83a7f9','#496fc0'],['invalid','#ffe6ed','#d990b2','#9c5d87']])
+    gradient(name,true,{cx:'31%',cy:'23%',r:'78%'},[['0%','#ffffff'],['13%',light],['43%',mid],['100%',edge]]);
+  const blur=make(defs,'filter',{id:prefix+'-blur',x:'-60%',y:'-60%',width:'220%',height:'220%'});make(blur,'feGaussianBlur',{stdDeviation:6});
+  const soft=make(defs,'filter',{id:prefix+'-soft',x:'-50%',y:'-50%',width:'200%',height:'200%'});make(soft,'feGaussianBlur',{stdDeviation:2});
+  const clip=make(defs,'clipPath',{id:prefix+'-inside'});make(clip,'path',{d:'M38 58Q150 23 262 58L267 153C267 190 33 190 33 153Z'});
+  make(svg,'ellipse',{cx:150,cy:193,rx:115,ry:8,fill:'#73b9b5',opacity:.2,filter:url('blur')});
+  make(svg,'ellipse',{cx:150,cy:164,rx:123,ry:31,fill:'#c3f9e5',opacity:.17,filter:url('blur')});
+  make(svg,'path',{d:'M31 40C31 12 269 12 269 40L275 155C275 208 25 208 25 155Z',fill:url('body'),stroke:'#9fcfd0','stroke-width':1,'stroke-opacity':.55});
+  make(svg,'path',{d:'M38 58Q150 23 262 58L267 153C267 190 33 190 33 153Z',fill:url('water')});
+  make(svg,'ellipse',{cx:150,cy:58,rx:112,ry:19,fill:url('surface'),stroke:'#d3f8ef','stroke-opacity':.7,'stroke-width':1.2});
+  const inside=make(svg,'g',{'clip-path':url('inside')});
+  make(inside,'path',{d:'M21 151C89 100 186 179 282 127M32 175C115 132 182 180 267 157',fill:'none',stroke:'#e2fff2','stroke-width':2.5,'stroke-opacity':.32,filter:url('soft')});
+  make(inside,'ellipse',{cx:151,cy:170,rx:110,ry:15,fill:'none',stroke:'#d4fff0','stroke-width':1.1,'stroke-opacity':.6});
+  const positions=[[150,116,15],[215,91,11],[82,137,12],[109,83,8],[194,149,12],[62,100,8],[232,139,10],[133,157,10],[173,81,8],[118,123,9],[203,121,8],[165,143,8],[78,166,8],[245,111,7],[51,145,7],[142,89,7],[98,159,7],[184,107,7]];
+  capabilities.slice(0,18).map((capability,i)=>({capability,position:positions[i],i})).sort((a,b)=>a.position[1]-b.position[1]).forEach(({capability,position:[x,y,r],i})=>{
+    const anchor=make(inside,'g',{transform:`translate(${x} ${y})`}),particle=make(anchor,'g',{class:'culture-particle phase-'+i%4,'data-capability-id':capability.id});
+    make(particle,'circle',{r:r*1.7,fill:capability.status==='certified'?'#7fe3a8':capability.status==='invalid'?'#d5a0bf':'#9eb9ff',opacity:.22,filter:url('blur')});
+    make(particle,'circle',{r,fill:url(capability.status),stroke:'#ffffff','stroke-opacity':.46,'stroke-width':.7});
+    make(particle,'ellipse',{cx:-r*.3,cy:-r*.42,rx:r*.34,ry:r*.18,fill:'#ffffff',opacity:.8,transform:'rotate(-30)'});
+    make(particle,'path',{d:`M${-r*.65} ${r*.25}Q0 ${r*.96} ${r*.65} ${r*.15}`,fill:'none',stroke:'#efffe5','stroke-opacity':.4,'stroke-width':.8});
+  });
+  make(svg,'path',{d:'M31 42L25 155C25 208 275 208 275 155L269 42',fill:url('front'),stroke:'#e7ffff','stroke-width':1.7,'stroke-opacity':.7});
+  make(svg,'ellipse',{cx:150,cy:174,rx:119,ry:21,fill:'none',stroke:'#bdede4','stroke-width':2,'stroke-opacity':.75});
+  make(svg,'ellipse',{cx:150,cy:177,rx:111,ry:15,fill:'none',stroke:'#ffffff','stroke-width':1.8,'stroke-opacity':.7});
+  make(svg,'path',{d:'M39 66Q29 120 37 153M262 70Q271 120 263 145',fill:'none',stroke:'#ffffff','stroke-width':5,'stroke-linecap':'round','stroke-opacity':.65,filter:url('soft')});
+  make(svg,'ellipse',{cx:150,cy:39,rx:119,ry:22,fill:'none',stroke:url('rim'),'stroke-width':7});
+  make(svg,'ellipse',{cx:150,cy:36,rx:119,ry:21,fill:'none',stroke:'#ffffff','stroke-width':1.3,'stroke-opacity':.9});
+  make(svg,'path',{d:'M52 31C93 14 204 14 246 31',fill:'none',stroke:'#ffffff','stroke-width':2.8,'stroke-linecap':'round','stroke-opacity':.88});
+  return svg;
+}
+
 /** 导入仅驻留当前页面内存；不发送资料、不改变 Agent 和工作区。 */
 function createMotifView({trigger,host,conversation,deliveries,navigation=[],embedded=false,scopeChoices=()=>[],onScope=()=>{},onReset=()=>{}}) {
   let model=null,selected=null,tab='library',filter='all',query='',source='',opened=false,loading=false,error='',revision=0;
@@ -133,12 +177,16 @@ export function bindMotifLibrary(options){
   const getWorkspace=options.getWorkspace||(()=>null);
   function renderSummary(){const host=options.summaryHost;if(!host)return;const group=getWorkspace(),row=rows.find(r=>r.workspaceId===group?.workspaceId),view=row?.view;
     const b=button('',async()=>{if(group){panels.get(group.workspaceId)?.view.setTab('evolution');global.close();await options.onWorkspace?.(group.workspaceId);}else global.open();},'motif-evolution-card');
-    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 200 82');svg.setAttribute('class','motif-culture');svg.setAttribute('aria-hidden','true');
-    const add=(tag,attrs)=>{const el=document.createElementNS(svg.namespaceURI,tag);for(const[k,v]of Object.entries(attrs))el.setAttribute(k,v);svg.append(el);};
-    add('path',{d:'M18 18Q100 2 182 18V62Q100 86 18 62Z',fill:'currentColor',opacity:'.05'});add('ellipse',{cx:'100',cy:'18',rx:'82',ry:'12',fill:'none',stroke:'currentColor',opacity:'.25'});add('path',{d:'M18 18V62Q100 86 182 62V18',fill:'none',stroke:'currentColor',opacity:'.25'});
-    for(const c of (view?.capabilities||[]).slice(0,18)){const seed=parseInt(c.id.slice(0,8),16);add('circle',{cx:String(35+seed%130),cy:String(32+(seed>>>8)%29),r:'4',fill:c.status==='certified'?'#62b9a3':c.status==='invalid'?'#bb7a86':'#9386cb'});}
-    b.append(node('span',{class:'motif-evolution-title'},'Motif Evolution'),svg,node('small',{},group?.title||'选择工作区查看能力'),node('span',{class:'motif-evolution-count'},view?'已认证 '+view.summary.certified+' · 实际复用 '+view.summary.applied:error||row?.status==='unavailable'?'证据暂不可用':ready?'尚无证据记录':'正在读取…'));
-    svg.toggleAttribute('hidden',collapsed);b.querySelector('small').hidden=collapsed;
+    const svg=cultureGraphic(view?.capabilities),status=error||row?.status==='unavailable'?'证据暂不可用':ready?'尚无证据记录':'正在读取…';
+    const arrow=node('span',{class:'motif-evolution-open','aria-hidden':true},'↗');
+    const scope=node('small',{class:'motif-summary-scope',title:group?.title||''},group?.title||'选择工作区查看能力');
+    const legend=node('span',{class:'motif-culture-legend'},...Object.entries({certified:'已认证',pending_certification:'待认证',invalid:'已失效'}).map(([key,label])=>node('span',{},node('i',{class:key}),label)));
+    const stat=(label,value,cls='')=>node('span',{class:'motif-culture-stat '+cls},node('small',{},label),node('strong',{},value));
+    const stats=node('span',{class:'motif-culture-stats'},stat('Motif 数量',view?view.capabilities.length:'—'),stat('实际复用',view?view.summary.applied:'—','reuse'));
+    b.dataset.collapsed=String(collapsed);
+    b.append(node('span',{class:'motif-evolution-title'},'Motif Evolution',arrow),scope,svg,legend,stats);
+    if(!view)b.append(node('span',{class:'motif-culture-status'},status));
+    svg.toggleAttribute('hidden',collapsed);scope.hidden=collapsed;legend.hidden=collapsed;
     const toggle=button(icon(collapsed?'chevron-right':'chevron-down'),()=>{collapsed=!collapsed;localStorage.setItem('geneloop.desktop.motif-summary-collapsed',collapsed?'yes':'no');renderSummary();},'icon motif-summary-toggle');toggle.setAttribute('aria-label',collapsed?'展开演化摘要':'收起演化摘要');toggle.setAttribute('aria-expanded',String(!collapsed));
     host.replaceChildren(node('div',{class:'motif-evolution-shell'},b,toggle));
   }
