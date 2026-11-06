@@ -121,6 +121,14 @@ test('active or rollback sources, linked config, altered auth/budget, or mismatc
  assert.equal(read(f.candidate.patchPath).find(row=>row.id==='llm-retry').disabled,true);
 });
 
+test('candidate may rotate the upstream model credential without changing account authentication',t=>{
+ const f=fixture(t),config=read(f.candidate.configPath);
+ write(f.candidate.configPath,{...config,apiKey:'NEW_SYNTHETIC_KOURI_CREDENTIAL'});
+ const result=prepareNativeHost({planPath:f.candidate.planPath,root:f.source});
+ assert.equal(result.applied,false);assert.equal(result.service_started,false);
+ assert.doesNotMatch(JSON.stringify(result),/NEW_SYNTHETIC_KOURI_CREDENTIAL/);
+});
+
 test('launcher stdin composition and candidate dry-run CLI do not print credentials or change files',t=>{
  const f=fixture(t),helper=fileURLToPath(new URL('../src/adapters/geneloop_native_host.mjs',import.meta.url));
  const normalized=spawnSync(process.execPath,[helper,'--source-dir',join(f.source,'src')],{input:JSON.stringify(f.candidate.patch),encoding:'utf8'});

@@ -153,7 +153,8 @@ def model_context(catalog, task, snapshot):
             for ref in declaration.get('expected_dependencies',[])]
     context['history']=history
     context['historical_alias_scope']='Old uses aliases belong to each historical snapshot; use current aliases shown separately.'
-    return context
+    from .geneloop_privacy import learning_view
+    return learning_view(context)
 
 
 def unwrap_strategy(draft, output, snapshot, enabled):
@@ -174,7 +175,7 @@ def unwrap_strategy(draft, output, snapshot, enabled):
 
 
 def inherited_strategy_context(catalog, snapshot):
-    """Recheck one host-selected construction policy through original feedback."""
+    """Private host identity. The proposal boundary sanitizes its model copy."""
     config = catalog.get('source_catalog', catalog).get('inherited_strategy')
     if config is None:
         return None

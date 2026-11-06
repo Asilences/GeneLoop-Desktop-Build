@@ -24,6 +24,8 @@ import type { NormalizedWebTask, PromptPart, ExecutionMode } from './web_task_re
 import {bindUploadedPptTask,bindUploadedSourceTask,structuralOnlySimilarity} from './harless_rsi_binding.ts';
 import {createComparisonService} from './file_legacy_comparison.ts';
 import {comparisonArtifacts,captureComparisonDeliveries} from './harless_comparison_artifacts.ts';
+import {capturePlatformLearningTrace} from './harless_learning_trace.ts';
+import {mountRsiSharing} from './harless_rsi_sharing.ts';
 import {dataInterceptor,paperShadowInterceptor,validateExistingData} from './harless_legacy_motif.ts';
 import {bindReportAnswer} from './harless_report_answer.ts';
 import {createTaskProgress} from './harless_task_progress.ts';
@@ -37,6 +39,7 @@ import {createSessionTrash, protectDeletedSessions, protectDeletedSessionFiles, 
 export const name = 'sss-web-tasks';
 export const inject = ['llm', 'agents', 'sessionController', 'sessionProjections', 'connection', 'webServer', 'fileUploads', 'commands', 'agentPresets', 'attachments', 'workspaceRegistry', 'workspaceController'];
 type Policy = {
+  learning_python?: string; rsi_sharing_endpoint?: string;
   output: string; user_id?: string; allowed_tools: string[]; endpoint: string; max_output_tokens: number | null;
   mode: ExecutionMode; budget_usd: number; request_limit?: number | null; run_budget_usd?: number | null; run_request_limit?: number | null; capability_profile: string;
   provider_mode: 'mock' | 'real'; control_endpoint: string; control_token: string;
@@ -63,6 +66,7 @@ type Task = {
   model_option: ModelOption; reasoning_effort?: WebReasoningEffort; workspace: string; scene_options: SceneOptions; scene_inputs: any[]; source_pending?: boolean; scope_sha256: string | null;
   budget_session_id: string;
   source_task_id?: string;
+  trace_start_index?: number;
   bound_binding_sha256?: string | null;
 };
 class TaskError extends Error {
@@ -494,6 +498,7 @@ export async function apply(ctx: any) {
       answer: '', output, stats: state.stats, humans: new Map(), current_humans: new Set(),
       sources: state.sources, entrypoint: state.entrypoint, budget_session_id: route.budget_session_id,
       source_task_id: state.source_task_id ?? request.task_id,
+      trace_start_index: effective.trace_start_index,
       scene: { ...restoredScene, config_sha256: effective.scene_sha256 ?? restoredScene.config_sha256,
         instructions: effective.instructions ?? restoredScene.instructions, instructions_sha256: effective.instructions_sha256,
         allowed_tools: effective.allowed_tools ?? restoredScene.allowed_tools },
@@ -588,9 +593,16 @@ export async function apply(ctx: any) {
         task.management.sealed=await managementBridge(task.management.config,{action:'seal',directory:task.management.binding.directory,metrics});
         task.management.status=await managementBridge(task.management.config,{action:'status'});record(task);
       }
+      void capturePlatformLearningTrace(config,task.output,task.scene.id,task.status,task.trace_start_index,privacyLifetime.signal);
       if (active === task.request.task_id) active = null;
     })().catch((error) => { task.failure = 'budget_close_failed: ' + String(error); record(task); }).finally(()=>{if(active===task.request.task_id)active=null;});
   }
+  const privacyLifetime=new AbortController();
+  ctx.effect(()=>()=>privacyLifetime.abort(),'geneloop-privacy-lifetime');
+  mountRsiSharing(ctx,config,async id=>{
+    const task=get(id);await ensureOwned(task.request.session_id);
+    return {output:task.output,scene:task.scene.id,status:task.status,start:task.trace_start_index};
+  });
   const controller = ctx.sessionController;
   const privateLanes = registerPrivateLanes(ctx, config.output, principal, id => comparisons?.isLane(id) ?? false);
   const privateCreations = new WeakSet<object>();
@@ -972,6 +984,7 @@ export async function apply(ctx: any) {
       entrypoint, created_at: utc(), failure: null, fallback_reason: null, answer: '', output,
       humans: priorHumans, current_humans: new Set(), sources,
       model_option: chosenModel, reasoning_effort: chosenReasoning, budget_session_id: budgetSessionId,
+      trace_start_index: management ? 0 : snapshot.events.length,
       source_task_id: firstSources ? taskId : previousTask?.source_task_id ?? previousTask?.request.task_id ?? taskId,
       stats: { tool_calls: 0, tool_errors: 0, llm_decisions: 0, motif_attempts: 0, shadow_candidates: 0, verified_skips: 0,
         upstream_requests: 0, model_requests: 0, actual_paid_usd: config.provider_mode === 'mock' ? 0 : null } };
@@ -1016,6 +1029,7 @@ export async function apply(ctx: any) {
       provider: task.model_option.provider, model: task.model_option.model, reasoning_effort: task.reasoning_effort ?? null });
     json(join(task.output, 'task.json'), task.request);
     json(join(task.output, 'effective-config.json'), { ...view(task), selection: task.selection, tools: task.tools,
+      trace_start_index:task.trace_start_index,
       scenario: task.scene.scenario, scenario_version: task.scene.scenario_version,
       instructions: instructionsFor(task.scene, task.source_pending), instructions_sha256: sha(instructionsFor(task.scene, task.source_pending) ?? ''),
       certified_tool_schemas_sha256: task.scene.certified_tool_schemas_sha256, diagnostic: task.scene.diagnostic ?? false,

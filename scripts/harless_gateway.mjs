@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, chmodSy
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { memberSceneDeployment } from './harless_member_scenes.mjs';
+import {createMotifViewRoute} from './harless_motif_view.ts';
 import { productPersona } from '../src/adapters/harless_product_prompt.ts';
 import {startCommandBroker} from '../src/adapters/geneloop_command_broker.ts';
 import {videoConfiguration} from '../src/adapters/geneloop_video.ts';
@@ -84,7 +85,7 @@ const inviteUsable = invite => Boolean(invite && !invite.revokedAt &&
 export function memberProductProfile() {
   return {
     persona: productPersona(),
-    sandboxArgs: ['--dir', '/app/config', ...['geneloop-persona.json', 'geneloop-capabilities.json', 'geneloop-capabilities.md', 'pdf-ocr-assets.json', 'geneloop-transport.json']
+    sandboxArgs: ['--dir', '/app/config', ...['geneloop-persona.json', 'geneloop-capabilities.json', 'geneloop-capabilities.md', 'pdf-ocr-assets.json', 'geneloop-transport.json', 'motif-evidence-v1.schema.json']
       .flatMap(name => ['--ro-bind', fileURLToPath(new URL('../config/' + name, import.meta.url)), '/app/config/' + name])],
   };
 }
@@ -148,6 +149,7 @@ export function memberWatcherEnvironment(environment = process.env) {
 }
 
 export function createGateway(config) {
+  const motifView=createMotifViewRoute(config.motifEvidence);
   const memberWatchers = memberWatcherEnvironment();
   const videoRenderer=config.memberSceneDeployment?.videoRenderer?videoConfiguration(config.memberSceneDeployment.videoRenderer):undefined;
   if(videoRenderer&&typeof config.ownerCommandOutput!=='string')throw Error('Video owner command output must be configured');
@@ -626,6 +628,7 @@ export function createGateway(config) {
       }
       if (path.startsWith('/api/account/')) return accountApi(req, res, path, user);
       if (path === '/api/workspace/ready' && req.method === 'GET') return memberReady(res, user);
+      if (await motifView(req,res,user)) return;
       if (path === '/account' || path === '/login' || path === '/register' || path === '/claim' || path === '/starting') {
         const visualStyle = readFileSync(new URL('../src/adapters/geneloop_theme.css', import.meta.url), 'utf8');
         const html = readFileSync(config.accountHtml, 'utf8').replace('</head>', '<style data-geneloop-theme="1">' + visualStyle + '</style></head>');
@@ -747,8 +750,8 @@ if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).
         ? createSharedInvite(offline, body).code : createInvites(offline, body.count).join('\n'));
     }
   } else {
-    const sourceEnv = process.env.DEEPSEEK_API_KEY;
-    if (!sourceEnv) throw Error('DEEPSEEK_API_KEY required for user workspaces');
+    const sourceEnv = process.env.KOURI_API_KEY;
+    if (!sourceEnv) throw Error('KOURI_API_KEY required for user workspaces');
     const gateway = createGateway({ ...config, apiKey: sourceEnv });
     if (gateway.scopedBudget) gateway.scopedBudget.listen(config.scopedBudgetPort, '127.0.0.1');
     gateway.server.listen(config.port, '127.0.0.1', () => console.log('Harless account gateway ready on loopback'));

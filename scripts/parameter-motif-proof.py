@@ -17,6 +17,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
 from src.adapters.parameter_motif_compiler import compile_parameter_library
 from src.adapters.native_motif_compiler import digest
@@ -135,9 +136,9 @@ items 中的相对路径均相对当前工作区。必须覆盖全部 item，独
             return row
     state = Recorded(cap_usd=cap, output_cap=OUTPUT_CAP, request_limit=None, record=out / 'cost-ledger.jsonl')
     state.request_count = len(rows); state.reserved_usd = prior
-    gate = create_server('127.0.0.1', 0, 'https://api.deepseek.com', state)
+    gate = create_server('127.0.0.1', 0, model_api_root(), state)
     thread = threading.Thread(target=gate.serve_forever, daemon=True); thread.start()
-    env.update(DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1', SSS_BUDGET_GATE_ACTIVE='1',
+    env.update(DEEPSEEK_API_KEY=model_sdk_key(), DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1', SSS_BUDGET_GATE_ACTIVE='1',
                SSS_BUDGET_CAP_USD=str(cap), SSS_BUDGET_LEDGER=str(out / 'cost-ledger.jsonl'))
     save(out / 'manifest.json', {'model': 'deepseek-flash', 'reasoning_effort': 'off', 'mode': mode,
          'case': case, 'session_id': session, 'prompt_sha256': __import__('hashlib').sha256(prompt.encode()).hexdigest(),
@@ -211,7 +212,7 @@ def main():
         print(json.dumps({'prior_usd': prior, 'cumulative_cap_usd': cap, 'paid_enabled': False,
                           'cases': ['read', 'query'], 'modes': ['baseline', 'shadow', 'execute'],
                           'model': 'deepseek-flash', 'reasoning_effort': 'off', 'output_cap': OUTPUT_CAP, 'request_limit': None})); return
-    if not args.call_model or not os.environ.get('DEEPSEEK_API_KEY'): raise ValueError('explicit server API authorization/config required')
+    if not args.call_model or not model_api_key_configured(): raise ValueError('explicit server API authorization/config required')
     with exclusive_lock((ROOT / '.local/paper-motif/.budget.lock')) as lock:
         library = json.loads((exp / 'library.json').read_text()); contracts = json.loads((exp / 'contracts.json').read_text())
         frozen_budget = exp / 'effective-budget.json'

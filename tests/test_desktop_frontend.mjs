@@ -6,6 +6,16 @@ import {test} from 'node:test';
 import {LocalFrontendHost} from '../apps/desktop/src/frontend.ts';
 import {Conversation} from '../apps/desktop/ui/desktop/conversation.js';
 import {promptContent} from '../apps/desktop/ui/desktop/composer.js';
+import {desktopNetworkAllowed} from '../apps/desktop/src/privacy.ts';
+
+test('本机任务的既有模型接口可连接同一服务，未知出口和跨源仍拒绝',()=>{
+  const server='https://fixture.example/';
+  for(const path of ['lease','v1/chat/completions','video/render'])
+    assert.equal(desktopNetworkAllowed(server+'api/harless/desktop-model/'+path,server),true);
+  for(const url of [server+'api/harless/desktop-model/upload',server+'api/training/upload',
+    'https://foreign.example/api/harless/desktop-model/lease'])
+    assert.equal(desktopNetworkAllowed(url,server),false);
+});
 
 test('独立桌面只提供自己的页面和资源，不获取网页HTML、模块图或远程脚本',async()=>{
   const directory=mkdtempSync(join(tmpdir(),'geneloop-ui-')),network=[];
@@ -18,8 +28,11 @@ test('独立桌面只提供自己的页面和资源，不获取网页HTML、模�
     assert.equal(await(await get('/desktop/app.js')).text(),'OWN_RENDERER');
     for(const path of ['/plugins/bootstrap.js','/assets/index-web.js','/desktop/unknown.js'])assert.equal((await get(path)).status,404);
     assert.deepEqual(network,[]);
-    const api=await get('/api/result');assert.equal(await api.text(),'API_STREAM');assert.equal(api.headers.get('content-encoding'),null);assert.equal(api.headers.get('content-length'),null);
-    assert.deepEqual(network,['https://fixture.example/api/result']);
+    const api=await get('/api/harless/tasks');assert.equal(await api.text(),'API_STREAM');assert.equal(api.headers.get('content-encoding'),null);assert.equal(api.headers.get('content-length'),null);
+    assert.deepEqual(network,['https://fixture.example/api/harless/tasks']);
+    assert.equal((await get('/api/harless/motif-library?workspaceId=owned')).status,200);
+    assert.equal((await get('/api/harless/motif-library-unknown')).status,403);
+    assert.equal(host.egress.task,2);
     const headers=(await get('/')).headers;assert.match(headers.get('content-security-policy'),/default-src 'none'/);assert.match(headers.get('content-security-policy'),/form-action 'none'/);
   }finally{assert.equal(directory.startsWith(join(tmpdir(),'geneloop-ui-')),true);rmSync(directory,{recursive:true,force:true});}
 });
@@ -34,6 +47,23 @@ test('API保持可信Origin、凭据omit与请求体；拒绝跨源及不透明�
 test('网络错误保持独立界面可用，返回可重试API错误',async()=>{
   const host=new LocalFrontendHost({server:'https://fixture.example/',ui:'unused',assets:'unused',fail:assert.fail,session:{fetch:async()=>{throw Error('offline');}}});
   const response=await host.fetch(new Request('https://fixture.example/api/account/me'));assert.equal(response.status,503);assert.equal((await response.json()).error.code,'desktop/network');
+});
+
+test('共享控制请求在桌面拒绝原文、嵌套字段和未同意请求，只有固定控制字段可以转发',async()=>{
+  const forwarded=[],host=new LocalFrontendHost({server:'https://fixture.example/',ui:'unused',assets:'unused',
+    fail:assert.fail,session:{fetch:async request=>{forwarded.push(await request.text());return Response.json({ok:true});}}});
+  const send=body=>host.fetch(new Request('https://fixture.example/api/harless/rsi-sharing',{
+    method:'POST',headers:{Origin:'https://fixture.example','Content-Type':'application/json'},body:JSON.stringify(body),
+  }));
+  for(const body of [
+    {action:'preview',task_id:'owned',source:{content:'private@example.com'}},
+    {action:'preview',task_id:'/private/trace'},
+    {action:'send',preview_id:'a'.repeat(36),sha256:'b'.repeat(64),consent:false},
+  ])assert.equal((await send(body)).status,403);
+  assert.equal((await host.fetch(new Request('https://fixture.example/api/harless/rsi-sharing?source=private'))).status,403);
+  assert.deepEqual(forwarded,[]);
+  assert.equal((await send({action:'preview',task_id:'owned-task'})).status,200);
+  assert.deepEqual(forwarded,[JSON.stringify({action:'preview',task_id:'owned-task'})]);
 });
 test('独立日志投影处理快照、流式增量、持久替换及重连，不重复消息',()=>{
   const c=new Conversation(),event=(seq,type,data,surfaceOp)=>({type:'event',event:{seq,type,data,surfaceOp,time:1}});

@@ -471,6 +471,10 @@ Harness 原生 `SessionPromptRequest.content` 的实际格式为：
 
 ### 预算、模型与记录
 
+Python 的模型上游入口为 `src/adapters/model_api.py`：`model_api_base_url()` 当前为 `https://api.kourichat.com/v1`，`model_wire_id()` 将 Harness 内部 `deepseek-flash` 映射到 `deepseek-v4.1-flash`，`model_api_key()` 只读取 `KOURI_API_KEY`。Web、File、预算代理与独立场景从这里取得上游；模拟模式仍用本地 provider，GLM 等显式配置的其他 provider 保留各自入口。旧 SDK 字段名只用作本地网关兼容占位，网关出站以 Kouri 密钥替换。当前模型选项由指定模型 ID 静态配置，不调用未确认兼容的 Kouri `/models`。SkillFlow baseline 首请求的真实 Chat/工具调用已返回 HTTP 200；价格沿 DeepSeek 费率代理估算，Kouri 实付和文件/搜索/思考接口待验证。
+
+网页聊天的可选模型默认读取 `config/kouri-models.json`；私有 `KOURI_MODELS_FILE` 可替换完整列表，路径相对项目根目录解析。私有环境变量 `KOURI_EXTRA_MODELS_JSON` 可在其后追加模型。后者为单行 JSON 数组，每项必须写明 `id`、`context_window`、`max_output_tokens`、`input_usd_per_million`、`output_usd_per_million`；可选 `wire_id`、`label`、`input_modalities`、`supported_reasoning_efforts`、`cache_hit_usd_per_million`。未填的模态与推理能力按文字、`off` 处理，缓存估费按输入价处理；重名、未知字段或非法容量/单价在启动前拒绝。网页 `/api/harless/models` 和原生模型下拉从策略列表读取，Harness 适配器使用显式元数据接纳非内置模型，预算网关按同一 ID 白名单和费率记账，再映射到上游 ID。当前仅有 Flash 的真实 ID；双模型测试使用离线诊断 ID，不对用户开放。Flash 仍按 393216 输出容量发请求；新增模型使用其配置容量，有限应用上限取较小值。独立 File 管理场景的 Flash/Off 限制维持原状。
+
 通用 Web 入口每任务、全启动费用和请求次数默认均为 `null`，表示不限。Web 不对单次用户文字另设长度上限；输出配置 `max_output_tokens: null` 时没有应用层输出额度；按2026-10-20最新要求，Web普通和文件转发请求统一使用官方真实最大单次容量393216 tokens作为 `max_tokens`，避免省略参数触发非思考默认8K截断，不裁剪模型返回。明确设置的有限诊断参数保持原值。服务商自身上下文和最大输出容量仍适用。上传容量、账号/路径权限及 HTTP 协议安全边界继续保留。前端预算只能下调服务器任务费用上限；`harness-web.py --budget-usd` 定任务上限，`--run-budget-usd` 定全启动上限，两者显式 `0` 均表示取消对应费用限制。累计 cap 在 policy/effective config/统计中以 `null` 表示不限，禁止使用 Infinity 或巨大数代替；内部 `State(cap_usd=0)` 仍代表零费用预算。可选 `--request-limit/--run-request-limit` 正整数保留次数限制；CLI `0`、配置/统计中的 `null` 表示不限次数，仍完整累计请求与费用。`TaskBudgetRegistry` 支持任务与累计费用分别设为 `null`；有限服务器上限仍禁止客户端提交不限或越界的任务；先不可变注册，原生聊天随发送激活，显式 API 经 submit 激活。预算代理根据 `x-deepseek-harness-session-id` 路由，同一次请求原子记录任务与累计费用，检查仍有效的上限，完整成功用量两层结算，新任务不重置累计账本。
 
 私有控制服务仅监听 loopback，`/tasks/register/activate/cancel/stats` 均要求 `X-SSS-Control-Token`。该 token 由启动器生成，不提供给浏览器。每任务冻结已选 provider/model、思考档位（`off/low/high/max`，旧 On=`high`）和输出配置（允许 `null`），关闭标题模型、辅助请求和压缩；UI 模型菜单不能绕过预算连接。
@@ -1537,6 +1541,13 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+
+## RSI 学习数据投影
+
+公共 `geneloop_privacy.learning_view` / TypeScript `privacyLearningView` 处理任意场景的学习 JSON；`geneloop_learning_trace` v4 为两个 Web 宿主、公共 SDK 和离线导入生成脱敏派生视图，包含任务正文、模型回答和工具参数/结果。研究学习器的上下文与工具返回使用同一内核；`admit_publication` 提供保留认证字节的公开导出准入。已有 Paper/PPT 结构编译继续使用无语义值的 v2。入口与边界见 [公共脱敏模块](rsi-data-privacy.md)。
+
+默认私有的 `/api/harless/rsi-sharing` 从账号内任何完成场景生成严格 v4 工具流程，场景和工具名使用样本内代号。完整预览、SHA256 绑定和逐次同意后才发送。十分钟失效、重启不恢复授权、异常无自动重传；桌面支持本地副本与取消。接口动作与边界见[可选共享](rsi-data-privacy.md#默认私有与可选共享)。
+
 ## Evidence-Grounded Evolution Agent（2026-11-04）
 
 离线研究入口：`node scripts/project.mjs python scripts/run-evolution-agent.py --manifest <private.json> --output <new-.local-directory>`。默认只预检；`--call-model --budget-usd 3 --max-requests 1` 显式执行一个提案请求。复用原累计账本，不修改在线 Runtime。
@@ -1664,3 +1675,12 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 `BenchmarkHost(..., owner='overnight-research')`允许调用方从创建时绑定同一研究owner，旧记录不改写。`review_skill`可选 `behavior_expectation`，使用既有独立review工具按需读配对动作。接受行为变化时必须引用两侧已经读取的宿主动作证据；输出 `verified_behavior_evidence`，质量仍走原oracle。此评审是有来源的模型判断，语义校准与因果归因另外验证。论文试验冻结300秒/64次读取，费用及请求沿原无限额账本。
 
 后继候选选择冻结为通过独立质量及行为检查、符合原质量/费用政策后，按质量降序、任务模型成本升序和策略摘要确定顺序。neutral、negative、unknown不改默认选择。选择只用于隔离后继，完整研究成本与正式发布仍分别判断。
+
+## 工作区 Motif 只读展示（2026-11-06）
+
+- `GET /api/harless/motif-library`：沿用网关账号 Cookie。可选 `workspaceId` 参数缩小范围，只返回该账号已由宿主绑定的工作区；未登录401、跨站403、无效查询400、其他方法405。无配置返回空目录。
+- 私有网关配置 `motifEvidence.sources` 的每项包含稳定 `accountId`、`workspaceId`、`executionLocation`（`cloud`/`local`）及物理绝对 `path`。客户端不能注册导出、指定路径、写入或执行能力；拒绝链接、硬链接和超过4MiB的文件。
+- 响应为 `geneloop-motif-catalog-v1`：`revision` 是响应数据摘要，`workspaces` 每项含范围ID、`status`（`ready`/`unavailable`）、来源执行位置、固定 `compatibility: unverified` 及 `evidence`。原件是同伴 `coding-motif-evidence-v1` 协议，复用 `config/motif-evidence-v1.schema.json` 与共享展示投影。读取失败不会返回物理路径。
+- 前端在已登录且页面可见时每10秒读取，退出清空。展示认证不授权执行；单项费用/完整耗时为null时保持未知，缺少配对质量与成本时不计算节省。公开样例不绑定账号或工作区。
+- 当前仅覆盖Coding v1，不推测缺失的组合、学习/发布事件或历史版本；来源执行位置不改变任务路由。正式服务及本机Runtime活证据桥未由本轮部署。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
+- 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。

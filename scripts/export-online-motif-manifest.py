@@ -157,6 +157,7 @@ def main() -> None:
     parser.add_argument("--version-fields", type=Path)
     parser.add_argument("--source-dereference", action='append', default=[])
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--public", action="store_true", help="require common privacy admission for external publication")
     args = parser.parse_args()
     library = json.loads(args.library.read_text(encoding="utf-8"))
     contracts = json.loads(args.contracts.read_text(encoding="utf-8"))
@@ -166,6 +167,9 @@ def main() -> None:
                 if args.version_fields else {})
     manifest = export_manifest(library, contracts, rules, versions,
                                source_dereferences=tuple(args.source_dereference))
+    if args.public:
+        from src.adapters.geneloop_privacy import admit_publication
+        admit_publication(manifest)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                            encoding="utf-8")

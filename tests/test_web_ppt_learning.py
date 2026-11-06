@@ -196,6 +196,14 @@ def test_single_learning_can_be_used_by_future_real_paired_promotion_protocol(ow
 def test_existing_user_traces_certify_then_two_future_reviewed_pairs_promote(owned):
     seed(owned);out,store,req=owned
     release=store/'round-0001/release';assert load_product_bundle(ROOT,release,'ppt',private_root=store)['runtime_kind']=='ppt_master_v2'
+
+    for split in ("train-1", "train-2", "heldout-1"):
+        exported = release.parent / "compile" / split
+        assert not (exported / "agent-events.jsonl").exists()
+        assert not (exported / "events.jsonl").exists()
+        assert not (exported / "task.json").exists()
+        assert "question" not in json.loads((exported / "manifest.json").read_text(encoding="utf-8"))
+        assert json.loads((exported / "learning-trace.json").read_text(encoding="utf-8"))["bindings"]
     before=worker.sha(release/'entry.json');worker.advance(req);assert worker.sha(release/'entry.json')==before
     for n in (4,5):
         pair(owned,n,task(owned,n*10,source=n,cost=.003),task(owned,n*10+1,source=n,mode='execute',version='round-0001',cost=.001,requests=1))

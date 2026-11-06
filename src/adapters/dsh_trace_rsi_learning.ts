@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { canonical, digest } from './paper_rsi_program.ts';
 import { runTraceTool, validateTraceCandidate } from './trace_rsi_program.ts';
+import {createLearningPrivacyBoundary,safeLearningError} from './geneloop_privacy.ts';
 
 export const name = 'sss-trace-rsi-learning';
 export const inject = ['tools', 'agents'];
@@ -36,10 +37,10 @@ function validateContract(contract:any):void {
 /** Native Cordis objects may belong to another realm. Normalize only JSON data
  * at this submission boundary; the interpreter retains its strict local checks.
  */
-function normalizeCandidateSubmission(value:any):any {
+export function normalizeCandidateSubmission(value:any,maxBytes=128000,maxNodes=20000):any {
   const ancestors = new Set<any>();let nodes = 0;
   function walk(value:any,depth:number):void {
-    if (++nodes > 20000 || depth > 48) throw Error('candidate_submission_too_complex');
+    if (++nodes > maxNodes || depth > 48) throw Error('candidate_submission_too_complex');
     if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
     if (typeof value === 'number') {
       if (!Number.isFinite(value)) throw Error('candidate_submission_non_json_number');
@@ -67,10 +68,25 @@ function normalizeCandidateSubmission(value:any):any {
   walk(value,0);
   let text:string;
   try { text = JSON.stringify(value); } catch { throw Error('invalid_candidate_json_submission'); }
-  if (typeof text !== 'string' || Buffer.byteLength(text) > 128000) throw Error('candidate_submission_too_large');
+  if (typeof text !== 'string' || Buffer.byteLength(text) > maxBytes) throw Error('candidate_submission_too_large');
   try { return JSON.parse(text); } catch { throw Error('invalid_candidate_json_submission'); }
 }
 const jsonType = (value:any) => value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+// The host's bounded shape is a declaration, never a credential instance.
+// Use the public JSON Schema boundary while retaining its established wire shape.
+function shapeSchema(shape:any):any {
+  const value={...shape};
+  if(value.fields){value.properties=Object.fromEntries(Object.entries(value.fields).map(([k,v])=>[k,shapeSchema(v)]));delete value.fields;}
+  if(Array.isArray(value.items))value.items=value.items.length?{anyOf:value.items.map(shapeSchema)}:false;
+  return value;
+}
+function schemaShape(schema:any):any {
+  const value={...schema};
+  if(value.properties){value.fields=Object.fromEntries(Object.entries(value.properties).map(([k,v])=>[k,schemaShape(v)]));delete value.properties;}
+  if(value.items===false)value.items=[];
+  else if(value.items?.anyOf)value.items=value.items.anyOf.map(schemaShape);
+  return value;
+}
 /** Shape reveals field names and value kinds, never scalar values. */
 function jsonShape(value:any,budget:{remaining:number},depth=1):any {
   if (budget.remaining <= 0) return undefined;
@@ -144,10 +160,10 @@ export function createTraceLearning(config:any) {
     if (canonical(candidateContract(current)) !== canonical(state.proposal.contract)) throw Error('candidate_contract_mismatch');
     return state;
   }
-  function list() {
+  function list(options:{fullCommands?:boolean}={}) {
     return JSON.parse(JSON.stringify({schema_version:1,trace_bundle_sha256:bundleSha,records:bundle.entries.map((entry:any) => ({
       run_id:entry.run_id,call_id:entry.call_id,line:entry.line,step:entry.step,tool:entry.tool,
-      description:entry.arguments?.description,command_preview:typeof entry.arguments?.command === 'string' ? entry.arguments.command.slice(0,200) : null,
+      description:entry.arguments?.description,command_preview:typeof entry.arguments?.command === 'string' ? (options.fullCommands?entry.arguments.command:entry.arguments.command.slice(0,200)) : null,
       ok:entry.ok,replay_status:entry.replay_status,replay_reason:entry.replay_reason,output_labels:entry.output_labels}))}));
   }
   function read(args:any) {
@@ -248,7 +264,7 @@ export function apply(ctx:any):void {
   if (realpathSync(config.work) !== realpathSync(process.cwd())) throw Error('learning_workspace_mismatch');
   const empty = {type:'object',properties:{},additionalProperties:false};
   const definitions = [
-    {name:'rsi_trace_list',description:'列出私有正常轨迹的全部工具记录及重放状态，包含不支持重放的记录；不运行历史命令。',parameters:empty,run:learning.list},
+    {name:'rsi_trace_list',description:'列出私有正常轨迹的全部工具记录及重放状态，包含不支持重放的记录；不运行历史命令。',parameters:empty,run:()=>learning.list({fullCommands:true})},
     {name:'rsi_trace_read',description:'按 run_id/call_id 读取已登记轨迹的完整命令、结果与重放标签。JSON文件展示有界字段类型shape及摘要，字符串不展示原文；据此选择输入投影，不接受任意路径。',
       parameters:{type:'object',properties:{run_id:{type:'string'},call_id:{type:'string'}},required:['run_id','call_id'],additionalProperties:false},run:learning.read},
     {name:'rsi_propose',description:'提交一个从 observed_replay_match 轨迹抽象的工具名称、说明和输入输出绑定；schema可提供或由固定控制器推导。接受后返回完整契约与开发样例，目标冻结不可更换。',
@@ -258,14 +274,28 @@ export function apply(ctx:any):void {
       parameters:{type:'object',properties:{input:{}},required:['input'],additionalProperties:false},run:learning.trial}
   ];
   // This Harness validates allow-lists against global tools at agent creation.
+  const privacy=createLearningPrivacyBoundary({onBind:binding=>appendFileSync(join(config.work,'learning.jsonl'),
+    JSON.stringify({timestamp:new Date().toISOString(),session_id:config.session_id,kind:'privacy_handle',...binding})+'\n',{mode:0o600})});
   for (const definition of definitions) ctx.tools.register({
     name:definition.name,description:definition.description,parameters:definition.parameters,
     output:{schema:{type:'object'},render:(_:any,value:any) => [{type:'text',text:JSON.stringify(value)}]},
     async execute(args:any,exec:any) {
       if (exec?.agent?.session?.id !== config.session_id) throw Error('trace_learning_session_not_authorized');
       if (exec.signal?.aborted) throw Error('trace_learning_cancelled');
+      try {
       if (definition.name === 'rsi_trace_list') exactArgs(args,[]);
-      return definition.run(args);
+      const normalized=normalizeCandidateSubmission(args,32*1024*1024,100000);
+      const references=definition.name==='rsi_trace_read'||definition.name==='rsi_propose';
+      const result=await definition.run(references?privacy.resolve(normalized):normalized);
+      if(definition.name==='rsi_trace_read')for(const file of result.json_files)
+        if(file.shape){file.input_schema=shapeSchema(file.shape);delete file.shape;}
+      const visible=await privacy.show(result);
+      if(definition.name==='rsi_trace_read')for(const file of visible.json_files)
+        if(file.input_schema){file.shape=schemaShape(file.input_schema);delete file.input_schema;}
+      if(definition.name==='rsi_trace_list')for(const row of visible.records)
+        if(typeof row.command_preview==='string')row.command_preview=row.command_preview.slice(0,200);
+      return visible;
+      } catch(error) {throw await safeLearningError(error);}
     }});
   ctx.provide('sssTraceRsi',{install:learning.install,installProgram:learning.installProgram});
   ctx.on('agent/created',({agent}:any) => {

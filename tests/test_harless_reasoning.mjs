@@ -70,6 +70,44 @@ test('Model availability keeps the configured route and reports unavailable reas
   assert.throws(()=>webReasoningAvailability({...pro,supported_reasoning_efforts:['off','high']},'max'),/does not support/);
 });
 
+test('explicit Kouri model metadata enables a model absent from installed DeepSeek defaults',async()=>{
+  const option={provider:'deepseek-official',model:'kouri-diagnostic',label:'Kouri diagnostic',available:true,
+    context_window:16000,max_output_tokens:4000,input_modalities:['text'],supported_reasoning_efforts:['off']};
+  const options=resolveAdapterOptions({reasoningEffort:'off'});
+  options.models=webDeepSeekModels(options.models,[option]);
+  const adapter=new WebDeepSeekAdapter({options:()=>options,resolveApiKey:async()=>'unused',
+    resolveUserId:()=> 'diagnostic',prepareExtensions:async()=>({fields:{},accept:async()=>{}})},[option]);
+  const model=await adapter.resolveModel('deepseek-official','kouri-diagnostic');
+  assert.equal(model.id,'kouri-diagnostic');
+  assert.equal(model.context.contextWindow,16000);
+  assert.equal(model.defaultMaxTokens,4000);
+  assert.deepEqual(model.reasoning.efforts.map(row=>row.id),['off']);
+  assert.deepEqual(model.inputModalities,['text']);
+});
+
+test('new model output capacity respects the smaller configured application cap',async()=>{
+  const requests=[];
+  const server=createServer(async(req,res)=>{
+    let raw='';for await(const part of req)raw+=part;requests.push(JSON.parse(raw));
+    res.writeHead(200,{'Content-Type':'text/event-stream'});
+    res.end('data: '+JSON.stringify({id:'diagnostic',object:'chat.completion.chunk',created:1,
+      model:'kouri-diagnostic',choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n');
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try{
+    const option={provider:'deepseek-official',model:'kouri-diagnostic',label:'Kouri diagnostic',available:true,
+      context_window:16000,max_output_tokens:4000,input_modalities:['text'],supported_reasoning_efforts:['off']};
+    const options=resolveAdapterOptions({baseURL:`http://127.0.0.1:${server.address().port}`,maxTokens:1000,reasoningEffort:'off'});
+    options.models=webDeepSeekModels(options.models,[option]);
+    const adapter=new WebDeepSeekAdapter({options:()=>options,resolveApiKey:async()=>'local-only',
+      resolveUserId:()=> 'diagnostic',prepareExtensions:async()=>({fields:{},accept:async()=>{}})},[option]);
+    for await(const _ of adapter.stream({provider:'deepseek-official',model:'kouri-diagnostic',reasoningEffort:'off',
+      messages:[{id:'diagnostic-user',role:'user',content:[{type:'text',text:'test'}]}]})){}
+    assert.equal(requests[0].model,'kouri-diagnostic');
+    assert.equal(requests[0].max_tokens,1000);
+  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
 test('Explicit per-model capability intersects installed native modes while an ID-only catalog retains native modes',async()=>{
   const options=resolveAdapterOptions({reasoningEffort:'off'});
   const config={options:()=>options,resolveApiKey:async()=>'unused',resolveUserId:()=>'diagnostic',prepareExtensions:async()=>({fields:{},accept:async()=>{}})};

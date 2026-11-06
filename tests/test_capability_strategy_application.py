@@ -58,6 +58,7 @@ def test_actual_builder_prompt_records_admitted_policy_with_current_aliases(tmp_
     assert visible['inherited_strategy']['capability_aliases']
     effective = pilot.read_json(tmp_path/'attempt/effective.json')
     assert effective['inherited_strategy']['selection'] == selection
+    assert str(tmp_path) not in json.dumps(visible['inherited_strategy'])
     assert result['strategy_observation'] == 'prompt_exposure_only'
     assert result['inherited_strategy']['strategy'] == strategy_ref(strategy)
     compiled = pilot.read_json(tmp_path/'attempt/candidate.json')

@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.13",
+  "version": "0.3.0-preview.14",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -11,39 +11,42 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "build": "tsc && node scripts/prepare-assets.mjs",
+    "build": "tsc && node scripts/build-motif-evidence.mjs && node scripts/prepare-assets.mjs",
     "dev": "npm run build && electron .",
     "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs ../../tests/test_desktop_frontend.mjs",
     "smoke": "npm run build && node scripts/check-local-ui.mjs",
     "smoke:packaged": "node scripts/check-package.mjs",
     "smoke:account": "npm run build && node scripts/check-account-login.mjs",
-    "smoke:local-workspace": "npm run build && npm run runtime:stage && node scripts/check-local-workspace.mjs",
     "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
-    "runtime:stage": "node scripts/stage-local-runtime.mjs",
-    "tools:stage": "node scripts/stage-desktop-tools.mjs",
     "pack": "npm run build && npm run runtime:stage && electron-builder --dir --publish never",
     "dist": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs",
+    "check:motif": "node scripts/build-motif-evidence.mjs && node --test ../../tests/test_desktop_motif_library.mjs",
+    "smoke:local-workspace": "npm run build && npm run runtime:stage && node scripts/check-local-workspace.mjs",
+    "runtime:stage": "node scripts/stage-local-runtime.mjs",
+    "tools:stage": "node scripts/stage-desktop-tools.mjs",
     "smoke:native": "node scripts/check-native-platform.mjs",
     "smoke:remotion": "node scripts/check-native-remotion.mjs",
     "smoke:ppt": "node scripts/check-native-ppt.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",
-    "@remotion/bundler": "4.0.539",
-    "@remotion/renderer": "4.0.539",
     "@types/node": "26.6.6",
-    "csv-parse": "7.0.3",
     "electron": "45.2.1",
     "electron-builder": "26.18.0",
+    "sharp": "0.35.5",
+    "typescript": "7.0.2",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.1",
+    "@remotion/bundler": "4.0.539",
+    "@remotion/renderer": "4.0.539",
+    "csv-parse": "7.0.3",
     "pdfjs-dist": "6.4.299",
     "pptxgenjs": "4.0.1",
     "quickjs-emscripten": "0.32.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "remotion": "4.0.539",
-    "sharp": "0.35.5",
-    "typescript": "7.0.2"
+    "remotion": "4.0.539"
   },
   "dependencies": {},
   "build": {
@@ -89,6 +92,30 @@
       "hardenedRuntime": true,
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "format": "UDZO",
+      "backgroundColor": "#f7f7fa",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "iconSize": 96,
+      "iconTextSize": 13,
+      "contents": [
+        {
+          "x": 130,
+          "y": 190,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "nsis": {
       "include": "installer.nsh",

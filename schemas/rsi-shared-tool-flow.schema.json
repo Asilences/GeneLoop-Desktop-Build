@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "kind", "trace"],
+  "properties": {
+    "format": {"const": "geneloop.rsi-shared-object/v1"},
+    "kind": {"const": "tool_flow"},
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "scene", "status", "nodes", "bindings"],
+      "properties": {
+        "format": {"const": "geneloop.rsi-learning-trace/v4"},
+        "scene": {"const": "generic"},
+        "status": {"const": "completed"},
+        "bindings": {"const": []},
+        "nodes": {
+          "type": "array", "minItems": 1, "maxItems": 20000,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["tool", "outcome"],
+            "properties": {
+              "tool": {"oneOf": [{"type": "string", "pattern": "^tool-[0-9]{1,5}$"}, {"type": "null"}]},
+              "outcome": {"enum": ["observed_success", "unapproved_tool", "missing_or_failed_result"]}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -21,6 +21,7 @@ from secrets import token_hex
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_scenario import prepare_scenario
 from src.adapters.file_cost_gate import State, create_server
 from src.adapters.file_web_task_budget import TaskBudgetRegistry, create_control_server
@@ -237,8 +238,8 @@ def main():
     if bool(args.manifest) != bool(args.task): parser.error('--manifest and --task must be supplied together')
     if args.real_model and (args.frozen or args.fixture != 'normal'):
         parser.error('real provider cannot use frozen/failure fixtures')
-    if args.real_model and not os.environ.get('DEEPSEEK_API_KEY', '').strip():
-        parser.error('configure DEEPSEEK_API_KEY in private .env and start through npm run web')
+    if args.real_model and not model_api_key_configured():
+        parser.error('configure KOURI_API_KEY in private .env and start through npm run web')
     if args.run_id is not None and not re.fullmatch('[0-9a-f]{32}', args.run_id):
         parser.error('run-id must be 32 lowercase hexadecimal characters')
     if args.scenario=='file-management' and not args.rsi_config:
@@ -283,7 +284,7 @@ def main():
     if args.scenario=='file-management':provider.requests=handler.calls if hasattr(handler,'calls') else []
     upstream = f'http://127.0.0.1:{provider.server_port}'
     if not args.real_model: args.embedding_endpoint = args.embedding_endpoint or upstream + '/v1/embeddings'
-    else: upstream = 'https://api.deepseek.com'
+    else: upstream = model_api_root()
     state = State(cap_usd=args.budget_usd if args.frozen else args.run_budget_usd,
                   output_cap=args.max_output or defaults['max_output_tokens'], record=output / 'ledger.jsonl',
                   request_limit=args.request_limit if args.frozen else args.run_request_limit)
@@ -319,7 +320,7 @@ def main():
         threading.Thread(target=server.serve_forever, daemon=True).start()
     prepare(args, output, f'http://127.0.0.1:{gate.server_port}/v1')
     env = {**os.environ, 'DSH_HOME': str(Path(cfg['state_root'])/'web-dsh') if args.scenario=='file-management' and cfg.get('adapter')=='file_operations_v2' else str(output/'dsh'), 'SSS_WEB_POLICY': str(output / 'policy.json'),
-           'DEEPSEEK_API_KEY': os.environ['DEEPSEEK_API_KEY'] if args.real_model else 'sss-mock-only',
+           'DEEPSEEK_API_KEY': model_sdk_key() if args.real_model else 'sss-mock-only',
            'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{gate.server_port}/v1',
            'SSS_ONLINE_MOTIF_MANIFEST': '', 'SSS_ONLINE_MOTIF_TASK': ''}
     log = (output / 'startup.log').open('w')

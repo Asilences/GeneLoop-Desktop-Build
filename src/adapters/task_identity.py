@@ -12,7 +12,7 @@ DECISION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,99}$")
 
 
 def load_trace_identity(identity_file: Path, events_file: Path,
-                        local_root: Path) -> dict[str, str]:
+                        local_root: Path, *, projected: bool = False) -> dict[str, str]:
     """Read an auditable identity lock; its decision ID is still human asserted."""
     identity_path = identity_file.resolve(strict=True)
     events_path = events_file.resolve(strict=True)
@@ -38,13 +38,15 @@ def load_trace_identity(identity_file: Path, events_file: Path,
     manifest = json.loads(manifest_raw)
     if (not isinstance(manifest, dict)
             or not isinstance(manifest.get("task_id"), str) or not manifest["task_id"]
-            or not isinstance(manifest.get("question"), str)
-            or not manifest["question"].strip()):
-        raise ValueError("task manifest needs a task_id and research question")
-    question = " ".join(manifest["question"].split()).casefold()
+            or (projected and not re.fullmatch(r"[a-f0-9]{64}", manifest.get("question_sha256", "")))
+            or (not projected and (not isinstance(manifest.get("question"), str)
+                                   or not manifest["question"].strip()))):
+        raise ValueError("task manifest needs a task_id and research question evidence")
+    question_sha256 = (manifest["question_sha256"] if projected else hashlib.sha256(
+        " ".join(manifest["question"].split()).casefold().encode()).hexdigest())
     return {"research_decision_id": identity["research_decision_id"],
             "task_id": manifest["task_id"],
-            "question_sha256": hashlib.sha256(question.encode()).hexdigest(),
+            "question_sha256": question_sha256,
             "manifest_sha256": identity["manifest_sha256"],
             "events_sha256": identity["events_sha256"],
             "identity_sha256": hashlib.sha256(identity_path.read_bytes()).hexdigest()}

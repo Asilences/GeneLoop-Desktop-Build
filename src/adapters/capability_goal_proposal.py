@@ -45,6 +45,8 @@ def propose_json(request, output, gate=None, *, system=SYSTEM, response_key='goa
     gate.register_attempt(output,request['owner']+'/'+owner_kind+'/'+request['trigger_id'],category=category)
     if gate.current is not None:raise ValueError('proposal_serial_attempt_required')
     visible = request if prompt_request is None else prompt_request
+    from .geneloop_privacy import learning_view
+    visible = learning_view(visible)
     prompt = system+'\nFROZEN TASK NEEDS AND CAPABILITIES:\n'+json.dumps(visible,ensure_ascii=False,allow_nan=False)
     if max_prompt_bytes is not None and (type(max_prompt_bytes) is not int or max_prompt_bytes < 1
             or len(prompt.encode('utf-8')) > max_prompt_bytes):

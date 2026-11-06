@@ -9,6 +9,7 @@ import type { Settings } from './settings.ts';
 import { authorizedDirectory, LocalWorkspaceStore, reopenDirectory } from './local-workspaces.ts';
 import { LocalWorkspaceConversation, localSceneStatus } from './local-workspace.ts';
 import { LocalFrontendHost } from './frontend.ts';
+import {desktopNetworkAllowed} from './privacy.ts';
 import { TITLE_BAR_HEIGHT, LIGHT_APPEARANCE, DARK_APPEARANCE, readAppearance } from './appearance.ts';
 import type { Appearance } from './appearance.ts';
 
@@ -289,6 +290,9 @@ export class DesktopWorkspace {
     const partition = 'persist:geneloop-' + createHash('sha256').update(server).digest('hex').slice(0, 24);
     const remoteSession = session.fromPartition(partition);
     this.currentSession = remoteSession;
+    const diagnostic = this.options.allowLoopback === true;
+    remoteSession.webRequest.onBeforeRequest({urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*']},
+      (details, callback) => callback({cancel: !desktopNetworkAllowed(details.url, server, diagnostic)}));
     remoteSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     remoteSession.setPermissionCheckHandler(() => false);
     const view = new WebContentsView({ webPreferences: {
@@ -305,7 +309,7 @@ export class DesktopWorkspace {
       view.setVisible(false);
       this.update('error', message);
     };
-    this.frontend = new LocalFrontendHost({ session: remoteSession, server, assets: join(directory, '../assets'), ui: join(directory, '../ui/desktop'), fail });
+    this.frontend = new LocalFrontendHost({ session: remoteSession, server, assets: join(directory, '../assets'), ui: join(directory, '../ui/desktop'), fail, diagnostic });
     this.frontend.install();
     view.webContents.on('ipc-message', (event, channel, value: unknown) => {
       if (channel !== 'geneloop:appearance' || attempt !== this.generation || event.senderFrame !== view.webContents.mainFrame ||
@@ -383,6 +387,7 @@ export class DesktopWorkspace {
   }
 
   private removeWorkspace(): void {
+    this.currentSession?.webRequest.onBeforeRequest(null);
     this.frontend?.dispose();
     this.frontend = undefined;
     if (this.currentSession && this.downloadListener) this.currentSession.removeListener('will-download', this.downloadListener);

@@ -209,7 +209,8 @@ def test_failed_quality_or_missing_activation_does_not_take_over(tmp_path, valid
     assert feedback['skill_activated'] is activated
     assert feedback['quality_assessment']['full_quality'] is validation_pass
     trial = result['validation'][0]['runs'][0]
-    original = json.loads(verify(host.submissions[0]['record']))['outcome']
+    assert str(tmp_path) not in host.submissions[0]['record']['path']
+    original = json.loads((tmp_path/'generation/investigation/submission-0.json').read_text())['outcome']
     assert trial['record'] in original['evidence_refs'] and trial['observation'] in original['evidence_refs']
     assert all(verify(reference) is not None for reference in original['evidence_refs'])
     assert feedback['record_evidence_id'] == 'evidence_' + trial['record']['sha256']
@@ -883,7 +884,8 @@ def test_successful_strategy_returns_same_actual_validation_evidence(tmp_path):
     assert outcome['status'] == 'evaluated'
     assert all(check['status'] == 'passed' for check in outcome['checks'])
     assert outcome['validation_feedback'][0]['skill_activated'] is True
-    original = json.loads(verify(host.submissions[0]['record']))['outcome']
+    assert str(tmp_path) not in host.submissions[0]['record']['path']
+    original = json.loads((tmp_path/'generation/investigation/submission-0.json').read_text())['outcome']
     assert result['selection']['strategy'] in original['evidence_refs']
     assert result['selection']['evaluation'] in original['evidence_refs']
 
@@ -940,7 +942,7 @@ def test_strategy_errors_without_a_host_validation_keep_original_diagnostic(tmp_
     assert 'outcome' not in host.submissions[0]
 
 
-def test_native_example_lookup_pages_only_admissible_files_with_original_provenance(tmp_path):
+def test_native_example_lookup_pages_only_admissible_files_with_original_provenance(tmp_path, monkeypatch):
     host = NativeHost(tmp_path / 'trials')
     original = host.agent
     seen = []
@@ -956,12 +958,21 @@ def test_native_example_lookup_pages_only_admissible_files_with_original_provena
         assert cards[0]['evidence_id'] != cards[1]['evidence_id']
         assert len({source for card in cards for source in card['source_identities']}) == 2
         for card in cards:
-            assert card['relative_path'] == 'artifact-input.json'
+            assert card['relative_path'].startswith('<PRIVATE_REFERENCE_') and card['relative_path'].endswith('.json')
             assert card['artifact_index_evidence_ids'] and card['observation_ids']
             raw = dispatch('evolution_read', {'kind': 'evidence', 'id': card['evidence_id'], 'section': 'content'})
             assert 'value' in json.loads(raw['content'])
         unmatched = dispatch('evolution_example_files', {'query': 'result.json'})
         assert unmatched['total'] == 0 and unmatched['available_files'] == 2
+        import src.adapters.evolution_benchmark_gene as gene
+        with monkeypatch.context() as patcher:
+            def unavailable(*args, **kwargs):
+                raise FileNotFoundError('/home/synthetic-owner@example.com/private/data.json')
+            patcher.setattr(gene, '_example_file_cards', unavailable)
+            failed = dispatch('evolution_example_files', {'observation_ids':ids})
+            assert failed['status'] == 'error'
+            assert 'synthetic-owner@example.com' not in json.dumps(failed)
+            assert '/home/' not in json.dumps(failed)
         seen.extend(cards)
         return original(request, dispatch)
     host.agent = agent
@@ -969,6 +980,9 @@ def test_native_example_lookup_pages_only_admissible_files_with_original_provena
     assert result['capability_acquisitions'][0]['status'] == 'registered'
     assert len(seen) == 2
     assert (tmp_path / 'generation/investigation/example-lookup-0.json').is_file()
+    recorded = json.loads((tmp_path/'generation/investigation/example-lookup-0.json').read_text())
+    assert recorded['result']['items'][0]['relative_path'] == 'artifact-input.json'
+    assert recorded['model_visible_result']['items'][0]['relative_path'] != 'artifact-input.json'
 
 
 def test_invalid_native_proposal_metadata_does_not_consume_actual_candidate_evaluations(tmp_path):

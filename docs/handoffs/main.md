@@ -1,5 +1,30 @@
 # 主线当前交接
 
+## 2026-11-06：全场景公共脱敏候选
+
+- `codex/rsi-privacy-platform` 为已合并 PR159 的后续工作，继续扩展公共脱敏模块，接两个 Web 宿主、SDK、离线导入和研究学习模型边界；新 MCP 场景继承规则。复用本地 Presidio/Gitleaks，保留账号内任务语义，公开共享只允许匿名工具流程。
+- 后续 [草稿 PR162](https://github.com/jingyio/GeneLoop/pull/162) 已创建并推送，已整合 main `cdc3a6a9`；描述和四项隐私 Issue 的评论明确区分初步实现与待验收，桌面端可按分支对接。最终完整回归和 Mac 真实 Coding 验收未完成，Issue 未关闭。
+- 正式服务未切换，原任务证据、费用与版本守卫保持私有权威。隔离回归和 Issue141–144 边界见[隐私交接](rsi-data-privacy.md)及[本轮记录](../debug/privacy-platform-20261106.md)，不能由工程诊断代替 Mac Coding 产品验收。
+
+## 2026-11-06 模型上游地址集中与 Kouri 接入
+
+- 联合整合：#159 已以 `5e21c754` 合入 main；#160 纳入隐私分支并更新八个模型迁移相关文件的精确证书兼容摘要，原证书、Motif IR/schema/来源和累计账本均未修改。联合专项 Python 98 通过/11 跳过、Node 13/13、Web 场景 4/4，详见 `docs/debug/kouri-env-models-20261106.md`。正式服务未重启。
+- 最终联合回归：允许本机回环端口的隔离环境执行 `SSS_PYTHON=<项目 Python 3.12> npm test`，退出码 0；Python 3036 通过/272 跳过，Node 1675 通过/25 跳过。`npm run smoke` 通过，新增付费调用 0。原先受限沙箱的失败记录保留，不能与本次最终结果混淆。
+
+- 范围：将运行代码中散落的 DeepSeek 官方 API 地址收敛到 `src/adapters/model_api.py`；按用户提供的 Kouri `https://api.kourichat.com/v1`、`deepseek-v4.1-flash` 接入。Harness 内部模型别名沿原路由到本地计费网关，出站模型 ID 在集中模块映射；私有上游凭证变量为 `KOURI_API_KEY`，旧 DeepSeek 密钥值不再读取。原账本保留。
+- 从最新 `origin/main` 的 `d1863342` 建立隔离分支 `codex/kouri-api-20261106`；原研究工作区及未跟踪 `reference/` 未动。README 与 `docs/interfaces.md` 已同步入口说明。
+- Kouri 密钥值只由私有环境加载，未展示或提交；现已完成一次真实 Chat/工具调用冒烟，细节见 `docs/debug/kouri-env-models-20261106.md`。Kouri 文件/搜索/思考协议、输出容量与实际价格尚未验收。既有 DeepSeek 单价仅作代理费用估算，不代表 Kouri 实付；旧密钥不再读取。未修改旧能力包证书。
+- 验证：最新 main 隔离分支的模型网关专项 56/56、Kouri 凭证相关专项 79/79、成员网关 Node 38/38、无模型 `npm run smoke` 通过，付费请求 0。全量 Python 初跑 2986 通过、261 跳过、28 失败；其中 9 项为旧密钥测试夹具，已更新并由相关专项复核，其余为旧 Paper/PPT 能力包源码锁，未重跑全量。Node 全量在隔离工作区有既有夹具/环境失败，受本轮改动的成员网关专项已单独通过。本次不改证书、不部署服务；回退可切回 `d1863342`，历史账本不清零。
+- 发布前补齐：私有 gateway 启动环境与独立预算服务都须取得 `KOURI_API_KEY`；公开计划示例已列出 gateway 环境。候选准备现在允许更换上游模型密钥，账号令牌、存储和预算绑定仍受保护；对应原生宿主 8 项定向测试通过。未重启、未发布；真实冒烟仅覆盖单次 Chat/工具调用。
+- 多模型切换：原生网页下拉和模型 API 已支持列表；新增 Kouri 模型的名称、实际 ID、能力容量及估费参数统一写在 `model_api.py` 的 `KOURI_MODELS`。预算网关白名单/费率与 Harness 自定义目录由此生成；当前无第二个真实模型 ID，因此页面仍只展示 Flash。离线双模型配置、网页选择/任务绑定和预算测试通过；正式 Kouri 协议与价格仍待私有配置后的联调。独立 File 管理场景的 Flash/Off 限制未扩大。
+- 先前增量验证：Python 模型/预算专项 33/33，Harness 适配器 7/7，网页自定义模型选择专项通过；完整网页任务测试 109 通过、6 失败、1 跳过（显示缺少本机 `pymupdf`/`PIL` 夹具依赖）。当时 `npm test` 的 Python 收集阶段因隔离环境缺少 `mcp` 提前退出。未重启正式服务。
+- 本地审阅：隔离工作区用 `--preview-model-picker --port 39080` 启动模拟 Web，页面实际显示默认 Flash 与“本地模拟 · 第二模型”，选择后输入框标签同步更新。私有认证链接保存在该次 `.local/web/runs/<RUN_ID>/access-url.txt`，不写入仓库；正式服务未操作。此预览只验证 UI 与本地绑定，不代表第二个 Kouri 模型已配置或真实可用。
+- 前端模型名称已改为仅显示 `DeepSeek V4.1 Flash`，不显示上游 Kouri 品牌；模型目录读取失败时的网页提示也改为通用服务端配置说明。2026-11-06 本地模拟预览已重新打开并实际切换两个选项，正式服务未重启。
+- 追加模型可在项目私有 `.env` 配置 `KOURI_EXTRA_MODELS_JSON`，不再要求修改 `model_api.py`；字段与默认能力见 `.env.example` 和 `docs/interfaces.md`。模型配置在进程启动时进入网页目录与预算费率，正式服务还须在私有启动计划及独立预算进程传入相同配置并按统一入口发布；本轮没有修改运行中的服务。
+- 本次验证：环境变量模型/预算 Python 专项 34/34；Harness 推理/模型适配 Node 7/7（允许本机回环端口后）。全量 `npm test` 在受限本地环境为 2914 通过、261 跳过、94 失败、15 错误，主要是回环端口 `EPERM` 及旧能力包源码锁；相关专项已单独通过。Kouri 真实冒烟使用 SkillFlow Healthcare 第 3 题 baseline 首请求、`off`、输出诊断上限 1024，HTTP 200、输入 1362/输出 56 token、1 个可解析工具调用；代理估费约 USD 0.0004758，账单实付未知。它不含工具执行或官方 verifier，不代表整题通过。原始请求/响应仅在忽略的 `.local/debug/kouri-baseline-smoke/`；正式服务未重启。
+
+- Flash 完整模板已放入 `config/kouri-models.json`，成为默认模型目录；`KOURI_MODELS_FILE` 可指定替代文件。模板保留内部 `deepseek-flash` 与上游 `deepseek-v4.1-flash` 映射，`KOURI_EXTRA_MODELS_JSON` 可继续追加，重复 ID 会拒绝。主工作区仅新增同内容模板供用户审阅，未覆盖已有源码或重启服务。模板读取、缺失文件拒绝和模型/预算相关 Python 专项 35/35 通过。
+
 ## 2026-11-05：PR156 整合 main 候选
 
 - 以 PR156 `8e697e51` 为起点，合入 #158 后的 main `a71e30ce`；在隔离检出处理冲突，共享工作区与原研究检出的未提交改动未覆盖。保留 main 的精简 AGENTS、文档分类与 README 布局，Evolution 研究进展仍在 docs。
@@ -1197,3 +1222,7 @@ TaskScene新契约修复全局重命名、明确转换原件/产物读取，以�
 ## 2026-10-16 即时发送与不限额度
 
 当前补丁将每任务及对照每侧费用也设为 `null`，与累计、次数和输出配置一致，移除指令发送前的设置网络等待，并保留模型选择失败时的草稿恢复。完整回归和无模型 smoke 通过；真实网页与上线记录见 [修复验收](../debug/geneloop-instant-submit-unlimited-20261016-v1.md)。PPT 使用同一冻结证据重编译的 r5 兼容包，不代表新增学习或质量收益。
+
+## 2026-11-06 Motif 可视化独立候选
+
+`codex/motif-library-ui` 基于 main `d1863342`，在工作区首页融合能力与演化，增加全局目录和账号隔离的只读证据接口。复用 #150 的脱敏协议；不改学习或执行器、不放宽认证守卫；Paper v85/PPT v83仅重导出只读接线兼容代码锁，旧库保留。生产服务未改。实现、验证、全量回归及尚未接入的数据边界统一维护于[模块交接](motif-visualization.md)，Windows/Mac工具迁移继续在原分支推进。
