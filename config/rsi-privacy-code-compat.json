@@ -45,7 +45,7 @@
   },
   "scripts/harless_gateway.mjs": {
     "certified": "0d55ab7993311aac55e4b0ccb4d22ae557454dc00de69957724362859f5b980a",
-    "current": "eea9fce6e1badacefc70f4ca1b00bd73eedf44146d14e0b6cda947877b2c9c91"
+    "current": "36af5951840a475792bc6cfd1412779c0e087a5dd8885d3947cdac030f56ae07"
   },
   "scripts/prepare-native-host.mjs": {
     "certified": "c4f9b1bf04712d361e6364600dcf2bd75a20d5410a09aaa92a028ea9ee94658f",

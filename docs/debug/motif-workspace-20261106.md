@@ -79,4 +79,10 @@ Windows / Node 24.19.0 / Python 3.11.7。当前工程检查不调用模型，不
 
 合并后桌面构建、13项检查、网关32项、Paper/PPT53项、Electron16组通过，控制台错误0。日志为 `merge-build.log`、`merge-desktop-check-unrestricted.log`、`merge-gateway.log`、`merge-compat.log`、`merge-renderer.log`。受限沙箱的桌面临时文件 rename EPERM 日志另存，正常权限重跑同一检查通过。最新截图目录为 `apps/desktop/.local/validation/renderer-9b3f3ed5-8dab-4727-a154-45b37a5ef70b/`；产品文档仅纳入明确标记合成任务的总览截图，不提交私人原始日志。
 
-本轮重新启动完整 `npm test`，并单独核对项目 `tests/test_*.mjs` 清单的 Node 阶段，结果另记；当前定向通过不代替完整结论。没有真实模型请求、生产部署或安装包构建/上传。
+`7a4a225f` 上完整 `npm test` 的 Python 阶段为2940通过、283跳过、56失败、30错误，717.96秒，未进入 Node 阶段；按项目清单显式运行 Node 得1618通过、59跳过、25失败。完整日志为 `merge-npm-test.log` 和 `merge-node-suite.log`。失败包括 Windows 符号链接特权、缺失 reportlab/PDF/OCR 依赖、路径/学习夹具断言等；未经同环境干净 main 对照，不把所有失败归为历史问题。最初 Node 清单表达式错误导致默认扫描了工程目录，错误运行日志另存 `merge-node-test.log`，不用于上述数量。
+
+完整 Node 回归另发现本轮直接引入的真实错误：新认证代码锁中的 `config/motif-evidence-v1.schema.json` 没有进入成员命名空间。最终只为这个公开文件增加精确只读挂载，更新相应白名单断言与网关精确兼容摘要；没有挂载整个 config 目录或用户证据。修复后 Motif/既有网关与原生产品策略36项通过（`final-gateway-prompt.log`），Paper/PPT兼容及负向53项通过（`final-compat.log`）。最终修复后没有重跑完整回归，不把定向通过当作全量结论。
+
+无模型 `npm run smoke` 通过（`merge-smoke.log`）；`motif:check`仍在Windows临时目录清理时报WinError145（`merge-motif-check.log`），未算通过。GitHub CI 的检查注释为“account is locked due to a billing issue”，任务没有启动；本次不修改账单/Actions设置。
+
+源码已推送并创建 [Draft PR #161](https://github.com/jingyio/GeneLoop/pull/161)，不使用自动关闭 Issue 的关键词；#137–#140 用评论分别交付真实范围。没有真实模型请求、生产部署或安装包构建/上传。桌面开发在其独立分支合入后统一提交整合源码与安装包。
