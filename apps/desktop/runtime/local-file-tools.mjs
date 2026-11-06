@@ -5,6 +5,10 @@ import { readPaperPage, checkCitationKeys } from './local-paper.mjs';
 import { createLocalPresentation } from './local-ppt.mjs';
 import { exportPptMaster, readPptMasterGuide, readPptMaterial, fillPptTemplate, editPptTemplate, createPptSourceReader } from './local-ppt-master.mjs';
 import {analyzeLocalData,auditLocalPaper,exportLocalFiles} from './local-scene-tools.mjs';
+import {createNativeWorkflows} from './local-workflows.mjs';
+import {workflowToolName} from './native-workflow-catalog.mjs';
+import {nativeVideoTools} from './local-video-workflow.mjs';
+import {workflowOutput} from './local-workflow-output.mjs';
 import { probeLocalVideo, renderLocalVideo, renderHybridVideo, renderNativeRemotion } from './local-video.mjs';
 
 const string = { type: 'string', required: true };
@@ -13,8 +17,8 @@ const jsonOutput = {
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
 };
 
-export function registerLocalFileTools(scope, reader, writer, onReport, scene = 'files', signal, media, approveVideo, ppt, onVideoPhase, nativeContext, legacyTools = false) {
-  const names = localSceneTools(scene,legacyTools);
+export function registerLocalFileTools(scope, reader, writer, onReport, scene = 'files', signal, media, approveVideo, ppt, onVideoPhase, nativeContext, legacyTools = false, fullWorkflows = false, approveFilePlan) {
+  const names = localSceneTools(scene,legacyTools,fullWorkflows);
   if (!names) throw Error('不支持该本机场景。');
   const tools = [
     defineTool({
@@ -50,6 +54,27 @@ export function registerLocalFileTools(scope, reader, writer, onReport, scene = 
       },
     }),
   ];
+  if(fullWorkflows&&!legacyTools&&scene==='video'&&nativeContext&&media)tools.push(...nativeVideoTools(nativeContext,reader,writer,media,signal,onReport));
+  let workflows;const workflowRegistrations=new Map();
+  if(fullWorkflows&&!legacyTools&&ppt&&scene!=='video') {
+    workflows=createNativeWorkflows(nativeContext,reader,writer,ppt,scene,signal,onReport,(kind,id,catalog)=>{
+      for(const dispose of workflowRegistrations.get(kind)??[])dispose();
+      const disposers=[];workflowRegistrations.set(kind,disposers);
+      try {
+        for(const tool of catalog)disposers.push(scope.tools.register({
+          name:workflowToolName(kind,tool.name),description:tool.description??tool.name,parameters:tool.inputSchema,
+          ...workflowOutput(nativeContext,async args=>workflows.call(id,tool.name,JSON.stringify(args),approveFilePlan)),
+        }));
+      }catch(error){for(const dispose of disposers)dispose();throw error;}
+    });
+    tools.push(defineTool({name:'local_workflow_open',
+      description:'在本机打开完整原场景MCP工具并将mcp__native_*工具直接加入当前Agent。sources为[{path,sha256}] JSON数组，只取实际阅读并固定的工作区材料；request为本轮实际任务。settings为JSON对象：data使用workflow=report，paper/ppt/files与场景同名；chat可选general/report/paper/ppt。PPT还可设slides(1至30)、template(academic/lab)、operation(generate/restyle)。优先直接调用返回的public_name工具，保留原生工具轨迹。文件整理作用于本轮副本，须预览、用户确认，并保留恢复工具。',
+      parameters:{sources:string,request:string,settings:string},output:jsonOutput,
+      async execute({sources,request,settings}){return workflows.open(sources,request,settings);}
+    }),defineTool({name:'local_workflow_close',description:'关闭一个本轮工作流并释放其工具与临时快照，已交付到工作区的文件保留。',
+      parameters:{workflow_id:string},output:jsonOutput,async execute({workflow_id}){return workflows.release(workflow_id);}
+    }));
+  }
   tools.push(defineTool({
       name: 'local_save_report',
       description: '在本机工作区的「GeneLoop 输出」文件夹中创建一份 Markdown 文件，返回文件名。请在报告中附上来源相对路径。',
@@ -200,4 +225,5 @@ export function registerLocalFileTools(scope, reader, writer, onReport, scene = 
   scope.tools.restrict({ allow: [] });
   scope.tools.guard(call => allowed.has(call.name) ? undefined : '工具不在当前本机场景的权限内。');
   for (const tool of tools) if(allowed.has(tool.name))scope.tools.register(tool);
+  return {async close(){for(const list of workflowRegistrations.values())for(const dispose of list)dispose();await workflows?.close();}};
 }

@@ -56,7 +56,10 @@ def node(script: str, payload: dict, *args: str) -> dict:
     runner = SCENE / 'dist' / script
     if not runner.exists():
         raise ValueError('请先在 scenarios/research_ppt 运行 npm ci 和 npm run build')
-    result = subprocess.run(['node', str(runner), *args], input=json.dumps(payload, ensure_ascii=False),
+    native = os.environ.get('SSS_PPT_NODE_ROOT')
+    argv = ([os.environ['SSS_PPT_NODE_EXECUTABLE'], str(Path(native) / 'local-python-node.mjs'), script, *args]
+            if native else ['node', str(runner), *args])
+    result = subprocess.run(argv, input=json.dumps(payload, ensure_ascii=False),
                             text=True, encoding='utf-8', capture_output=True, timeout=90)
     if result.returncode:
         if script == 'render.js':

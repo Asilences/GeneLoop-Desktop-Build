@@ -36,9 +36,7 @@ await download('https://github.com/astral-sh/python-build-standalone/releases/do
 if(!existsSync(join(root,'python')))run('python3',['-c',
   "import tarfile,sys;tarfile.open(sys.argv[1]).extractall(sys.argv[2],filter='data')",pythonArchive,root]);
 const python=join(root,'python/bin/python3');
-run(python,['-m','pip','install','--only-binary=:all:',
-  'python-pptx==1.0.2','lxml==6.1.3','Pillow==12.3.0','PyMuPDF==1.26.7',
-  'defusedxml==0.7.1','PyYAML==6.0.3','XlsxWriter==3.3.1','typing_extensions==4.16.0']);
+run(python,['-m','pip','install','--only-binary=:all:','-r',join(app,'native-tools-requirements.txt'),'-c',join(app,'native-tools-constraints.txt')]);
 
 const skill=join(root,'ppt-master');
 if(!existsSync(skill)) {

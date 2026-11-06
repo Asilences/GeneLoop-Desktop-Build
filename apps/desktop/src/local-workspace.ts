@@ -5,7 +5,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSyn
 import { basename, dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
-import type { LocalMediaTools, LocalPptTools, LocalScene, LocalTaskUpdate, VideoApproval } from './local-runtime.ts';
+import type { LocalMediaTools, LocalPptTools, LocalScene, LocalTaskUpdate, VideoApproval, FilePlanApproval } from './local-runtime.ts';
 import { reopenDirectory } from './local-workspaces.ts';
 import type { LocalWorkspace } from './local-workspaces.ts';
 
@@ -19,7 +19,7 @@ type SavedTask = {
   sessionId?: string;
   updates: Extract<LocalTaskUpdate, { kind: 'answer' | 'report' | 'done' }>[];
 };
-const reportName = /^GeneLoop-[a-f0-9-]{36}\.(?:md|pptx|pdf|mp4|json|tsx|csv|zip)$/;
+const reportName = /^GeneLoop-[a-f0-9-]{36}\.(?:md|pptx|pdf|mp4|json|tsx|csv|zip|txt|docx|xlsx|png)$/;
 const supportedScenes: readonly LocalScene[] = ['chat', 'files', 'data', 'paper', 'ppt', 'video'];
 const localRuntime = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime.asar') : join(here, '../runtime-bundle');
 const bundledTools = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-tools') : join(here, '../desktop-tools-bundle');
@@ -107,7 +107,7 @@ export class LocalWorkspaceConversation {
   private pending?: { workspaceId: string; threadId: string; abort: AbortController };
   private closed = false;
 
-  constructor(private options: { server: string; session: Session; approveVideo?: (request: VideoApproval) => Promise<boolean> }) {}
+  constructor(private options: { server: string; session: Session; approveVideo?: (request: VideoApproval) => Promise<boolean>; approveFilePlan?: (request: FilePlanApproval) => Promise<boolean> }) {}
 
   history(workspace: LocalWorkspace): SavedTask[] {
     return loadTasks(location(workspace).history);
@@ -187,9 +187,10 @@ export class LocalWorkspaceConversation {
       token = lease.token;
       abort.signal.throwIfAborted();
       this.controller = startLocalWorker({
-        ...task, legacyTools:lease.toolsetVersion!==2,executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
+        ...task, legacyTools:![2,3].includes(lease.toolsetVersion),fullWorkflows:lease.toolsetVersion===3,executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
         token: lease.token, model: lease.model,
         approveVideo: task.scene === 'video' && lease.videoRendering === true ? this.options.approveVideo : undefined,
+        approveFilePlan:this.options.approveFilePlan,
         onUpdate: event => {
           if (event.kind === 'done') { outcome = event; return; }
           if (event.kind === 'report') {

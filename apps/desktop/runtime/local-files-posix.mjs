@@ -127,7 +127,7 @@ export function openReportWriter(directory) {
   function writeArtifacts(items) {
     if (closed) throw Error('输出目录授权已关闭。');
     if (!Array.isArray(items) || !items.length || items.length > 4 || items.some(({extension, bytes}) =>
-      !['md','pptx','pdf','mp4','json','tsx','csv','zip'].includes(extension) || !Buffer.isBuffer(bytes) || !bytes.length || bytes.length > 80 * 1024 * 1024)) {
+      !['md','pptx','pdf','mp4','json','tsx','csv','zip','txt','docx','xlsx','png'].includes(extension) || !Buffer.isBuffer(bytes) || !bytes.length || bytes.length > 80 * 1024 * 1024)) {
       throw Error('交付物的类型、数量或大小超出本机限制。');
     }
     const fd = ensureOutput(), pending = [], id = randomUUID();

@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.12",
+  "version": "0.3.0-preview.13",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -38,12 +38,14 @@
     "electron-builder": "26.18.0",
     "pdfjs-dist": "6.4.299",
     "pptxgenjs": "4.0.1",
+    "quickjs-emscripten": "0.32.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "remotion": "4.0.539",
     "sharp": "0.35.5",
     "typescript": "7.0.2"
   },
+  "dependencies": {},
   "build": {
     "appId": "ai.geneloop.desktop",
     "productName": "GeneLoop Desktop",
@@ -97,6 +99,5 @@
       "deleteAppDataOnUninstall": false,
       "artifactName": "GeneLoop-Desktop-${version}-${arch}-Engine.${ext}"
     }
-  },
-  "dependencies": {}
+  }
 }

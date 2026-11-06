@@ -181,6 +181,16 @@ export class DesktopWorkspace {
       const server = this.stateValue.server;
       const runner = this.localWorkspace ??= new LocalWorkspaceConversation({
         server, session: this.currentSession,
+        approveFilePlan: async request => {
+          const preview=JSON.stringify(request.preview,null,2);
+          if(preview.length>24000)return false;
+          const answer=await dialog.showMessageBox(this.window,{
+            type:'question',title:'GeneLoop Desktop',message:'执行这份文件整理方案？',
+            detail:'以下操作只作用于本轮文件副本，工作区原件保持不变。\n\n'+preview,
+            buttons:['取消','确认整理副本'],defaultId:0,cancelId:0,
+          });
+          return answer.response===1;
+        },
         approveVideo: async request => {
           const details = request.assets.map(asset => `• ${asset.path}（${Math.ceil(asset.bytes / 1024)} KiB）`);
           const result = await dialog.showMessageBox(this.window, {

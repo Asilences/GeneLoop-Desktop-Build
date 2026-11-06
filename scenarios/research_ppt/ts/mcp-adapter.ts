@@ -144,7 +144,8 @@ function stringArg(args: Obj, name: string): string {
 
 async function main(): Promise<void> {
   const args=process.argv.slice(2); const flag=(name:string):string|undefined=>{ const i=args.indexOf(name); return i>=0?args[i+1]:undefined; };
-  const area=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+  const nativeSource=process.env.GENELOOP_PPT_SOURCE_ROOT;
+  const area=nativeSource ? resolve(nativeSource,'scenarios/research_ppt') : resolve(dirname(fileURLToPath(import.meta.url)),'..');
   const root=await realpath(flag('--root')??resolve(area,'../..'));
   const webPrivateRoot=args.includes('--web-session') ? process.env.HARLESS_PRIVATE_ROOT : undefined;
   const job=await privateFile(root,flag('--job')??process.env.SSS_PPT_JOB??'',webPrivateRoot);
@@ -161,7 +162,7 @@ async function main(): Promise<void> {
   const client=new Client({name:'sss-ppt-delivery-backend-client',version:'0.1.0'},{capabilities:{}});
   liveClient=client;
   const renderEnvironment: Record<string,string> = {};
-  for (const name of ['FONTCONFIG_FILE','FONTCONFIG_PATH']) {
+  for (const name of ['FONTCONFIG_FILE','FONTCONFIG_PATH','SSS_PPT_NODE_ROOT','SSS_PPT_NODE_EXECUTABLE','GENELOOP_PPT_SOURCE_ROOT','GENELOOP_PDF_OCR_ROOT','GENELOOP_DESKTOP_OCR_LOCK','ELECTRON_RUN_AS_NODE']) {
     if (process.env[name]) renderEnvironment[name] = process.env[name]!;
   }
   const backendArgs = [backendPath, ...(webPrivateRoot ? ['--web-session','--private-root',dirname(job)] : [])];
@@ -177,7 +178,19 @@ async function main(): Promise<void> {
     throw new AdapterRejected('backend_schema_rejected','实际后端工具集合与冻结配置不一致。');
   const offered=advertisedTools(expected.map(name=>byName.get(name)!),Number(jobData.slides));
   const schemaDigest=digest(offered);
-  const adapterDirectory=dirname(fileURLToPath(import.meta.url));
+  const executedDirectory=dirname(fileURLToPath(import.meta.url));
+  const adapterDirectory=nativeSource ? resolve(area,'dist') : executedDirectory;
+  const nativeScripts=['mcp-adapter.js','delivery-adapter.js','execution-policy.js','pending-plan.js','plan-recovery.js',
+    'render.js','layout-policy.js','layout-policy-cli.js','guard.js','guard-cli.js'];
+  async function guardNativeScripts():Promise<void> {
+    if(!nativeSource)return;
+    for(const name of nativeScripts) {
+      const executed=await readFile(resolve(executedDirectory,name));
+      const versioned=await readFile(resolve(adapterDirectory,name));
+      if(!executed.equals(versioned))throw new AdapterRejected('dependency_version_changed','ASAR执行脚本与场景版本守卫不一致。');
+    }
+  }
+  await guardNativeScripts();
   const adapter=await DeliveryAdapter.create(root,job,async(name,args)=>payload(await client.callTool({name,arguments:args},undefined,{timeout:240_000})),
     await dependencyFiles(root,backendPath,adapterDirectory),args.includes('--web-session'),webPrivateRoot);
   const pendingPlans=executionPolicy.strategy==='host_delivery' && jobData.allow_output===true
@@ -202,6 +215,7 @@ async function main(): Promise<void> {
   let queue:Promise<unknown>=Promise.resolve();
   server.setRequestHandler(ListToolsRequestSchema,async()=>({tools:offered}));
   server.setRequestHandler(CallToolRequestSchema,async request=>{
+    await guardNativeScripts();
     const pending=queue.then(async()=>{
       let args: Obj={};
       try {

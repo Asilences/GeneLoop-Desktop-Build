@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { join, posix } from 'node:path';
 
-export const pptRendererFiles = ['layout-policy', 'render'].map(name =>
-  new URL('../../../scenarios/research_ppt/ts/' + name + '.ts', import.meta.url));
+export const pptRendererFiles = readdirSync(new URL('../../../scenarios/research_ppt/ts/',import.meta.url))
+  .filter(name=>name.endsWith('.ts')).map(name=>new URL('../../../scenarios/research_ppt/ts/'+name,import.meta.url));
 
 export function stageRuntime(app, destination, dependencies = app) {
   const lock = JSON.parse(readFileSync(join(dependencies, 'package-lock.json'), 'utf8'));
@@ -45,11 +45,17 @@ export function stageRuntime(app, destination, dependencies = app) {
   stage('csv-parse');
   stage('pdfjs-dist');
   stage('pptxgenjs');
+  stage('quickjs-emscripten');
+  stage('sharp');
   for (const name of ['@remotion/renderer', '@remotion/bundler', 'remotion', 'react', 'react-dom']) stage(name);
   for (const file of pptRendererFiles) {
     const name = posix.basename(file.pathname, '.ts');
-    const source = readFileSync(file, 'utf8').replace('./layout-policy.js', './local-ppt-layout-policy.mjs');
-    writeFileSync(join(destination, 'local-ppt-' + name + '.mjs'), stripTypeScriptTypes(source, { mode: 'transform' }));
+    const original=readFileSync(file,'utf8');
+    if(['render','layout-policy'].includes(name))writeFileSync(join(destination,'local-ppt-'+name+'.mjs'),
+      stripTypeScriptTypes(original.replace('./layout-policy.js','./local-ppt-layout-policy.mjs'),{mode:'transform'}));
+    const directory=join(destination,'research-ppt');mkdirSync(directory,{recursive:true});
+    writeFileSync(join(directory,name+'.js'),stripTypeScriptTypes(original,{mode:'transform'}));
+    writeFileSync(join(directory,'package.json'),'{"type":"module"}\n');
   }
   cpSync(join(app, 'runtime'), destination, { recursive: true });
   return staged.size;
