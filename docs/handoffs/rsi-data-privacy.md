@@ -1,6 +1,6 @@
 # RSI 数据隐私交接
 
-- 2026-11-06 后续交付：PR159 已于 17:16 合并，内容停在 `5294897e`，不代表当前全场景模块。后续工作使用 `codex/rsi-privacy-platform`，基于最新 main 整理新的草稿 PR供桌面端对接。正常任务和宿主校验读取原件；仅 RSI 学习副本脱敏。最新完整回归尚未通过，已观察的协议字段误判、文件发布读取竞态等修正仍在验证；不提前关闭 Issue。
+- 2026-11-06 后续交付：[草稿 PR162](https://github.com/jingyio/GeneLoop/pull/162) 已创建，分支 `codex/rsi-privacy-platform` 已推送，供桌面端对接。PR159 已于 17:16 合并，内容停在 `5294897e`，不代表当前全场景模块。正常任务和宿主校验读取原件；仅 RSI 学习副本脱敏。最新完整回归尚未通过，已观察的协议字段误判、文件发布读取竞态等修正仍在验证；不提前关闭 Issue。已在 [141](https://github.com/jingyio/GeneLoop/issues/141#issuecomment-6683861349)、[142](https://github.com/jingyio/GeneLoop/issues/142#issuecomment-6683862014)、[143](https://github.com/jingyio/GeneLoop/issues/143#issuecomment-6683862447)、[144](https://github.com/jingyio/GeneLoop/issues/144#issuecomment-6683862771) 分别记录初步解决范围和待验收项。
 
 - 更新时间与交接人：2026-11-06，Codex。
 - 目标与范围：GeneLoop 全场景公共脱敏模块，覆盖两个 Web 宿主、公共 SDK、离线导入、研究学习模型边界及公开导出；新 MCP 场景继承公共接线。继续推进 Issue 141、142、143、144，保留默认私有、预览和逐次同意。
