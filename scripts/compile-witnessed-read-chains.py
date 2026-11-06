@@ -55,6 +55,7 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--contracts", type=Path, action="append", required=True,
                         help="approved tool contract JSON; repeat to combine connectors")
+    parser.add_argument("--projected-scene", choices=("paper-proofreading", "ppt"))
     args = parser.parse_args()
     if len(args.train) < 2:
         parser.error("at least two independent training traces are required")
@@ -71,16 +72,21 @@ def main() -> int:
         path = Path(filename).resolve(strict=True)
         if not path.is_relative_to(local_root):
             parser.error("event traces must stay under .local")
-        identity = load_trace_identity(Path(identity_filename), path, local_root)
+        identity = load_trace_identity(Path(identity_filename), path, local_root, projected=bool(args.projected_scene))
         identities.append(identity)
         raw = path.read_bytes()
-        events = [json.loads(line) for line in raw.decode("utf-8").splitlines()
-                  if line.strip()]
-        provenance = infer_dsh_provenance(events, contracts)
-        traces.append(extract_dsh_trace(
-            events, contracts, trace_id=trace_id,
-            task_fingerprint=identity["research_decision_id"],
-            provenance_by_call_id=provenance))
+        if args.projected_scene:
+            from src.adapters.rsi_learning_trace import compilation_trace
+            traces.append(compilation_trace(json.loads(raw), contracts, scene=args.projected_scene,
+                                            trace_id=trace_id, fingerprint=identity["research_decision_id"]))
+        else:
+            events = [json.loads(line) for line in raw.decode("utf-8").splitlines()
+                      if line.strip()]
+            provenance = infer_dsh_provenance(events, contracts)
+            traces.append(extract_dsh_trace(
+                events, contracts, trace_id=trace_id,
+                task_fingerprint=identity["research_decision_id"],
+                provenance_by_call_id=provenance))
         inputs.append({"trace_id": trace_id,
                        "research_decision_id": identity["research_decision_id"],
                        "task_id": identity["task_id"],

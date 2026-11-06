@@ -1387,19 +1387,16 @@ test('real Paper product manifest mounts the page-one continuation only on Motif
  const root=fileURLToPath(new URL('../',import.meta.url));
  const sceneRegistry=JSON.parse(readFileSync(join(root,'config/harless-scenes.json'),'utf8'));
  const base=join(root,sceneRegistry.scenes.find(row=>row.id==='paper-proofreading').rsi.runtime_bundle);
- const read=name=>JSON.parse(readFileSync(join(base,name),'utf8'));
- const hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
- const entry=read('entry.json'),cert=read('certification.json'),schemas=read('tool-schemas.json');
+ const python=process.env.SSS_PYTHON??(process.platform==='win32'?'python':'python3');
+ const runtime=JSON.parse(execFileSync(python,['-c',
+  'import json,sys; from pathlib import Path; from src.adapters.harless_rsi_bundle import load_product_bundle; print(json.dumps(load_product_bundle(Path.cwd(), Path(sys.argv[1]), "paper-proofreading")))',
+  base],{cwd:root,encoding:'utf8'}));
+ const schemas=runtime.certified_tool_schemas;
  const common=JSON.parse(readFileSync(join(root,'config/geneloop-capabilities.json'),'utf8')).tools;
  const fixtureSchemas=[...schemas,...common.map(name=>({name,description:'Free shared capability schema diagnostic',
   parameters:{type:'object',properties:{},required:[]}}))].sort((a,b)=>a.name<b.name?-1:1);
- const scene={id:'paper-proofreading',label:'Paper',preset:'sss-paper-release-protocol',adapter:'workspace',mcp_rows:[],
-  runtime_kind:entry.runtime_kind,runtime_mode:entry.mode,runtime_library:join(base,'library.json'),runtime_library_sha256:hash(join(base,'library.json')),
-  manifest:join(base,'online-manifest.json'),task:join(base,'task.json'),allowed_tools:[...schemas.map(row=>row.name),...common],common_tools:common,
-  matching_policy:cert.matching_policy,binding_policy:cert.binding_policy,certification_scope:cert.certification_scope,
-  certification_path:join(base,'certification.json'),certification_sha256:hash(join(base,'certification.json')),
-  certified_code_locks:Object.fromEntries(Object.entries(cert.code_locks).map(([name,sha])=>[join(root,name),sha])),
-  certified_tool_schemas:schemas};
+ const scene={...runtime,id:'paper-proofreading',label:'Paper',preset:'sss-paper-release-protocol',adapter:'workspace',mcp_rows:[],
+  allowed_tools:[...schemas.map(row=>row.name),...common],common_tools:common};
  const f=await fixture({broker:true,scenes:[scene],capability_profile:scene.id,comparison_scenes:[scene.id],fixtureSchemas});
  try{
   const {sessionId}=await f.ctx.sessionController.create({});
@@ -3076,6 +3073,108 @@ test('large native images pass paired task preview without base64 or scene quota
    assert.equal(call.content.find(p=>p.type==='image').data,image.data);
   }
  }finally{await f.close();}
+});
+
+const rsiIntentCases = JSON.parse(readFileSync(new URL('./fixtures/rsi_task_intent.json', import.meta.url), 'utf8'));
+for (const semantic of [false, true]) for (const [scene, tools] of [
+  ['paper-proofreading', ['mcp__paper_checks__pin_document', 'mcp__paper_checks__read_pinned_document']],
+  ['ppt', ['mcp__ppt_master__pin_source', 'mcp__ppt_master__convert_source', 'mcp__ppt_master__read_converted_source']],
+]) test(`RSI privacy: ${scene} ${semantic ? 'semantic' : 'structural'} Web settlement and offline import agree`, {
+  skip: options.skip || (semantic && !process.env.SSS_RSI_GITLEAKS),
+}, async () => {
+  const python = process.env.SSS_PYTHON ?? 'python';
+  const previous = process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;
+  const previousSemantic = process.env.SSS_RSI_PRIVACY_SEMANTIC;
+  process.env.SSS_RSI_PRIVACY_DIAGNOSTIC = '1';
+  process.env.SSS_RSI_PRIVACY_SEMANTIC = semantic ? '1' : '0';
+  const received = [];
+  const receiver = createServer(async (request,response) => {
+    const chunks=[]; for await(const chunk of request) chunks.push(chunk);
+    received.push(Buffer.concat(chunks).toString()); response.end('ok');
+  });
+  await new Promise(resolve => receiver.listen(0,'127.0.0.1',resolve));
+  const schemas = tools.map(name => ({...toolSchemas[0], name}));
+  const f = await fixture({scenes: [{id: scene, label: scene, preset: 'sss-task', adapter: 'workspace',
+    mcp_rows: [], allowed_tools: tools}], capability_profile: scene, fixtureSchemas: schemas, learning_python: python,
+    rsi_sharing_endpoint: 'http://127.0.0.1:'+receiver.address().port+'/private-test-receiver'});
+  try {
+    const secret = '私有标题_MARKER_person@example.invalid';
+    const intent = rsiIntentCases.find(row => row.scene === scene);
+    const task = await f.preview({instruction: semantic ? intent.text : secret});
+    assert.equal((await f.submit(task)).status, 200);
+    const session = f.agents.get(task.session_id).session;
+    const source = 'source-' + 'a'.repeat(32), converted = 'result-' + 'b'.repeat(32);
+    for (const [index, name] of tools.entries()) {
+      const callId = secret + index;
+      const args = index === 0 ? {name: secret, sha256: 'c'.repeat(64)} :
+        index === 1 ? {source_id: source} : {converted_id: converted};
+      session.append('tool/call', {callId, name, arguments: JSON.stringify(args)});
+      session.append('tool/result', {message: {source: {kind: 'tool', callId}, content: [
+        {type: 'tool-result', toolCallId: callId, isError: false, content: [
+          {type: 'text', text: JSON.stringify(index === 0 ? {source_id: source, name: secret} :
+            {converted_id: converted, content: {text: secret, path: '/private/secret'}})},
+        ]},
+      ]}});
+    }
+    session.append('tool/call', {callId: 'unknown', name: secret, arguments: JSON.stringify({secret})});
+    await f.complete(task);
+    const output = join(f.directory, 'tasks', task.task_id);
+    const samplePath = join(output, 'rsi-learning-trace.json');
+    const web = readFileSync(samplePath, 'utf8');
+    const eventsPath = join(output, 'events.jsonl');
+    const start = JSON.parse(readFileSync(join(output, 'effective-config.json'), 'utf8')).trace_start_index;
+    const args = ['-m', 'src.adapters.rsi_learning_trace', '--input', eventsPath, '--scene', scene,
+      '--status', 'completed', '--start', String(start)];
+    const offline = execFileSync(python, [...args, '--authorized', ...(semantic ? ['--include-task-intent'] : [])],
+      {encoding: 'utf8'});
+    assert.deepEqual(JSON.parse(web), JSON.parse(offline));
+    assert.ok(readFileSync(eventsPath, 'utf8').includes(secret));
+    for (const value of [secret, source, converted, '/private/secret', task.task_id]) {
+      assert.ok(!web.includes(value));
+    }
+    const sample = JSON.parse(web);
+    assert.equal(sample.format, `geneloop.rsi-learning-trace/${semantic ? 'v3' : 'v2'}`);
+    if (semantic) {
+      for (const span of intent.private) assert.ok(!sample.task_intent.includes(span), span);
+      for (const span of intent.keep) assert.ok(sample.task_intent.includes(span), span);
+    } else {
+      assert.ok(!('task_intent' in sample));
+    }
+    assert.deepEqual(sample.nodes.map(node => node.tool), [...tools, null]);
+    assert.deepEqual(sample.bindings, tools.slice(1).map((_, index) => ({
+      from: index, to: index + 1, field: index === 0 ? 'source_id' : 'converted_id',
+      parameter: index === 0 ? 'source_id' : 'converted_id',
+    })));
+    assert.equal(sample.nodes.at(-1).outcome, 'unapproved_tool');
+    const share = async(body,authorized=true) => {
+      const request=new Request('http://local/api/harless/rsi-sharing',body===undefined?{}:{
+        method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'},
+      });
+      request.authorized=authorized;
+      return f.routes.get('/api/harless/rsi-sharing').fetch(request);
+    };
+    assert.equal((await share(undefined,false)).status,401);
+    assert.equal((await share({action:'preview',task_id:'foreign'})).status,409);
+    const preview=await(await share({action:'preview',task_id:task.task_id})).json();
+    const expectedShared={...sample,format:'geneloop.rsi-learning-trace/v2'};
+    delete expectedShared.task_intent;
+    assert.deepEqual(JSON.parse(preview.payload).trace,expectedShared);
+    assert.equal(createHash('sha256').update(preview.payload).digest('hex'),preview.sha256);
+    assert.equal(received.length,0);
+    assert.equal((await share({action:'send',preview_id:preview.preview_id,sha256:preview.sha256,consent:false})).status,409);
+    assert.equal(received.length,0);
+    assert.equal((await share({action:'send',preview_id:preview.preview_id,sha256:preview.sha256,consent:true})).status,200);
+    assert.deepEqual(received,[preview.payload]);
+    for(const raw of [secret,source,converted,'/private/secret',task.task_id])assert.ok(!received[0].includes(raw));
+  } finally {
+    await f.close();
+    receiver.closeAllConnections();
+    await new Promise(resolve=>receiver.close(resolve));
+    if (previous === undefined) delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;
+    else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC = previous;
+    if (previousSemantic === undefined) delete process.env.SSS_RSI_PRIVACY_SEMANTIC;
+    else process.env.SSS_RSI_PRIVACY_SEMANTIC = previousSemantic;
+  }
 });
 
 test('actual PPT adapter completion freezes single-learning evidence before another message edits outputs',

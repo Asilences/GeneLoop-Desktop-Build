@@ -1,0 +1,62 @@
+[
+  {
+    "scene": "paper-proofreading",
+    "text": "联系人：王小明。Email: xiaoming@example.com，手机 +86 138 0013 8000。请核对 PDF 第 4 页的引用，compare DOI 和参考文献条目。",
+    "private": ["王小明", "xiaoming@example.com", "138 0013 8000"],
+    "keep": ["PDF", "第 4 页", "compare DOI", "参考文献条目"]
+  },
+  {
+    "scene": "paper-proofreading",
+    "text": "Please ask Jane Miller to review the citations. 来源 /home/reviewer/draft.pdf，保留 IEEE citation order，检查 bibliography 的重复条目。",
+    "private": ["Jane Miller", "/home/reviewer/draft.pdf"],
+    "keep": ["review the citations", "IEEE citation order", "bibliography", "重复条目"]
+  },
+  {
+    "scene": "paper-proofreading",
+    "text": "Use https://review.example.com/draft?signature=opaque-value to check references. 先核对 arXiv 编号，再标记 bibliography 中缺失的年份。联系电话：415-555-0132。",
+    "private": ["https://review.example.com", "opaque-value", "415-555-0132"],
+    "keep": ["check references", "arXiv", "bibliography", "缺失的年份"]
+  },
+  {
+    "scene": "paper-proofreading",
+    "text": "核对公式编号与交叉引用，verify Equation (12) and keep Figure 3 labels. 不要修改正文，report discrepancies only.",
+    "private": [],
+    "keep": ["公式编号与交叉引用", "Equation (12)", "Figure 3", "不要修改正文", "report discrepancies only"]
+  },
+  {
+    "scene": "paper-proofreading",
+    "text": "我叫李晓红，please verify table captions 和 footnotes。邮寄地址：北京市海淀区示例路18号。证件号 11010119900101001X。",
+    "private": ["李晓红", "北京市海淀区示例路18号", "11010119900101001X"],
+    "keep": ["verify table captions", "footnotes"]
+  },
+  {
+    "scene": "ppt",
+    "text": "姓名：陈晓梅。Please use the existing slide master，保留 16:9 版式，highlight the ablation results，联系邮箱 ppt-review@example.com。",
+    "private": ["陈晓梅", "ppt-review@example.com"],
+    "keep": ["slide master", "16:9", "highlight the ablation results"]
+  },
+  {
+    "scene": "ppt",
+    "text": "David Turner uploaded quarterly-review.pptx. 请沿用母版，add a comparison chart on slide 3，保留图例及误差线。",
+    "private": ["David Turner", "quarterly-review.pptx"],
+    "keep": ["沿用母版", "comparison chart on slide 3", "图例及误差线"]
+  },
+  {
+    "scene": "ppt",
+    "text": "来源 C:\\Users\\analyst\\slides\\private-layout.pptx，IP 192.0.2.10。请 update the chart labels，用柱状图对比 3 组结果。",
+    "private": ["C:\\Users\\analyst\\slides\\private-layout.pptx", "192.0.2.10"],
+    "keep": ["update the chart labels", "柱状图", "3 组结果"]
+  },
+  {
+    "scene": "ppt",
+    "text": "Cookie: internal-demo-cookie\n密码：opaque-secret\n保留母版比例，create three slides with a bar chart，图注注明 mean ± SD。",
+    "private": ["internal-demo-cookie", "opaque-secret"],
+    "keep": ["保留母版比例", "three slides", "bar chart", "mean ± SD"]
+  },
+  {
+    "scene": "ppt",
+    "text": "打开 \"/mnt/design/Private Project/layout.pptx\"。Use a stacked chart，保持每页不超过 4 条 bullet points。联系邮箱 artist@workplace.example。",
+    "private": ["Private Project", "layout.pptx", "artist@workplace.example"],
+    "keep": ["stacked chart", "每页不超过 4 条", "bullet points"]
+  }
+]

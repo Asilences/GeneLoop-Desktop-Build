@@ -1,0 +1,46 @@
+{
+  "scenarios/research_ppt/motif_v6.py": {
+    "certified": "2a8d6cc9c27bdb30d3bae6dc598460635c2be1a4a5aa4190c605c813096ce1ad",
+    "current": "b129d91b8fb1069fd13c36ca585075a02f8d418ab35f1e94fa47785faa9e387b"
+  },
+  "scripts/compile-witnessed-read-chains.py": {
+    "certified": "a0111bc4254d982b27a38d591c00e71d4c090bdf3e35e72c8b9abb1730989fc3",
+    "current": "b1dd62ebd6d824125e99dd12f5f483ffab87aca6f5ce9d065a2207c34329402b"
+  },
+  "scripts/harness-web.py": {
+    "certified": "04e3bb997cc76f974312dcbb05fc4aa01dadf01428500258ff187bdc8f26f5ef",
+    "current": "228dd80387ca3e41ae4ac9fcf0ba1479c94623d3fbce41a117f811b759639245"
+  },
+  "scripts/learn-ppt-master-motif.py": {
+    "certified": "42b928b1df3eb83b6c096823651afe8e1c82885c57f6b772500eb630e327dfe0",
+    "current": "2f55f219cac3c8e70cf97bd7d3d89c771f030bb120f1a260bdf8d6071e6996d0"
+  },
+  "scripts/learn-web-paper-document-motif.py": {
+    "certified": "09c7d55ac6ed6f6ac297a7dfc4586cbff6c2d0c0ce4f374ed2f7db429fc34edd",
+    "current": "ea42f445fdda555561dea936371aef8c20f310f42a5e093a366401723867bb15"
+  },
+  "scripts/learn-web-paper-tasks.py": {
+    "certified": "bb3a8caecf84921446cc446358ccc2204283ade7549b8aaa8a0a2d83e2fa7c71",
+    "current": "5e91b22ebe26e077813c7731ef01356dc1c7c6dbb18fda4f7a667fed600cffbe"
+  },
+  "scripts/learn-web-ppt-tasks.py": {
+    "certified": "43796d1faa5d56ff679a0a90677b012215791275ae24912279208e2533851954",
+    "current": "79f1743f6d7efa2b6c59a494e177aa6a6ed18ef21700fef89870dd63ba17abe5"
+  },
+  "src/adapters/dsh_web_tasks.ts": {
+    "certified": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284",
+    "current": "f85236f4070d6dba409f53e1dd084d1707f5c9e75ca772a2bf2cf98abbaf0b3c"
+  },
+  "src/adapters/harless_rsi_bundle.py": {
+    "certified": "06af97b2a465a439dd4323a37f764c492cd3927bb1bed232afeef8f389f5fe91",
+    "current": "9a8ab054a4d130395c5fe6f515e6a2afefdda6a2fb671f6ec00a622d4b3aa4ac"
+  },
+  "src/adapters/task_identity.py": {
+    "certified": "cc81e05c7eaf8e17a7bf9e0e04443a922ea7cbee6eb1745e199a3b8cd4081bb8",
+    "current": "53f1fad9248777d87c17c7518b689b0f2556ab754cdd86b5621d3bc1b2adf4c6"
+  },
+  "src/motif_core/offline/edge_compiler.py": {
+    "certified": "1ef4dda018d33e5120e37c2951928d617f582306e7f69552fcd343ab941c4261",
+    "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
+  }
+}

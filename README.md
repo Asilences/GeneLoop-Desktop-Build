@@ -1,5 +1,9 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+Paper/PPT 的 [RSI 任务语义脱敏](docs/rsi-data-privacy.md#v3-任务语义诊断)可在隔离 Web 和离线导入中显式启用，使用本地 Presidio 和 Gitleaks。普通运行只需原有依赖。
+
+轨迹、源码共享和可选遥测默认关闭。桌面设置中的[数据与隐私](docs/rsi-data-privacy.md#默认私有与可选共享)提供工具流程预览、逐次授权、保存本地副本与取消；接收端由部署方在私有配置中指定。
+
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
 模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。SkillFlow baseline 首请求的 Kouri Chat/工具调用冒烟已返回 HTTP 200，见[记录](docs/debug/kouri-env-models-20261106.md)；文件、搜索、思考能力、容量和实际费率仍待真实兼容性验收。当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。

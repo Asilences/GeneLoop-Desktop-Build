@@ -1,5 +1,6 @@
 import {request,post} from './api.js';
 import {node,button,dialog,icon,choiceControl} from './components.js';
+import {privacyPanel} from './privacy.js';
 
 const conversationSizes=[12,14,16,18,20];
 export function conversationPreferences(){
@@ -49,8 +50,9 @@ export function settingsPanel(context,initial='appearance'){
   const modal=dialog('设置',node('div',{class:'settings-layout'},menu,body));
   modal.classList.add('settings-dialog');
   const guard=fn=>async()=>{try{await fn();}catch(error){context.fail(error);}};
-  let activePage, pageRevision=0;
+  let activePage, pageRevision=0,privacy;
   async function page(id,{preserveScroll=false}={}){
+    privacy?.dispose();privacy=undefined;
     activePage=id;
     const revision=++pageRevision,scroll=body.scrollTop;
     const current=()=>modal.open&&revision===pageRevision;
@@ -60,6 +62,8 @@ export function settingsPanel(context,initial='appearance'){
       body.append(node('h3',{},'桌面外观'),node('p',{},'选择桌面主题，点击后立即应用。'),themeCards(context.theme),conversationSettings(context.applyConversationPreferences),
         node('section',{class:'settings-connection'},node('h4',{},'服务器连接'),node('p',{},location.origin),
           node('p',{},'可在「文件」菜单中修改连接设置。'),button('刷新服务器状态',guard(async()=>{modal.close();await context.refresh();}),'secondary')));
+    }else if(id==='privacy'){
+      privacy=privacyPanel();body.append(privacy.section);
     }else if(id==='models'){
       body.append(node('h3',{},'模型'),node('p',{},'查看服务器开放的模型和推理档位。当前会话的模型可在输入框旁切换。'));
       const models=context.models();
@@ -100,8 +104,8 @@ export function settingsPanel(context,initial='appearance'){
     if(modal.open&&(activePage==='archive'||activePage==='trash'))page(activePage,{preserveScroll:true}).catch(context.fail);
   };
   context.sessionChanges.addEventListener('change',updateSessionPage);
-  modal.addEventListener('close',()=>context.sessionChanges.removeEventListener('change',updateSessionPage),{once:true});
-  for(const [id,label,symbol]of [['appearance','通用设置','sun'],['models','模型','files'],['archive','已归档对话','archive'],['trash','最近删除','trash'],['account','账户与安全','user']]){
+  modal.addEventListener('close',()=>{privacy?.dispose();context.sessionChanges.removeEventListener('change',updateSessionPage);},{once:true});
+  for(const [id,label,symbol]of [['appearance','通用设置','sun'],['privacy','数据与隐私','lock'],['models','模型','files'],['archive','已归档对话','archive'],['trash','最近删除','trash'],['account','账户与安全','user']]){
     const tab=button([icon(symbol),label],guard(()=>page(id)));
     tab.dataset.page=id;
     menu.append(tab);
