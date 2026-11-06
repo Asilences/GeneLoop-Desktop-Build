@@ -123,4 +123,4 @@ def discover_deepseek_models(api_key: str, *, opener=None) -> dict:
         return {'data': rows, 'checked_at': datetime.now(timezone.utc).isoformat(),
                 'source': CATALOG_URL, 'http_status': 200, 'model_requests': 0}
     except Exception:
-        raise ValueError('无法读取模型列表，请检查服务器连接和 Kouri 凭据配置后重试。') from None
+        raise ValueError('无法读取模型列表，请检查服务端模型配置和网络连接后重试。') from None

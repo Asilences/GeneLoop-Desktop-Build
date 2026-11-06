@@ -20,7 +20,7 @@ MODEL_CHAT_PATH = '/v1/chat/completions'
 # not verified Kouri billing rates. Do not list a model without a deliberate rate.
 KOURI_MODELS = (
     {'id': MODEL_SDK_ID, 'wire_id': MODEL_WIRE_ID,
-     'label': 'Kouri AI · DeepSeek V4.1 Flash',
+     'label': 'DeepSeek V4.1 Flash',
      'context_window': 1_000_000, 'max_output_tokens': 393_216,
      'input_modalities': ('text', 'image'),
      'supported_reasoning_efforts': ('off', 'low', 'high', 'max'),
