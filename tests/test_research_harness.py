@@ -377,7 +377,7 @@ def test_original_harness_native_skill_and_callback_mcp_use_original_request_led
     ledger.mkdir()
     (ledger / 'budget-checkpoint.json').write_text(json.dumps({'request_count': 5, 'reserved_usd': 0}))
     (ledger / 'cost-ledger.jsonl').write_text('')
-    monkeypatch.setenv('DEEPSEEK_API_KEY', 'diagnostic-local-provider-only')
+    monkeypatch.setenv('KOURI_API_KEY', 'diagnostic-local-provider-only')
     original_server = proposal.create_server
     with ThreadingHTTPServer(('127.0.0.1', 0), Provider) as provider:
         thread = threading.Thread(target=provider.serve_forever, daemon=True)

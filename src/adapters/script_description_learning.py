@@ -5,6 +5,8 @@ requests propose and review metadata, never code, bindings or execution permissi
 """
 from __future__ import annotations
 
+from .model_api import model_chat_url, model_wire_id, model_api_key
+
 from copy import deepcopy
 import json
 import os
@@ -188,9 +190,8 @@ class MeteredDescriptionModel:
         if ledger_prefix not in ('description', 'negative'):
             raise ValueError('invalid_learning_ledger_prefix')
         self.output, self.config, self.calls = output, config, 0
-        self.key = os.environ.get('DEEPSEEK_API_KEY')
-        if not self.key:
-            raise ValueError('description_model_credentials_missing')
+        try:self.key = model_api_key()
+        except ValueError:raise ValueError('description_model_credentials_missing') from None
         checkpoint = store / (ledger_prefix+'-budget.json')
         if not checkpoint.exists():
             save(checkpoint, {'request_count': 0, 'reserved_usd': 0})
@@ -216,8 +217,10 @@ class MeteredDescriptionModel:
                         'reserved_usd': dollars, 'reasoning_effort': 'off', 'reset_history': False})
         started, status, usage = time.monotonic(), 0, {}
         try:
-            request = urllib.request.Request('https://api.deepseek.com/v1/chat/completions',
-                data=raw, headers={'Authorization': 'Bearer '+self.key, 'Content-Type': 'application/json'})
+            wire_payload = {**payload, 'model': model_wire_id(payload['model'])}
+            request = urllib.request.Request(model_chat_url(),
+                data=json.dumps(wire_payload, ensure_ascii=False).encode(),
+                headers={'Authorization': 'Bearer '+self.key, 'Content-Type': 'application/json'})
             with urllib.request.urlopen(request, timeout=90) as response:
                 answer = response.read(512_001)
                 status = response.status
