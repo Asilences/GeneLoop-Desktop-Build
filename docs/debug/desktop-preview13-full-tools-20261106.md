@@ -26,8 +26,11 @@ Windows/Mac 随包提供目标平台 Python wheels、原场景代码、Office、
 - Windows：实际 MCP 发现/调用和 80 项 DSH 注册、文本输出、QuickJS 代码执行、文件方案拒绝/确认/ZIP、来源失效、PPT→Office PDF/PNG、官方 PDF→Markdown 转换通过。原生 Remotion 渲染/完整解码、裁剪拼接和真实 PCM RMS 统计通过。桌面编译和已有 12 项定向检查通过。
 - Windows：固定中英文语言数据上的实际扫描页 OCR 通过。OCR 是转录，不能代替原图或科研内容审阅。
 - 上述为合成材料上的真实工具诊断，无模型请求，不是场景效果/费用验收。私有日志使用 `native-workflows-check.log`、`native-media-full.log`、`native-code-check.log`、`native-ocr-check.log` 和 `native-workflow-desktop-check.log`。
-- 本轮打包后验证、Mac 两架构新增工具验证及真实模型完整流程尚待完成，不能沿用 preview.12 的成功记录冒充本轮通过。
+- Windows 最终 ASAR 完整 MCP 检查与 DSH 启动/读写/权限拒绝/取消通过，实际归档摘要记录在私有 `preview13-windows-package.json`。未使用开发目录的 Python/工具代替随包版本。
+- 完整 `npm test` 在合入新 main 前执行：2174通过、84失败、272跳过、30错误，不能报告全绿。相较 preview.12 增加的转换日志兼容与认证版本16项问题已修复；转换相关定向检查通过，保留原网页字节后公共文件种子20项通过。既有 Windows 权限/环境及历史套件失败保留；未为形式重复全量或删除检查。
+- 首轮 Mac 增量检查失败：Intel 无当前 cryptography 官方 wheel，ARM 的增量启动脚本调用了受限 PATH 下的 dirname。已修正；Intel 在构建端从固定 SHA 的当前源包编译并静态链接 OpenSSL，不降级依赖，不要求用户编译。首轮失败与费用保留。
+- 用户要求暂停工具扩展，优先交付 Windows/Mac 预览。Mac 两架构正式包内验证、真实模型完整流程仍须按实际结果更新，不能沿用 preview.12 的成功记录冒充本轮通过。
 
 ## 后续验收与回退
 
-保留 0.2.40、preview.11 和 preview.12 已有源码/产物。正式服务不在本轮直接切换；V100 真实模型验收须使用原账号与累计账本，先通过统一生命周期入口 status/check 确认。Mac 仍仅使用已授权免费额度，安装包和 CI 产物不上传。跨平台 Motif 库须按新工具/渲染/语言数据版本重新认证，不能直接重标旧证书。
+保留 0.2.40、preview.11 和 preview.12 已有源码/产物。正式服务不在本轮直接切换；V100 真实模型验收须使用原账号与累计账本，先通过统一生命周期入口 status/check 确认。Mac 仅使用免费额度（本轮上限提高到15美元，保留原账本），用户已授权私有一天中转，取回核对后立即删除；不发布 Release。Windows 包不上传。跨平台 Motif 库须按新工具/渲染/语言数据版本重新认证，不能直接重标旧证书。

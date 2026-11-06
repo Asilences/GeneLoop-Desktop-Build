@@ -51,13 +51,26 @@ export function nativeVideoTools(ctx,reader,writer,media,signal,onReport) {
     if(!Number.isFinite(start)||start<0||!Number.isFinite(duration)||duration<=0||duration>90||!/\.(mp4|mov|mp3|wav)$/i.test(row.path))throw Error('音轨分析需要媒体素材、非负起点和不超过90秒的时段。');
     return inSceneScratch(async scratch=>{
       const extension=row.path.split('.').at(-1).toLowerCase();
-      const path=join(scratch,'source.'+extension),pcm=join(scratch,'samples.pcm');
+      const wave=process.platform==='darwin',path=join(scratch,'source.'+extension),pcm=join(scratch,wave?'samples.wav':'samples.pcm');
       writeFileSync(path,reader.readBytes(row.path,80*1024*1024),{flag:'wx'});
       const demux=['mp4','mov'].includes(extension)?['-f','mov','-enable_drefs','0','-use_absolute_path','0']:['-f',extension];
       await runNativeProcess(ctx,[media.ffmpeg,'-v','error','-nostdin','-protocol_whitelist','file,pipe',...demux,'-i',path,
-        '-ss',String(start),'-t',String(duration),'-map','0:a:0','-vn','-ac','1','-ar','16000','-c:a','pcm_s16le','-f','s16le','-n',pcm],scratch,signal,{timeoutMs:100000});
+        '-ss',String(start),'-t',String(duration),'-map','0:a:0','-vn','-ac','1','-ar','16000','-c:a','pcm_s16le','-f',wave?'wav':'s16le','-n',pcm],scratch,signal,{timeoutMs:100000});
       if(statSync(pcm).size>3*1024*1024)throw Error('音轨解码超出本次分析时段。');
-      const bytes=readFileSync(pcm),n=Math.floor(bytes.length/2);if(!n)throw Error('该时段没有音频样本。');
+      let bytes=readFileSync(pcm);
+      if(wave) {
+        if(bytes.toString('ascii',0,4)!=='RIFF'||bytes.toString('ascii',8,12)!=='WAVE')throw Error('音频容器无效。');
+        let format=false,data;
+        for(let offset=12;offset+8<=bytes.length;) {
+          const name=bytes.toString('ascii',offset,offset+4),size=bytes.readUInt32LE(offset+4),start=offset+8;
+          if(start+size>bytes.length)throw Error('音频块超出边界。');
+          if(name==='fmt ') {if(size<16||bytes.readUInt16LE(start)!==1||bytes.readUInt16LE(start+2)!==1||bytes.readUInt32LE(start+4)!==16000||bytes.readUInt16LE(start+14)!==16)throw Error('需要单声道16kHz PCM16。');format=true;}
+          if(name==='data')data=bytes.subarray(start,start+size);
+          offset=start+size+(size%2);
+        }
+        if(!format||!data||data.length%2)throw Error('PCM音频数据缺失。');bytes=data;
+      }
+      const n=Math.floor(bytes.length/2);if(!n)throw Error('该时段没有音频样本。');
       let squares=0,peak=0,mean=0,silent=0;
       for(let i=0;i<n;i++){const x=bytes.readInt16LE(i*2)/32768;squares+=x*x;mean+=x;peak=Math.max(peak,Math.abs(x));if(Math.abs(x)<0.001)silent++;}
       pinned(row.asset_id);const rms=Math.sqrt(squares/n);

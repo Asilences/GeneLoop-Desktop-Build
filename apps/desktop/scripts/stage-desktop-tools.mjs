@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {stageWorkflowSource} from './stage-workflow-source.mjs';
 import {stageOcrData} from './stage-ocr-data.mjs';
+import {stageCjkFont} from './stage-cjk-font.mjs';
 
 const app = fileURLToPath(new URL('../', import.meta.url));
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
@@ -102,6 +103,7 @@ for (const path of [
 }
 stageWorkflowSource(repo,join(destination,'source'));
 stageOcrData(join(app,'.local/ocr-data'),join(destination,'ocr'));
+stageCjkFont(app,destination);
 if (process.platform === 'win32') {
   const pth = join(destination, 'python', 'python312._pth');
   if (!readFileSync(pth, 'utf8').includes('python312.zip')) throw Error('需要 Windows Python 3.12 嵌入式分发。');

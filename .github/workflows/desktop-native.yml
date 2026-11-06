@@ -77,7 +77,7 @@ jobs:
         run: node scripts/check-native-scenes.mjs
       - name: Credential scrubbing and cancellation of descendants
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
-        run: node scripts/check-native-process.mjs
+        run: npm run runtime:stage && node scripts/check-native-process.mjs
       - name: Package on target architecture
         id: package
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
@@ -117,7 +117,7 @@ jobs:
       # Explicit user authorization: private one-day transit, delete after local retrieval.
       # Other modes still do not upload. Never publish a Release.
       - uses: actions/upload-artifact@v4
-        if: ${{ success() && inputs.packageMode == 'delivery' }}
+        if: ${{ success() && inputs.packageMode == 'delivery' && github.repository == 'Asilences/GeneLoop-Desktop-Build' }}
         with:
           name: geneloop-desktop-${{ matrix.arch }}-${{ github.run_id }}
           path: |
