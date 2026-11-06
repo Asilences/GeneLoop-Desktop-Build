@@ -6,7 +6,7 @@
 
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
-GeneLoop Desktop `0.3.0-preview.13` 提供 Windows x64、macOS ARM64 和 Intel 本机执行预览：六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。工具随包提供，Mac 使用 ZIP 分发 `.app`。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[本轮记录](docs/debug/desktop-preview13-full-tools-20261106.md)。安装包保存在私有本地目录，不发布 Release。
+GeneLoop Desktop `0.3.0-preview.14` 提供 Windows x64 EXE、macOS ARM64 DMG 和 Intel DMG 本机执行预览。在 preview.13 基础上接入 Draft PR161 的 Motif 库／工作区展示和 Draft PR162 的数据隐私接口，保留独立桌面界面、本机工作区及统一输入框。六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[交接](docs/handoffs/desktop.md)。正式服务器未随安装包部署，不发布 Release。
 
 桌面 Motif 展示候选在工作区首页融入运行、能力组合、评估、演化和版本，并提供全局库入口。它复用同伴的脱敏证据协议，通过账号隔离的只读接口展示，不授予执行权或虚构节省。接入配置、构建和验证边界见[工作区 Motif 说明](docs/product/desktop/motif-workspace.md)与[模块交接](docs/handoffs/motif-visualization.md)；尚未部署正式服务。
 

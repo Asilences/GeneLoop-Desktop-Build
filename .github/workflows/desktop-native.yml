@@ -118,7 +118,7 @@ jobs:
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
-          npx --no-install electron-builder --mac dmg --${{ matrix.arch }} --prepackaged "$APP" --publish never
+          npx --no-install electron-builder --mac dmg --${{ matrix.arch }} --prepackaged "$APP" --publish never --config.dmg.format=ULFO --config.dmg.writeUpdateInfo=false
           DMG=$(find release -maxdepth 1 -name 'GeneLoop-Desktop-*.dmg' -type f -print -quit)
           test -n "$DMG"
           hdiutil verify "$DMG"
@@ -141,7 +141,8 @@ jobs:
             ditto -c -k --sequesterRsrc --keepParent "$APP" "release/GeneLoop-Desktop-$VERSION-macOS-${{ matrix.arch }}.zip"
             shasum -a 256 release/GeneLoop-Desktop-*.zip > release/SHA256SUMS-${{ matrix.arch }}.txt
           fi
-      # Explicit user authorization: private one-day transit, delete after local retrieval.
+      # Explicit user authorization: temporary Actions transit, delete after local retrieval.
+      # User permits public artifacts in this dedicated build repository (2026-11-06).
       # Other modes still do not upload. Never publish a Release.
       - uses: actions/upload-artifact@v4
         if: ${{ success() && (inputs.packageMode == 'delivery' || inputs.packageMode == 'dmg-delivery') && github.repository == 'Asilences/GeneLoop-Desktop-Build' }}
