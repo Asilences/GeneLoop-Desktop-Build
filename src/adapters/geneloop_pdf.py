@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import json
 import os
 from pathlib import Path
 import re
@@ -20,15 +19,10 @@ def tessdata_directory():
     if not root:
         return None
     path = Path(root) / 'tessdata'
-    lock = Path(root) / 'manifest.json'
-    expected = (json.loads(lock.read_text(encoding='utf-8'))['files']
-                if os.environ.get('GENELOOP_DESKTOP_OCR_LOCK') == '1' else None)
     for name in ('eng', 'chi_sim'):
         item = path / (name + '.traineddata')
         if item.is_symlink() or not item.is_file():
             raise ValueError('pdf_ocr_languages_unavailable')
-        if expected is not None and hashlib.sha256(item.read_bytes()).hexdigest() != expected.get('tessdata/'+item.name):
-            raise ValueError('pdf_ocr_languages_version_changed')
     return str(path)
 
 

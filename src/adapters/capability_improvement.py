@@ -167,6 +167,10 @@ def run_improvement(plan, adapter, *, execute=False):
     # at each use; changes fail closed, they never become repair feedback.
     for job in plan['jobs']:
         evidence(job['task'])
+        if job.get('learned_candidate'):
+            if plan.get('recursive_abstraction',{}).get('enabled') is not True:
+                raise ValueError('improvement_recursive_abstraction_disabled')
+            evidence(job['learned_candidate'])
         discover(job)
     journal = Journal(plan['output'], plan['id'])
     save(journal.directory/'plan.json', plan)

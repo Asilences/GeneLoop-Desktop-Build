@@ -132,7 +132,7 @@
 - 已完成：npm run web:literature，固定服务端PDF目录与独立任务preset/MCP；同Session阅读→自动claim复核最多两轮→完整表综合→真实收据交付。原生聊天/任意路径/通用附件拒绝，预算/记录/单槽仍原Web；原SDK/8765/自研最终前端路线保留。
 - 修复：第二轮传原始证据历史及拒绝原因，复核阶段不能通过普通读取绕claim额度；启动包装器转发退出信号，防端口残留。共享变更先登记在docs/changes/literature-web-binding.md，无上游/Motif核心/原PDF修改。
 - 验收：378 Python+66共享Node，免费最终51ad10a4两个任务各43模拟请求/15显式缺口，加取消0请求；真实aaf962ec两题各15字段0程序缺口/17和16引文，22/21请求，0.100008924/0.076882584美元。首版8d701dd9的4/1缺口及49请求费用、启动6b82834e失败0请求保留；开发合计92请求/USD0.358430952，累计PDF代理USD2.962426888，实付/维护未知。0程序缺口不是科学认证，本轮verified skip0/没有新learned Motif。
-- 数据：私有web-binding-20261012-*/protocol/real-audit/outcome与.local/web/runs；公开docs/experiments/literature-web-binding-20261012.md，后续公平对照协议literature-web-comparison-protocol.md待运行。界面仅预览/取消0付费，问题和论文显示替代内部提示词。最终共享UI元信息修正后免费/回归核验，不重跑付费。
+- 数据：私有web-binding-20261012-*/protocol/real-audit/outcome与.local/web/runs；公开docs/debug/literature-web-binding-20261012.md，后续公平对照协议literature-web-comparison-protocol.md待运行。界面仅预览/取消0付费，问题和论文显示替代内部提示词。最终共享UI元信息修正后免费/回归核验，不重跑付费。
 - 限制/下一步：Web仍off，旧工作台缓存/增量更新未迁入；无大PDF浏览器上传、任意子集或跨启动HTTP历史加载。每任务独立preset的长期内存未测。先冻结质量和强脚本基线，从真实轨迹选独立认证候选，再运行相同质量成本对照；不能强用旧web未认证库或宣称现已降本。
 - Git/回退：feature/rsi-research-agent/HEAD2368235保留既有未提交工作，main与origin/main仍bc1ecd5，未merge/commit/push/PR。回退到SDK/8765或通用Web profile，不删除历史/PDF/Key。最新文献Web真实服务3080，通过私有access-url认证；8765旧工作台未停。
 

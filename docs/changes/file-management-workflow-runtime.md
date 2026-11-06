@@ -39,7 +39,7 @@ CLI的upstream_requests/budget_accounted_usd记录本次增量；durable_request
 
 关闭新服务/--file-job，使用原TaskScene配置即可回旧入口。不要把恢复服务的15工具或新执行摘要塞进原14工具证书；本轮未学习、修改或认证新Motif。未来付费探索须重新核对源码/工具/模式/权限/系列剩余预算。
 
-最终验证见[免费准备记录](../experiments/file-management-workflow-free-20261013.md)。当前565Python、145Node通过，3可选Docker跳过；最后版本校验定向26项通过，18题旧MCP烟测通过。真实API新增0、真实模型估费USD0，未做人工业务质量盲评或跨平台恢复认证。
+最终验证见[免费准备记录](../debug/file-management-workflow-free-20261013.md)。当前565Python、145Node通过，3可选Docker跳过；最后版本校验定向26项通过，18题旧MCP烟测通过。真实API新增0、真实模型估费USD0，未做人工业务质量盲评或跨平台恢复认证。
 
 ## 真实探索后的接口修订 2026年10月14日
 

@@ -1,0 +1,14 @@
+Compare the candidate's actual task actions with the paired control actions.
+Determine whether the expected behavior supplied by the research host occurred
+and whether the relevant solving method observably differs from the control.
+Read original action evidence from both rollouts through review_read. Cite the
+read SHA256 identifiers and name concrete tool sequences, commands, artifacts
+or repairs supporting each observation.
+
+Skill loading, instruction text, model self-report, passing output, a changed
+filename or fewer tool calls alone do not demonstrate the expected behavior.
+Return accepted=false when behavior is unchanged, contradicted or insufficiently
+witnessed. An affirmative verdict needs actual action citations from both arms.
+Model-issued code and repair commands remain model work. Do not infer causal
+attribution or assign unmeasured node costs. The original task verifier and the
+frozen cost/quality policy remain authoritative and are evaluated separately.

@@ -8,6 +8,7 @@ import JSZip from 'jszip';
 import {NativeMcpTransport} from './local-mcp-transport.mjs';
 import {removeScratchDirectory,publishArtifacts} from './local-artifacts.mjs';
 import {workflowTools,workflowKinds as kinds,workflowToolName} from './native-workflow-catalog.mjs';
+import {ocrData} from './native-ocr-data.mjs';
 
 const sha=data=>createHash('sha256').update(data).digest('hex');
 // Python's canonical representation is shared with the existing file planner.
@@ -36,6 +37,9 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
   const active=new Map(),parent=realpathSync(process.cwd());let pending=false,closed=false;
   function checkSources(sources){
     signal.throwIfAborted();
+    const root=join(dirname(tools.sourceRoot),'ocr');
+    for(const [name,version]of Object.entries(ocrData))
+      if(sha(readFileSync(plainFile(root,join(root,name))))!==version)throw Error('本机OCR资源版本已变化。');
     for(const source of sources)if(sha(reader.readBytes(source.path,maxSource))!==source.sha256)throw Error('工作区来源已变化，请重新打开该工作流。');
   }
   async function closeOne(row) {

@@ -53,11 +53,19 @@ class StudyEpisodeRegistry:
 
 
 class FrontierGate(CumulativeProposalGate):
-    def __init__(self,ledger_root,journal,*,deadline,study_registry=None):
+    def __init__(self,ledger_root,journal,*,deadline,study_registry=None,max_requests=None):
         if type(deadline) not in (int,float) or not math.isfinite(deadline):raise ValueError('frontier_deadline_invalid')
         super().__init__(ledger_root,study_registry=study_registry)
         self.journal=Path(journal);self.deadline=deadline;self.budget=None;self.cell=None
         self.owners={};self.request_cells={};self.exact_costs={};self.budgets={}
+        if max_requests is not None and (type(max_requests) is not int or max_requests < 0):
+            raise ValueError('frontier_request_limit_invalid')
+        self.max_requests=max_requests
+        self.booked_requests=0
+        if self.journal.exists():
+            raw=self.journal.read_text(encoding='utf-8')
+            if raw and not raw.endswith('\n'):raise ValueError('frontier_budget_journal_incomplete')
+            self.booked_requests=sum(json.loads(line).get('event')=='request_booked' for line in raw.splitlines())
 
     def activate(self,cell,limit):
         if self.current is not None:raise ValueError('frontier_active_attempt')
@@ -94,13 +102,15 @@ class FrontierGate(CumulativeProposalGate):
             model,_,ceiling=reservation(body,max_output=self.state.output_cap,rates=self.state.rates)
             request=json.loads(body);input_rate,output_rate=self.state.rates[model]
             reserve=(Decimal(ceiling)*Decimal(str(input_rate))+Decimal(request['max_tokens'])*Decimal(str(output_rate)))/Decimal(1000000)
-            if time.time()>=self.deadline or not self.budget.available(reserve):
+            exhausted=self.max_requests is not None and self.booked_requests>=self.max_requests
+            if exhausted or time.time()>=self.deadline or not self.budget.available(reserve):
                 append(self.journal,{'event':'admission_denied','path':path,'cell':self.cell,
-                    'reason':'deadline' if time.time()>=self.deadline else 'research_upper_reservation',
+                    'reason':'research_request_limit' if exhausted else ('deadline' if time.time()>=self.deadline else 'research_upper_reservation'),
                     'reserved_upper_usd':str(reserve),'time':time.time()})
                 return None
             result=native_book(body)
             if result:
+                self.booked_requests+=1
                 rid=result[0];self.budget.book(rid,reserve);self.request_cells[rid]=self.cell
                 append(self.journal,{'event':'request_booked','request_id':rid,'ledger_ref':str(self.root/'cost-ledger.jsonl'),
                     **self.owners[path],'path':path,'body_sha256':sha(body),'reserved_upper_usd':str(reserve),'time':time.time()})

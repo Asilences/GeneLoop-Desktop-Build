@@ -1,27 +1,27 @@
 # DeepSeek Harless Web 当前交接
 
-- 2026-10-20（Codex）：[PR98](https://github.com/jingyio/GeneLoop/pull/98) 恢复场景双栏 1–5 分，账户两入口支持默认5/每批1–20个邀请码、逐个/全部复制与原生粘贴。原邀请码本无TTL，未使用永久有效，每码注册一次；页面关闭只丢失明文显示。源码756a181已统一发布，保留原账号、评分、库和累计账本。本地/服务器定向127项、服务器smoke/Motif及Ubuntu/Windows完整CI通过；正式网页已有Paper/PPT/Data记录均显示评分，Data两侧4/5分保存并刷新保留（仅接口诊断，不是质量打分）。普通Chat/新版独立File不加旧数值接口。本轮新增模型请求0；历史测试会话仍有加载失败/慢提示，未宣称本轮修复加载链路。见[实验记录](../experiments/invites-ratings-20261020.md)和[接口](../interfaces.md#邀请与场景数值评分2026-10-20-恢复)。合并状态以PR98为准；回退用统一service rollback。
+- 2026-10-20（Codex）：[PR98](https://github.com/jingyio/GeneLoop/pull/98) 恢复场景双栏 1–5 分，账户两入口支持默认5/每批1–20个邀请码、逐个/全部复制与原生粘贴。原邀请码本无TTL，未使用永久有效，每码注册一次；页面关闭只丢失明文显示。源码756a181已统一发布，保留原账号、评分、库和累计账本。本地/服务器定向127项、服务器smoke/Motif及Ubuntu/Windows完整CI通过；正式网页已有Paper/PPT/Data记录均显示评分，Data两侧4/5分保存并刷新保留（仅接口诊断，不是质量打分）。普通Chat/新版独立File不加旧数值接口。本轮新增模型请求0；历史测试会话仍有加载失败/慢提示，未宣称本轮修复加载链路。见[实验记录](../debug/invites-ratings-20261020.md)和[接口](../interfaces.md#邀请与场景数值评分2026-10-20-恢复)。合并状态以PR98为准；回退用统一service rollback。
 
-- 2026-10-20（Codex）：[PR96](https://github.com/jingyio/GeneLoop/pull/96)修复账号执行槽导致多对话gateway/internal及省略max_tokens触发8K截断。运行源码c3cd21a已统一发布，费用/次数/output app cap均null，普通/场景/文件wire使用393216。File独立SDK的5美元/96步/4000输出旧额度已清理，冷重建保留原pool/计数；File v7四图真实重新认证，Paper19/PPT14仅兼容继承。6普通对话真实同时运行、三场景区间重叠；1000行完整输出；最终原生Chat与File上线复验通过，公网成员正常。Python1514通过/3跳过，Node1167通过/8实验沙箱既有失败/3跳过，smoke/Motif通过；CI以PR对应head Checks为准。实验、73次重认证费用、失败和回退边界见[输出记录](../experiments/provider-output-20261020.md)及[并行记录](../experiments/concurrent-chat-20261020.md)。生产位置仅通过私有环境GENELOOP_SERVICE_HOME/CONFIG定位，沿用累计账本、保留旧代码/计划；仍走npm service。额度修复与上线完成，8项实验Script Motif的Linux只读挂载测试尚未解决；不将其称为正式聊天失败或整套服务器测试全绿。
+- 2026-10-20（Codex）：[PR96](https://github.com/jingyio/GeneLoop/pull/96)修复账号执行槽导致多对话gateway/internal及省略max_tokens触发8K截断。运行源码c3cd21a已统一发布，费用/次数/output app cap均null，普通/场景/文件wire使用393216。File独立SDK的5美元/96步/4000输出旧额度已清理，冷重建保留原pool/计数；File v7四图真实重新认证，Paper19/PPT14仅兼容继承。6普通对话真实同时运行、三场景区间重叠；1000行完整输出；最终原生Chat与File上线复验通过，公网成员正常。Python1514通过/3跳过，Node1167通过/8实验沙箱既有失败/3跳过，smoke/Motif通过；CI以PR对应head Checks为准。实验、73次重认证费用、失败和回退边界见[输出记录](../debug/provider-output-20261020.md)及[并行记录](../debug/concurrent-chat-20261020.md)。生产位置仅通过私有环境GENELOOP_SERVICE_HOME/CONFIG定位，沿用累计账本、保留旧代码/计划；仍走npm service。额度修复与上线完成，8项实验Script Motif的Linux只读挂载测试尚未解决；不将其称为正式聊天失败或整套服务器测试全绿。
 
-- 2026-10-19（Codex）：附件/上下文与执行展示修复已发布运行代码 `d2291646`。当前原话与 plugin 资料分离、后续轮不重解析历史、完整上下文和图片随场景承接、准备进度提前绑定同一任务；执行展开状态与代码侧栏已真网页验证。paper16/ppt11是原库兼容认证，无新训练。真实四格式24轮/28侧全部严格通过；旧污染会话续聊2轮通过且日志原字节保留。Linux全量Python1114通过/2跳过、Node887通过/3跳过（仅测试完成窗口补丁，旧fixture超时保留），smoke/motif/continuation通过；最新GitHub Actions未取得终态，不称跨平台CI已通过。PPT更新仍16次冗余工具，未保证最短路径；短跨场景样本未测得两侧主请求重叠。发布/完整检查状态与失败费用见[验收记录](../experiments/attachment-context-streaming-20261019.md)；PR89–91已合并，最后证据消费修复跟踪PR92。私有结果在 `.local/attachment-integrity-20261019/`，六组代理估费合计$0.245796300（排除独立网页成员测试及其他流量），账单未知。继续沿用共享账本和不限额度配置。服务仍仅从私有环境的 GENELOOP_SERVICE_HOME/GENELOOP_SERVICE_CONFIG 走统一 npm service 入口；旧代码/计划/库和失败回执保留，勿覆盖或另起临时发布进程。
+- 2026-10-19（Codex）：附件/上下文与执行展示修复已发布运行代码 `d2291646`。当前原话与 plugin 资料分离、后续轮不重解析历史、完整上下文和图片随场景承接、准备进度提前绑定同一任务；执行展开状态与代码侧栏已真网页验证。paper16/ppt11是原库兼容认证，无新训练。真实四格式24轮/28侧全部严格通过；旧污染会话续聊2轮通过且日志原字节保留。Linux全量Python1114通过/2跳过、Node887通过/3跳过（仅测试完成窗口补丁，旧fixture超时保留），smoke/motif/continuation通过；最新GitHub Actions未取得终态，不称跨平台CI已通过。PPT更新仍16次冗余工具，未保证最短路径；短跨场景样本未测得两侧主请求重叠。发布/完整检查状态与失败费用见[验收记录](../debug/attachment-context-streaming-20261019.md)；PR89–91已合并，最后证据消费修复跟踪PR92。私有结果在 `.local/attachment-integrity-20261019/`，六组代理估费合计$0.245796300（排除独立网页成员测试及其他流量），账单未知。继续沿用共享账本和不限额度配置。服务仍仅从私有环境的 GENELOOP_SERVICE_HOME/GENELOOP_SERVICE_CONFIG 走统一 npm service 入口；旧代码/计划/库和失败回执保留，勿覆盖或另起临时发布进程。
 
 
 ## 2026-10-19：统一服务启动、发布与回退入口
 
-`npm run service -- <start|status|check|restart|rollback>` 是正式 owner/gateway 的统一入口，私有计划由 `GENELOOP_SERVICE_CONFIG` 指定。历史私有发布脚本只可参考配置准备，启动段退役。入口处理身份/配置/互斥检查、认证与令牌同步、活跃任务保护、失败回退及运行记录；保持预算进程/账本与用户数据。后续开发先读 [统一流程](../service-lifecycle.md)，验证与边界见[实施记录](../experiments/unified-service-lifecycle-20261019.md)。本地开发 `web`/`web:real` 不等于正式网站发布，Linux 管理验证不代表 Windows 托管。
+`npm run service -- <start|status|check|restart|rollback>` 是正式 owner/gateway 的统一入口，私有计划由 `GENELOOP_SERVICE_CONFIG` 指定。历史私有发布脚本只可参考配置准备，启动段退役。入口处理身份/配置/互斥检查、认证与令牌同步、活跃任务保护、失败回退及运行记录；保持预算进程/账本与用户数据。后续开发先读 [统一流程](../operations/service-lifecycle.md)，验证与边界见[实施记录](../debug/unified-service-lifecycle-20261019.md)。本地开发 `web`/`web:real` 不等于正式网站发布，Linux 管理验证不代表 Windows 托管。
 
 ## 2026-10-19：管理员内部令牌陈旧导致服务不可用
 
 - 公开登录页/进程正常，所有者内部认证失败。直接重启 DSH 后漏写 `ownerTokenFile`；旧令牌 401、新令牌 303。已备份并原子同步当前有效令牌，网关热读取恢复，未重启、未调用模型、未改账号/数据/账本。
-- `scripts/harless_owner_access.py` 提供认证后首页检查和原子同步；本次私有发布与回退脚本均接入并绑定启动日志偏移。6 项定向回归通过，生产 `--check` 返回认证后 200；已有成员刷新正常，新注册与管理员本人浏览器反馈未验。详见[故障记录](../experiments/owner-access-recovery-20261019.md)及[部署说明](../harless-account-gateway.md)。
+- `scripts/harless_owner_access.py` 提供认证后首页检查和原子同步；本次私有发布与回退脚本均接入并绑定启动日志偏移。6 项定向回归通过，生产 `--check` 返回认证后 200；已有成员刷新正常，新注册与管理员本人浏览器反馈未验。详见[故障记录](../debug/owner-access-recovery-20261019.md)及[部署说明](../operations/harless-account-gateway.md)。
 - 所有者与成员令牌独立；后续发布不能只检查 TCP/公开登录页。代码发布与PR状态以本次提交/PR为准；线上运行代码未因此切换。
 
 ## 2026-10-19：生成文件只有文件名、不能点击
 
 - 范围/分支：`codex/clickable-generated-files`，基于main `9f945a5` 的独立工作树，原本地工作区未改动。修复提交 `93e5309` 已推送，[PR #83](https://github.com/jingyio/GeneLoop/pull/83) 待审、未合并、未部署。
 - 已完成：普通Chat命令产物快照/API/原生文件mentions/预览下载；双栏沙箱路径匹配；本轮暂存成品明确引用准入和旧报告排除；私有权限保持。新兼容库v13/v8仅重验原认证序列化IR，未重挖原始轨迹；旧库保留。
-- 验证/结论：定向无模型回归已通过，最终全套/发布状态见[修复记录](../experiments/clickable-generated-files-20261019.md)。无真实API请求、新费用或收益结论；未部署线上。
+- 验证/结论：定向无模型回归已通过，最终全套/发布状态见[修复记录](../debug/clickable-generated-files-20261019.md)。无真实API请求、新费用或收益结论；未部署线上。
 - 入口/下一步：按接口重建成员policy并随PR发布，检查普通Chat和对照的文件名/卡片/下载、历史刷新及账号拒绝。`/api/harless/deliveries` 只认当前会话/任务文件ID。旧文件已覆盖且缺少快照时无法恢复。
 - 回退/权限：回退PR与registry，不清理.local，不改600/700、不修改私人原件、不改变累计预算。
 
@@ -31,11 +31,11 @@
 
 ## 2026-10-18：双栏分别显示进度
 
-用户最新要求覆盖下方“统一一个提示”的旧决定。Baseline/Motif 各自在回复下方显示 GeneLooping，各侧独立结束；双栏水合后不再重复显示原生全局提示，普通 Chat 继续使用原生即时反馈。隐藏无报告/文件和空回复占位，保留真实错误与已验证文件。当前 DeepSeek 两侧原本已并行，新增覆盖三个场景及预算隔离的回归，详情见[复核记录](../experiments/geneloop-paired-progress-20261018.md)。
+用户最新要求覆盖下方“统一一个提示”的旧决定。Baseline/Motif 各自在回复下方显示 GeneLooping，各侧独立结束；双栏水合后不再重复显示原生全局提示，普通 Chat 继续使用原生即时反馈。隐藏无报告/文件和空回复占位，保留真实错误与已验证文件。当前 DeepSeek 两侧原本已并行，新增覆盖三个场景及预算隔离的回归，详情见[复核记录](../debug/geneloop-paired-progress-20261018.md)。
 
 ## 2026-10-18：统一加载与场景后续聊状态
 
-移除每侧GeneLooping，由原生聊天底部统一承接本地提交、普通执行、最新轮场景子任务及结束状态；保留后续聊天的私有上下文接线。加载遮罩绑定会话布局、隐藏全部历史/输入、修正图标溢出。附件显示同时覆盖user/steering及合并文本块。相关回归78项通过，详情见[生命周期修复](../experiments/geneloop-chat-lifecycle-20261018.md)，真实网页/发布状态见关联PR与私有验收。
+移除每侧GeneLooping，由原生聊天底部统一承接本地提交、普通执行、最新轮场景子任务及结束状态；保留后续聊天的私有上下文接线。加载遮罩绑定会话布局、隐藏全部历史/输入、修正图标溢出。附件显示同时覆盖user/steering及合并文本块。相关回归78项通过，详情见[生命周期修复](../debug/geneloop-chat-lifecycle-20261018.md)，真实网页/发布状态见关联PR与私有验收。
 
 ## 2026-10-18：PPT 转换结构扩大复用与同模板网页对照
 
@@ -73,7 +73,7 @@
 
 - 2026-10-10 访问恢复（二次故障）：用户再次出现 ERR_CONNECTION_REFUSED；本机 3086 监听和手工 SSH socket 已消失，服务器原 Web 仍响应，旧隧道退出原因未确定。改用用户级 LaunchAgent `com.jingyio.harless-web-tunnel` 自动重连，专用密钥在 `~/.ssh/harless-web-tunnel-3086`，日志在 `~/Library/Logs/DeepSeekHarless/`。服务器 `harless-tunnel` 账号仅允许公钥认证、本地转发至 127.0.0.1:3086，禁止 shell/远程转发/PTY；标记配置块 `HARLESS WEB TUNNEL 3086`，sshd 校验后重载。后台访问 Desktop 密钥曾被系统拒绝，移至 ~/.ssh 后成功；一次服务器断开被自动重试恢复。主动终止专用隧道后约 2 秒恢复，恢复后认证、/tasks、只读任务 API 均 HTTP 200。WT15/Wi-Fi 代理原绕过列表合成一个条目，追加独立 localhost/127.0.0.1/::1，原代理与规则保留。既有运行 `ebd724e8f4464b72b5cbc797210da350`、0.247 美元预算及 3 请求/4 MCP 统计不变，本次零模型调用。cookie 约 30 天，连接拒绝发生在认证前；浏览器实际刷新结果仍待用户确认。配置/代理回退快照及验证在本机 `.local/web-review/`，服务器 SSH 原配置备份在 `.local/web-review/sshd_config.before-tunnel`。回退先卸载专用 LaunchAgent，再仅移除该账号/标记配置块，校验并重载 SSH；代理按私有 snapshot 恢复，不能覆盖后来的 SSH 改动。公共匿名记录已随 `f212141` 推送至正式待审 PR #2；私有配置未进入 Git，尚未合并 main。
 
-- 2026-10-09 官方真实聊天修复：见 `docs/experiments/native-chat-confirm-20261009-v1.md`。原 `session/prompt` 直接报错已改为待确认任务与原生预算弹窗；确认前/重试/取消均 0 模型调用，确认后真实 3 请求/4 MCP/来源核验通过。当前 3086 运行 `ebd724e8f4464b72b5cbc797210da350`，每任务/启动上限 0.247 美元，承接旧支出后累计估费约 0.003950 美元、账单未核对。146 Python、45 Node、13 组协议诊断通过；真实浏览器点击仍待负责人确认。原论文分支不切换，公共修复随 PR #2 发布。
+- 2026-10-09 官方真实聊天修复：见 `docs/debug/native-chat-confirm-20261009-v1.md`。原 `session/prompt` 直接报错已改为待确认任务与原生预算弹窗；确认前/重试/取消均 0 模型调用，确认后真实 3 请求/4 MCP/来源核验通过。当前 3086 运行 `ebd724e8f4464b72b5cbc797210da350`，每任务/启动上限 0.247 美元，承接旧支出后累计估费约 0.003950 美元、账单未核对。146 Python、45 Node、13 组协议诊断通过；真实浏览器点击仍待负责人确认。原论文分支不切换，公共修复随 PR #2 发布。
 
 - 2026-10-09 真实 Web 恢复与 API 验收：见 `docs/experiments/web-real-recovery-20261009-v1.md`。3086 运行 `9ea9d68a37a44627ad3ab1d545678c37` 已后台恢复，baseline/execute 两项真实任务各 3 请求/4 MCP/0 错误，来源核验通过、独立 Session，execute 无库回退；合计代理估费约 0.002485 美元（总上限 0.25，账单待核对）。旧运行零调用，记录保留。真实浏览器点击仍待负责人确认；认证 URL 换行修复避免复制进终端提示符。
 
@@ -89,10 +89,10 @@
 - 已验证：服务器 Ubuntu 22.04 / Node 22.23.3 / Python 3.10.8，146 项 Python、44 项 Node、18 题/83 来源 smoke、`motif:check`，冻结 Web 11 组及动态 HTTP/MCP 13 组均通过。动态 example 为 5 次代理请求/4 次 MCP；portfolio baseline/shadow/execute 为 14/14/7 次请求，三组各 13 次工具，execute 5 次 verified skip。无库或输入变化回退，图片不适配明确失败且请求数为零。以上模拟 Provider/embedding 验证协议与守卫，不验证科研答案。
 - 浏览器已验证：先前同一 3084 运行的两项不同文本任务各 5 次代理请求/4 次 MCP，刷新保留，截图 `.local/web-review/browser-multiple-tasks.jpg`。最新一键版本在 3084 运行 `b94e903d4a7c434dad86ee3b0e04be03` 已验：文字 baseline、JSON user messages execute 无额度表单、无第二次确认，各 completed/5 请求/4 MCP/真实支出 0，execute 明确 `no_certified_library` 普通回退，刷新保留；另一个聊天的浏览器也在该运行完成一项 5/4/0 任务。截图 `.local/web-review/browser-free-one-click.jpg`，任务/Session ID 详见动态实验记录。旧冻结入口的三模式和预算拒绝证据保留。
 - 正式 3080 完整浏览器闭环已验证：动态运行 `f91a53c78a524bbaa3fb935fd68c8b4f` 保持运行，本地浏览器已认证进入 `/tasks`，DeepSeek Harless、免费一键与三模式可见。同一运行无重启提交两项不同题面，任务 `2057d2c5580d466d8efea9c385ad491a`、`ae83a4b3ad104fc7a4d0bf5760198de5` 各 completed/5 次模拟请求/4 次真实只读 MCP/实付 0，无预算输入、一键执行、独立 Session，刷新两项保留。截图 `.local/web-review/browser-live-multi-tasks.jpg`，具体 Session 见实验记录。旧冻结 3080 运行 `b1bce3882e5f470eb6f8ccc088e7a505` 与诊断 3084 `b94e903d4a7c434dad86ee3b0e04be03` 均按身份停止，资料保留。
-- 实验结论：新增 `dynamic-web-tasks-20261009-v1`，见 `docs/experiments/dynamic-web-tasks-20261009-v1.md`；原冻结记录 `docs/experiments/harness-web-v1-20261009.md` 保留。支持动态输入、独立追踪和认证回退可运行，不支持真实语义质量或费用收益。旧模拟 Provider 累计 24 次的错误上限已修，失败记录保留，重验 13 组通过。
+- 实验结论：新增 `dynamic-web-tasks-20261009-v1`，见 `docs/debug/dynamic-web-tasks-20261009-v1.md`；原冻结记录 `docs/debug/harness-web-v1-20261009.md` 保留。支持动态输入、独立追踪和认证回退可运行，不支持真实语义质量或费用收益。旧模拟 Provider 累计 24 次的错误上限已修，失败记录保留，重验 13 组通过。
 - 配置与数据：公共配置 `config/harness-web.json`，固定 DSH `0.1.5-rc.3`；运行先 `source .local/remote-env.sh`。`.env.example` 仅字段，统一 npm 入口加载服务器项目根私有 `.env`；原 `DEEPSEEK_APIKEY` 已补为规范 `DEEPSEEK_API_KEY`，文件权限 `600`，密钥值不记录。`--real-model` 显式开放真实连接，产品真实任务仍确认；SDK 已实际调用成功，现有 Web 仍为 mock。来源登记 `--resources` 的文本快照，版本为字节 SHA；尚无真实应用 resolver。Web 记录在 `.local/web/runs/<RUN_ID>/tasks/<TASK_ID>/`，含快照、原生事件、答案、ledger 和 Motif audit，全局账本另存启动目录。
 - 后续模型验收约定：用户已持续授权测试目的真实 DeepSeek API。今后端到端、场景和效果/成本验收默认在服务器使用 `npm run web:real`（SDK 用 `npm run scenario:real`），不再用固定回复替代；单元、错误注入和无模型 smoke 保留为诊断。一般 `web` 与 CI 仍可默认 mock 避免暗中付费。当前正式 3080 仍为 mock，已记录结果不追改。
-- 真实 SDK/API/MCP 已验证：example/baseline、`reasoning_effort="off"`、预算 0.25 美元、单请求输出 1000 token、8 步的 `scenario:real` 退出 0，耗时 9.729 秒；运行 `7929653e0d9d4828bf46e4ff49394abd`，Session `sss-105f45630d444789bccf467f3718006a`。3 次真实上游请求均 HTTP 200；4 次真实 MCP（2 pin/2 read）、0 工具错误，两个来源的 ID、SHA、读取正文和答案引用逐项一致。prompt 2712 token（缓存命中 1536/未命中 1176）、output 1043、total 3755，代理估费约 0.001614 美元，账单实付未核对。记录 `docs/experiments/deepseek-real-api-smoke-20261009-v1.md`；原目录 `.local/runs/7929653e0d9d4828bf46e4ff49394abd/`，原始轨迹、答案和 `verification.json` 已同步两端 `.local/experiments/deepseek-real-api-smoke-20261009-v1/`。仅支持 SDK 基本连通；合成来源，质量未盲评，无收益结论。现有 3080 未重启且仍为 mock，真实 Web 尚未验。
+- 真实 SDK/API/MCP 已验证：example/baseline、`reasoning_effort="off"`、预算 0.25 美元、单请求输出 1000 token、8 步的 `scenario:real` 退出 0，耗时 9.729 秒；运行 `7929653e0d9d4828bf46e4ff49394abd`，Session `sss-105f45630d444789bccf467f3718006a`。3 次真实上游请求均 HTTP 200；4 次真实 MCP（2 pin/2 read）、0 工具错误，两个来源的 ID、SHA、读取正文和答案引用逐项一致。prompt 2712 token（缓存命中 1536/未命中 1176）、output 1043、total 3755，代理估费约 0.001614 美元，账单实付未核对。记录 `docs/debug/deepseek-real-api-smoke-20261009-v1.md`；原目录 `.local/runs/7929653e0d9d4828bf46e4ff49394abd/`，原始轨迹、答案和 `verification.json` 已同步两端 `.local/experiments/deepseek-real-api-smoke-20261009-v1/`。仅支持 SDK 基本连通；合成来源，质量未盲评，无收益结论。现有 3080 未重启且仍为 mock，真实 Web 尚未验。
 - 未完成与限制：真实 Web、语义 embedding、科研质量、费用收益、Windows Web、多用户隔离与跨启动恢复未验证；真实 SDK/API/MCP 基本连通已通过。一个启动只注册一个能力配置；256 KiB 文件上限，文件 receipt 通过不代表论文/PDF 内容理解。论文工具闭环未开发，认证文件浏览不是多人文件沙箱。预算、启动器和现有纯代码节点仍依赖 Python。
 - 接手下一步：1. 负责人审阅工作区，分开提交公共 Web 改动与论文场景工作；未提交/推送状态不得当作团队已同步。2. 场景负责人用真实联调入口接自己的 MCP 与输入，先执行最小普通闭环，再冻结独立任务/认证 library。3. 按质量标准及真实用量评估收益，模拟诊断只验协议；真实模型测试在授权限额内推进，不重复询问同一授权。
 - 权限与预算：测试目的真实 API 持续授权已生效，后续调用仍在服务器；运行前说明有效预算，Web 保持每任务/全启动 0.25 美元及 24/256 次默认限制。SDK 最小真实运行上限 0.25 美元，代理估费约 0.001614 美元、账单实付待核对；未知总额度不扩大支出，不重启循环规避限额。超额、外部写操作和实际投稿另确认。密钥不展示，产品真实任务仍保留预算预览/确认。
@@ -102,6 +102,6 @@
 
 
 ## 2026-11-03 上传容量与历史附件
-服务器分支 `fix/native-upload-context-20261103` 对齐原生图片准入、统一普通文件 200 MiB、分块上传和多轮/跨场景来源保留。规则见 [upload-rules](../upload-rules.md)，回归与发布证据见 [upload-capacity-context-20261103](../experiments/upload-capacity-context-20261103.md)。保持原用户数据、权限和 Motif 算法；Paper/PPT 仅兼容重导出。发布状态以实验记录为准。
+服务器分支 `fix/native-upload-context-20261103` 对齐原生图片准入、统一普通文件 200 MiB、分块上传和多轮/跨场景来源保留。规则见 [upload-rules](../product/web/upload-rules.md)，回归与发布证据见 [upload-capacity-context-20261103](../debug/upload-capacity-context-20261103.md)。保持原用户数据、权限和 Motif 算法；Paper/PPT 仅兼容重导出。发布状态以实验记录为准。
 
 最终服务器发布为 `70f86583`（上传容量修复第二版），2 个测试成员的原对话真实多轮验收通过；20 MiB 图片、约 31 MiB PPT 双栏读取、公网 120 MiB 原生回执均已验证。当前规则与负面网络证据详见上述实验记录。

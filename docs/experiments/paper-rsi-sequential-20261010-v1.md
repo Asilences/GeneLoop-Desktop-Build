@@ -73,7 +73,7 @@ node scripts/project.mjs python scripts/paper-motif-learn.py \
   --store .local/paper-reference/paper-rsi-sequential-20261010-v1
 ```
 
-首次训练命令及顺序验收见 `docs/paper-rsi-loop.md`。离线发布未调用模型，编译 CPU/人工开发时间未单独测量。新 Crossref 目录和协议改变了提示，不能与旧冻结库实验直接作同条件成本归因。
+首次训练命令及顺序验收见 `docs/research/rsi/paper-rsi-loop.md`。离线发布未调用模型，编译 CPU/人工开发时间未单独测量。新 Crossref 目录和协议改变了提示，不能与旧冻结库实验直接作同条件成本归因。
 
 ## 两次真实结果与失败
 

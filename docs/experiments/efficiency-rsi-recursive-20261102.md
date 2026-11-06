@@ -63,4 +63,4 @@ npm run rsi:improve:source -- --plan "$PRIVATE_PLAN" --call-model
 4. 当前为保守保留，无容量受限替换/归档优化、因果价值估计或自动预算再投资。逐历史证据核验的扩展成本待测。
 5. 任意宿主崩溃恢复和生产聊天接入未做；本轮未修改正式服务、推送或发布。
 
-本地交付与汇总：`.local/efficiency-rsi-recursive-20261102/delivery/`。协议见[共同流程](../capability-improvement-v1.md)，接手状态见[交接](../handoffs/efficiency-rsi.md)。
+本地交付与汇总：`.local/efficiency-rsi-recursive-20261102/delivery/`。协议见[共同流程](../research/capability/capability-improvement-v1.md)，接手状态见[交接](../handoffs/efficiency-rsi.md)。

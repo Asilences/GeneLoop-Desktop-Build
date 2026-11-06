@@ -9,6 +9,8 @@ tools = Path(sys.argv[1]).resolve(strict=True)
 sys.path.insert(0, str(tools / 'source'))
 os.environ.update(GENELOOP_PDF_OCR_ROOT=str(tools / 'ocr'), GENELOOP_DESKTOP_OCR_LOCK='1')
 from src.adapters.geneloop_pdf import read_pdf
+from src.adapters.desktop_general import verify_native_ocr
+verify_native_ocr()
 from PIL import Image, ImageDraw, ImageFont
 import pymupdf as fitz
 

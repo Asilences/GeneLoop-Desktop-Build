@@ -10,7 +10,7 @@ const fileBytes = Buffer.from('%PDF-1.7\nfixture');
 const artifact = { id: 'file-one', name: 'outputs/report/research_report.pdf', bytes: fileBytes.length,
   sha256: createHash('sha256').update(fileBytes).digest('hex') };
 const comparison = () => ({ id: 'comparison-a', session_id: 'session-a', status: 'completed', score_revision: 1,
-  scores: { baseline: null, motif: null }, scoring_available: true,
+  scores: { baseline: null, motif: null }, scoring_available: true, display_order: ['baseline', 'motif'],
   lanes: Object.fromEntries(['baseline', 'motif'].map(lane => [lane, { status: 'completed', mode: lane === 'baseline' ? 'baseline' : 'execute',
     answer: '**结果**\n\n| 项目 | 值 |\n|---|---|\n| n | 12 |\n\n`/app/work/outputs/report/research_report.pdf`',
     artifacts: [{ ...artifact }], output_sha256: lane + '-hash', stats: { upstream_requests: 2 }, delivery_status: 'available' }])) });
@@ -137,23 +137,16 @@ test('cold history renders no output frame until an authoritative snapshot arriv
   assert.equal(f.all(row => row.type === 'button' && f.content(row) === '停止生成').length, 0); f.dispose();
 });
 
-test('new Paper Execute results use verified reuse labels while historic Shadow and fallback remain truthful', async () => {
+test('paired results hide method names and mechanism counters in every execution mode', async () => {
+  assert.doesNotMatch(source, /\[data-lane=motif\][^{]*\{/);
   for(const [mode,fallback] of [['execute',undefined],['shadow',undefined],['baseline','runtime_bundle_certification_invalid']]){
     const value=comparison();value.scene='paper-proofreading';
     Object.assign(value.lanes.motif,{mode,fallback_reason:fallback,
-      stats:{upstream_requests:2,verified_skips:mode==='execute'?1:0,shadow_candidates:mode==='shadow'?3:0}});
+      stats:{upstream_requests:2,verified_skips:1,shadow_candidates:3,program_reuses:2}});
     const f=fixture(undefined,value);try{
       await flush();const tree=f.render();
-      const titles=f.all(row=>row.type==='strong').map(row=>f.content(row));
-      assert.ok(titles.includes(mode==='shadow'?'Motif · 影子评估':'Motif'));
-      const text=f.content(tree);
-      if(mode==='shadow'){
-        assert.match(text,/预测候选 3/);assert.doesNotMatch(text,/已验证跳过 3/);
-      }else{
-        assert.doesNotMatch(text,/影子评估|预测候选/);
-        assert.match(text,new RegExp('已验证跳过 '+(mode==='execute'?1:0)));
-      }
-      if(fallback)assert.match(text,/优化未启用，已回退普通模式/);
+      assert.doesNotMatch(f.content(tree),/Baseline|Motif|影子评估|预测候选|已验证跳过|程序复用|优化未启用/);
+      assert.equal(f.all(row=>row.type==='section'&&row.props['aria-label']==='回复 2').length,1);
     }finally{f.dispose();}
   }
 });
@@ -163,10 +156,10 @@ test('missing bound sources is explained as ordinary execution, not a task error
   value.lanes.motif.stats.verified_skips = 0;
   const f = fixture(undefined, value); await flush();
   const text = f.content(f.render());
-  assert.match(text, /本轮未绑定可复用的资料，按标准流程回答/);
+  assert.doesNotMatch(text, /本轮未绑定可复用的资料/);
   assert.doesNotMatch(text, /rsi_requires_approved_sources|优化未启用/);
   assert.equal(f.all(row => row.props.role === 'alert').length, 0);
-  assert.match(text, /已验证跳过 0/); f.dispose();
+  assert.doesNotMatch(text, /已验证跳过/); f.dispose();
 });
 
 test('returning to completed comparison reuses verified results while the new GET is pending or older', async () => {
@@ -177,7 +170,7 @@ test('returning to completed comparison reuses verified results while the new GE
   const f = fixture(() => ++reads === 1 ? Response.json(done) : new Promise(resolve => { finish = resolve; }), initial, { streaming: true });
   await flush(); f.render(); f.remount(structuredClone(initial));
   assert.equal(f.all(row => f.isMarkdown(row)).length, 2);
-  assert.equal(f.all(row => row.props['aria-label'] === '赞 Motif 回复')[0].props['aria-pressed'], true);
+  assert.equal(f.all(row => row.props['aria-label'] === '赞 回复 2')[0].props['aria-pressed'], true);
   assert.doesNotMatch(f.content(f.render()), /等待执行|等待当前任务|停止生成/);
   assert.equal(f.blocks.get('session-a'), undefined);
   assert.equal(f.streams.length, 1, 'a cached completed task does not reopen a live stream');
@@ -199,10 +192,10 @@ test('all paired scenes restore persisted 1–5 scores without writes on refresh
     const value = comparison(); value.scene = scene; value.snapshot_revision = 1; value.scores = { baseline: 2, motif: 5 };
     const f = fixture(undefined, value); await flush(); f.render();
     const checked = () => f.all(row => row.type === 'input' && row.props.type === 'radio' && row.props.checked).map(row => row.props['aria-label']);
-    assert.deepEqual(checked(), ['Baseline 2 分', 'Motif 5 分']);
+    assert.deepEqual(checked(), ['回复 1 2 分', '回复 2 5 分']);
     f.events.get('focus')(); await flush(); f.render();
     f.remount(structuredClone(value)); await flush(); f.render();
-    assert.deepEqual(checked(), ['Baseline 2 分', 'Motif 5 分']);
+    assert.deepEqual(checked(), ['回复 1 2 分', '回复 2 5 分']);
     assert.equal(f.requests.filter(row => row.init.method === 'POST').length, 0); f.dispose();
   }
 });
@@ -216,12 +209,12 @@ test('score changes bind exact output and revision; failed writes preserve confi
     value.scores[body.lane] = body.score; value.score_revision++; return Response.json(value);
   }, value); await flush(); f.render();
   const radio = label => f.all(row => row.props['aria-label'] === label)[0];
-  await radio('Baseline 4 分').props.onChange(); await flush(); f.render();
+  await radio('回复 1 4 分').props.onChange(); await flush(); f.render();
   const body = JSON.parse(f.requests.find(row => row.init.method === 'POST').init.body);
   assert.equal(body.action, 'rate'); assert.equal(body.score, 4); assert.equal(body.revision, 1); assert.equal(body.output_sha256, 'baseline-hash');
-  assert.equal(radio('Baseline 4 分').props.checked, true); assert.equal(radio('Motif 4 分').props.checked, false);
-  reject = true; await radio('Baseline 1 分').props.onChange(); await flush(); f.render();
-  assert.equal(radio('Baseline 4 分').props.checked, true); assert.equal(radio('Baseline 1 分').props.checked, false);
+  assert.equal(radio('回复 1 4 分').props.checked, true); assert.equal(radio('回复 2 4 分').props.checked, false);
+  reject = true; await radio('回复 1 1 分').props.onChange(); await flush(); f.render();
+  assert.equal(radio('回复 1 4 分').props.checked, true); assert.equal(radio('回复 1 1 分').props.checked, false);
   assert.match(f.content(f.render()), /结果已更新/); f.dispose();
 });
 
@@ -241,10 +234,10 @@ test('a rejected feedback action keeps confirmed votes and leaves the other lane
   const f = fixture((_url, init) => init.method === 'POST' ? new Promise(resolve => { finish = resolve; }) : Response.json(value), value);
   await flush(); f.render();
   const button = label => f.all(row => row.props['aria-label'] === label)[0];
-  const work = button('赞 Baseline 回复').props.onClick(); f.render();
+  const work = button('赞 回复 1').props.onClick(); f.render();
   finish(Response.json({ error: { message: 'save rejected' } }, { status: 500 })); await work; await flush(); f.render();
-  assert.equal(button('赞 Baseline 回复').props['aria-pressed'], true);
-  assert.equal(button('踩 Motif 回复').props['aria-pressed'], true);
+  assert.equal(button('赞 回复 1').props['aria-pressed'], true);
+  assert.equal(button('踩 回复 2').props['aria-pressed'], true);
   assert.equal(f.all(row => row.props.className === 'harless-paired-error').length, 1);
   assert.equal(f.requests.filter(row => row.init.method === 'POST').length, 1); f.dispose();
 });
@@ -257,7 +250,7 @@ test('401 and 403 feedback responses never replay a mutation after access return
       writes.push(JSON.parse(init.body)); return new Promise(resolve => { finish = resolve; });
     }, value);
     await flush(); f.render();
-    const button = () => f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0];
+    const button = () => f.all(row => row.props['aria-label'] === '赞 回复 1')[0];
     const work = button().props.onClick(); button().props.onClick();
     finish(Response.json({ error: {} }, { status })); await work; await flush(); f.render();
     assert.equal(button().props['aria-pressed'], false);
@@ -274,7 +267,7 @@ test('leaving the authenticated page ignores a late feedback response and never 
     writes.push(JSON.parse(init.body)); return new Promise(resolve => { finish = resolve; });
   }, value);
   await flush(); f.render();
-  const button = () => f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0];
+  const button = () => f.all(row => row.props['aria-label'] === '赞 回复 1')[0];
   const work = button().props.onClick(); f.render();
   f.events.get('pagehide')();
   const late = comparison(); late.lanes.baseline.feedback = 'up'; late.snapshot_revision = 2;
@@ -290,7 +283,7 @@ test('feedback rejected for an obsolete output refreshes the replacement without
     writes.push(JSON.parse(init.body)); return new Promise(resolve => { finish = resolve; });
   }, value);
   await flush(); f.render();
-  const button = () => f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0];
+  const button = () => f.all(row => row.props['aria-label'] === '赞 回复 1')[0];
   const work = button().props.onClick(); f.render();
   value.lanes.baseline.output_sha256 = 'replacement-hash'; value.lanes.baseline.answer = '已更新的结果';
   value.snapshot_revision++; value.score_revision++; value.scores = {};
@@ -441,8 +434,8 @@ test('feedback with an uncertain network response is reconciled by GET and never
     return Response.json(value);
   });
   await flush(); f.render();
-  await f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props.onClick(); await flush(); f.render();
-  assert.equal(posts, 1); assert.equal(f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props['aria-pressed'], true);
+  await f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props.onClick(); await flush(); f.render();
+  assert.equal(posts, 1); assert.equal(f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props['aria-pressed'], true);
   assert.match(f.content(f.all(row => row.props.className === 'harless-paired-error')[0]), /请勿重复提交/); f.dispose();
 });
 test('artifact download validates authenticated bytes then triggers an explicit local download', async () => {
@@ -540,7 +533,7 @@ for (const scene of ['ppt', 'paper-proofreading', 'research-data-analysis']) tes
   value.scene = scene;
   value.lanes.motif.delivery_message = '本轮未通过交付校验，没有可下载成品。';
   const f = fixture(undefined, value); await flush(); f.render();
-  const pane = f.all(row => row.type === 'section' && row.props['aria-label'] === 'Motif')[0];
+  const pane = f.all(row => row.type === 'section' && row.props['aria-label'] === '回复 2')[0];
   assert.match(f.content(pane), /回复完成/); assert.doesNotMatch(f.content(pane), /没有可下载成品/);
   assert.equal(f.all(row => row.type === 'a' && row.props.download, pane).length, 0);
   assert.equal(f.all(row => f.isMarkdown(row), pane)[0].props.fileMentions.resolve(artifact.name), undefined); f.dispose();
@@ -575,9 +568,9 @@ test('overlapping old GET cannot undo saved feedback; followup read still happen
     return Response.json(value);
   });
   await flush(); f.render(); f.events.get('focus')(); await flush();
-  await f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props.onClick();
+  await f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props.onClick();
   finishRead(); await flush(); f.render();
-  assert.equal(f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props['aria-pressed'], true);
+  assert.equal(f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props['aria-pressed'], true);
   const timer = [...f.timers.values()][0]; assert.equal(timer.delay, 0); f.timers.clear(); await timer.fn();
   assert.equal(reads, 3); f.dispose();
 });
@@ -611,7 +604,7 @@ test('reassembled start-event objects cannot roll newer completed results back t
   const f = fixture(() => Response.json(current), initial); await flush(); f.render();
   f.setNodeData(structuredClone(initial)); f.render(); f.render();
   assert.equal(f.all(row => row.type === 'a' && row.props.download).length, 2);
-  assert.equal(f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props['aria-pressed'], true);
+  assert.equal(f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props['aria-pressed'], true);
   assert.equal(f.all(row => f.isMarkdown(row))[1].props.streaming, false);
   assert.equal(f.timers.size, 0); f.dispose();
 });
@@ -633,11 +626,11 @@ test('POST deadline reconciles server-saved feedback using GET without another P
     return Response.json(value);
   });
   await flush(); f.render();
-  const action = f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props.onClick();
+  const action = f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props.onClick();
   await flush(); [...f.timers.values()].find(timer => timer.delay === 30000).fn(); await action; await flush(); f.render();
-  assert.equal(posts, 1); assert.equal(f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props['aria-pressed'], true);
+  assert.equal(posts, 1); assert.equal(f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props['aria-pressed'], true);
   assert.match(f.content(f.all(row => row.props.className === 'harless-paired-error')[0]), /连接超时.*请勿重复提交/);
-  assert.equal(f.all(row => row.props['aria-label'] === '赞 Baseline 回复')[0].props.disabled, false); f.dispose();
+  assert.equal(f.all(row => row.props['aria-label'] === '赞 回复 1')[0].props.disabled, false); f.dispose();
 });
 test('download body timeout gives a retryable error and releases duplicate-download guard', async () => {
   const value = comparison(); let downloads = 0;
@@ -704,7 +697,7 @@ test('paired lanes own matching bottom GeneLooping indicators and finish indepen
   const partial=structuredClone(value);Object.assign(partial.lanes.baseline,{status:'completed',answer:'Baseline 完成'});
   f.streams[0].emit(partial);f.render();
   assert.equal(f.all(row=>row.props.className==='geneloop-looping').length,1);
-  assert.equal(f.all(row=>row.props.className==='geneloop-looping')[0].props['aria-label'],'Motif 正在处理');
+  assert.equal(f.all(row=>row.props.className==='geneloop-looping')[0].props['aria-label'],'回复 2 正在处理');
   f.streams[0].emit(comparison());f.render();assert.equal(f.all(row=>row.props.className==='geneloop-looping').length,0);f.dispose();
 });
 
@@ -848,7 +841,7 @@ test('completed paired and single turns branch from a selected lane and immutabl
       calls.push(JSON.parse(init.body)); return new Promise(resolve => { finish = () => resolve(Response.json({sessionId:'branch-1'})); });
     }, value, { anchorSeq: 17, sessions: { open: id => opened.push(id) } });
     await flush(); f.render();
-    const button = f.all(row => row.props['aria-label'] === '从 Baseline 在新对话中分支')[0]; assert.ok(button);
+    const button = f.all(row => row.props['aria-label'] === '从 回复 1 在新对话中分支')[0]; assert.ok(button);
     assert.equal(f.all(row => row.type==='button' && f.content(row)==='在新对话中分支').length,0,'no duplicate large text button');
     const operation = button.props.onClick(); button.props.onClick();
     assert.equal(calls.length, 1); assert.equal(calls[0].session_id, 'session-a');
@@ -883,13 +876,13 @@ test('lane footer copies full Markdown, reports actual usage and duration, and p
     if(init.method==='POST'){const body=JSON.parse(init.body);assert.equal(body.action,'feedback');assert.equal(body.output_sha256,'baseline-hash');value.lanes[body.lane].feedback=body.vote;}
     return Response.json(value);
   },value,{clipboard:{writeText:async text=>copied.push(text)}});await flush();f.render();
-  await f.all(row=>row.props['aria-label']==='复制 Baseline 回复')[0].props.onClick();f.render();
+  await f.all(row=>row.props['aria-label']==='复制 回复 1')[0].props.onClick();f.render();
   assert.deepEqual(copied,[value.lanes.baseline.answer]);assert.ok(f.all(row=>row.props.kind==='usage' && row.props.label==='用量 1.5K tok').length);
   assert.ok(f.all(row=>row.props.kind==='clock' && row.props.label==='用时 1分04秒').length);
-  await f.all(row=>row.props['aria-label']==='赞 Baseline 回复')[0].props.onClick();await flush();f.render();
-  assert.equal(f.all(row=>row.props['aria-label']==='赞 Baseline 回复')[0].props['aria-pressed'],true);
-  await f.all(row=>row.props['aria-label']==='赞 Baseline 回复')[0].props.onClick();await flush();f.render();
-  assert.equal(f.all(row=>row.props['aria-label']==='赞 Baseline 回复')[0].props['aria-pressed'],false);
+  await f.all(row=>row.props['aria-label']==='赞 回复 1')[0].props.onClick();await flush();f.render();
+  assert.equal(f.all(row=>row.props['aria-label']==='赞 回复 1')[0].props['aria-pressed'],true);
+  await f.all(row=>row.props['aria-label']==='赞 回复 1')[0].props.onClick();await flush();f.render();
+  assert.equal(f.all(row=>row.props['aria-label']==='赞 回复 1')[0].props['aria-pressed'],false);
   assert.equal(f.requests.filter(row=>row.init.method==='POST').length,2);f.dispose();
 });
 
@@ -928,8 +921,8 @@ test('lane actions use native glyphs and bottom tooltips, with a one-second copy
   const f = fixture(undefined, value, { clipboard: { writeText: async text => copied.push(text) } });
   await flush(); f.render();
   const button = label => f.all(row => row.type === 'button' && row.props['aria-label'] === label)[0];
-  for (const [label, icon] of [['复制 Baseline 回复', 'IconCopyOutline16'], ['赞 Baseline 回复', 'IconLikeFill16'],
-    ['踩 Baseline 回复', 'IconDislikeOutline16'], ['从 Baseline 在新对话中分支', 'IconBranchOutline16']]) {
+  for (const [label, icon] of [['复制 回复 1', 'IconCopyOutline16'], ['赞 回复 1', 'IconLikeFill16'],
+    ['踩 回复 1', 'IconDislikeOutline16'], ['从 回复 1 在新对话中分支', 'IconBranchOutline16']]) {
     assert.equal(button(label).children[0].type, f.primitives[icon]);
     assert.equal(button(label).props.title, undefined, 'native Tooltip replaces browser title tooltips');
   }
@@ -937,23 +930,23 @@ test('lane actions use native glyphs and bottom tooltips, with a one-second copy
     .flatMap(actions => f.all(row => row.type === f.primitives.Tooltip, actions));
   assert.equal(tips.length, 8); assert.ok(tips.every(row => row.props.side === 'bottom'));
   assert.ok(tips.some(row => row.props.label === '取消标记')); assert.ok(tips.some(row => row.props.label === '有问题的回答'));
-  await button('复制 Baseline 回复').props.onClick(); f.render();
+  await button('复制 回复 1').props.onClick(); f.render();
   assert.deepEqual(copied, [value.lanes.baseline.answer]); assert.deepEqual(f.clipboardWrites, copied);
-  assert.equal(button('复制 Baseline 回复').children[0].type, f.primitives.IconCheckOutline16);
+  assert.equal(button('复制 回复 1').children[0].type, f.primitives.IconCheckOutline16);
   assert.equal(f.all(row => row.props.role === 'status' && f.content(row) === '已复制')[0].props.className, 'harless-visually-hidden');
-  await button('复制 Baseline 回复').props.onClick(); assert.equal(copied.length, 1, 'check feedback prevents accidental duplicate copies');
+  await button('复制 回复 1').props.onClick(); assert.equal(copied.length, 1, 'check feedback prevents accidental duplicate copies');
   const timer = [...f.timers].find(([, value]) => value.delay === 1000); assert.ok(timer);
   f.timers.delete(timer[0]); timer[1].fn(); f.render();
-  assert.equal(button('复制 Baseline 回复').children[0].type, f.primitives.IconCopyOutline16);
+  assert.equal(button('复制 回复 1').children[0].type, f.primitives.IconCopyOutline16);
   assert.equal(f.all(row => row.props.role === 'status' && f.content(row) === '已复制').length, 0); f.dispose();
 });
 
 test('copy completion after leaving the comparison cannot change another conversation footer', async () => {
   let finish; const f = fixture(undefined, comparison(), { clipboard: { writeText: () => new Promise(resolve => { finish = resolve; }) } });
-  await flush(); f.render(); const work = f.all(row => row.props['aria-label'] === '复制 Baseline 回复')[0].props.onClick();
+  await flush(); f.render(); const work = f.all(row => row.props['aria-label'] === '复制 回复 1')[0].props.onClick();
   const next = comparison(); next.id = 'comparison-b'; next.session_id = 'session-b'; f.setNodeData(next); f.render();
   finish(); await work; f.render();
-  assert.equal(f.all(row => row.props['aria-label'] === '复制 Baseline 回复')[0].children[0].type, f.primitives.IconCopyOutline16);
+  assert.equal(f.all(row => row.props['aria-label'] === '复制 回复 1')[0].children[0].type, f.primitives.IconCopyOutline16);
   assert.equal([...f.timers.values()].some(timer => timer.delay === 1000), false); f.dispose();
 });
 
@@ -1028,7 +1021,7 @@ test('trajectory shows both lanes together and distinguishes verified optimizati
   value.lanes.motif.mode='shadow';value.lanes.motif.trace=[{id:'shadow',kind:'motif',label:'预测候选',status:'completed',optimized:false,verified_skip:false}];
   const f=fixture(undefined,value,{traceOnly:true});await flush();f.render();
   assert.equal(f.all(row=>row.props.className==='harless-trace-column').length,2);
-  assert.match(f.content(f.all(row=>row.props.className==='harless-comparison-trace')[0]),/Baseline.*Motif · 影子评估/);
+  assert.match(f.content(f.all(row=>row.props.className==='harless-comparison-trace')[0]),/回复 1.*回复 2/);
   const rows=index=>{const component=f.all(row=>row.type?.name==='TraceRows')[index];return component.type(component.props);};
   assert.match(f.content(rows(0)),/读取数据/);assert.match(f.content(rows(1)),/预测候选/);
   assert.doesNotMatch(f.content(rows(1)),/已应用优化|已验证跳过/);
@@ -1101,6 +1094,41 @@ test('media download starts an authenticated native request inside the click wit
 test('video program comparison labels actual program reuse separately from model-request skips',async()=>{
  const value=comparison();value.scene='video-editing';value.lanes.baseline.stats.program_reuses=0;value.lanes.motif.stats.program_reuses=2;
  const f=fixture(undefined,value);try{await flush();f.render();const text=f.content(f.render());
-  assert.match(text,/程序复用 0 次/);assert.match(text,/程序复用 2 次/);assert.doesNotMatch(text,/已验证跳过/);
+  assert.doesNotMatch(text,/程序复用|已验证跳过|Motif|Baseline/);
  }finally{f.dispose();}
+});
+
+for(const order of [['baseline','motif'],['motif','baseline']]) test('anonymous persisted order keeps actions on the true lane '+order.join('-'),async()=>{
+ const value=comparison();value.display_order=order;value.snapshot_revision=1;const posted=[];
+ value.lanes.baseline.answer='BASE_RESULT';value.lanes.motif.answer='OPT_RESULT';
+ const f=fixture((url,init)=>{
+  if(init?.method==='POST'){const body=JSON.parse(init.body);posted.push(body);return Response.json({...value,snapshot_revision:2});}
+  return Response.json(value);
+ },value);
+ try{
+  await flush();f.render();
+  const panes=()=>f.all(row=>row.type==='section'&&row.props.className==='harless-paired-pane');
+  assert.deepEqual(panes().map(row=>row.props['aria-label']),['回复 1','回复 2']);
+  assert.deepEqual(panes().map(row=>f.all(node=>f.isMarkdown(node),row)[0].props.text),order.map(lane=>value.lanes[lane].answer));
+  const button=f.all(row=>row.props['aria-label']==='赞 回复 1')[0];await button.props.onClick();await flush();f.render();
+  assert.equal(posted[0].lane,order[0]);assert.equal(posted[0].output_sha256,value.lanes[order[0]].output_sha256);
+  f.remount(structuredClone(value));await flush();f.render();
+  assert.deepEqual(panes().map(row=>f.all(node=>f.isMarkdown(node),row)[0].props.text),order.map(lane=>value.lanes[lane].answer));
+  assert.doesNotMatch(f.content(f.render()),/Baseline|Motif/);
+ }finally{f.dispose();}
+});
+
+test('legacy completed results wait for persisted order before exposing panes or rating', async () => {
+  const old = comparison(); delete old.display_order;
+  let resolveSnapshot;
+  const f = fixture(() => new Promise(resolve => { resolveSnapshot = resolve; }), old);
+  try {
+    f.render();
+    assert.equal(f.all(row => row.props.className === 'harless-paired-pane').length, 0);
+    assert.equal(f.all(row => row.type === 'input' && row.props.type === 'radio').length, 0);
+    resolveSnapshot(Response.json({ ...old, display_order: ['motif', 'baseline'] }));
+    await flush(); f.render();
+    assert.deepEqual(f.all(row => row.props.className === 'harless-paired-pane').map(row => row.props['aria-label']), ['回复 1', '回复 2']);
+    assert.equal(f.all(row => row.props['aria-label'] === '赞 回复 1').length, 1);
+  } finally { f.dispose(); }
 });

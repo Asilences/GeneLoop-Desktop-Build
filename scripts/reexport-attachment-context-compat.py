@@ -51,7 +51,7 @@ RELEASES = [
      'scenarios/paper_proofreading/document-read-contracts.json'),
     ('ppt-master-v8', 'ppt-master-v9', 'ppt', 'scenarios/ppt_master/contracts.json'),
 ]
-VALIDATION_RECORD = 'docs/experiments/attachment-context-streaming-20261019.md'
+VALIDATION_RECORD = 'docs/debug/attachment-context-streaming-20261019.md'
 
 
 def write(path, value):

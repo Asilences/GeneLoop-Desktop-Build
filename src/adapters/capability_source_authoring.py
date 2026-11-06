@@ -113,12 +113,17 @@ def source_callable_interfaces(snapshot):
     return result
 
 
-def source_authoring_context(task, snapshot, catalog=None):
+def source_authoring_context(task, snapshot, catalog=None, *, abstract=False):
     """Public semantic callable view; full native identities remain in audit.
 
     The legacy JSON interface retains its own transport contracts. Only source
     calls use these semantic parameters/results; no callable alias is invented.
     """
+    if type(abstract) is not bool:
+        raise ValueError('proposal_abstraction_view_invalid')
+    if abstract and not isinstance(task.get('contract'), dict):
+        raise AuthoringError('source_contract_required', ['contract'],
+                             'host-frozen capability contract for abstraction view', task.get('contract'))
     context = authoring_context(task, snapshot, catalog or {})
     descriptions = {row['alias']: row for row in context['capabilities']}
     interfaces = []
@@ -126,31 +131,67 @@ def source_authoring_context(task, snapshot, catalog=None):
         item = {key: copy.deepcopy(row[key]) for key in ('alias', 'input_schema', 'output_schema')}
         if descriptions[row['alias']].get('description'):
             item['description'] = copy.deepcopy(descriptions[row['alias']]['description'])
+        if abstract:
+            item['effects'] = copy.deepcopy(descriptions[row['alias']]['contract']['effects'])
+            # Catalog examples are host-provided inputs, not execution proofs.
+            # Check the exact native ABI before projecting to semantic kwargs.
+            example = descriptions[row['alias']].get('example_parameters')
+            if example is not None:
+                from jsonschema import Draft202012Validator
+                native_schema = descriptions[row['alias']]['contract']['input_schema']
+                if Draft202012Validator(native_schema).is_valid(example):
+                    projected = example['value'] if row['input_projection'] else example
+                    if Draft202012Validator(row['input_schema']).is_valid(projected):
+                        item['input_example'] = copy.deepcopy(projected)
+                        item['example_status'] = 'host_catalog_input_schema_checked_not_execution_evidence'
         interfaces.append(item)
+    if abstract:
+        order = {row['alias']: index for index, row in enumerate(context['capabilities'])}
+        interfaces.sort(key=lambda row: order[row['alias']])
+        del context['capabilities']
+        # Acquisition records remain in catalog.json; do not reintroduce their
+        # implementation/program details through the summary view.
+        context.pop('material_continuation', None)
+        context['authoring_format'] = FORMAT
+        context['abstraction_view'] = True
     context['source_interfaces'] = interfaces
     context['source_authoring_format'] = FORMAT
     return context
 
 
-def prepare_capability_source_request(draft, task, snapshot, catalog=None):
-    """Parse source and freeze a new helper request before native acquisition.
-
-    This performs no execution, learning, certification or publication. The
-    unresolved program slot is explicit and keeps the model's exact bindings.
-    A host adapter must provide actual training evidence and a native learner.
-    """
+def compile_source_draft(draft, task, snapshot, catalog=None):
+    """Original static parser stage; also callable by the isolated Builder host."""
     if not isinstance(draft, dict) or set(draft) != {'capability_source'}:
         raise AuthoringError('draft_shape', [], {'keys': ['capability_source']}, draft)
     if not isinstance(task.get('contract'), dict):
         raise AuthoringError('source_contract_required', ['contract'],
                              'host-frozen capability contract before source construction', task.get('contract'))
-    result = compile_capability_source(draft['capability_source'], task, snapshot, catalog)
+    return compile_capability_source(draft['capability_source'], task, snapshot, catalog)
+
+
+def freeze_source_draft(result, task, snapshot):
+    """Original intent-freezing stage; grants no execution or certification."""
+    result = copy.deepcopy(result)
     result['composition_intent'] = None
     if result['program'] is not None:
         from .capability_program_encoding import freeze_program_composition
         result['composition_intent'] = freeze_program_composition(
             task, snapshot, result['program'], result['composition'])
     return result
+
+
+def prepare_capability_source_request(draft, task, snapshot, catalog=None, *, construction_session=None):
+    """Parse source and freeze a new helper request before native acquisition.
+
+    This performs no execution, learning, certification or publication. The
+    unresolved program slot is explicit and keeps the model's exact bindings.
+    A host adapter must provide actual training evidence and a native learner.
+    """
+    ordinary = lambda: freeze_source_draft(compile_source_draft(draft, task, snapshot, catalog), task, snapshot)
+    if construction_session is not None:
+        # Host-owned research injection, never decoded from a model proposal.
+        return construction_session.prepare(draft, task, snapshot, catalog, ordinary=ordinary)
+    return ordinary()
 
 
 def _copy_binding(binding, node, budget):

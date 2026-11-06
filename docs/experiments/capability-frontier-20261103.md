@@ -1,7 +1,7 @@
 # Capability Frontier：真实论文能力阶梯实验
 
 - 当前状态：C 已发布；三次冻结条件共 16 格 D 已结束。最后条件 WithC 2/2、Direct 1/2 通过 Mamba 两对检查，Flat 一格失败、一格无候选；全部已发布 D 都没有调用完整 C。**自主 C→D 与递归效率收益未观察到。** 零模型强制组合 C→D 能通过相同检查，说明执行链可用，不能代替自主选择证据。
-- 实验 ID：`capability-frontier-20261103`。代码起点为已合并 PR #122 的 `f594e19`，分支 `codex/capability-frontier-20261103`。研究目标及冻结约定见[推进协议](../capability-frontier-protocol-v1.md)。生产服务未切换。
+- 实验 ID：`capability-frontier-20261103`。代码起点为已合并 PR #122 的 `f594e19`，分支 `codex/capability-frontier-20261103`。研究目标及冻结约定见[推进协议](../research/capability/capability-frontier-protocol-v1.md)。生产服务未切换。
 - 要回答的问题：同一模型在相同有限预算下，已有高层引用审查能力 C 是否让新增跨版本关系系统 D 更易构造？如果两组都成功、C 未被选择、没有降本或留出失败，都保留原结果。
 
 ## 冻结条件
@@ -47,7 +47,7 @@ C 与第一轮 D 共 32 次真实请求，代理估费 USD `0.158522784`。原�
 
 第二条件使用新的 [Mamba arXiv v2 源项目](https://arxiv.org/abs/2312.00752v2)作最终留出，避免将已查看的 QLoRA 成绩当作新的盲测。Mamba 14 个可达 Tex、338 条活动书目，v0/v1/v2 摘要分别为 `6af3a0542b7214e4f33e2c67b3048cd14aaf82088d5381d1696c25cb05f558f0`、`120a2de83b20d988352f09a1a33e6a67efbdb805f960067a06823594bf5c33c9`、`5d27dddfa797d4ad1f8f852bd0dee976be168d6869335615f0a66cbb13f7389e`。沿用原评价器与受控变化规则，最终项目不进入模型构造或修复。
 
-第二 study 文件摘要 `f17d771ab82d57b85940b2955c047e9e7a6bd0039d91100b5fe18bd06e602304`，冻结代码 `252e2c1`。来源、六格初始可见集、预算、顺序和修复差异见[追加协议](../capability-frontier-protocol-v1.md#d-第二条件按实际失败预登记不替换第一轮)。六格全部结束后继续封存 Mamba；第三条件也全部构造完成，才统一执行两个条件的最终检查。没有将 Mamba 结果送回构造模型。
+第二 study 文件摘要 `f17d771ab82d57b85940b2955c047e9e7a6bd0039d91100b5fe18bd06e602304`，冻结代码 `252e2c1`。来源、六格初始可见集、预算、顺序和修复差异见[追加协议](../research/capability/capability-frontier-protocol-v1.md#d-第二条件按实际失败预登记不替换第一轮)。六格全部结束后继续封存 Mamba；第三条件也全部构造完成，才统一执行两个条件的最终检查。没有将 Mamba 结果送回构造模型。
 
 | 格 | 构造/最终结果 | 请求数 | 全部模型估费 USD |
 | --- | --- | ---: | ---: |

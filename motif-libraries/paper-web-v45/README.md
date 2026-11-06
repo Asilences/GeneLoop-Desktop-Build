@@ -6,4 +6,4 @@
 
 library、online manifest、task、tool schemas、source evidence 五项逐字节保留；旧库未覆盖。零新增训练任务、零模型调用，不代表质量或费用效果晋级。
 
-验证记录：docs/experiments/shared-invite-20261103.md。
+验证记录：docs/debug/shared-invite-20261103.md。

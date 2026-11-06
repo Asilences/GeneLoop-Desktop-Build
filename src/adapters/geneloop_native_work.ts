@@ -109,7 +109,5 @@ export function nativePresentedFiles(context:{workspace:string;eventsPath?:strin
 export const name='geneloop-native-work';
 export const inject=['skills','tools','fs'];
 export function apply(ctx:any) {
-  const policy=JSON.parse(readFileSync(process.env.SSS_WEB_POLICY!,'utf8'));
-  registerApprovedSkill(ctx,policy.command_resources);
   installNativePresentation(ctx);
 }

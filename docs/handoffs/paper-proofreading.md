@@ -1,4 +1,55 @@
+## 2026-11-05 组合输入与反馈连续性审议
+
+- 修正 `bf15185a` 的过度启动限制。真实执行经历可以独立调查，Capability/Builder清单可选；`--require-builder-evidence`仅用于专项输入检查。当前论文入口准确标为Task Strategy Pilot，`construction_strategy`仍等待真实Builder评价器。
+- 原 `Investigation.continue_with` 保留能力快照、原任务与Builder inspector、笔记、候选/评价和已暴露证据，再追加新运行。无候选和多代续接均覆盖；消费评价角色需显式暴露并要求后续新评价材料。纯记账续接不触发同证据no_change重查。
+- Task Strategy采用增加既有独立reviewer的配对动作证据检查。接受需要实际读取并引用两侧动作证据；语义评审校准仍待真实运行。后继选择按预冻质量/成本规则，neutral/negative/unknown保留原方法，候选不再按最后提交顺序选择。
+- 已只读恢复真实C，seed摘要与原引用一致，`cap_dc3832ee6ce8f4f6e4fa9cf7`认证且active，snapshot有4个能力。owner为`frontier-20261103`，不同于五篇任务`script-motif-real`；恢复的两份Builder记录为同一`frontier-D`任务两次尝试，不能作两份独立构造问题。原证据不改身份、不写入原始论文实验。
+- 下一步真实Builder验收应在原owner及独立Store中复用`strategy_handler(target='construction')`、原`inherited_strategy_context`、Builder和检查器。先明确局部任务范围与新的评价资料，再比较后继构造动作、质量和完整投入。两次重试不能支持家族级推广；新任务/新能力发现仍由Evolution决定。
+- 本输入接线阶段新增模型请求0，原73次请求及其neutral/no_change结论保留；后续真实003另列如下，未合并或部署。
+
+## 2026-11-05 通用Core与真实调查003
+
+- 生命周期抽到`src/adapters/evolution_cycle.py`；Paper证据、oracle、任务与结果解释在`scenarios/paper_proofreading/evolution_adapter.py`，脚本仅配置/启动。原则写入AGENTS和通用协议，第二最小Adapter覆盖非task_strategy路由和新能力回流。
+- 模型源码25383ae6已完成真实G1/G2：同一自主task_strategy两次提交、两对4次任务，候选均未准入，原决定inconclusive。98请求/代理USD0.18567348，原账本5156–5253全结算。两候选存在真实断言失败，行为review均不确定；没有新增收益或Creation Efficiency结论。
+- 真实运行暴露日志晚结算导致FileRef失效、重复开发暴露掩盖错误、CTRF缺失raw_status三项。24b3effc修复为不可变日志捕获、暴露幂等及断言拒绝兼容；通用`accumulate_evolution_feedback`支持原决定FileRef约束的零模型恢复。原失败保留，G5重放22条经历、第三视图22条、4份独立输入，快照不变，模型0。
+- 原始运行和恢复已关联私有`evolution-core-003-evidence.tar`，不含dsh凭证目录或.env。详见[本轮真实记录](../experiments/evolution-core-20261105-003.md)。真实运行与恢复分别用code-evolution-core-005/006，禁止覆盖它们或重写原状态。
+- 下一步优先审阅通用边界、动作review的返回可靠性，再在原frontier owner开展局部Builder后继试验。只存在同任务两次Builder尝试时不作跨任务独立证据；不为追求成功继续手工改论文解析细节。PR156仍草稿，不合并/部署。
+- 最终源码24b3effc验证。定向192、本地3010 Python/1662 Node、Linux356通过，3639源码摘要不变。真实G1–G3与修复后零模型G5分别报告；独立动作review仍未形成可靠采用结论，完整研究收益和Builder真实接收器未通过。
+
+## 2026-11-05 Evolution修订3真实执行
+
+- 范围与状态。a3e96f59已推送草稿PR156，未合并部署。用户授权的修订3冻结补丁、原论文历史适配与隔离接收已实现。
+- 真实结果。自主调查18次/3来源，产生1个task_strategy，Prefix同条件两侧原oracle均5/5，费用差-0.00093408按冻结标准neutral。DDPM后继5/5，部分策略行为可查，完整遵守待验。首轮61请求/USD0.10151940；反馈轮12请求/USD0.01977294，总73请求/USD0.12129234代理观测。原账本5083—5155全部结算，实付未知。
+- 失败与修复。原no_change结束误拒，真实最终inconclusive保留。修复默认summary返回正文的判定及试验后维持决定，另避免纯路径重投影重访。81b6c306已完成原工具离线重放及真实反馈轮no_change，相同快照重访0请求。模型把模型工具修复误判为Runtime内部等解释问题保留为下一轮输入语义检查。
+- 验证与入口。已有a3e96f59本地2971 Python/1662 Node、Linux302项及smoke/Motif/RSI通过，最终81b6c306本地2973 Python/1662 Node、Linux304项及smoke/Motif/RSI通过。Linux私有快照code-paper-evolution-001和同名results保留，入口scripts/run-paper-evolution.py；加载既有remote-env，沿原累计账本。原始日志不入Git。
+- 接手。优先复核门禁修复的原工具重放与最终回归，随后审阅真实行为与研究边界。仅task_strategy接收可用，其余pending，跨进程额度恢复与完整高层图闭包继续待验。
+- 证据与权限。见[正式实验](../experiments/paper-evolution-20261105-001.md)及[集中调试](../debug/evolution-artifact-routing-20261105.md)。费用/请求null授权、账本与生产不改；GitHub job因付款/消费额度未启动，不能标CI通过。
+
 # 论文校对 当前交接
+
+## 2026-11-05 当前审议入口（修订3，待用户核查）
+
+当前研究HEAD为`7fd8c1fd`。向solver交付[通用上下文与产物协议](../evolution-context-protocol.md)及[完整推进方案](../changes/paper-semantic-evolution-20261105.md)。本轮核对恢复清单中30次任务、原事件和输入摘要一致；下一步为通用skeleton、分层调查和产物采用验收。本轮文档未提交/推送，模型调用0，尚未启动新的Evolution或judge实验。
+
+## 2026-11-05 用户校正主批次
+
+当前需复用的是10月21日五篇论文各两次的修复后实验`paper-multipaper-retest-20261021-v1`及其原对照。完整材料已在原`paper-script-motif`工作区的私有`.local/`恢复。已核对原20次对照及复测10次的事件与输入绑定，5份独立论文输入。定位清单为当前私有`.local/overnight-20261105/multipaper-20261021-recovered/manifest.json`，包含旧评价来源，仅供宿主审计，尚未送入本轮Evolution或judge校准。S4误报的两次后续检查使用同一份中间解析数据，未提供独立复核。
+
+后续优先使用该批原确定性oracle，定位S4误报、旧QLoRA冲突证据聚合、选择与接管后剩余工作。原请求195→110、核心9/10为既有成果；两次重复按同论文输入保留，旧回放与新留出分开。详细判断见[计划校正](../changes/paper-semantic-evolution-20261105.md#当前主批次校正)。10月10日逐论断原件搜索退出当前优先级，作为历史记录保留。本次恢复与审计新增模型调用0。
+
+## 2026-11-05 历史语义失败审计与质量反馈接线
+
+- 本次范围为用户要求的旧轨迹定位，基于`codex/evolution-overnight-20261105`、HEAD `6499d32c`。只追加本节及[原实验复核](../experiments/evidence-evolution-20261104.md#2026-11-05-历史轨迹复核与瓶颈定位)，保留工作区已有R13未提交改动；本次未提交或推送。
+- 已核对11月4日两轮原模型输入与输出，以及11月3日构造方法原认证。两轮Evolution仅有两份Runtime关系记录，无失败或反例，费用未知；补充已有容器信息后返回空候选。旧方法程序未认证，实际后继采用为0。
+- 语义失败前史包括逐论断支持错误，但本次仅取得原公开报告，尚未重新取得完整原事件。论文参考评分92.5/93.5为同一评估者核验，不能写作独立LLM judge性能演化成果。
+- 当前瓶颈为语义质量问题及其实际求解决策尚未与上述Evolution输入接通。下一步先恢复旧语义失败证据，确认任务独立性、具体未解决判断与既有能力边界，再定最小候选及留出验收；不自动恢复旧18格运行。
+- 本轮模型请求0、模型费0，旧账本与原件未改。仅文档变更，检查Git diff和引用；无生产切换、合并、部署或外部写入。
+
+后续按用户授权开始实现，先保存[关键判断与实施计划](../changes/paper-semantic-evolution-20261105.md)，再补原RSI质量协议到语义经历、分层调查与旧策略CLI的接线。`rsi_quality.review_quality`保留宿主固定的任务/工件/标准绑定与原判断；调用模型的回调及账本由原宿主提供。执行完成但质量失败可独立检索，具体检查及原件按需读取。PPT81/Paper83仅为来源兼容导出，生产未部署。
+
+当前机制提交为`c4d86145`，上阶段证据封装修复为`34fb0b44`。最终本地全量Python2947通过/261跳过、Node1662通过/23跳过/0失败，smoke、Motif、RSI、效率和RAE检查通过。Linux冻结源码23文件597通过、418.57秒；3608文件SHA一致。模型调用0。原件定位已核对本地和V100的项目目录及7个相关结果/工作归档，未找到完整逐论断原运行。真实judge校准、Evolution语义候选与后继质量仍pending。接手先恢复可追溯语义评价材料，再校准裁判并运行最小真实后继对照。工作区另有其他会话的产物分配审计文档，本轮保留，不混入本次源码提交。
+
+上述源码及结果记录已推送至[草稿PR156](https://github.com/jingyio/GeneLoop/pull/156)，结果记录提交为`3a14109e`。PR保持draft，未合并或部署。该head最后读取的Ubuntu/Windows检查为queued，本地和Linux结果分别保留，不能写成GitHub CI已通过。
 
 ## 2026-11-03：停止场景细节优化，回到公共机制
 
@@ -16,7 +67,7 @@
 - 已观察：`continuation-study-001`四对真实检查点消融，on四格全合格、两格模型完整C→D，off两格合格、无完整C。on/off模型估费0.005062164/0.068178516，局部低92.6%，不是无C对照或新盲测。
 - 从初始池结果：`generative-primitives-001`三组各两格；WithC1模型自主新写3273字符比较程序和C调用，DoRA/BitFit四项最终检查全过、每项2次C回执。D为`cap_c962563a382f4c1d2e1f598c`。实际用JSON意图，不是Python拼写。WithC0完整重写2/4；Flat1完整重写4/4且费用更低；另三格最终未评审。完整理论反馈未闭合。
 - 验证/费用：本地1979Python通过/239skip、1516Node通过/20skip，Linux原生/公共129通过，smoke/motif通过，诊断无模型。真实38请求、USD0.139684764用量估费，原账本3315→3353，全部结算unknown0；实付、Codex开发、人机成本未知。
-- 证据入口：公开[组会报告](../experiments/recursive-construction-20261103.md)含一分钟讲稿、完整矩阵和失败；[新协议](../recursive-construction-protocol-20261103.md)。私有`.local/recursive-construction-20261103/server-evidence/`保留两个study及配置/原始回答/质量/回执。服务器同名私有根`code-20`=main、`code-21`=`4af5c56f`，加载既有`.local/remote-env.sh`后用研究README入口；不重发已关闭格。
+- 证据入口：公开[组会报告](../experiments/recursive-construction-20261103.md)含一分钟讲稿、完整矩阵和失败；[新协议](../research/evolution/recursive-construction-protocol-20261103.md)。私有`.local/recursive-construction-20261103/server-evidence/`保留两个study及配置/原始回答/质量/回执。服务器同名私有根`code-20`=main、`code-21`=`4af5c56f`，加载既有`.local/remote-env.sh`后用研究README入口；不重发已关闭格。
 - 接手下一步：①减轻新程序调用与原生value包装等作者接口负担，仍由模型明确参数关系；②补array.items类型与确定数据形状错误的修复诊断，保留已提交后继失败的撤回/新机会；③再做可执行C/仅描述/无C的创造价值和同一任务流净节余→再投资→D→E对照，不追加重复任务凑回本。
 - 权限/风险：真实DeepSeek持续授权、平台null与原累计账本不变；生产/默认聊天/外部应用/私人原件未改。独立研究入口可停用，回退源码到main `2f29d34a`；保留所有失败与不可变研究快照。
 
@@ -24,7 +75,7 @@
 
 - 起点：已核对远程 main `f594e19`，PR #122 已合并。当前分支 `codex/capability-frontier-20261103`，沿用当前工作区，私人 `reference/` 未跟踪。
 - 更新时间与交接人：2026-11-03，Codex；研究已封账，独立草稿[PR #123](https://github.com/jingyio/GeneLoop/pull/123)审阅中，不自动合并。
-- 当前目标与结果：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结见[七小时协议](../capability-frontier-protocol-v1.md)。C 已真实发布；三种冻结条件全部结束，最后条件 WithC 2/2、Direct 1/2 通过 Mamba 两对检查，Flat 一格失败、一格无候选。已发布 D 全部完整重写、未调用 C/J；自主 C→D 与递归效率收益 pending。
+- 当前目标与结果：引用一致性 C → 跨版本一致性 D，以及隐藏 C 的反事实；完整冻结见[七小时协议](../research/capability/capability-frontier-protocol-v1.md)。C 已真实发布；三种冻结条件全部结束，最后条件 WithC 2/2、Direct 1/2 通过 Mamba 两对检查，Flat 一格失败、一格无候选。已发布 D 全部完整重写、未调用 C/J；自主 C→D 与递归效率收益 pending。
 - 执行窗口：约 00:48–07:48（Asia/Shanghai）；先固定真实/公开输入、独立判据、组间可见能力和有限实验预算，再运行。沿用原累计账本；生产服务、旧库与默认聊天不改。
 - 已实现：JSON 值桥接与65KB认证报告、双文件角色绑定、函数入口胶合与完整程序机械包装、按能力池版本恢复机会准入；复用原公共控制器/原生认证/TS执行与发布，没有另造Agent循环。
 - 已验证：`e6d46f6`源码本地全量1879 Python通过/239跳过、1516 Node通过/20跳过；服务器原生/公共95 Python、前轮20 Node通过/1平台跳过。含最终源码的`a92f278` Ubuntu/Windows push/PR四项CI全部通过（含全量、smoke、motif:check）；后续仅文档收尾，当前head见PR检查。444个实验内部文件引用校验无缺失/变化，未读凭证或越出实验根的链接。
@@ -55,13 +106,13 @@
 - 已完成：`capability_adapter.py`、`publish_capability.mjs`、`verify_capability_outputs.py`接公共Builder/反馈/Store；原生只读Script后端及精确版本白名单。独立验收先覆盖字面BibTeX条目数、唯一键和重复键，不认证文献真实性。
 - 已验证：Linux原生认证、组合、发布、不同输入后继和下一Builder可见，4项论文测试通过；21项Script/沙箱检查通过。全量Python1793通过/237跳过，Node1495通过/18跳过；Linux smoke通过。确定性组合和合成输入只属诊断，模型请求0。
 - 未完成：真实历史任务的acquire路由、新真实Builder提案、任务结束自动采集、读取Motif接入及收益对照。默认聊天和原学习工作器未接管。修复`observation`缺失前的发布失败保留。
-- 配置/复现/边界见[场景协议](../capability-scenes-v1.md#论文-script-接入2026-11-02续)和[记录](../experiments/efficiency-rsi-script-20261102.md)。测试使用项目Linux私有环境，原始产物仅存`.local/efficiency-rsi-script-20261102/`。真实API持续授权不变；本轮新增费用0、机器成本未计价。
+- 配置/复现/边界见[场景协议](../research/capability/capability-scenes-v1.md#论文-script-接入2026-11-02续)和[记录](../experiments/efficiency-rsi-script-20261102.md)。测试使用项目Linux私有环境，原始产物仅存`.local/efficiency-rsi-script-20261102/`。真实API持续授权不变；本轮新增费用0、机器成本未计价。
 - 接手下一步：固定真实任务训练/认证分区，运行原学习器路由；让真实Builder构造并逐阶段定位失败。回退可停用新scene_adapter；兼容策略与白名单应和本轮代码一起回退，不单独删除配置文件。
 
 ## 2026-10-23：回执传输独立 main 修复
 
 - 目标与范围：用户同意依次推进传输小PR、明确反例下的候选失效、成本决定。第一步从最新 main `62cb9787` 新建 `codex/script-receipt-transport-20261023`，只整理有界无损回执，不带入尚未发布的集合/关系/反馈实验。原实验分支 `codex/paper-evidence-split-20261023` 在 `fd7f98c9` 完整保留，Desktop脏工作区、生产、原件及旧库未动。
-- 已完成：Runtime校验并解码 `bounded_zlib_v1`，仅显式compactContext和新认证标记共同启用；模型始终看到可读stdout，包括解码结果更大的情况。认证器对来源/独立输入核对完整明文/压缩回执等价。原stdout、权限、版本和一次性授权守卫不变，旧明文路径保留；代码锁仍须实际重认证，不能直接补hash。接口见docs/interfaces，范围见[独立记录](../experiments/script-receipt-transport-20261023-v1.md)。
+- 已完成：Runtime校验并解码 `bounded_zlib_v1`，仅显式compactContext和新认证标记共同启用；模型始终看到可读stdout，包括解码结果更大的情况。认证器对来源/独立输入核对完整明文/压缩回执等价。原stdout、权限、版本和一次性授权守卫不变，旧明文路径保留；代码锁仍须实际重认证，不能直接补hash。接口见docs/interfaces，范围见[独立记录](../debug/script-receipt-transport-20261023-v1.md)。
 - 已验证：40项定向通过；完整Python1519通过/235跳过，Node1372通过/15跳过/1失败。未修改网关的大上传ECONNRESET在原样main私有独立检出也8/9失败，已定位为main同现问题，未借本PR改网关。smoke/motif:check通过、0模型。12个原历史程序重新沙箱认证，ID/模板/描述不变，私有transport-main-library摘要 `beb12ae8…`；未更新生产库。
 - 费用与配置：本步骤API0/USD0，累计6697/USD12.048783156，unknown13/pending2保留，非账单；本地/人工成本未货币量化。原始日志、原样main诊断检出、认证、state及PR材料放 `.local/paper-candidate-guard-20261023-v1/`。真实论文回执失败的付费回归属于先前实验分支，不把本次合成传输诊断称新论文效果。
 - 接手下一步：仅推送/提传输PR供审阅，不合并/部署；远端CI需独立查看。其后另开分支做当前程序/输入/任务目标绑定的明确质量反例，不将相似结果、未选、重写或单次任务失败直接编译为错误原因；关系扩展继续暂停。无后台付费，heartbeat保持暂停。
@@ -130,7 +181,7 @@
 - 已完成：`script_negative_learning.py`复用当前原生失败编译，两个不同任务且工具源码一致才有候选；有界模型生成+独立审核，强制prompt_only，审核缓存与失败不自动付费重试。`advance-script-motifs.py`区分完成任务Positive历史和已结束任务Negative历史，发布同一不可变round。`script_learning_store.ts`接入negative_file/digest与冻结加载；Runtime实际失败后投递建议。默认无negative-learning.json不启用。
 - 接线修复：自动生成12个Positive算子而实验未配置Embedding，曾因Invalid URL连带停用整个Runtime；`optionalScriptRuntime`现对空库直接跳过，对非空匹配器初始化失败仅局部回退，Negative/Reuse和原生Agent继续。完整配置下原cache catalog保持可用。库摘要/来源/代码锁失败仍保守拒绝。初判为空库已纠正，不以新增算子数量称收益。
 - 已验证：最终完整Python1359通过/213跳过，最终完整Node1206通过/5跳过；相关Python35、Node34定向通过，smoke与motif:check通过。确定性测试仅作诊断。完整Node曾有1项既有MCP子进程5秒期限失败，单独7项复跑及停付费任务后的完整Node均通过，未放宽超时、未删除失败日志；并行负载原因尚属推测。
-- main兼容更新：使用DSH的`isAgentLoopRequest`标记绕过compaction等辅助请求；自动提示规则逐失败见证绑定目标参数schema，无关工具新增允许提示复用，目标变化仍失效，早停规则不放宽。合并后Python1517通过/235跳过、Node1357通过/15跳过；相关Python38/Node38、smoke/motif通过。见[main兼容记录](../experiments/paper-rsi-main-compat-20261021-v1.md)。
+- main兼容更新：使用DSH的`isAgentLoopRequest`标记绕过compaction等辅助请求；自动提示规则逐失败见证绑定目标参数schema，无关工具新增允许提示复用，目标变化仍失效，早停规则不放宽。合并后Python1517通过/235跳过、Node1357通过/15跳过；相关Python38/Node38、smoke/motif通过。见[main兼容记录](../debug/paper-rsi-main-compat-20261021-v1.md)。
 - Windows CI修复：首轮2项失败定位为worker发布指针使用系统反斜杠，违背共享POSIX路径协议，继承时被拒绝。已统一三种资产指针为`as_posix()`并保留安全校验，原发布/继承回归补充格式检查；首轮失败不删除，远端结果以PR104最新提交为准。该序列化修复不另跑付费实验。
 - 真实结论：见[Negative闭环验收](../experiments/paper-negative-rsi-20261021-v1.md)。同论文两种历史失败候选，非七篇独立论文。A/B任务传输失败但原生结构错误仍自动采集；学习400后做了一次局部worker恢复。C自动发布5da69dc7…，D精确消费并提示；D结束自动重新生成/审核提示，另编译12个正面算子。E局部发现组件接线问题。第二次局部重编译/当前loader认证后，最终F/G均在当前代码下真实命中并投递，F自动发布a21a7de1…由G精确加载，源码与冻结快照一致。两次人工worker恢复单列，不冒充自动触发。
 - 质量与限制：C/D均有实际7页PDF及工具交付回执，但在最后组件隔离修复前；最终F/G为45秒投递检查，主动取消，未重复完整恢复。没有重检文献真实性或逐页视觉验收，不能称完整论文质量合格。D仍尝试不合法单章重组且保留旧说明；提示不保证修复成功。A通用summary把原论文图片PDF算成报告，本轮已按真实documents产物纠正统计，未改旧原始summary。
