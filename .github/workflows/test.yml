@@ -21,6 +21,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - run: npm ci
       - run: npm run setup
+      - name: Install pinned local privacy dependencies
+        shell: bash
+        run: |
+          python_path=.venv-sss/$([[ "$RUNNER_OS" == "Windows" ]] && echo Scripts || echo bin)/python
+          "$python_path" -m pip install -r requirements-rsi-privacy.txt
+          tool_path=$("$python_path" scripts/install-rsi-privacy-tools.py --root "$RUNNER_TEMP/geneloop-privacy-tools")
+          echo "SSS_RSI_GITLEAKS=$tool_path" >> "$GITHUB_ENV"
       - name: Install pinned OCR languages for real scan tests
         shell: bash
         run: |

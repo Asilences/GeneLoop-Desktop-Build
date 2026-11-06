@@ -1,5 +1,11 @@
 # 主线当前交接
 
+## 2026-11-06：全场景公共脱敏候选
+
+- `codex/rsi-privacy-platform` 为已合并 PR159 的后续工作，继续扩展公共脱敏模块，接两个 Web 宿主、SDK、离线导入和研究学习模型边界；新 MCP 场景继承规则。复用本地 Presidio/Gitleaks，保留账号内任务语义，公开共享只允许匿名工具流程。
+- 后续 [草稿 PR162](https://github.com/jingyio/GeneLoop/pull/162) 已创建并推送，已整合 main `cdc3a6a9`；描述和四项隐私 Issue 的评论明确区分初步实现与待验收，桌面端可按分支对接。最终完整回归和 Mac 真实 Coding 验收未完成，Issue 未关闭。
+- 正式服务未切换，原任务证据、费用与版本守卫保持私有权威。隔离回归和 Issue141–144 边界见[隐私交接](rsi-data-privacy.md)及[本轮记录](../debug/privacy-platform-20261106.md)，不能由工程诊断代替 Mac Coding 产品验收。
+
 ## 2026-11-06 模型上游地址集中与 Kouri 接入
 
 - 联合整合：#159 已以 `5e21c754` 合入 main；#160 纳入隐私分支并更新八个模型迁移相关文件的精确证书兼容摘要，原证书、Motif IR/schema/来源和累计账本均未修改。联合专项 Python 98 通过/11 跳过、Node 13/13、Web 场景 4/4，详见 `docs/debug/kouri-env-models-20261106.md`。正式服务未重启。

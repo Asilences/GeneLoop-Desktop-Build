@@ -29,7 +29,7 @@
   },
   "src/adapters/dsh_web_tasks.ts": {
     "certified": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284",
-    "current": "7b230e08ce49578a61280427f7dd5eaedab2e792b10119d220782b9b460f77f3"
+    "current": "06d651d54c8150a90f200a92244ef11942067c67bb9047faa461fb672b4980d2"
   },
   "src/adapters/harless_rsi_bundle.py": {
     "certified": "06af97b2a465a439dd4323a37f764c492cd3927bb1bed232afeef8f389f5fe91",
@@ -57,7 +57,7 @@
   },
   "src/adapters/capability_proposal.py": {
     "certified": "26b9fe45909001bd8f0a36352be20d8406b49a7d5a2fed11028d710ea2b44a59",
-    "current": "3a5b38403779607ebb25f583bf35693b928335c91d15ba66096009b065e78c0e"
+    "current": "7d68a430b9d45119f3551cc0fc0e74fd7e17e65f84b15f3fd4843998ab0d8427"
   },
   "src/adapters/deepseek_cost_gate.py": {
     "certified": "b42ea0cdcf2f2ebc4ddf7efb42761270a98a7d204868caea35b6550523875675",
@@ -66,5 +66,17 @@
   "src/adapters/harless_reasoning.ts": {
     "certified": "7e734662ea4169ac8a94154a65ea226f3f6d933675a0557c59cd445601bb4967",
     "current": "e02a83bea475ff7e5e2e62d4eedf718ef2f69730971ef70ce321ff9034a53461"
+  },
+  "src/adapters/capability_construction_history.py": {
+    "certified": "7a00cdc0de3cc2c818df566e11883bfec98664072f0f2bd045be515fe35385b2",
+    "current": "e92906f9e7b175f6554e9fb396916cc907a92cc5ad8300d7e84d5d941e663d18"
+  },
+  "src/adapters/capability_goal_proposal.py": {
+    "certified": "b2720f7e1577d8cd4d428fa479b62d93383174a2e8b7b83fa0c512c00241ba15",
+    "current": "427d5747a46e938d1418a071b7845ef7a393f3662c14af5df7962818456f8aae"
+  },
+  "scripts/export-online-motif-manifest.py": {
+    "certified": "e8adb978c381b07877cf93da1c7b502e9ddbafe29dc42ae8fe7cdc9697d8314c",
+    "current": "b550caff70260f6c8c1320f5760b557c3909bcfcf8239d77dd3ddabb0b70412b"
   }
 }

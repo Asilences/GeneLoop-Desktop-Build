@@ -55,6 +55,9 @@ const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFil
 const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'}]});
 let motifAuthenticated=true;
 let workspaceTasks=[];
+// The UI must offer completed tasks from future MCP scenes as well. Its
+// protocol fixture needs no NLP installation; actual v4 admission runs on Linux.
+shareSources.set('future-custom-mcp',shareSources.get('ppt'));
 const requests=[],streams=new Map(),sessions=[],selections=new Map(),modelSelections=new Map();let questionPending=false;
 const archived=new Set(),deleted=new Set();
 const scenes=[['new-scene','Chat','chat'],['ppt','PPT','ppt'],['paper-proofreading','论文校对','paper'],['research-data-analysis','数据分析','data'],['files','文件管理','file'],['video-editing','视频编辑','video']].map(([id,label,shortcut])=>({id,label,shortcut,available:true}));

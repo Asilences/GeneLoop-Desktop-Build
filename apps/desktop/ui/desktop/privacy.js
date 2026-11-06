@@ -47,7 +47,7 @@ export function privacyPanel(){
       }
     },'secondary');
     stop.dataset.privacyCancel='true';
-    content.replaceChildren(node('p',{},'共享对象为工具流程结构。以下 JSON 是本次将发送的完整内容。'),
+    content.replaceChildren(node('p',{},'共享对象仅含工具流程结构。场景和工具使用本次对象内的编号，任务内容保留在账号内。以下 JSON 是将发送的完整内容。'),
       node('p',{},'接收端 '+(value.target||'尚未配置')),
       node('p',{},'本次共享编号 '+value.preview_id),
       node('p',{},value.bytes+' 字节 · SHA256 '+value.sha256),
@@ -61,9 +61,9 @@ export function privacyPanel(){
       status.textContent=configuration.enabled?'共享需逐次预览并确认。':'当前部署未配置共享接收端，可生成预览或保存本地副本。';
       const value=await request('/api/harless/tasks',{signal:abort.signal});
       if(!valid())return;
-      const tasks=(value.tasks||[]).filter(row=>row.status==='completed'&&['paper-proofreading','ppt'].includes(row.scene));
-      if(!tasks.length){content.replaceChildren(node('p',{},'完成论文校对或 PPT 任务后，可在此选择工具流程结构。'));return;}
-      const select=node('select',{'aria-label':'选择共享对象'},tasks.map((row,index)=>node('option',{value:row.task_id},(row.scene==='ppt'?'PPT':'论文校对')+' 已完成任务 '+(index+1))));
+      const tasks=(value.tasks||[]).filter(row=>row.status==='completed');
+      if(!tasks.length){content.replaceChildren(node('p',{},'完成任务后，可在此选择工具流程结构。'));return;}
+      const select=node('select',{'aria-label':'选择共享对象'},tasks.map((row,index)=>node('option',{value:row.task_id},(row.scene_label||row.scene||'通用场景')+' 已完成任务 '+(index+1))));
       const prepare=button('生成共享预览',async()=>{
         prepare.disabled=true;
         try{const value=await post(endpoint,{action:'preview',task_id:select.value},{signal:abort.signal});if(valid())showPreview(value);}

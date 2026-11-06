@@ -200,7 +200,6 @@ def run_investigation(investigation, *, call_agent, handlers, output,
     if require_no_change_evidence:
         request['prompt'] += ('\nBefore a completed no_change decision, read original evidence and save an '
                               'evidence-linked note. If you cannot complete that investigation, finish inconclusive.')
-    save(directory / 'request.json', request)
 
     def dispatch(name, arguments):
         nonlocal finish, exhausted
@@ -354,17 +353,31 @@ def run_investigation(investigation, *, call_agent, handlers, output,
         except Exception as error:
             result = {'status': 'error', 'error': type(error).__name__ + ':' + str(error)}
             record.update(status='failed', result=result)
+        from .geneloop_privacy import learning_view, PrivacyRejected
+        try:
+            visible = learning_view(result)
+        except PrivacyRejected:
+            visible = {'status':'error','error':'geneloop_privacy_rejected'}
+        # Keep original host authority private and distinguish the exact
+        # projection actually returned to the learning model.
+        record['model_visible_result'] = visible
         path = directory / ('tool-' + str(len(tool_calls)) + '.json')
         save(path, record)
         tool_calls.append(file_ref(path))
-        return result
+        return visible
 
     result = {'status': 'incomplete', 'submissions': submissions, 'finish': None,
               'tool_calls': tool_calls, 'measured_net_benefit': None, 'actual_adoption': None,
               'production_enabled': False}
     result['investigation_identity'] = identity
     try:
-        result['agent_result'] = call_agent(request, dispatch)
+        from .geneloop_privacy import learning_view
+        safe_request = dict(request)
+        safe_request['prompt'] = learning_view(request['prompt'])
+        safe_request['initial_context'] = learning_view(request['initial_context'])
+        safe_request['tools'] = learning_view(request['tools'])
+        save(directory / 'request.json', safe_request)
+        result['agent_result'] = call_agent(safe_request, dispatch)
         result['finish'] = finish
         if finish is not None:
             result['status'] = ('completed' if finish['decision'] == 'proposal' else finish['decision'])

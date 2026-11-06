@@ -3116,7 +3116,7 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
         ]},
       ]}});
     }
-    session.append('tool/call', {callId: 'unknown', name: secret, arguments: JSON.stringify({secret})});
+    session.append('tool/call', {callId: 'unknown', name: secret, arguments: JSON.stringify({unapproved_input:secret})});
     await f.complete(task);
     const output = join(f.directory, 'tasks', task.task_id);
     const samplePath = join(output, 'rsi-learning-trace.json');
@@ -3156,9 +3156,11 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
     assert.equal((await share(undefined,false)).status,401);
     assert.equal((await share({action:'preview',task_id:'foreign'})).status,409);
     const preview=await(await share({action:'preview',task_id:task.task_id})).json();
-    const expectedShared={...sample,format:'geneloop.rsi-learning-trace/v2'};
-    delete expectedShared.task_intent;
-    assert.deepEqual(JSON.parse(preview.payload).trace,expectedShared);
+    const sharedOffline=execFileSync(python,['-m','src.adapters.geneloop_learning_trace','--authorized',
+      '--input',eventsPath,'--scene',scene,'--status','completed','--start',String(start),
+      '--catalog',join(output,'effective-config.json'),'--share-object'],{encoding:'utf8'});
+    assert.deepEqual(JSON.parse(preview.payload),JSON.parse(sharedOffline));
+    assert.equal(JSON.parse(preview.payload).trace.format,'geneloop.rsi-learning-trace/v4');
     assert.equal(createHash('sha256').update(preview.payload).digest('hex'),preview.sha256);
     assert.equal(received.length,0);
     assert.equal((await share({action:'send',preview_id:preview.preview_id,sha256:preview.sha256,consent:false})).status,409);
@@ -3200,4 +3202,42 @@ test('actual PPT adapter completion freezes single-learning evidence before anot
   // This fixture records model-selection RPCs in modelCalls; those are not
   // provider HTTP requests. No fake request-count assertion is used here.
  }finally{await f.close();}
+});
+
+const platformPrivacyScenes=[...new Set([...JSON.parse(readFileSync(new URL('../config/harless-scenes.json',import.meta.url))).scenes.map(row=>row.id),
+ 'chat','coding','future-custom-mcp'])];
+for(const scene of platformPrivacyScenes)test('platform privacy native task settlement: '+scene,{
+ skip:!process.env.SSS_PYTHON||!process.env.SSS_RSI_GITLEAKS,timeout:120000,
+},async()=>{
+ const prior=process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;process.env.SSS_RSI_PRIVACY_DIAGNOSTIC='1';
+ const python=process.env.SSS_PYTHON;
+ const f=await fixture({scenes:[{...multiScenes[0],id:scene,label:scene}],capability_profile:scene,learning_python:python});
+ try{
+  const task=await f.preview({instruction:'Keep RMSE and 24 fps; contact owner@example.com.'});
+  await f.submit(task);
+  const session=f.agents.get(task.session_id).session;
+  session.append('tool/call',{callId:'private-person@example.com',name:'mcp__demo__read_note',
+   arguments:JSON.stringify({resource_id:'source:one',email:'owner@example.com'})});
+  session.append('tool/result',{message:{source:{kind:'tool',callId:'private-person@example.com'},content:[
+   {type:'tool-result',toolCallId:'private-person@example.com',isError:false,content:[{type:'text',
+    text:JSON.stringify({text:'Keep RMSE and 24 fps',path:'/home/private-owner/results.csv'})}]}]}});
+  await f.complete(task);
+  const directory=join(f.directory,'tasks',task.task_id),sample=join(directory,'privacy-learning.json');
+  const deadline=Date.now()+90000;
+  while(!existsSync(sample)&&!existsSync(join(directory,'privacy-learning-rejected'))&&Date.now()<deadline)
+   await new Promise(resolve=>setTimeout(resolve,50));
+  assert.equal(existsSync(sample),true,'native task privacy view must be admitted');
+  const config=JSON.parse(readFileSync(join(directory,'effective-config.json')));
+  const offline=execFileSync(python,['-m','src.adapters.geneloop_learning_trace','--authorized',
+   '--input',join(directory,'events.jsonl'),'--catalog',join(directory,'effective-config.json'),
+   '--scene',scene,'--status','completed','--start',String(config.trace_start_index)],{encoding:'utf8'});
+  assert.deepEqual(JSON.parse(readFileSync(sample)),JSON.parse(offline));
+  const safe=readFileSync(sample,'utf8');
+  assert.doesNotMatch(safe,/owner@example.com|private-person@example.com|\/home\/private-owner/);
+  assert.match(safe,/RMSE/);assert.match(safe,/24 fps/);
+  assert.match(readFileSync(join(directory,'events.jsonl'),'utf8'),/owner@example.com/);
+ }finally{
+  await f.close();
+  if(prior===undefined)delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC=prior;
+ }
 });

@@ -321,3 +321,19 @@ test('frozen dynamic tool speaks real MCP stdio with no model calls',t => {
   assert.equal(rows[4].result.isError,true);assert.match(rows[4].result.content[0].text,/input_schema_additional_property/);
   assert.deepEqual(rows[5].result,{});
 });
+
+test('learning previews redact before cropping while normal host reads keep original contents',
+ {skip:!process.env.SSS_PYTHON||!process.env.SSS_RSI_GITLEAKS,timeout:120000},async t=>{
+ const f=fixture(t),command='x'.repeat(195)+' owner@example.com END';
+ f.bundle.entries[0].arguments.command=command;
+ writeFileSync(f.config.trace_bundle_path,JSON.stringify(f.bundle));
+ const normal=createTraceLearning(f.config);
+ assert.equal(normal.read({run_id:'synthetic-run',call_id:'supported-call'}).arguments.command,command);
+ const mounted=mount(f.config),listed=await mounted.registry.get('rsi_trace_list').execute({},mounted.exec);
+ assert.doesNotMatch(listed.records[0].command_preview,/own/);
+ assert.ok(listed.records[0].command_preview.length<=200);
+ const row=listed.records[0];
+ const read=await mounted.registry.get('rsi_trace_read').execute({run_id:row.run_id,call_id:row.call_id},mounted.exec);
+ assert.doesNotMatch(JSON.stringify(read),/owner@example.com|private synthetic fixture/);
+ assert.equal(read.json_files[0].shape.fields.secret.type,'string');
+});

@@ -11,23 +11,25 @@ from tempfile import TemporaryDirectory
 MAX_INTENT_CHARS = 2048
 MODELS = {"en": "en_core_web_sm", "zh": "zh_core_web_sm"}
 EXTRA_PATTERNS = {
+    "BINARY_PAYLOAD": [r"(?i)data:(?:image|audio|video|application/octet-stream)/?[^\s,]*;base64,[A-Za-z0-9+/=_-]+"],
     "PRIVATE_REFERENCE": [
         r"(?i)(?:https?|s3|file|ssh|ftp|smb)://[^\s<>\"',;，。；！？、）\])]+",
-        r"""["'](?:[A-Za-z]:[\\/]|\\\\|~/|/)[^"'\n]+["']""",
+        r"""["'](?:[A-Za-z]:[\\/]|\\\\|~/|/(?!/\s))[^"'\n]+["']""",
         r"(?<![\w/:])(?:[A-Za-z]:[\\/]|\\\\|~/|/)[\w.~-]+(?:[\\/][\w.~-]+)+",
         r"(?i)(?<![\w.-])[\w.-]+\.(?:pdf|pptx?|docx?|xlsx?|csv|tex|bib)(?![\w-]|\.[\w-])",
+        r"(?i)(?<![\w])\.local[\\/][^\s<>\"',;，。；！？]+",
     ],
     "CREDENTIAL": [
-        r"""(?i)\b(?:authorization|cookie|set-cookie)["']?\s*[:=][^\n]+""",
-        r"""(?i)\b(?:api[_ -]?key|access[_ -]?token|password|passwd|secret|token)["']?\s*[:=]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)""",
-        r"""(?:密码|口令|令牌|密钥)\s*[:=]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)""",
+        r"""(?i)\b(?:authorization|cookie|set-cookie)["']?\s*[:=：][^\n]+""",
+        r"""(?i)\b(?:api[_ -]?key|access[_ -]?token|password|passwd|secret|token)["']?\s*[:=：]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;，；]+)""",
+        r"""(?:密码|口令|令牌|密钥)\s*[:=：]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;，；]+)""",
     ],
-    "PERSON": [r"(?:联系人|姓名)\s*[:=]\s*[\p{Han}·]{2,8}(?=\s|[,;。]|$)"],
-    "ADDRESS": [r"(?i)(?:通讯地址|邮寄地址|住址|\b(?:home|mailing|street) address)\s*[:=]\s*[^\n;,。]+"],
+    "PERSON": [r"(?:联系人|姓名)\s*[:=：]\s*[\p{Han}·]{2,8}(?=\s|[,;，；。]|$)"],
+    "ADDRESS": [r"(?i)(?:通讯地址|邮寄地址|住址|\b(?:home|mailing|street) address)\s*[:=：]\s*[^\n;,，；。]+"],
     "CN_ID_NUMBER": [r"(?<!\d)[1-9]\d{16}[\dXx](?!\d)"],
 }
 ENTITIES = ["PERSON", "LOCATION", "EMAIL_ADDRESS", "PHONE_NUMBER", "IP_ADDRESS",
-            "CREDIT_CARD", "US_SSN", *[key for key in EXTRA_PATTERNS if key != "PERSON"]]
+            "CREDIT_CARD", "IBAN_CODE", "US_SSN", *[key for key in EXTRA_PATTERNS if key != "PERSON"]]
 STAT_ABBREVIATION = re.compile(r"\bmean\s*±\s*(SD|SEM|SE)\b", re.IGNORECASE)
 
 
@@ -54,6 +56,7 @@ def _presidio():
         supported_entity="EMAIL_ADDRESS", patterns=EmailRecognizer.PATTERNS,
     ))
     analyzer.registry.add_recognizer(PhoneRecognizer(supported_language="zh", supported_regions=["CN"]))
+    analyzer.registry.add_recognizer(PhoneRecognizer(supported_language="en", supported_regions=["CN"]))
     for entity, patterns in EXTRA_PATTERNS.items():
         analyzer.registry.add_recognizer(PatternRecognizer(
             supported_language="en", supported_entity=entity,
@@ -79,15 +82,16 @@ def _has_han(text):
     return any("\u3400" <= char <= "\u9fff" for char in text)
 
 
-def redact_task_intent(text):
-    if not 0 < len(text) <= MAX_INTENT_CHARS:
-        raise ValueError("invalid_task_intent_size")
-    text = unicodedata.normalize("NFKC", text).replace("\r\n", "\n").replace("\r", "\n")
-    text = "".join(char for char in text
-                   if char in "\n\t" or unicodedata.category(char) not in {"Cc", "Cf"})
-    if not text.strip() or len(text) > MAX_INTENT_CHARS:
-        raise ValueError("invalid_task_intent_size")
-    _scan(text)
+def anonymize_text(text, *, alias=None):
+    """Shared Presidio operation, independent of scenes and JSON transport.
+
+    Callers scan the complete material before and after this operation. Keep
+    Unicode and whitespace unchanged for code, equations and structured text.
+    """
+    if not isinstance(text, str) or len(text) > 1_000_000:
+        raise ValueError("invalid_privacy_text")
+    if not text:
+        return text
     analyzer, anonymizer = _presidio()
     statistical_spans = {match.span(1) for match in STAT_ABBREVIATION.finditer(text)}
     findings = []
@@ -102,6 +106,23 @@ def redact_task_intent(text):
                 if (start, end) in statistical_spans or _has_han(text[start:end]) != (language == "zh"):
                     continue
             findings.append(finding)
-    redacted = anonymizer.anonymize(text=text, analyzer_results=findings).text
+    operators = None
+    if alias is not None:
+        from presidio_anonymizer.entities import OperatorConfig
+        operators = {entity: OperatorConfig("custom", {"lambda": lambda value, entity=entity: alias(entity, value)})
+                     for entity in {finding.entity_type for finding in findings}}
+    return anonymizer.anonymize(text=text, analyzer_results=findings, operators=operators).text
+
+
+def redact_task_intent(text):
+    if not 0 < len(text) <= MAX_INTENT_CHARS:
+        raise ValueError("invalid_task_intent_size")
+    text = unicodedata.normalize("NFKC", text).replace("\r\n", "\n").replace("\r", "\n")
+    text = "".join(char for char in text
+                   if char in "\n\t" or unicodedata.category(char) not in {"Cc", "Cf"})
+    if not text.strip() or len(text) > MAX_INTENT_CHARS:
+        raise ValueError("invalid_task_intent_size")
+    _scan(text)
+    redacted = anonymize_text(text)
     _scan(redacted)
     return redacted

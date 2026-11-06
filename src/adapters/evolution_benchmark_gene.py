@@ -580,14 +580,22 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                 nonlocal lookups
                 if name != 'evolution_example_files':
                     return dispatch(name, arguments)
-                requested = dict(arguments)
-                identities = requested.pop('observation_ids', list(investigation.observations))
-                context = investigation.context(identities)
-                result = _example_file_cards(context, investigation, **requested)
+                try:
+                    requested = dict(arguments)
+                    identities = requested.pop('observation_ids', list(investigation.observations))
+                    context = investigation.context(identities)
+                    result = _example_file_cards(context, investigation, **requested)
+                except Exception as error:
+                    result = {'status':'error','error':type(error).__name__+':'+str(error)}
+                from .geneloop_privacy import learning_view, PrivacyRejected
+                try:
+                    visible = learning_view(result)
+                except PrivacyRejected:
+                    visible = {'status':'error','error':'geneloop_privacy_rejected'}
                 save(directory / 'investigation' / ('example-lookup-' + str(lookups) + '.json'),
-                     {'arguments': arguments, 'result': result})
+                     {'arguments': arguments, 'result': result, 'model_visible_result': visible})
                 lookups += 1
-                return result
+                return visible
             if materials is not None:
                 request = {**request, 'prompt': request['prompt'] + '\nA native Python helper backend is available. '
                     'For kind capability, proposal is exactly {source:Python_source, '

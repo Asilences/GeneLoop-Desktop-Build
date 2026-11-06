@@ -1,6 +1,6 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-Paper/PPT 的 [RSI 任务语义脱敏](docs/rsi-data-privacy.md#v3-任务语义诊断)可在隔离 Web 和离线导入中显式启用，使用本地 Presidio 和 Gitleaks。普通运行只需原有依赖。
+[公共脱敏模块](docs/rsi-data-privacy.md)覆盖各场景的 Web、SDK、离线导入和学习模型边界，使用本地 Presidio 和 Gitleaks，保留脱敏后的任务语义。学习准入需要安装 `requirements-rsi-privacy.txt` 并配置已核验的 Gitleaks；依赖不可用时拒绝学习样本，原任务继续正常执行。
 
 轨迹、源码共享和可选遥测默认关闭。桌面设置中的[数据与隐私](docs/rsi-data-privacy.md#默认私有与可选共享)提供工具流程预览、逐次授权、保存本地副本与取消；接收端由部署方在私有配置中指定。
 

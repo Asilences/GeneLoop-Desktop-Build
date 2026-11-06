@@ -13,10 +13,15 @@ def main():
     parser.add_argument('--study', type=Path, required=True)
     parser.add_argument('--journal', type=Path, required=True)
     parser.add_argument('--provider-request-refs', type=Path, required=True)
+    parser.add_argument('--public', action='store_true')
     args = parser.parse_args()
     load = lambda path: json.loads(path.read_text(encoding='utf-8'))
     registry = StudyRequestRegistry(load(args.study), args.journal)
-    print(json.dumps(registry.export(load(args.provider_request_refs)), ensure_ascii=False,
+    value=registry.export(load(args.provider_request_refs))
+    if args.public:
+        from src.adapters.geneloop_privacy import admit_publication
+        admit_publication(value)
+    print(json.dumps(value, ensure_ascii=False,
                      indent=2, allow_nan=False))
 
 
