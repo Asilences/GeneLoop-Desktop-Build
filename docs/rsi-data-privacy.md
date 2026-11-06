@@ -31,6 +31,8 @@
 
 在隔离解释器安装 `requirements-rsi-privacy.txt`，将 `SSS_PYTHON` 指向该解释器，`SSS_RSI_GITLEAKS` 指向核对官方校验表的二进制。运行时不下载模型、不调用外部脱敏 API。所有学习材料仍视为受限数据，不能因通过识别就任意公开。
 
+Linux/Windows x64 可用 `python scripts/install-rsi-privacy-tools.py --root .local/privacy-tools` 安装固定官方发布包；先核对固定 SHA256，再写入单个二进制并核验版本，拒绝覆盖已有安装。`--archive` 可传离线官方包。脚本只输出可用于 `SSS_RSI_GITLEAKS` 的绝对路径，来源和实际摘要写入私有安装清单。CI 的两个平台都显式安装同一份固定 NLP 依赖与 Gitleaks。其他架构请按官方发布校验表自行安装，尚未由该安装脚本验证。
+
 ## 通用离线导入
 
 提供当前任务的零基事件行起点及其冻结的 `effective-config.json`（`allowed_tools` 或 `tools[].name`）。
