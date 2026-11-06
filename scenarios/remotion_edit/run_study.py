@@ -6,6 +6,7 @@ from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.harness_runtime import create_harness
 from src.adapters.scenario import prepare_scenario
 from src.adapters.deepseek_cost_gate import State, create_server
@@ -35,7 +36,7 @@ def main():
             if hashlib.sha256((BASE/'assets'/name).read_bytes()).hexdigest()!=source_rows[name]['sha256']: raise ValueError('changed source asset')
     image=os.environ['REMOTION_IMAGE']
     # Credentials are inherited from private server configuration, never serialized.
-    if args.call_model and not os.environ.get('DEEPSEEK_API_KEY'): raise RuntimeError('missing private credential')
+    if args.call_model and not model_api_key_configured(): raise RuntimeError('missing private credential')
     checkpoint=BASE/'budget-checkpoint.json'
     if not checkpoint.exists(): save(checkpoint,{'request_count':0,'reserved_usd':0})
     attribution={}
@@ -48,7 +49,7 @@ def main():
                 attribution[booked[0]]=next((t['id'] for t in tasks if t['instruction'] in payload), 'unknown')
             return booked
     state=AuditedState(cap_usd=None,output_cap=6000,record=BASE/'cost-ledger.jsonl',request_limit=None,checkpoint=checkpoint)
-    gate=create_server('127.0.0.1',0,'https://api.deepseek.com',state)
+    gate=create_server('127.0.0.1',0,model_api_root(),state)
     worker=threading.Thread(target=gate.serve_forever,daemon=True); worker.start()
     def run_task(task):
         if args.task and task['id']!=args.task: return
@@ -100,7 +101,7 @@ def main():
                 raise TaskTurnEnded()
             if time.monotonic()-started>900:
                 raise TimeoutError('experiment task exceeded 900s wall-time checkpoint; spend history retained')
-        env={'SSS_SCENARIO_TOOLS':json.dumps(prepared['allowed_tools']),'DEEPSEEK_API_KEY':os.environ['DEEPSEEK_API_KEY'],'DEEPSEEK_BASE_URL':f'http://127.0.0.1:{gate.server_port}/v1','SSS_BUDGET_GATE_ACTIVE':'1','SSS_BUDGET_CAP_USD':'0','SSS_BUDGET_LEDGER':str(BASE/'cost-ledger.jsonl')}
+        env={'SSS_SCENARIO_TOOLS':json.dumps(prepared['allowed_tools']),'DEEPSEEK_API_KEY':model_sdk_key(),'DEEPSEEK_BASE_URL':f'http://127.0.0.1:{gate.server_port}/v1','SSS_BUDGET_GATE_ACTIVE':'1','SSS_BUDGET_CAP_USD':'0','SSS_BUDGET_LEDGER':str(BASE/'cost-ledger.jsonl')}
         started=time.monotonic(); before=state.request_count
         print(json.dumps({'start':task['id'],'prior_requests':before}),flush=True)
         metrics={'task':task['id'],'batch_id':args.batch_id,'status':'failed'}

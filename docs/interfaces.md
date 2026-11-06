@@ -466,6 +466,8 @@ Harness 原生 `SessionPromptRequest.content` 的实际格式为：
 
 ### 预算、模型与记录
 
+Python 的模型上游入口为 `src/adapters/model_api.py`：`model_api_base_url()` 当前为 `https://api.kourichat.com/v1`，`model_wire_id()` 将 Harness 内部 `deepseek-flash` 映射到 `deepseek-v4.1-flash`，`model_api_key()` 只读取 `KOURI_API_KEY`。Web、File、预算代理与独立场景从这里取得上游；模拟模式仍用本地 provider，GLM 等显式配置的其他 provider 保留各自入口。旧 SDK 字段名只用作本地网关兼容占位，网关出站以 Kouri 密钥替换。当前模型选项由指定模型 ID 静态配置，不调用未确认兼容的 Kouri `/models`。价格沿 DeepSeek 费率代理估算，Kouri 实付和文件/搜索/思考接口待验证。
+
 通用 Web 入口每任务、全启动费用和请求次数默认均为 `null`，表示不限。Web 不对单次用户文字另设长度上限；输出配置 `max_output_tokens: null` 时没有应用层输出额度；按2026-10-20最新要求，Web普通和文件转发请求统一使用官方真实最大单次容量393216 tokens作为 `max_tokens`，避免省略参数触发非思考默认8K截断，不裁剪模型返回。明确设置的有限诊断参数保持原值。服务商自身上下文和最大输出容量仍适用。上传容量、账号/路径权限及 HTTP 协议安全边界继续保留。前端预算只能下调服务器任务费用上限；`harness-web.py --budget-usd` 定任务上限，`--run-budget-usd` 定全启动上限，两者显式 `0` 均表示取消对应费用限制。累计 cap 在 policy/effective config/统计中以 `null` 表示不限，禁止使用 Infinity 或巨大数代替；内部 `State(cap_usd=0)` 仍代表零费用预算。可选 `--request-limit/--run-request-limit` 正整数保留次数限制；CLI `0`、配置/统计中的 `null` 表示不限次数，仍完整累计请求与费用。`TaskBudgetRegistry` 支持任务与累计费用分别设为 `null`；有限服务器上限仍禁止客户端提交不限或越界的任务；先不可变注册，原生聊天随发送激活，显式 API 经 submit 激活。预算代理根据 `x-deepseek-harness-session-id` 路由，同一次请求原子记录任务与累计费用，检查仍有效的上限，完整成功用量两层结算，新任务不重置累计账本。
 
 私有控制服务仅监听 loopback，`/tasks/register/activate/cancel/stats` 均要求 `X-SSS-Control-Token`。该 token 由启动器生成，不提供给浏览器。每任务冻结已选 provider/model、思考档位（`off/low/high/max`，旧 On=`high`）和输出配置（允许 `null`），关闭标题模型、辅助请求和压缩；UI 模型菜单不能绕过预算连接。

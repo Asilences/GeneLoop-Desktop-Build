@@ -123,7 +123,8 @@ class UnlimitedCostBudgetTests(unittest.TestCase):
         control, gate = Mock(server_port=40001), Mock(server_port=40002)
         argv = ['serve-web-budget.py', '--output', str(self.root), '--checkpoint', str(self.checkpoint),
                 '--budget-usd', '0', '--request-limit', '0', '--task-request-limit', '0']
-        with patch('sys.argv', argv), patch.object(module.signal, 'pause', create=True), \
+        with patch.dict('os.environ', {'KOURI_API_KEY': 'diagnostic-only'}), \
+                patch('sys.argv', argv), patch.object(module.signal, 'pause', create=True), \
                 patch.object(module, 'create_control_server', return_value=control) as control_factory, \
                 patch.object(module, 'create_server', return_value=gate) as gate_factory, patch('builtins.print'):
             module.main()

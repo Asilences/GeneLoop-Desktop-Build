@@ -1,5 +1,12 @@
 # 主线当前交接
 
+## 2026-11-06 模型上游地址集中与 Kouri 接入
+
+- 范围：将运行代码中散落的 DeepSeek 官方 API 地址收敛到 `src/adapters/model_api.py`；按用户提供的 Kouri `https://api.kourichat.com/v1`、`deepseek-v4.1-flash` 接入。Harness 内部模型别名沿原路由到本地计费网关，出站模型 ID 在集中模块映射；私有上游凭证变量为 `KOURI_API_KEY`，旧 DeepSeek 密钥值不再读取。原账本保留。
+- 从最新 `origin/main` 的 `d1863342` 建立隔离分支 `codex/kouri-api-20261106`；原研究工作区及未跟踪 `reference/` 未动。README 与 `docs/interfaces.md` 已同步入口说明。
+- Kouri 密钥值未提供、未读取；当前无真实 Kouri 请求。Kouri 文件/搜索/思考协议、输出容量与实际价格尚未验收。既有 DeepSeek 单价仅作代理费用估算，不代表 Kouri 实付；真实调用前须在私有环境配置 `KOURI_API_KEY` 并删除旧密钥。未修改旧能力包证书。
+- 验证：最新 main 隔离分支的模型网关专项 56/56、Kouri 凭证相关专项 79/79、成员网关 Node 38/38、无模型 `npm run smoke` 通过，付费请求 0。全量 Python 初跑 2986 通过、261 跳过、28 失败；其中 9 项为旧密钥测试夹具，已更新并由相关专项复核，其余为旧 Paper/PPT 能力包源码锁，未重跑全量。Node 全量在隔离工作区有既有夹具/环境失败，受本轮改动的成员网关专项已单独通过。本次不改证书、不部署服务；回退可切回 `d1863342`，历史账本不清零。
+
 ## 2026-11-05：PR156 整合 main 候选
 
 - 以 PR156 `8e697e51` 为起点，合入 #158 后的 main `a71e30ce`；在隔离检出处理冲突，共享工作区与原研究检出的未提交改动未覆盖。保留 main 的精简 AGENTS、文档分类与 README 布局，Evolution 研究进展仍在 docs。

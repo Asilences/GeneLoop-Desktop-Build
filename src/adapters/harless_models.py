@@ -5,6 +5,8 @@ Credentials and provider error bodies are never returned or recorded.
 """
 from __future__ import annotations
 
+from .model_api import model_catalog_url, model_api_key
+
 import json
 import urllib.request
 from datetime import datetime, timezone
@@ -14,8 +16,8 @@ from src.adapters.deepseek_cost_gate import (
     provider_output_reservation, validate_cost_cap,
 )
 
-CATALOG_URL = 'https://api.deepseek.com/models'
-MODEL_LABELS = {'deepseek-flash': 'DeepSeek V4.1 Flash', 'deepseek-v4-pro': 'DeepSeek V4 Pro'}
+CATALOG_URL = model_catalog_url()
+MODEL_LABELS = {'deepseek-flash': 'Kouri AI · DeepSeek V4.1 Flash', 'deepseek-v4-pro': 'DeepSeek V4 Pro'}
 REASONING_EFFORTS = ('off', 'low', 'high', 'max')
 REASONING_LABELS = {'off': 'Off', 'low': 'Low', 'high': 'High', 'max': 'Max'}
 
@@ -77,6 +79,7 @@ def price_basis(models: list[dict]) -> dict:
         'output': PEAK_USD_PER_MILLION[row['model']][1],
         'off_peak_multiplier': .5,
         'source': 'https://api-docs.deepseek.com/quick_start/pricing/',
+        'billing_provider': 'Kouri AI', 'billing_price_verified': False,
     } for row in models if row['provider'] == 'deepseek-official'}
 
 
@@ -87,7 +90,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def discover_deepseek_models(api_key: str, *, opener=None) -> dict:
     if not isinstance(api_key, str) or not api_key.strip():
-        raise ValueError('DeepSeek model discovery requires the configured server credential')
+        raise ValueError('model discovery requires the configured server credential')
+    if opener is None and api_key.strip() != model_api_key():
+        raise ValueError('model discovery requires KOURI_API_KEY')
     request = urllib.request.Request(CATALOG_URL, headers={
         'Authorization': 'Bearer ' + api_key.strip(), 'Accept': 'application/json'}, method='GET')
     try:
@@ -109,4 +114,4 @@ def discover_deepseek_models(api_key: str, *, opener=None) -> dict:
         return {'data': rows, 'checked_at': datetime.now(timezone.utc).isoformat(),
                 'source': CATALOG_URL, 'http_status': 200, 'model_requests': 0}
     except Exception:
-        raise ValueError('无法读取 DeepSeek 模型列表，请检查服务器连接和凭据配置后重试。') from None
+        raise ValueError('无法读取模型列表，请检查服务器连接和 Kouri 凭据配置后重试。') from None

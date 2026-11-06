@@ -22,6 +22,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
 from src.adapters.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State, create_server
@@ -148,7 +149,7 @@ def run(exp, source, index, mode, cap_usd=1):
             return row
     state=RecordedState(cap_usd=cap_usd,output_cap=OUTPUT_CAP,request_limit=None,record=out/'cost-ledger.jsonl')
     state.request_count=len(rows);state.reserved_usd=prior
-    gate=create_server('127.0.0.1',0,'https://api.deepseek.com',state)
+    gate=create_server('127.0.0.1',0,model_api_root(),state)
     worker=threading.Thread(target=gate.serve_forever,daemon=True);worker.start()
     guard=NativeBudgetGuard(max_model_requests=None,max_observed_input_tokens=None)
     calls={}
@@ -171,7 +172,7 @@ def run(exp, source, index, mode, cap_usd=1):
                         p.chmod(0o600)
             if e['type']=='step/start':print(json.dumps({'run':label,'step':e['data'].get('step'),'upstream_requests':state.request_count-len(rows),'cumulative_reserved_usd':round(state.reserved_usd,6)}),flush=True)
         guard.on_notification(n)
-    env.update(DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',SSS_BUDGET_GATE_ACTIVE='1',
+    env.update(DEEPSEEK_API_KEY=model_sdk_key(),DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',SSS_BUDGET_GATE_ACTIVE='1',
                SSS_BUDGET_CAP_USD=str(cap_usd),SSS_BUDGET_LEDGER=str(out/'cost-ledger.jsonl'))
     print(json.dumps({'starting':label,'model':'deepseek-flash','reasoning_effort':'off','prompt_sha256':sha(PROMPT),
                       'cap_usd':cap_usd,'prior_usd':prior,'request_limit':None,'output_cap':OUTPUT_CAP}),flush=True)
@@ -220,7 +221,7 @@ def main():
             from src.adapters.native_motif_compiler import compile_native_runs
             save(exp/'native-motifs.json',compile_native_runs(exp,sha(PROMPT),sha(source)));return
         if not args.call_model:parser.error('explicit --call-model required')
-        if not os.environ.get('DEEPSEEK_API_KEY'):raise ValueError('server credential missing')
+        if not model_api_key_configured():raise ValueError('server credential missing')
         end=5 if args.phase=='collect' else 2
         if not 1<=args.start_index<=end:parser.error('start-index out of range')
         for i in range(args.start_index,end+1):

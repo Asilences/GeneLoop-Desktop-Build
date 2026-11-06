@@ -18,6 +18,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root
 from src.adapters.deepseek_cost_gate import State, create_server
 from src.adapters.dsh_client import call_bounded_prompt
 from src.adapters.file_lock import exclusive_lock
@@ -77,7 +78,7 @@ def main():
                     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                     'quality': 'synthetic diagnostic only; no blind research review'}
         save(run / 'config.json', snapshot)
-        server = create_server('127.0.0.1', 0, 'https://api.deepseek.com', state, allowed_models={'deepseek-flash'})
+        server = create_server('127.0.0.1', 0, model_api_root(), state, allowed_models={'deepseek-flash'})
         threading.Thread(target=server.serve_forever, daemon=True).start()
         os.environ.update(DEEPSEEK_BASE_URL=f'http://127.0.0.1:{server.server_port}/v1',
                           SSS_BUDGET_GATE_ACTIVE='1', SSS_BUDGET_CAP_USD='null',

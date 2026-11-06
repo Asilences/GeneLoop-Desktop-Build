@@ -1,5 +1,6 @@
 """Restart the public Harness around one original durable task; never reset admission."""
 import hashlib,json,os,threading,time
+from .model_api import model_api_root
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -70,7 +71,7 @@ def execute(args,prepared=None,*,on_event=None,on_start=None):
             env['HARLESS_FILE_APPROVAL_HOME']=os.environ['HARLESS_FILE_APPROVAL_HOME']
         env.update(SSS_OPERATION_BINDING=str(out/'operation-binding.json'),SSS_EXPERIENCE_BINDING=str(out/'experience-binding.json'),
             SSS_CONTINUOUS_RSI_BINDING=str(out/'rsi-binding.json'),DSH_HOME=str(attempt/'dsh'),SSS_SCENARIO_PRESENTATION='native',SSS_SCENARIO_TOOLS=json.dumps(prepared['allowed_tools']))
-        endpoint='https://api.deepseek.com'
+        endpoint=model_api_root()
         if cfg['provider_mode']=='mock':
             import re
             endpoint=os.environ.get('SSS_MOCK_ENDPOINT','')

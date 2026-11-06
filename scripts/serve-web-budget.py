@@ -12,6 +12,7 @@ from secrets import token_hex
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key
 from src.adapters.deepseek_cost_gate import (State, create_server, request_limit_argument,
     cost_cap_argument, output_limit_argument)
 from src.adapters.web_task_budget import TaskBudgetRegistry, create_control_server
@@ -39,6 +40,8 @@ def main():
         parser.error('budget data must remain in a private .local output')
     if not checkpoint.is_file():
         parser.error('an explicit cumulative checkpoint is required; refusing to reset usage')
+    try:model_api_key()
+    except ValueError as error:parser.error(str(error))
     os.umask(0o077)
     output.mkdir(parents=True, exist_ok=True)
     state = State(cap_usd=args.budget_usd, output_cap=args.max_output,
@@ -49,10 +52,10 @@ def main():
                                   task_request_limit=args.task_request_limit)
     token = token_hex(32)
     control = create_control_server('127.0.0.1', 0, registry, control_token=token)
-    gate = create_server('127.0.0.1', 0, 'https://api.deepseek.com', state,
+    gate = create_server('127.0.0.1', 0, model_api_root(), state,
                          state_selector=registry.state_for,
                          allow_search=True, allow_vision=True,
-                         allowed_models={'deepseek-flash', 'deepseek-v4-pro'})
+                         allowed_models={'deepseek-flash'})
     policy = {'endpoint': f'http://127.0.0.1:{gate.server_port}/v1',
               'control_endpoint': f'http://127.0.0.1:{control.server_port}',
               'control_token': token, 'budget_usd': args.task_budget_usd,

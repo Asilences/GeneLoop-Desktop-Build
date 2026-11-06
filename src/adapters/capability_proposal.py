@@ -5,6 +5,8 @@ explicit invocation referencing the previous immutable attempt. The CLI defaults
 to preview; only --call-model opens the existing experiment's provider gate.
 """
 from __future__ import annotations
+
+from .model_api import model_api_root, model_api_key_configured, model_sdk_key
 import argparse
 import copy
 from contextlib import AbstractContextManager
@@ -181,7 +183,7 @@ class CumulativeProposalGate(AbstractContextManager):
         checkpoint, ledger = self.root/'budget-checkpoint.json', self.root/'cost-ledger.jsonl'
         if not checkpoint.is_file() or not ledger.is_file():
             raise ValueError('proposal_existing_cumulative_ledger_required')
-        if not os.environ.get('DEEPSEEK_API_KEY'):
+        if not model_api_key_configured():
             raise ValueError('proposal_private_model_credential_required')
         # Prevent concurrent instances of this pilot. Legacy runners must still
         # be scheduled serially by the experiment owner; they do not use this lock.
@@ -226,7 +228,7 @@ class CumulativeProposalGate(AbstractContextManager):
                         append(Path(target)/'requests.jsonl', {**row, 'phase': 'settled', 'ledger_ref': str(ledger)})
             self.state = AuditedState(cap_usd=None, output_cap=MAX_TOKENS, request_limit=None,
                                      record=ledger, checkpoint=checkpoint)
-            self.gate = create_server('127.0.0.1', 0, 'https://api.deepseek.com', self.state)
+            self.gate = create_server('127.0.0.1', 0, model_api_root(), self.state)
             self.thread = threading.Thread(target=self.gate.serve_forever, daemon=True)
             self.thread.start()
             return self
@@ -235,7 +237,7 @@ class CumulativeProposalGate(AbstractContextManager):
             raise
 
     def environment(self):
-        return {'DEEPSEEK_API_KEY': os.environ['DEEPSEEK_API_KEY'],
+        return {'DEEPSEEK_API_KEY': model_sdk_key(),
                 'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{self.gate.server_port}/v1',
                 'SSS_BUDGET_GATE_ACTIVE': '1', 'SSS_BUDGET_CAP_USD': '0',
                 'SSS_BUDGET_LEDGER': str(self.root/'cost-ledger.jsonl')}

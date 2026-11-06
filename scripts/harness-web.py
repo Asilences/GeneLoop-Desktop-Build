@@ -24,10 +24,12 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import (model_api_root, model_catalog_snapshot,
+    model_api_key_configured, model_sdk_key)
 from src.adapters.scenario import prepare_scenario
 from src.adapters.harless_scenarios import prepare_scene_registry
 from src.adapters.harless_product_prompt import product_persona, product_system_prompt
-from src.adapters.harless_models import discover_deepseek_models, model_options, price_basis
+from src.adapters.harless_models import model_options, price_basis
 from src.adapters.deepseek_cost_gate import (State, create_server, normalize_request_limit,
     request_limit_argument, cost_cap_argument, PEAK_USD_PER_MILLION, CACHE_HIT_PEAK_USD_PER_MILLION)
 from src.adapters.web_task_budget import TaskBudgetRegistry, create_control_server
@@ -402,15 +404,15 @@ def main():
         parser.error('real provider cannot use frozen/failure fixtures')
     try: args.glm = configured_glm(args.real_model and not args.frozen)
     except ValueError as error: parser.error(str(error))
-    if args.real_model and not (os.environ.get('DEEPSEEK_API_KEY', '').strip() or args.glm):
-        parser.error('configure DEEPSEEK_API_KEY or HARLESS_GLM_API_KEY in private .env')
+    if args.real_model and not (model_api_key_configured() or args.glm):
+        parser.error('configure KOURI_API_KEY or HARLESS_GLM_API_KEY in private .env')
     if args.run_id is not None and not re.fullmatch('[0-9a-f]{32}', args.run_id):
         parser.error('run-id must be 32 lowercase hexadecimal characters')
     if args.resume and (not args.run_id or args.frozen):parser.error('--resume requires --run-id and dynamic Web mode')
     args.deepseek_catalog = None
-    if args.real_model and os.environ.get('DEEPSEEK_API_KEY', '').strip():
+    if args.real_model and model_api_key_configured():
         try:
-            args.deepseek_catalog = discover_deepseek_models(os.environ['DEEPSEEK_API_KEY'])
+            args.deepseek_catalog = model_catalog_snapshot()
             model_options(args.deepseek_catalog, budget_usd=args.budget_usd,
                           max_output_tokens=defaults['max_output_tokens'])
         except ValueError as error:
@@ -443,7 +445,7 @@ def main():
     provider = ThreadingHTTPServer(('127.0.0.1', 0), handler)
     upstream = f'http://127.0.0.1:{provider.server_port}'
     if not args.real_model: args.embedding_endpoint = args.embedding_endpoint or upstream + '/v1/embeddings'
-    else: upstream = 'https://api.deepseek.com'
+    else: upstream = model_api_root()
     rates = dict(PEAK_USD_PER_MILLION)
     cache_rates = dict(CACHE_HIT_PEAK_USD_PER_MILLION)
     if args.glm:
@@ -465,7 +467,7 @@ def main():
     gate = create_server('127.0.0.1', 0, upstream, state,
                          state_selector=registry.state_for if registry else None,
                          allow_search=not args.frozen, allow_vision=not args.frozen,
-                         allowed_models={'deepseek-flash', 'deepseek-v4-pro'})
+                         allowed_models={'deepseek-flash'} if args.real_model else {'deepseek-flash', 'deepseek-v4-pro'})
     servers.append(gate)
     if args.glm:
         args.glm_gate_token = token_hex(32)
@@ -479,7 +481,7 @@ def main():
         threading.Thread(target=server.serve_forever, daemon=True).start()
     prepare(args, output, f'http://127.0.0.1:{gate.server_port}/v1')
     env = {**os.environ, 'DSH_HOME': str(output / 'dsh'), 'SSS_WEB_POLICY': str(output / 'policy.json'),
-           'DEEPSEEK_API_KEY': os.environ.get('DEEPSEEK_API_KEY', '') if args.real_model else 'sss-mock-only',
+           'DEEPSEEK_API_KEY': model_sdk_key() if args.real_model and model_api_key_configured() else 'sss-mock-only',
            'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{gate.server_port}/v1',
            'SSS_ONLINE_MOTIF_MANIFEST': '', 'SSS_ONLINE_MOTIF_TASK': ''}
     log = startup_path.open('w')
