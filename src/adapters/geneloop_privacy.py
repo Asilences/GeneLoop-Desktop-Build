@@ -32,7 +32,7 @@ IDENTITY_FIELDS = {
     **dict.fromkeys(("streetaddress", "contactaddress", "address", "家庭地址"), "ADDRESS"),
     **dict.fromkeys(("bankaccount", "accountnumber", "iban", "银行卡号"), "FINANCIAL_ACCOUNT"),
     **dict.fromkeys(("passportnumber", "idnumber", "ssn", "证件号", "身份证号"), "IDENTITY_NUMBER"),
-    **dict.fromkeys(("filename", "filepath", "attachmentname", "文件名", "附件名", "文件路径"), "PRIVATE_REFERENCE"),
+    **dict.fromkeys(("filename", "filepath", "relativepath", "attachmentname", "文件名", "附件名", "文件路径"), "PRIVATE_REFERENCE"),
     **dict.fromkeys(("accountid", "userid", "sessionid", "taskid"), "PRIVATE_ID"),
 }
 _FIELD = re.compile(r"[\s_-]+")

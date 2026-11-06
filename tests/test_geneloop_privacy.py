@@ -54,10 +54,11 @@ def test_scanner_failure_and_anonymized_key_collision_fail_closed(monkeypatch):
 def test_media_bytes_are_omitted_and_technical_file_types_remain(monkeypatch):
     monkeypatch.setattr(privacy,'_scan',lambda value:None)
     monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value)
-    source={'filename':'private-person.ipynb','image':'data:image/png;base64,U2FtcGxl',
+    source={'filename':'private-person.ipynb','relative_path':'private-person.ipynb','image':'data:image/png;base64,U2FtcGxl',
             'bytes':[1,2,3], 'address':'0xdeadbeef','nested':{'bank_account':'synthetic-account'}}
     result=privacy.learning_view(source)
     assert result['filename'].endswith('.ipynb') and 'private-person' not in result['filename']
+    assert result['relative_path'] == result['filename']
     assert result['image']==result['bytes']=='<BINARY_OMITTED>'
     assert result['address']=='0xdeadbeef' and result['nested']['bank_account'].startswith('<FINANCIAL_ACCOUNT_')
     assert privacy.learning_view(result)==result
