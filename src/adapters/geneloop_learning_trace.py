@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import stat
+from jsonschema import Draft202012Validator
 
 from .dsh_event_projection import is_original_tool_result
 from .geneloop_privacy import MAX_BYTES, PrivacyRejected, admit_publication, learning_view
@@ -46,7 +47,7 @@ def _content(parts):
 
 
 def project(events, scene, status, allowed_tools, *, semantic=True):
-    if (not SCENE.fullmatch(scene) or status not in ("completed", "failed", "cancelled", "interrupted")
+    if (not SCENE.fullmatch(scene) or status not in ("completed", "failed", "cancelled", "interrupted", "budget_exhausted")
             or not isinstance(events, list) or len(events) > MAX_EVENTS
             or not isinstance(allowed_tools, list) or any(not isinstance(tool, str) or not TOOL.fullmatch(tool)
                                                        for tool in allowed_tools)):
@@ -82,10 +83,13 @@ def project(events, scene, status, allowed_tools, *, semantic=True):
                 material.append({"type": "tool/result", "node": calls[call][0],
                                  "value": _content(blocks[0].get("content", []))})
         elif semantic and kind in ("user/message", "assistant/message"):
-            if event.get("surfaceOp") not in (None, "append"):
+            operation=event.get("surfaceOp")
+            if not (operation in (None, "append") or isinstance(operation,dict) and operation.get('op')=='append'):
                 continue
             message = data.get("message", data)
-            material.append({"type": kind, "node": None, "value": _content(message.get("content", []))})
+            source=message.get('source',data.get('source',{}))
+            role='user' if source.get('kind')=='user' else 'model' if source.get('kind')=='model' else 'system'
+            material.append({"type": kind, "node": None, "role":role, "value": _content(message.get("content", []))})
     nodes = [{"tool": name, "outcome": "unapproved_tool" if name is None else
               "observed_success" if results.get(call) else "missing_or_failed_result"}
              for call, (_, name) in calls.items()]
@@ -102,7 +106,8 @@ def sharing_object(sample, allowed_tools):
     fields = {"format", "scene", "status", "nodes", "bindings"}
     if (not isinstance(sample, dict) or set(sample) != fields
             or sample.get("format") != "geneloop.rsi-learning-trace/v4"
-            or sample.get("status") != "completed" or not SCENE.fullmatch(sample.get("scene", ""))
+            or sample.get("status") != "completed" or not isinstance(sample.get('scene'),str)
+            or not SCENE.fullmatch(sample["scene"]) or not isinstance(allowed_tools,list)
             or sample.get("bindings") != [] or not isinstance(sample.get("nodes"), list)
             or not 0 < len(sample["nodes"]) <= MAX_EVENTS):
         raise PrivacyRejected()
@@ -112,7 +117,20 @@ def sharing_object(sample, allowed_tools):
                 or node["outcome"] not in ("observed_success", "unapproved_tool", "missing_or_failed_result")
                 or (node["tool"] is None) != (node["outcome"] == "unapproved_tool")):
             raise PrivacyRejected()
-    value = {"format": "geneloop.rsi-shared-object/v1", "kind": "tool_flow", "trace": sample}
+    # Custom scene/MCP identifiers can themselves disclose a person's name or
+    # an internal service. Public topology uses sample-local IDs for every scene.
+    aliases={}
+    nodes=[]
+    for node in sample['nodes']:
+        tool=node['tool']
+        if tool is not None:
+            if tool not in aliases:aliases[tool]='tool-'+str(len(aliases))
+            tool=aliases[tool]
+        nodes.append({'tool':tool,'outcome':node['outcome']})
+    public={**sample,'scene':'generic','nodes':nodes}
+    value = {"format": "geneloop.rsi-shared-object/v1", "kind": "tool_flow", "trace": public}
+    schema=Path(__file__).resolve().parents[2]/'schemas/rsi-shared-tool-flow.schema.json'
+    Draft202012Validator(json.loads(schema.read_text(encoding='utf-8'))).validate(value)
     return admit_publication(value)
 
 
@@ -138,6 +156,28 @@ def capture_run(output, scene, status, allowed_tools, start=0):
         marker = output / "privacy-learning-rejected"
         with marker.open("a"):
             marker.chmod(0o600)
+        return False
+
+
+def capture_native_events(output, events, *, session_id, status):
+    """SDK observer admission. The private source index grants no execution authority."""
+    import hashlib
+    output = Path(output)
+    output.mkdir(parents=True, mode=0o700, exist_ok=False)
+    try:
+        tools = list(dict.fromkeys(event['data']['name'] for event in events
+                                  if event.get('type') == 'tool/call'))
+        view = project(events, 'sdk', status, tools)
+        (output/'privacy-learning.json').write_text(json.dumps(view,ensure_ascii=False,allow_nan=False),encoding='utf-8')
+        (output/'privacy-learning.json').chmod(0o600)
+        source = {'session_id':session_id,'events_sha256':hashlib.sha256(
+            json.dumps(events,sort_keys=True,ensure_ascii=False).encode()).hexdigest(),
+            'scope':'native_invocation','execution_witness':False}
+        (output/'source-private.json').write_text(json.dumps(source),encoding='utf-8')
+        (output/'source-private.json').chmod(0o600)
+        return True
+    except Exception:
+        (output/'privacy-learning-rejected').touch(mode=0o600)
         return False
 
 

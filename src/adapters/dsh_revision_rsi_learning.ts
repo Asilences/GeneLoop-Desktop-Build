@@ -5,9 +5,9 @@ import { appendFileSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { digest } from './paper_rsi_program.ts';
-import { createTraceLearning } from './dsh_trace_rsi_learning.ts';
+import { createTraceLearning,normalizeCandidateSubmission } from './dsh_trace_rsi_learning.ts';
 import { lowerRevisionProgram } from './revision_rsi_macros.ts';
-import {createLearningPrivacyBoundary} from './geneloop_privacy.ts';
+import {createLearningPrivacyBoundary,safeLearningError} from './geneloop_privacy.ts';
 
 export const name = 'sss-revision-rsi-learning';
 export const inject = ['tools', 'agents'];
@@ -146,20 +146,23 @@ export function apply(ctx:any):void {
       parameters:{type:'object',properties:{input:{}},required:['input'],additionalProperties:false},run:learning.trial},
   ];
   // Harness checks restrict allow-lists at creation, so register all five first.
-  const privacy=createLearningPrivacyBoundary();
+  const privacy=createLearningPrivacyBoundary({onBind:binding=>appendFileSync(join(config.work,'learning.jsonl'),
+    JSON.stringify({timestamp:new Date().toISOString(),session_id:config.session_id,kind:'privacy_handle',...binding})+'\n',{mode:0o600})});
   for (const definition of definitions) ctx.tools.register({
     name:definition.name,description:definition.description,parameters:definition.parameters,
     output:{schema:{type:'object'},render:(_:any,value:any) => [{type:'text',text:JSON.stringify(value)}]},
     async execute(args:any,exec:any) {
+      try {
       if (exec?.agent?.session?.id !== config.session_id) throw Error('revision_learning_session_not_authorized');
       if (exec.signal?.aborted) throw Error('revision_learning_cancelled');
-      const result = await definition.run(privacy.resolve(args));
+      const result = await definition.run(privacy.resolve(normalizeCandidateSubmission(args,32*1024*1024,100000)));
       if (definition.name === 'rsi_propose') {
         // Creating probe tools before a contract is accepted wastes learning
         // calls and can bypass the intended bounded submission path.
         proposalGates.get(exec.agent)?.();proposalGates.delete(exec.agent);
       }
-      return privacy.show(result);
+      return await privacy.show(result);
+      } catch(error) {throw await safeLearningError(error);}
     },
   });
   ctx.provide('sssRevisionRsi',{install:learning.install,installProgram:learning.installProgram});

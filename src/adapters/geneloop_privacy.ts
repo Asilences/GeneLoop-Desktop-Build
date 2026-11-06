@@ -1,6 +1,6 @@
 import {execFile} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const privateEnv = () => Object.fromEntries(['PATH','SYSTEMROOT','WINDIR','TMP','TEMP','TMPDIR','SSS_RSI_GITLEAKS']
@@ -9,7 +9,7 @@ const privateEnv = () => Object.fromEntries(['PATH','SYSTEMROOT','WINDIR','TMP',
 /** Opaque handles preserve private reader lookups across redacted tool replies.
  * This table is scoped to one learning host and is never written or exported.
  */
-export function createLearningPrivacyBoundary() {
+export function createLearningPrivacyBoundary(options:{onBind?:(binding:{field:string;alias:string;source_sha256:string})=>void}={}) {
   const fields=new Set(['run_id','call_id','packet_id']), forward=new Map<string,string>(), backward=new Map<string,string>();
   function walk(value:any,expose:boolean):any {
     if(Array.isArray(value))return value.map(row=>walk(row,expose));
@@ -20,7 +20,9 @@ export function createLearningPrivacyBoundary() {
           const identity=key+'\0'+item;
           if(!forward.has(identity)){
             if(forward.size>=20000)throw Error('geneloop_privacy_rejected');
-            const alias='private-'+randomUUID();forward.set(identity,alias);backward.set(key+'\0'+alias,item);
+            const alias='private-'+randomUUID();
+            options.onBind?.({field:key,alias,source_sha256:createHash('sha256').update(item).digest('hex')});
+            forward.set(identity,alias);backward.set(key+'\0'+alias,item);
           }
           return [key,forward.get(identity)];
         }
@@ -32,6 +34,16 @@ export function createLearningPrivacyBoundary() {
     }));
   }
   return {resolve:(value:any)=>walk(value,false),show:(value:any)=>privacyLearningView(walk(value,true))};
+}
+
+/** Error replies are learning content too. Never expose a worker's raw stack. */
+export async function safeLearningError(error:unknown):Promise<Error> {
+  let message='geneloop_privacy_rejected';
+  try {
+    const original=error instanceof Error?error.message:String(error);
+    if(original!==message)message=(await privacyLearningView({message:original})).message;
+  } catch {}
+  const safe=Error(message);safe.stack=undefined;return safe;
 }
 
 /** All online learning readers use the same local Presidio/Gitleaks worker. */

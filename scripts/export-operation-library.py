@@ -16,14 +16,15 @@ def export(state,destination,compatible_only=False):
     for e in view['entries']:
         if e['kind']!='operation_graph' or e['state']!='active':continue
         if compatible_only and any(not (ROOT/n).is_file() or sha(ROOT/n)!=h for n,h in e['runtime_source'].items()):continue
-        path=registry/e['payload'];policy=read(path);privacy(policy)
-        certificate=registry/e['certificate']['file'];c=check_motif_certificate(policy,certificate,sha(path))
-        row={'entry_id':e['entry_id'],'path':'policies/'+e['entry_id']+'.json','sha256':sha(path),'policy_digest':policy['policy_digest'],
+        path=registry/e['payload'];raw=path.read_bytes();policy=json.loads(raw);privacy(policy)
+        payload_sha=hashlib.sha256(raw).hexdigest()
+        certificate=registry/e['certificate']['file'];c=check_motif_certificate(policy,certificate,payload_sha)
+        row={'entry_id':e['entry_id'],'path':'policies/'+e['entry_id']+'.json','sha256':payload_sha,'policy_digest':policy['policy_digest'],
              'original_certificate_sha256':sha(certificate),'original_status':c['status'],'certification_contract':c.get('certification_contract'),
              'runtime_source':e['runtime_source'],**({'material_quality_contract':c['material_quality_contract']} if c.get('material_quality_contract') else {}),'nodes':[n['tool'] for n in policy['artifact']['nodes']],
              'holdout_used':c['holdout_used'],'quality_and_permission_required':c['quality_and_permission_required'],
              'reviews':[{k:r[k] for k in ('role','task_fingerprint','record_sha256','completion_count','audit_sha256') if k in r} for r in [c['native_review'],*c['reviews']]]}
-        entries.append(row);artifacts.append((row['path'],path.read_bytes()))
+        entries.append(row);artifacts.append((row['path'],raw))
     catalog={'schema_version':1,'format':'sss-public-operation-library-v2','original_generation':view['generation'],
        'original_registry_sha256':sha(registry/pointer['file']),'default_activation':False,'includes_private_runtime_admission_proofs':False,
        'artifact_bytes':'exact original learned policy bytes; no re-signing','entries':entries,'private_evidence_required_for_original_activation':True}

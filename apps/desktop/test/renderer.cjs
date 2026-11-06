@@ -250,6 +250,7 @@ app.whenReady().then(async()=>{
   };
   const receiver=mode=>evaluate(`fetch('/api/fixture/privacy-receiver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'${mode}'})}).then(response=>response.json())`);
   await openPrivacy();assert.equal((await receiver('accept')).received,0);
+  assert.equal(await evaluate(`!!document.querySelector('select[aria-label="选择共享对象"] option[value="future-custom-mcp"]')`),true);
   await prepare('paper-proofreading');
   assert.doesNotMatch(await evaluate(`document.querySelector('[data-privacy-payload]').textContent`),/Alice|alice-private|\/mnt\/private/);
   await evaluate(`document.querySelector('dialog.settings-dialog[open] > header button').click()`);

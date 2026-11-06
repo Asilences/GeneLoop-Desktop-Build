@@ -11,23 +11,25 @@ from tempfile import TemporaryDirectory
 MAX_INTENT_CHARS = 2048
 MODELS = {"en": "en_core_web_sm", "zh": "zh_core_web_sm"}
 EXTRA_PATTERNS = {
+    "BINARY_PAYLOAD": [r"(?i)data:(?:image|audio|video|application/octet-stream)/?[^\s,]*;base64,[A-Za-z0-9+/=_-]+"],
     "PRIVATE_REFERENCE": [
         r"(?i)(?:https?|s3|file|ssh|ftp|smb)://[^\s<>\"',;，。；！？、）\])]+",
         r"""["'](?:[A-Za-z]:[\\/]|\\\\|~/|/)[^"'\n]+["']""",
         r"(?<![\w/:])(?:[A-Za-z]:[\\/]|\\\\|~/|/)[\w.~-]+(?:[\\/][\w.~-]+)+",
         r"(?i)(?<![\w.-])[\w.-]+\.(?:pdf|pptx?|docx?|xlsx?|csv|tex|bib)(?![\w-]|\.[\w-])",
+        r"(?i)(?<![\w])\.local[\\/][^\s<>\"',;，。；！？]+",
     ],
     "CREDENTIAL": [
-        r"""(?i)\b(?:authorization|cookie|set-cookie)["']?\s*[:=][^\n]+""",
-        r"""(?i)\b(?:api[_ -]?key|access[_ -]?token|password|passwd|secret|token)["']?\s*[:=]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)""",
-        r"""(?:密码|口令|令牌|密钥)\s*[:=]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)""",
+        r"""(?i)\b(?:authorization|cookie|set-cookie)["']?\s*[:=：][^\n]+""",
+        r"""(?i)\b(?:api[_ -]?key|access[_ -]?token|password|passwd|secret|token)["']?\s*[:=：]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;，；]+)""",
+        r"""(?:密码|口令|令牌|密钥)\s*[:=：]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;，；]+)""",
     ],
-    "PERSON": [r"(?:联系人|姓名)\s*[:=]\s*[\p{Han}·]{2,8}(?=\s|[,;。]|$)"],
-    "ADDRESS": [r"(?i)(?:通讯地址|邮寄地址|住址|\b(?:home|mailing|street) address)\s*[:=]\s*[^\n;,。]+"],
+    "PERSON": [r"(?:联系人|姓名)\s*[:=：]\s*[\p{Han}·]{2,8}(?=\s|[,;，；。]|$)"],
+    "ADDRESS": [r"(?i)(?:通讯地址|邮寄地址|住址|\b(?:home|mailing|street) address)\s*[:=：]\s*[^\n;,，；。]+"],
     "CN_ID_NUMBER": [r"(?<!\d)[1-9]\d{16}[\dXx](?!\d)"],
 }
 ENTITIES = ["PERSON", "LOCATION", "EMAIL_ADDRESS", "PHONE_NUMBER", "IP_ADDRESS",
-            "CREDIT_CARD", "US_SSN", *[key for key in EXTRA_PATTERNS if key != "PERSON"]]
+            "CREDIT_CARD", "IBAN_CODE", "US_SSN", *[key for key in EXTRA_PATTERNS if key != "PERSON"]]
 STAT_ABBREVIATION = re.compile(r"\bmean\s*±\s*(SD|SEM|SE)\b", re.IGNORECASE)
 
 

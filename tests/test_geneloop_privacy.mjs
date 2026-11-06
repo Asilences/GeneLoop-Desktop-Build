@@ -46,7 +46,8 @@ for(const scene of [...new Set([...scenes,'chat','coding','future-custom-mcp'])]
    const shared=JSON.parse(execFileSync(python,[...args,'--share-object'],{encoding:'utf8'}));
    assert.deepEqual(JSON.parse(preview.payload),shared);
    assert.equal(shared.trace.format,'geneloop.rsi-learning-trace/v4');assert.equal('content' in shared.trace,false);
-   assert.equal(shared.trace.nodes[0].tool,tool);
+   assert.equal(shared.trace.nodes[0].tool,'tool-0');assert.equal(shared.trace.scene,'generic');
+   assert.ok(!preview.payload.includes(tool));
   }finally{
    await dispose?.();
    if(previous===undefined)delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC=previous;

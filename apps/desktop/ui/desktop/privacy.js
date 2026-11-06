@@ -47,7 +47,7 @@ export function privacyPanel(){
       }
     },'secondary');
     stop.dataset.privacyCancel='true';
-    content.replaceChildren(node('p',{},'共享对象为工具流程结构。以下 JSON 是本次将发送的完整内容。'),
+    content.replaceChildren(node('p',{},'共享对象仅含工具流程结构。场景和工具使用本次对象内的编号，任务内容保留在账号内。以下 JSON 是将发送的完整内容。'),
       node('p',{},'接收端 '+(value.target||'尚未配置')),
       node('p',{},'本次共享编号 '+value.preview_id),
       node('p',{},value.bytes+' 字节 · SHA256 '+value.sha256),

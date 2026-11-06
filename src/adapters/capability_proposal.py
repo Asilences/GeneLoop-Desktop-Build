@@ -320,6 +320,8 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
     system = ABSTRACTION_SYSTEM if abstraction_view else SYSTEM
     if inherited is not None:
         system += '\nThe host supplied an independently admitted inherited_strategy. Use its applicability and decision policy to inform construction. It grants no permission, changes no task contract or evaluator, and does not require any dependency. Actual compiled dependencies remain independently checked.\n'
+    from src.adapters.geneloop_privacy import learning_view
+    context = learning_view(context)
     prompt = system+strategy_instruction+'\nFrozen task and construction evidence:\n'+json.dumps(context, ensure_ascii=False, allow_nan=False)
     if len(prompt.encode()) > 4_000_000:
         raise ValueError('proposal_prompt_too_large')
@@ -339,6 +341,7 @@ def prepare_attempt(*, task, catalog, snapshot, output, repair_from=None, feedba
             'src/adapters/capability_builder.py', 'src/adapters/capability_authoring.py', 'src/adapters/capability_contract.py',
             'src/adapters/capability_source_authoring.py', 'src/adapters/capability_program_encoding.py',
             'src/adapters/capability_contract.ts', 'schemas/capability-v1.schema.json',
+            'src/adapters/geneloop_privacy.py', 'src/adapters/rsi_text_privacy.py', 'requirements-rsi-privacy.txt',
             'src/adapters/harness_runtime.py', 'src/adapters/deepseek_cost_gate.py')},
         'python_version': sys.version.split()[0], 'credential_source': 'DEEPSEEK_API_KEY environment',
         'publication_authorized': False, 'quality': 'not_independently_reviewed',

@@ -25,6 +25,9 @@ def test_recursive_keys_values_numeric_identity_and_local_relationships(monkeypa
 
 
 @pytest.mark.parametrize('value', [{'nested': {'access_token': 'synthetic-private'}},
+                                 {'nested':{'token':'synthetic-private'}}, {'password':0},
+                                 {'nested':{'x_api_key':'synthetic-private'}},
+                                 {'token':123456},
                                  {'x': float('nan')}, {'x': object()}])
 def test_invalid_or_secret_material_is_never_a_partial_success(monkeypatch, value):
     monkeypatch.setattr(privacy, '_scan', lambda value: None)
@@ -44,6 +47,29 @@ def test_scanner_failure_and_anonymized_key_collision_fail_closed(monkeypatch):
     with pytest.raises(privacy.PrivacyRejected) as error:
         privacy.learning_view({'text': 'do not fall back'})
     assert str(error.value) == 'geneloop_privacy_rejected'
+
+
+def test_media_bytes_are_omitted_and_technical_file_types_remain(monkeypatch):
+    monkeypatch.setattr(privacy,'_scan',lambda value:None)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value)
+    source={'filename':'private-person.ipynb','image':'data:image/png;base64,U2FtcGxl',
+            'bytes':[1,2,3], 'address':'0xdeadbeef','nested':{'bank_account':'synthetic-account'}}
+    result=privacy.learning_view(source)
+    assert result['filename'].endswith('.ipynb') and 'private-person' not in result['filename']
+    assert result['image']==result['bytes']=='<BINARY_OMITTED>'
+    assert result['address']=='0xdeadbeef' and result['nested']['bank_account'].startswith('<FINANCIAL_ACCOUNT_')
+    assert privacy.learning_view(result)==result
+    assert privacy.learning_view({'prompt_tokens':512,'has_token':True})=={'prompt_tokens':512,'has_token':True}
+
+
+def test_json_inside_stdout_cannot_bypass_the_same_recursive_rule(monkeypatch):
+    monkeypatch.setattr(privacy,'_scan',lambda value:None)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value)
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'stdout':json.dumps({'headers':{'X-API-Key':'synthetic-private'}})})
+    source={'stdout':json.dumps({'email':'owner@example.com','count':2})}
+    result=json.loads(privacy.learning_view(source)['stdout'])
+    assert result['email'].startswith('<EMAIL_ADDRESS_') and result['count']==2
 
 
 def events(prompt, arguments, response):
@@ -83,6 +109,7 @@ def test_all_registered_and_future_scenes_keep_task_semantics(scene, prompt, kee
     for private in ['owner@example.com','13800138000','private-source-call','/home/private-owner/report.pdf','王小明']:
         assert private not in rendered
     assert keep in rendered and '0.05' in rendered
+    assert privacy.learning_view(result['content']) == result['content']
     assert result['nodes'] == [{'tool':TOOLS[0], 'outcome':'observed_success'}]
     assert 'owner@example.com' in json.dumps(original)
     structural = trace.project(original,scene,'completed',TOOLS,semantic=False)

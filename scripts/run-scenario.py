@@ -303,8 +303,6 @@ def main():
             acceptance_trace_dir=str(trace),acceptance_max_repairs=prepared['acceptance_guard']['max_repairs'])
         if metrics['status']=='done' and not passed:metrics['status']='acceptance_failed'
     save('metrics.json', json.dumps(metrics, ensure_ascii=False, indent=2))
-    from src.adapters.geneloop_learning_trace import capture_run
-    capture_run(out, 'offline', 'completed' if metrics['status']=='done' else 'failed', prepared['allowed_tools'])
     print(json.dumps({'output_dir': str(out), **metrics}, ensure_ascii=False))
     return 0 if metrics['status'] == 'done' else 2
 

@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { canonical, digest } from './paper_rsi_program.ts';
 import { runTraceTool, validateTraceCandidate } from './trace_rsi_program.ts';
-import {createLearningPrivacyBoundary} from './geneloop_privacy.ts';
+import {createLearningPrivacyBoundary,safeLearningError} from './geneloop_privacy.ts';
 
 export const name = 'sss-trace-rsi-learning';
 export const inject = ['tools', 'agents'];
@@ -37,10 +37,10 @@ function validateContract(contract:any):void {
 /** Native Cordis objects may belong to another realm. Normalize only JSON data
  * at this submission boundary; the interpreter retains its strict local checks.
  */
-function normalizeCandidateSubmission(value:any):any {
+export function normalizeCandidateSubmission(value:any,maxBytes=128000,maxNodes=20000):any {
   const ancestors = new Set<any>();let nodes = 0;
   function walk(value:any,depth:number):void {
-    if (++nodes > 20000 || depth > 48) throw Error('candidate_submission_too_complex');
+    if (++nodes > maxNodes || depth > 48) throw Error('candidate_submission_too_complex');
     if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
     if (typeof value === 'number') {
       if (!Number.isFinite(value)) throw Error('candidate_submission_non_json_number');
@@ -68,7 +68,7 @@ function normalizeCandidateSubmission(value:any):any {
   walk(value,0);
   let text:string;
   try { text = JSON.stringify(value); } catch { throw Error('invalid_candidate_json_submission'); }
-  if (typeof text !== 'string' || Buffer.byteLength(text) > 128000) throw Error('candidate_submission_too_large');
+  if (typeof text !== 'string' || Buffer.byteLength(text) > maxBytes) throw Error('candidate_submission_too_large');
   try { return JSON.parse(text); } catch { throw Error('invalid_candidate_json_submission'); }
 }
 const jsonType = (value:any) => value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
@@ -259,15 +259,18 @@ export function apply(ctx:any):void {
       parameters:{type:'object',properties:{input:{}},required:['input'],additionalProperties:false},run:learning.trial}
   ];
   // This Harness validates allow-lists against global tools at agent creation.
-  const privacy=createLearningPrivacyBoundary();
+  const privacy=createLearningPrivacyBoundary({onBind:binding=>appendFileSync(join(config.work,'learning.jsonl'),
+    JSON.stringify({timestamp:new Date().toISOString(),session_id:config.session_id,kind:'privacy_handle',...binding})+'\n',{mode:0o600})});
   for (const definition of definitions) ctx.tools.register({
     name:definition.name,description:definition.description,parameters:definition.parameters,
     output:{schema:{type:'object'},render:(_:any,value:any) => [{type:'text',text:JSON.stringify(value)}]},
     async execute(args:any,exec:any) {
+      try {
       if (exec?.agent?.session?.id !== config.session_id) throw Error('trace_learning_session_not_authorized');
       if (exec.signal?.aborted) throw Error('trace_learning_cancelled');
       if (definition.name === 'rsi_trace_list') exactArgs(args,[]);
-      return privacy.show(await definition.run(privacy.resolve(args)));
+      return await privacy.show(await definition.run(privacy.resolve(normalizeCandidateSubmission(args,32*1024*1024,100000))));
+      } catch(error) {throw await safeLearningError(error);}
     }});
   ctx.provide('sssTraceRsi',{install:learning.install,installProgram:learning.installProgram});
   ctx.on('agent/created',({agent}:any) => {

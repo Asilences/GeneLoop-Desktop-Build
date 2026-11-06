@@ -1,4 +1,8 @@
-"""Project a private native event journal into a bounded RSI learning sample."""
+"""Legacy v2/v3 compiler compatibility for two certified structural libraries.
+
+Scene-independent platform privacy lives in geneloop_privacy and
+geneloop_learning_trace. These old tool contracts do not scope its coverage.
+"""
 
 import argparse
 import hashlib
