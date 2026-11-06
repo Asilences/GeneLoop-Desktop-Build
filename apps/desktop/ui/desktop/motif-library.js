@@ -137,6 +137,29 @@ function createMotifView({trigger,host,conversation,deliveries,navigation=[],emb
         node('p',{class:'motif-muted'},'输入 '+count(r.cost.tokens.prompt_tokens)+' tokens · 输出 '+count(r.cost.tokens.completion_tokens)+' tokens'),evidence(r.evidence_refs))),
       section('同质量收益',node('p',{},'待提供可比基线'),node('p',{class:'motif-muted'},'当前快照不包含配对成本及质量比较，不显示节省金额或效率百分比。')));
   }
+  function overview(){
+    const costs=model?.runs.map(row=>row.cost.cost_usd),known=costs?.length&&costs.every(value=>value!==null);
+    const amount=known?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:4}).format(costs.reduce((sum,value)=>sum+value,0)):'—';
+    const stats=node('div',{class:'workspace-overview-stats'},
+      card('研究对话',workspace.sessionCount,workspace.runningCount+' 个执行中'),
+      card('已认证 Motif',model?model.summary.certified:'—','来自当前能力库'),
+      card('实际复用',model?model.summary.applied:'—','已记录的实际调用'),
+      card('任务估费',amount,'USD · 原账本估计'));
+    const browse=button(icon('chevron-right'),()=>changeTab('combination'),'workspace-panel-link');browse.setAttribute('aria-label','浏览能力组合');
+    const capability=node('section',{class:'workspace-insight-card'},node('div',{class:'workspace-panel-heading'},
+      node('h3',{},icon('scenes'),'能力概况'),node('div',{class:'workspace-panel-tools'},model?badge('v'+model.libraryVersion):null,browse)),
+      node('div',{class:'workspace-capability-counts'},...Object.entries(statusLabel).map(([key,label])=>node('div',{},node('span',{},node('i',{class:key}),label),node('strong',{},model?count(model.summary[{certified:'certified',pending_certification:'pending',invalid:'invalid'}[key]]):'—')))));
+    const recent=node('section',{class:'workspace-insight-card workspace-activity'},node('div',{class:'workspace-panel-heading'},node('h3',{},icon('trace'),'最近动态'),button('查看全部',()=>changeTab('evolution'),'workspace-panel-link')));
+    const events=model?.raw.events.slice(-3).reverse()||[];
+    if(events.length){
+      const items=node('div',{class:'workspace-activity-list'});
+      for(const event of events){const cap=model.capabilities.find(row=>row.id===event.capability_id),applied=event.kind==='invoke'&&event.status==='applied'&&event.actual_execution;items.append(node('div',{class:'workspace-activity-item'},
+        node('span',{class:'workspace-activity-mark '+(applied?'applied':event.kind)},icon(event.kind==='fallback'?'refresh':applied?'check':'scenes')),
+        node('div',{},node('p',{title:cap.name},cap.name),node('small',{},eventLabel[event.kind]+'记录'))));}
+      recent.append(items);
+    }else recent.append(node('p',{class:'workspace-insight-empty'},'暂无记录，新的能力经历会显示在这里。'));
+    return node('div',{},stats,node('div',{class:'workspace-dashboard'},workspace.run,node('aside',{class:'workspace-insights','aria-label':'工作区能力动态'},capability,recent)));
+  }
   function render() {
     if(!opened)return;
     const actions=node('div',{class:'motif-toolbar'},button('导入证据快照',()=>input.click(),'secondary'),button('公开验收样例',sample,'secondary'));
@@ -150,9 +173,10 @@ function createMotifView({trigger,host,conversation,deliveries,navigation=[],emb
     const scopeNote=model?node('div',{class:'motif-source'},badge('只读证据'),node('span',{},source),node('span',{},'库版本 '+model.libraryVersion),node('small',{},live?'认证状态不代表当前电脑可用':'与当前账号及工作区无关联')):null;
     if(embedded){
       const names={run:'运行',combination:'能力组合',evaluation:'评估',evolution:'演化',versions:'版本'};
-      const tabs=node('div',{class:'motif-tabs',role:'tablist','aria-label':'工作区视图'},...Object.entries(names).map(([id,label])=>{const b=button(label,()=>changeTab(id));b.setAttribute('role','tab');b.setAttribute('aria-selected',String(tab===id));return b;}));
+      const tabIcons={run:'folder-open',combination:'scenes',evaluation:'chart-column-increasing',evolution:'refresh',versions:'trace'};
+      const tabs=node('div',{class:'motif-tabs',role:'tablist','aria-label':'工作区视图'},...Object.entries(names).map(([id,label])=>{const b=button([icon(tabIcons[id]),label],()=>changeTab(id));b.setAttribute('role','tab');b.setAttribute('aria-selected',String(tab===id));return b;}));
       const content=node('div',{class:'motif-tab-body',role:'tabpanel','aria-label':names[tab]});
-      if(tab==='run')content.append(workspace.run,model?section('本工作区的 Motif',scopeNote,summary(),button('查看能力组合',()=>changeTab('combination'),'secondary')):node('p',{class:'motif-muted'},'尚无 Motif 证据；正常任务仍可使用。'));
+      if(tab==='run')content.append(overview());
       else if(!model)content.append(empty('这个工作区尚无 Motif 证据','宿主接入实际证据导出后，会在这里显示能力、评估和演化记录。'));
       else{content.append(scopeNote,({combination:()=>node('div',{},relations(),library()),evaluation:runs,evolution:timeline,versions:()=>section('当前库版本 '+model.libraryVersion,hash('快照摘要',model.raw.library.snapshot_sha256),hash('Registry 摘要',model.raw.library.registry_digest),node('p',{class:'motif-muted'},'当前来源仅含此版本。历史、版本差异和回滚记录待接入；本页不修改运行能力。'),...model.capabilities.map(c=>section(c.name,hash('候选摘要',c.version.candidate_digest),hash('证书摘要',c.version.certificate_digest))))})[tab]());}
       if(error)content.prepend(node('p',{class:'motif-error',role:'alert'},error));host.replaceChildren(workspace.heading,tabs,content);return;
@@ -165,7 +189,6 @@ function createMotifView({trigger,host,conversation,deliveries,navigation=[],emb
     }
     host.replaceChildren(node('div',{class:'motif-topbar'},button('返回工作区',back,'motif-text-button'),node('span',{},'Motif Library')),header,body,input);
   }
-  function summary(){return node('div',{class:'motif-stats'},card('已认证',model.summary.certified,'快照内的认证状态'),card('待认证',model.summary.pending,'候选仍需验证'),card('实际复用',model.summary.applied,'实际 invoke 回执'),card('回退',model.summary.fallbacks,'保留不适用与失败记录'));}
   return {open,close:back,setWorkspace(value){workspace=value;if(tab==='library')tab='run';opened=true;render();},setEvidence(data,label){model=data?readMotifEvidence(data):null;source=label;live=true;if(!model?.capabilities.some(c=>c.id===selected))selected=model?.capabilities[0]?.id||null;render();},setError(text){error=text;render();},setTab(value){tab=value;render();},isPreview(){return model&&!live;},clear(){model=null;error='';revision++;render();}};
 }
 

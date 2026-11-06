@@ -48,3 +48,13 @@ Windows / Node 24.19.0 / Python 3.11.7。当前工程检查不调用模型，不
 桌面构建和12项检查通过，现有 Electron 回环15组通过，控制台错误0。检查了浅色、深色和收起截图；系统减少动态效果通过 CSS 关闭漂浮。此次没有重跑全量回归，上一节失败边界继续有效。
 
 本轮日志 `summary-build.log`、`summary-check.log`、`summary-renderer.log` 在 `.local/debug/motif-library-ui/`；截图和回执在 `apps/desktop/.local/validation/renderer-e40b4794-47bd-4745-9f72-7e265db85a48/`，含 `motif-summary-light.png`、`motif-summary-dark.png`、`motif-summary-collapsed.png` 和整体页面。先前自动审批超时后重试成功；没有真实模型请求、生产部署、安装包构建或上传。
+
+## 工作区首页与侧边栏整理
+
+按用户要求统一首页和导航的视觉：紧凑的工作区标题与主操作、图标页签、四项实际统计、继续工作与最近对话、横向能力状态、最多三条实际动态。较窄窗口将两栏改为上下排列。侧栏调整品牌区、新会话、全局库、搜索、工作区与对话层级、选中态和细滚动条；玻璃卡片保留，头像区独立。没有新增依赖、接口、执行能力或服务器写入。
+
+首页只消费原协议：对话数来自原可见性筛选，实际复用继续要求 applied/invoke 回执；任务估费只在所有来源任务均有费用且存在任务时汇总，否则未知。费用是原账本估计，不是供应商账单或相对收益。最近动态按已有导出顺序反向显示，没有推测时间、执行进度或学习效果。
+
+构建和12项桌面检查通过；原15组 Electron 交互回归通过，控制台错误0，保留侧栏拖宽/折叠/搜索、草稿、原有菜单和认证失效检查。人工审阅了浅色、深色及900×700窗口截图；修正了搜索图标偏移和能力面板过高造成的首屏信息挤压。最终源码仅视觉/投影改动，本次没有重跑全量回归，前述未通过边界仍有效。
+
+最终日志为 `.local/debug/motif-library-ui/home-build-final.log`、`home-check-final.log`、`home-renderer-reviewed.log`。截图与回执在 `apps/desktop/.local/validation/renderer-330bc83d-c485-4972-9e37-ebbceda6823c/`：`workspace-overview-light.png`、`workspace-overview-dark.png`、`workspace-overview-compact.png`。正常提示自行收起后截图，不隐藏实际组件来制造结果。未构建、上传安装包或触碰并行工具迁移分支。

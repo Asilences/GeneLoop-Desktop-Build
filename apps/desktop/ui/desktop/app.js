@@ -421,12 +421,13 @@ function workspaceHome(group){
           node('div',{},decks.length>1?node('p',{},label):null,presentationCard(deck)))));
       },'secondary'):null)):null;
   const create=button(node('span',{},icon('plus'),'新会话'),()=>beginWorkspaceDraft(group.workspaceId).catch(fail),'secondary workspace-start');
-  const summary=node('div',{class:'workspace-home-heading'},
-    node('div',{class:'workspace-home-name'},node('span',{class:'workspace-home-icon'},icon('folder')),
-      node('div',{},node('h2',{},group.title),node('p',{},'研究工作区'))),
+  const summary=node('header',{class:'workspace-home-heading'},
+    node('div',{class:'workspace-home-copy'},
+      node('div',{class:'workspace-eyebrow'},icon('folder'),'研究工作区'),
+      node('h2',{title:group.title},group.title),node('p',{},'继续你的研究，或开启一个新的想法。')),
     create);
   const section=node('section',{class:'workspace-recent','aria-label':'最近对话'},
-    node('div',{class:'workspace-recent-heading'},node('h3',{},'最近对话'),node('span',{},rows.length+' 个对话')));
+    node('div',{class:'workspace-recent-heading'},node('h3',{},'最近对话'),node('span',{class:'workspace-count'},rows.length)));
   if(!rows.length){
     section.append(node('div',{class:'workspace-empty'},node('h4',{},'还没有对话'),node('p',{},'从下方输入框开始，或选一个研究示例填入草稿。'),
       node('div',{class:'scene-cards','aria-label':'研究示例'},exampleButtons())));
@@ -438,12 +439,12 @@ function workspaceHome(group){
       const time=Number.isFinite(updated.getTime())?node('time',{datetime:updated.toISOString()},date.format(updated)):null;
       const label=node('span',{class:'workspace-recent-title'},titleOf(row));
       const meta=node('span',{class:'workspace-recent-meta'},row.running?node('span',{class:'workspace-running'},'执行中'):null,time);
-      const link=button(node('span',{class:'workspace-recent-content'},label,meta),()=>selectSession(row.sessionId).catch(fail),'workspace-recent-link');
+      const link=button([node('span',{class:'workspace-recent-symbol'},icon('message-circle')),node('span',{class:'workspace-recent-content'},label,meta),node('span',{class:'workspace-recent-arrow','aria-hidden':true},icon('chevron-right'))],()=>selectSession(row.sessionId).catch(fail),'workspace-recent-link');
       list.append(node('li',{},link));
     }
     section.append(list);
   }
-  return motifUI.workspaceHome(group,{heading:summary,run:node('div',{},resume,section)});
+  return motifUI.workspaceHome(group,{heading:summary,run:node('div',{class:'workspace-run-main'},resume,section),sessionCount:rows.length,runningCount:rows.filter(row=>row.running).length});
 }
 function renderConversation(){
   const history=$('history'),previousTop=history.scrollTop,nearBottom=history.scrollHeight-previousTop-history.clientHeight<140;
@@ -451,6 +452,7 @@ function renderConversation(){
   const resultCard=id=>comparisonCard(state.comparisons.get(id),{trace:state.trace,fail,onUpdate:next=>{state.comparisons.set(id,next);scheduleRender();}});
   const group=state.workspaces.find(row=>row.workspaceId===state.workspace);
   const home=!state.session&&!activeWorkspaceDraft&&group;
+  document.querySelector('.conversation').dataset.page=home?'workspace-home':'conversation';
   const formal=state.session&&!activeWorkspaceDraft;
   $('chat-tab').parentElement.hidden=!formal;
   for(const id of ['rename-session','session-actions','deliveries-toggle'])$(id).hidden=!formal;

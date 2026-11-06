@@ -11,6 +11,7 @@ app.whenReady().then(async()=>{
  desktop=new DesktopWorkspace({settings:{version:1,server:fixture.server,window:{width:1280,height:860,maximized:false}},settingsFile:join(fixture.output,'settings.json'),version:'diagnostic',downloadsDirectory:fixture.output,allowLoopback:true});await desktop.ready;desktop.workspace.webContents.setBackgroundThrottling(false);
  const evaluate=code=>desktop.workspace.webContents.executeJavaScript(code);
  const captureSummary=async name=>{const bounds=await evaluate(`(()=>{const r=document.querySelector('#motif-summary').getBoundingClientRect();return {x:Math.floor(r.x),y:Math.floor(r.y),width:Math.ceil(r.width),height:Math.ceil(r.height)}})()`);writeFileSync(join(fixture.output,name),(await desktop.workspace.webContents.capturePage(bounds)).toPNG());};
+ const captureWorkspace=async name=>{await evaluate(`new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))`);await desktop.workspace.webContents.capturePage();await new Promise(done=>setTimeout(done,200));writeFileSync(join(fixture.output,name),(await desktop.workspace.webContents.capturePage()).toPNG());};
  const menusHidden=()=>desktop.window.webContents.executeJavaScript('document.getElementById("desktop-menus").hidden');
  assert.equal(await menusHidden(),true);
  await until(()=>evaluate('!document.getElementById("workspace").hidden'),'独立界面');
@@ -231,6 +232,17 @@ app.whenReady().then(async()=>{
  await until(()=>evaluate(`document.querySelector('#motif-summary .reuse strong')?.textContent==='1'`),'后端证据进入当前工作区摘要');
  assert.deepEqual(await evaluate(`[...document.querySelectorAll('.motif-workspace [role=tab]')].map(b=>b.textContent)`),['运行','能力组合','评估','演化','版本']);
  const motifTab=label=>evaluate(`[...document.querySelectorAll('.motif-workspace [role=tab]')].find(b=>b.textContent==='${label}').click()`);
+ await motifTab('运行');
+ await until(()=>evaluate(`document.getElementById('toast').hidden`),'首页提示自然收起');
+ report.workspace_layout=await evaluate(`(()=>{const row=document.querySelector('.workspace-row'),s=document.getElementById('search'),tools=s.parentElement;return {row_decoration:getComputedStyle(row).textDecorationLine,label_decoration:getComputedStyle(row.querySelector('span')).textDecorationLine,search_padding:getComputedStyle(tools).padding}})()`);
+ await captureWorkspace('workspace-overview-light.png');
+ await evaluate(`document.body.setAttribute('data-ds-dark-theme','')`);
+ await captureWorkspace('workspace-overview-dark.png');
+ await evaluate(`document.body.removeAttribute('data-ds-dark-theme')`);
+ const overviewWindowSize=desktop.window.getSize();desktop.window.setSize(900,700);
+ await new Promise(done=>setTimeout(done,250));
+ await captureWorkspace('workspace-overview-compact.png');
+ desktop.window.setSize(...overviewWindowSize);await new Promise(done=>setTimeout(done,250));
  await motifTab('能力组合');
  assert.equal(await evaluate(`document.querySelectorAll('.motif-workspace .motif-item').length`),1);
  assert.equal(await evaluate(`document.querySelectorAll('.motif-workspace .motif-dependency').length`),3);
