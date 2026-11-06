@@ -123,7 +123,7 @@ def learning_view(value):
             if type(item) is str:
                 return text(item)
             if type(item) is list:
-                return [walk(child, depth + 1, schema=schema) for child in item]
+                return [walk(child, depth + 1, schema=schema, property_name=property_name) for child in item]
             if type(item) is not dict:
                 raise PrivacyRejected()
             output = {}
@@ -180,7 +180,7 @@ def learning_view(value):
                             r"<"+entity+r"_[1-9][0-9]{0,6}>(?:\.[a-z0-9]{1,8})?",value) else alias(entity, value)
                     output[safe_key] = [reference(value) for value in child] if isinstance(child,list) else reference(child)
                 else:
-                    output[safe_key] = walk(child, depth + 1, schema=schema)
+                    output[safe_key] = walk(child, depth + 1, schema=schema, property_name=property_name)
             return output
 
         result = walk(value)

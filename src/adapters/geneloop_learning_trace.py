@@ -98,7 +98,8 @@ def project(events, scene, status, allowed_tools, *, semantic=True):
     if semantic:
         # All content and field keys use one engine; names/paths are not left
         # untouched in assistant replies, nested tool arguments or observations.
-        result["content"] = learning_view(material)
+        result["content"] = material
+        return learning_view(result)
     return result
 
 

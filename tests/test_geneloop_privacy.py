@@ -84,6 +84,9 @@ def test_schema_declarations_and_digest_handles_keep_protocol_meaning(monkeypatc
     assert privacy.learning_view(value)['input_schema']['properties']['email']['default'].startswith('<EMAIL_ADDRESS_')
     with pytest.raises(privacy.PrivacyRejected):
         privacy.learning_view({'parameters':{'type':'object','properties':{'password':{'type':'string','default':'synthetic'}}}})
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'parameters':{'type':'object','properties':{'password':{
+            'type':'array','items':{'type':'string','default':'synthetic'}}}}})
 
 
 def test_quoted_json_source_remains_valid_after_path_redaction(monkeypatch):
@@ -147,3 +150,15 @@ def test_unknown_fields_or_forged_catalog_cannot_enter_a_shared_object(monkeypat
                 {**sample,'nodes':[{'tool':TOOLS[0],'outcome':'observed_success','path':'/private'}]}]:
         with pytest.raises(privacy.PrivacyRejected):
             trace.sharing_object(bad,TOOLS)
+
+
+def test_registered_tool_metadata_cannot_bypass_credential_admission(monkeypatch):
+    name='synthetic-credential-tool'
+    def scan(value):
+        if name in value:raise ValueError('synthetic scanner rejection')
+    monkeypatch.setattr(privacy,'_scan',scan)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value)
+    source=events('task',{}, {'text':'result'})
+    source[1]['data']['name']=name
+    with pytest.raises(privacy.PrivacyRejected):
+        trace.project(source,'future-mcp','completed',[name])

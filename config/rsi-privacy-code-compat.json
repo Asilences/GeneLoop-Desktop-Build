@@ -42,5 +42,21 @@
   "src/motif_core/offline/edge_compiler.py": {
     "certified": "1ef4dda018d33e5120e37c2951928d617f582306e7f69552fcd343ab941c4261",
     "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
+  },
+  "src/adapters/capability_construction_history.py": {
+    "certified": "7a00cdc0de3cc2c818df566e11883bfec98664072f0f2bd045be515fe35385b2",
+    "current": "e92906f9e7b175f6554e9fb396916cc907a92cc5ad8300d7e84d5d941e663d18"
+  },
+  "src/adapters/capability_goal_proposal.py": {
+    "certified": "b2720f7e1577d8cd4d428fa479b62d93383174a2e8b7b83fa0c512c00241ba15",
+    "current": "427d5747a46e938d1418a071b7845ef7a393f3662c14af5df7962818456f8aae"
+  },
+  "src/adapters/capability_proposal.py": {
+    "certified": "26b9fe45909001bd8f0a36352be20d8406b49a7d5a2fed11028d710ea2b44a59",
+    "current": "f92fb787d3741cb2bb1e735578dfc1f3e00af657a65a3c1e5000117c4db2c525"
+  },
+  "scripts/export-online-motif-manifest.py": {
+    "certified": "e8adb978c381b07877cf93da1c7b502e9ddbafe29dc42ae8fe7cdc9697d8314c",
+    "current": "b550caff70260f6c8c1320f5760b557c3909bcfcf8239d77dd3ddabb0b70412b"
   }
 }
