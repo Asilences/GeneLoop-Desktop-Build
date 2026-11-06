@@ -1647,3 +1647,4 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 - 响应为 `geneloop-motif-catalog-v1`：`revision` 是响应数据摘要，`workspaces` 每项含范围ID、`status`（`ready`/`unavailable`）、来源执行位置、固定 `compatibility: unverified` 及 `evidence`。原件是同伴 `coding-motif-evidence-v1` 协议，复用 `config/motif-evidence-v1.schema.json` 与共享展示投影。读取失败不会返回物理路径。
 - 前端在已登录且页面可见时每10秒读取，退出清空。展示认证不授权执行；单项费用/完整耗时为null时保持未知，缺少配对质量与成本时不计算节省。公开样例不绑定账号或工作区。
 - 当前仅覆盖Coding v1，不推测缺失的组合、学习/发布事件或历史版本；来源执行位置不改变任务路由。正式服务及本机Runtime活证据桥未由本轮部署。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
+- 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。

@@ -14,6 +14,7 @@ const output=join(app,'.local/validation/renderer-'+randomUUID());mkdirSync(outp
 const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFileSync(join(app,'ui/desktop/motif-example.json')));
 const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'}]});
 let motifAuthenticated=true;
+let workspaceTasks=[];
 const requests=[],streams=new Map(),sessions=[],selections=new Map(),modelSelections=new Map();let questionPending=false;
 const archived=new Set(),deleted=new Set();
 const scenes=[['new-scene','Chat','chat'],['ppt','PPT','ppt'],['paper-proofreading','论文校对','paper'],['research-data-analysis','数据分析','data'],['files','文件管理','file'],['video-editing','视频编辑','video']].map(([id,label,shortcut])=>({id,label,shortcut,available:true}));
@@ -51,7 +52,16 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
-  if(path==='/api/harless/tasks')return json(res,{tasks:[]});
+  if(path==='/api/harless/tasks')return json(res,{tasks:workspaceTasks});
+  if(path==='/api/fixture/task-progress'&&req.method==='POST'){workspaceTasks[0].duration_ms=2400;return json(res,{ok:true});}
+  if(path==='/api/fixture/workspace-task'&&req.method==='POST'){
+   const time='2026-11-06T00:00:00.000Z';
+   workspaceTasks=[{task_id:'workspace-ui-task',session_id:'history',input_summary:'界面验收（合成）：核对材料并整理交付',scene:'files',status:'running',created_at:time,started_at:time,duration_ms:1200,stats:{model_requests:0,cost_usd:0},
+    todos:[{content:'读取已授权的材料目录（合成步骤）',status:'completed'},{content:'核对资料与来源标识（合成步骤）',status:'completed'},{content:'整理交付入口（合成步骤）',status:'in_progress'}],
+    progress:{label:'正在核对交付入口（合成进度）',status:'running'},trace:[{id:'ui-read',kind:'tool',label:'已读取目录信息（合成记录）',status:'completed',time},{id:'ui-motif',kind:'motif',label:'界面协议回执（合成）',status:'completed',optimized:true,verified_skip:false,time},{id:'ui-output',kind:'tool',label:'正在整理交付入口（合成记录）',status:'running',time}]},
+    {task_id:'foreign-ui-task',session_id:'foreign-session',input_summary:'另一工作区的任务不得显示',status:'running',created_at:time}];
+   return json(res,{ok:true});
+  }
   if(path==='/api/harless/session-trash'||path==='/api/fixture/external-trash'){
    const id=path==='/api/fixture/external-trash'?'history':body.session_id;
    if(body.action==='archive')archived.add(id);

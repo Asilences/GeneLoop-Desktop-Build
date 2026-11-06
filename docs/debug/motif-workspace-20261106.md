@@ -58,3 +58,15 @@ Windows / Node 24.19.0 / Python 3.11.7。当前工程检查不调用模型，不
 构建和12项桌面检查通过；原15组 Electron 交互回归通过，控制台错误0，保留侧栏拖宽/折叠/搜索、草稿、原有菜单和认证失效检查。人工审阅了浅色、深色及900×700窗口截图；修正了搜索图标偏移和能力面板过高造成的首屏信息挤压。最终源码仅视觉/投影改动，本次没有重跑全量回归，前述未通过边界仍有效。
 
 最终日志为 `.local/debug/motif-library-ui/home-build-final.log`、`home-check-final.log`、`home-renderer-reviewed.log`。截图与回执在 `apps/desktop/.local/validation/renderer-330bc83d-c485-4972-9e37-ebbceda6823c/`：`workspace-overview-light.png`、`workspace-overview-dark.png`、`workspace-overview-compact.png`。正常提示自行收起后截图，不隐藏实际组件来制造结果。未构建、上传安装包或触碰并行工具迁移分支。
+
+## 按定稿接入最右侧工作区详情栏
+
+用户澄清此前「侧边栏」指最右侧，要求中央也更像定稿。当前重排为任务卡与公开计划、工具输出、上下文、效果/用量，右侧独立工作区详情，左侧保留已实现导航。原型的四个顶部KPI与两栏卡片布局被替代，不是新增另一套工作区。Issue #137当前仍开放；本轮没有修改Issue、合并或部署。
+
+`workspace-run.js`只投影原任务接口公开字段；首页每4秒读取原tasks列表并按工作区可见会话过滤。任务列表选择与公开todo决定展示，进度只按已完成项计算；没有固定阶段、定时生成的进度或推测耗时。右栏只把当前任务完成且有优化/核验标识的记录显示为Motif调用回执，不把能力库所有条目当作已经使用。匿名Coding证据没有会话绑定时单独标识，不推断它属于最近对话。节省、效率、演化次数和自动演化/模板功能没有依据时保持未知/待接入。
+
+复用原PPT预览、实际图像字节、翻页和受保护下载；将入口移到任务卡与右栏。原有预览检查第一次因旧`.workspace-resume`定位超时，记录在`inspector-renderer.log`；新定位保留全部原检查，通过后没有删除失败记录。右栏保留当前滚动位置，公开计划的收起状态在轮询后保持；窄窗默认关闭，显式打开为抽屉。登出与授权失效清理任务缓存、右栏及相关代次，迟到回包不更新其他工作区。
+
+最终构建、12项桌面检查及16组Electron检查通过，控制台错误0。新增覆盖当前任务范围过滤、公开计划2/3项、任务进度从1.2s到2.4s的协议刷新、收起状态保留、右栏页面导航/开合、窄窗默认隐藏、401清空详情；原PPT预览和菜单/草稿检查保留。全部任务步骤/回执明确标记合成，只证明界面协议，不是新增真实模型执行或Motif效果实验。
+
+日志为`.local/debug/motif-library-ui/inspector-build-final.log`、`inspector-check-final.log`、`inspector-renderer-final.log`。截图与回执为`apps/desktop/.local/validation/renderer-1a453f12-7d32-49b9-9e0f-920012e7bfe7/`，包含整体浅深色/窄窗、`workspace-inspector-light.png`、`workspace-inspector-resources.png`及`workspace-runtime-details.png`。没有修改认证代码锁或新增在线执行逻辑，本轮不重跑全量回归，既有全量失败边界继续保留。安装包未构建或上传，生产服务和并行工具迁移工作树未改。

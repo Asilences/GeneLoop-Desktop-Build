@@ -8,7 +8,7 @@ import {comparisonCard} from './comparison.js';
 import {bindScenePicker} from './scene-picker.js';
 import {deliveryPath,deliveryFiles,deliveryName,presentation,presentationCard,previewPresentation} from './deliveries.js';
 const $=id=>document.getElementById(id),state={user:null,sessions:[],workspaces:[],archived:new Set(),session:null,workspace:null,settings:null,models:[],conversation:new Conversation(),attachments:[],trace:false,generation:0,submitting:false,drafts:new Map(),comparisons:new Map(),pending:new Map()};
-const motifUI=bindMotifLibrary({trigger:$('motif-nav'),host:$('motif-library'),conversation:document.querySelector('.conversation'),deliveries:$('deliveries'),navigation:[$('workspace-list'),$('new-session')],summaryHost:$('motif-summary'),getWorkspace:()=>state.workspaces.find(row=>row.workspaceId===state.workspace),getWorkspaceTitle:id=>state.workspaces.find(row=>row.workspaceId===id)?.title||id,onWorkspace:id=>Promise.resolve().then(()=>openWorkspace(id)).catch(fail)});
+const motifUI=bindMotifLibrary({trigger:$('motif-nav'),host:$('motif-library'),conversation:document.querySelector('.conversation'),deliveries:$('deliveries'),inspector:$('workspace-inspector'),inspectorToggle:$('workspace-inspector-toggle'),navigation:[$('workspace-list'),$('new-session')],summaryHost:$('motif-summary'),getWorkspace:()=>state.workspaces.find(row=>row.workspaceId===state.workspace),getWorkspaceTitle:id=>state.workspaces.find(row=>row.workspaceId===id)?.title||id,onAuthorizationLost:()=>{homeActivity=null;homeDelivery=null;scheduleRender();},onWorkspace:id=>Promise.resolve().then(()=>openWorkspace(id)).catch(fail)});
 const labels={'new-scene':'Chat',ppt:'PPT','paper-proofreading':'论文校对','research-data-analysis':'数据分析',files:'文件管理','video-editing':'视频编辑'};
 const examples=[
   ['paper-proofreading','检查论文引用','请检查我上传的论文，列出正文引用与参考文献不一致的地方，并标明位置。'],
@@ -34,6 +34,7 @@ let pinnedWorkspaces=[];
 let directoryRequest=0;
 const sessionChanges=new EventTarget();
 let homeDelivery=null;
+let homeActivity=null,homeRefresh=null;
 function changeSelection(action){const operation=selectionChange.catch(()=>{}).then(action);selectionChange=operation;return operation;}
 const errorText=error=>error?.message||String(error);
 function toast(message,duration=5500){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,duration);}
@@ -61,7 +62,7 @@ function restoreLoginPreference(){
   $('login-user').value=username||'';
   $('remember-login').checked=localStorage.getItem('geneloop.desktop.remember-login')!=='off';
 }
-function showAuth(){streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();newWorkspaceDrafts.clear();activeWorkspaceDraft=null;pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();restoreLoginPreference();screen('auth');$('login-pass').value='';}
+function showAuth(){homeActivity=null;homeDelivery=null;homeRefresh=null;streams.close();clearInterval(pollTimer);state.generation++;state.user=null;state.sessions=[];state.workspaces=[];state.session=null;state.workspace=null;state.attachments=[];state.drafts.clear();state.pending.clear();historyCache.clear();workspaceDrafts.clear();newWorkspaceDrafts.clear();activeWorkspaceDraft=null;pinnedWorkspaces=[];scratchText='';$('prompt').value='';renderLoginServer();restoreLoginPreference();screen('auth');$('login-pass').value='';}
 async function initialize(){screen('loading');$('connect-retry').hidden=true;$('loading-message').textContent='正在读取账号与工作空间…';try{
     let account;
     try{account=await request('/api/account/me');}catch(error){if(error.status===404||error.code==='http/200'){await rpc('session/list',{});account={user:{id:'standalone-host',displayName:'工作空间',standalone:true}};}else throw error;}
@@ -70,7 +71,7 @@ async function initialize(){screen('loading');$('connect-retry').hidden=true;$('
     await connectWorkspace();
   }catch(error){$('loading-message').textContent=errorText(error);$('connect-retry').hidden=false;}}
 async function connectWorkspace(){
-  streams.close();streams=new RemoteStreams(warning);currentFollow=workspaceFollow=eventFollow=controlFollow=null;state.generation++;state.conversation=new Conversation();state.comparisons=new Map();$('connection-warning').hidden=true;
+  homeActivity=null;homeDelivery=null;homeRefresh=null;streams.close();streams=new RemoteStreams(warning);currentFollow=workspaceFollow=eventFollow=controlFollow=null;state.generation++;state.conversation=new Conversation();state.comparisons=new Map();$('connection-warning').hidden=true;
   await loadSessions();state.settings=await request('/api/harless/settings');const catalog=await request('/api/harless/models');state.models=catalog.models||[];state.defaultModel=catalog.default;
   const user=state.user;
   request('/api/harless/workspaces/preferences').then(value=>{if(state.user===user){pinnedWorkspaces=value.pinned_workspace_ids||[];renderSidebar();}}).catch(()=>{});
@@ -88,7 +89,7 @@ async function connectWorkspace(){
   eventFollow=await streams.follow('$events',undefined,frame=>{handleEvent(frame).catch(fail);},warning);
   controlFollow=await streams.follow('session/control',undefined,frame=>{if(frame.type==='queue'&&frame.sessionId===state.session){$('session-status').textContent=frame.items.length?'排队中 · '+frame.items.length+' 条':'工作空间已连接';}if(frame.type==='jobs'&&frame.sessionId===state.session){state.jobs=frame.jobs;scheduleRender();}},warning);
   screen('workspace');restoreSidebarWidth();renderSidebar();renderModels();renderScenes();renderConversation();
-  clearInterval(pollTimer);pollTimer=setInterval(()=>{if(state.session)refreshTaskPanels().catch(()=>{});},4000);
+  clearInterval(pollTimer);pollTimer=setInterval(()=>{if(document.hidden)return;if(state.session)refreshTaskPanels().catch(()=>{});else if(state.workspace&&!activeWorkspaceDraft)refreshHomeDelivery(state.workspace).catch(()=>{});},4000);
   if(state.session&&state.sessions.some(row=>row.sessionId===state.session))await selectSession(state.session,{force:true});else state.session=null;
 }
 async function loadSessions({closeDeleted=false}={}){
@@ -235,7 +236,7 @@ function confirmWorkspaceDelete(group){
   modal.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
 }
 function clearSessionPanels(){
-  state.deliveries=[];state.nativePresentations=[];homeDelivery=null;renderDeliveries();renderQuestions([]);$('preview').replaceChildren();
+  state.deliveries=[];state.nativePresentations=[];homeDelivery=null;homeActivity=null;renderDeliveries();renderQuestions([]);$('preview').replaceChildren();
   if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
 }
 function saveComposer(){
@@ -377,19 +378,25 @@ function recentSessionEvents(id){
   });
 }
 async function refreshHomeDelivery(workspaceId){
+  const token=state.generation;
+  if(homeRefresh?.generation===token)return;
   const group=state.workspaces.find(row=>row.workspaceId===workspaceId);
   if(!group)return;
-  const row=workspaceSessions(group)[0];
-  if(!row||row.running)return;
-  const {sessionId}=row,generation=state.generation;
-  const current=()=>generation===state.generation&&!state.session&&!activeWorkspaceDraft&&state.workspace===workspaceId;
-  const [records,tasks]=await Promise.all([
-    recentSessionEvents(sessionId).catch(()=>[]),
-    request('/api/harless/tasks').catch(()=>({tasks:[]})),
-  ]);
+  const refresh={generation:token};homeRefresh=refresh;
+  const current=()=>token===state.generation&&!state.session&&!activeWorkspaceDraft&&state.workspace===workspaceId;
+  try{
+  const visible=workspaceSessions(group),sessionIds=new Set(visible.map(row=>row.sessionId));
+  const tasks=await request('/api/harless/tasks').catch(error=>{if(error.status===401&&current()){homeActivity=null;homeDelivery=null;scheduleRender();}return null;});
   if(!current())return;
+  const scoped=(tasks?.tasks||[]).filter(task=>sessionIds.has(task.session_id)&&typeof task.task_id==='string')
+    .sort((a,b)=>Number(['running','preparing','queued'].includes(b.status))-Number(['running','preparing','queued'].includes(a.status))||(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0));
+  if(tasks)homeActivity={workspaceId,tasks:scoped};
+  scheduleRender();
+  const row=visible[0];if(!row||row.running)return;
+  const {sessionId}=row;
+  const records=await recentSessionEvents(sessionId).catch(()=>[]);if(!current())return;
   const refs=records.map(row=>row.event?.data?.harless_comparison).filter(Boolean).reverse();
-  const native=(tasks.tasks||[]).filter(task=>task.session_id===sessionId&&task.scene==='ppt'&&task.status==='completed')
+  const native=scoped.filter(task=>task.session_id===sessionId&&task.status==='completed')
     .sort((a,b)=>(b.native_turn||0)-(a.native_turn||0));
   const candidates=[...refs.map(ref=>({id:ref.id,turn:ref.turn})),
     ...native.map(task=>({id:'native-'+task.task_id,turn:task.native_turn}))]
@@ -398,33 +405,28 @@ async function refreshHomeDelivery(workspaceId){
     const path=deliveryPath(sessionId,candidate.id);
     const value=await request(path).catch(()=>null);
     if(!current())return;
+    const files=Object.entries(value?.lanes||{}).flatMap(([lane,result])=>deliveryFiles(path,lane,result));
     const decks=Object.entries(value?.lanes||{}).map(([lane,result])=>({
       label:lane==='motif'?'Motif 执行':'标准执行',
       deck:presentation(deliveryFiles(path,lane,result)),
     })).filter(row=>row.deck);
-    if(decks.length){homeDelivery={sessionId,decks};scheduleRender();return;}
+    if(files.length){homeDelivery={sessionId,decks,files,taskId:candidate.id.startsWith('native-')?candidate.id.slice(7):null};scheduleRender();return;}
   }
+  }finally{if(homeRefresh===refresh)homeRefresh=null;}
 }
 function workspaceHome(group){
   const rows=workspaceSessions(group);
   const next=rows.find(row=>row.running)||rows[0];
   const decks=!next?.running&&homeDelivery?.sessionId===next?.sessionId?homeDelivery?.decks:null;
-  const resume=next?node('section',{class:'workspace-resume','aria-label':'继续工作'},
-    node('div',{class:'workspace-resume-mark'},node('img',{src:'/assets/geneloop-spiral.svg',alt:''})),
-    node('div',{class:'workspace-resume-copy'},node('div',{class:'delivery-kicker'},'继续工作'),
-      node('h3',{},titleOf(next)),node('p',{},next.running?'正在执行':decks?'演示文稿交付已就绪':'最近更新的研究对话')),
-    node('div',{class:'delivery-actions'},
-      button('打开对话',()=>selectSession(next.sessionId).catch(fail),'secondary'),
-      decks?button('查看交付',()=>{
+  const previewDelivery=decks?()=>{
         if(decks.length===1&&decks[0].deck.slides.length)previewPresentation(decks[0].deck);
         else dialog('演示文稿交付',node('div',{class:'workspace-delivery-options'},decks.map(({label,deck})=>
           node('div',{},decks.length>1?node('p',{},label):null,presentationCard(deck)))));
-      },'secondary'):null)):null;
+      }:null;
   const create=button(node('span',{},icon('plus'),'新会话'),()=>beginWorkspaceDraft(group.workspaceId).catch(fail),'secondary workspace-start');
   const summary=node('header',{class:'workspace-home-heading'},
     node('div',{class:'workspace-home-copy'},
-      node('div',{class:'workspace-eyebrow'},icon('folder'),'研究工作区'),
-      node('h2',{title:group.title},group.title),node('p',{},'继续你的研究，或开启一个新的想法。')),
+      node('h2',{},node('span',{class:'workspace-title-symbol'},icon('scenes')),'工作区'),node('p',{},'运行任务，组合与核验 Motif，让每次研究都有据可循。')),
     create);
   const section=node('section',{class:'workspace-recent','aria-label':'最近对话'},
     node('div',{class:'workspace-recent-heading'},node('h3',{},'最近对话'),node('span',{class:'workspace-count'},rows.length)));
@@ -444,7 +446,7 @@ function workspaceHome(group){
     }
     section.append(list);
   }
-  return motifUI.workspaceHome(group,{heading:summary,run:node('div',{class:'workspace-run-main'},resume,section),sessionCount:rows.length,runningCount:rows.filter(row=>row.running).length});
+  return motifUI.workspaceHome(group,{heading:summary,title:group.title,recent:section,nextSession:next?{sessionId:next.sessionId,title:titleOf(next),running:next.running}:null,sceneLabel:id=>labels[id]||id,tasks:homeActivity?.workspaceId===group.workspaceId?homeActivity.tasks:[],resources:homeDelivery?.files||[],resourceSession:homeDelivery?.sessionId,resourceTask:homeDelivery?.taskId,previewDelivery,openSession:id=>selectSession(id).catch(fail),sessionCount:rows.length,runningCount:rows.filter(row=>row.running).length});
 }
 function renderConversation(){
   const history=$('history'),previousTop=history.scrollTop,nearBottom=history.scrollHeight-previousTop-history.clientHeight<140;
@@ -453,6 +455,7 @@ function renderConversation(){
   const group=state.workspaces.find(row=>row.workspaceId===state.workspace);
   const home=!state.session&&!activeWorkspaceDraft&&group;
   document.querySelector('.conversation').dataset.page=home?'workspace-home':'conversation';
+  motifUI.syncInspector();
   const formal=state.session&&!activeWorkspaceDraft;
   $('chat-tab').parentElement.hidden=!formal;
   for(const id of ['rename-session','session-actions','deliveries-toggle'])$(id).hidden=!formal;

@@ -1,6 +1,7 @@
 import {node,button,icon} from './components.js';
 import {readMotifEvidence,usd} from './motif-evidence.js';
 import {request} from './api.js';
+import {workspaceRunView} from './workspace-run.js';
 const statusLabel={certified:'已认证',pending_certification:'待认证',invalid:'已失效'};
 const dependencyLabel={environment:'运行环境',dependency_lock:'依赖锁',effect_contract:'读写约束'};
 const eventLabel={match:'匹配',invoke:'执行',fallback:'回退'};
@@ -57,13 +58,14 @@ function cultureGraphic(capabilities=[]){
 }
 
 /** 导入仅驻留当前页面内存；不发送资料、不改变 Agent 和工作区。 */
-function createMotifView({trigger,host,conversation,deliveries,navigation=[],embedded=false,scopeChoices=()=>[],onScope=()=>{},onReset=()=>{}}) {
+function createMotifView({trigger,host,conversation,deliveries,navigation=[],embedded=false,inspector=null,isActive=()=>true,onVisibility=()=>{},scopeChoices=()=>[],onScope=()=>{},onReset=()=>{}}) {
   let model=null,selected=null,tab='library',filter='all',query='',source='',opened=false,loading=false,error='',revision=0;
   let workspace=null,live=false;
+  const runState={taskId:null,planOpen:true,contextOpen:true,recentOpen:false};
   const input=node('input',{type:'file',accept:'.json,application/json',hidden:true,'aria-label':'导入 Motif 证据快照'});
   const changeTab=next=>{tab=next;render();};
-  const back=()=>{opened=false;host.hidden=true;if(conversation)conversation.hidden=false;trigger.removeAttribute('aria-current');};
-  const open=()=>{opened=true;conversation.hidden=true;deliveries.hidden=true;host.hidden=false;trigger.setAttribute('aria-current','page');render();};
+  const back=()=>{opened=false;host.hidden=true;if(conversation)conversation.hidden=false;trigger.removeAttribute('aria-current');onVisibility();};
+  const open=()=>{opened=true;conversation.hidden=true;deliveries.hidden=true;host.hidden=false;trigger.setAttribute('aria-current','page');onVisibility();render();};
   trigger.replaceChildren(icon('scenes'),node('span',{},'Motif 库'));
   trigger.addEventListener('click',open);
   for(const el of navigation)el?.addEventListener('click',()=>{if(opened)back();},{capture:true});
@@ -137,29 +139,6 @@ function createMotifView({trigger,host,conversation,deliveries,navigation=[],emb
         node('p',{class:'motif-muted'},'输入 '+count(r.cost.tokens.prompt_tokens)+' tokens · 输出 '+count(r.cost.tokens.completion_tokens)+' tokens'),evidence(r.evidence_refs))),
       section('同质量收益',node('p',{},'待提供可比基线'),node('p',{class:'motif-muted'},'当前快照不包含配对成本及质量比较，不显示节省金额或效率百分比。')));
   }
-  function overview(){
-    const costs=model?.runs.map(row=>row.cost.cost_usd),known=costs?.length&&costs.every(value=>value!==null);
-    const amount=known?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:4}).format(costs.reduce((sum,value)=>sum+value,0)):'—';
-    const stats=node('div',{class:'workspace-overview-stats'},
-      card('研究对话',workspace.sessionCount,workspace.runningCount+' 个执行中'),
-      card('已认证 Motif',model?model.summary.certified:'—','来自当前能力库'),
-      card('实际复用',model?model.summary.applied:'—','已记录的实际调用'),
-      card('任务估费',amount,'USD · 原账本估计'));
-    const browse=button(icon('chevron-right'),()=>changeTab('combination'),'workspace-panel-link');browse.setAttribute('aria-label','浏览能力组合');
-    const capability=node('section',{class:'workspace-insight-card'},node('div',{class:'workspace-panel-heading'},
-      node('h3',{},icon('scenes'),'能力概况'),node('div',{class:'workspace-panel-tools'},model?badge('v'+model.libraryVersion):null,browse)),
-      node('div',{class:'workspace-capability-counts'},...Object.entries(statusLabel).map(([key,label])=>node('div',{},node('span',{},node('i',{class:key}),label),node('strong',{},model?count(model.summary[{certified:'certified',pending_certification:'pending',invalid:'invalid'}[key]]):'—')))));
-    const recent=node('section',{class:'workspace-insight-card workspace-activity'},node('div',{class:'workspace-panel-heading'},node('h3',{},icon('trace'),'最近动态'),button('查看全部',()=>changeTab('evolution'),'workspace-panel-link')));
-    const events=model?.raw.events.slice(-3).reverse()||[];
-    if(events.length){
-      const items=node('div',{class:'workspace-activity-list'});
-      for(const event of events){const cap=model.capabilities.find(row=>row.id===event.capability_id),applied=event.kind==='invoke'&&event.status==='applied'&&event.actual_execution;items.append(node('div',{class:'workspace-activity-item'},
-        node('span',{class:'workspace-activity-mark '+(applied?'applied':event.kind)},icon(event.kind==='fallback'?'refresh':applied?'check':'scenes')),
-        node('div',{},node('p',{title:cap.name},cap.name),node('small',{},eventLabel[event.kind]+'记录'))));}
-      recent.append(items);
-    }else recent.append(node('p',{class:'workspace-insight-empty'},'暂无记录，新的能力经历会显示在这里。'));
-    return node('div',{},stats,node('div',{class:'workspace-dashboard'},workspace.run,node('aside',{class:'workspace-insights','aria-label':'工作区能力动态'},capability,recent)));
-  }
   function render() {
     if(!opened)return;
     const actions=node('div',{class:'motif-toolbar'},button('导入证据快照',()=>input.click(),'secondary'),button('公开验收样例',sample,'secondary'));
@@ -172,14 +151,16 @@ function createMotifView({trigger,host,conversation,deliveries,navigation=[],emb
     if(error)body.append(node('p',{role:'alert',class:'motif-error'},error));
     const scopeNote=model?node('div',{class:'motif-source'},badge('只读证据'),node('span',{},source),node('span',{},'库版本 '+model.libraryVersion),node('small',{},live?'认证状态不代表当前电脑可用':'与当前账号及工作区无关联')):null;
     if(embedded){
+      const run=workspaceRunView({workspace,model,viewState:runState,onTab:changeTab,onTask:id=>{runState.taskId=id;render();}});
       const names={run:'运行',combination:'能力组合',evaluation:'评估',evolution:'演化',versions:'版本'};
       const tabIcons={run:'folder-open',combination:'scenes',evaluation:'chart-column-increasing',evolution:'refresh',versions:'trace'};
       const tabs=node('div',{class:'motif-tabs',role:'tablist','aria-label':'工作区视图'},...Object.entries(names).map(([id,label])=>{const b=button([icon(tabIcons[id]),label],()=>changeTab(id));b.setAttribute('role','tab');b.setAttribute('aria-selected',String(tab===id));return b;}));
       const content=node('div',{class:'motif-tab-body',role:'tabpanel','aria-label':names[tab]});
-      if(tab==='run')content.append(overview());
+      if(tab==='run')content.append(run.main);
       else if(!model)content.append(empty('这个工作区尚无 Motif 证据','宿主接入实际证据导出后，会在这里显示能力、评估和演化记录。'));
       else{content.append(scopeNote,({combination:()=>node('div',{},relations(),library()),evaluation:runs,evolution:timeline,versions:()=>section('当前库版本 '+model.libraryVersion,hash('快照摘要',model.raw.library.snapshot_sha256),hash('Registry 摘要',model.raw.library.registry_digest),node('p',{class:'motif-muted'},'当前来源仅含此版本。历史、版本差异和回滚记录待接入；本页不修改运行能力。'),...model.capabilities.map(c=>section(c.name,hash('候选摘要',c.version.candidate_digest),hash('证书摘要',c.version.certificate_digest))))})[tab]());}
-      if(error)content.prepend(node('p',{class:'motif-error',role:'alert'},error));host.replaceChildren(workspace.heading,tabs,content);return;
+      if(error)content.prepend(node('p',{class:'motif-error',role:'alert'},error));host.replaceChildren(workspace.heading,tabs,content);
+      if(inspector&&isActive()){const top=inspector.scrollTop;inspector.replaceChildren(run.inspector);inspector.scrollTop=top;}return;
     }
     if(!model)body.append(empty('让经历成为可追溯的能力','当前服务尚无可展示的数据。可导入证据快照或查看明确标注的公开验收样例。'));
     else {
@@ -189,14 +170,24 @@ function createMotifView({trigger,host,conversation,deliveries,navigation=[],emb
     }
     host.replaceChildren(node('div',{class:'motif-topbar'},button('返回工作区',back,'motif-text-button'),node('span',{},'Motif Library')),header,body,input);
   }
-  return {open,close:back,setWorkspace(value){workspace=value;if(tab==='library')tab='run';opened=true;render();},setEvidence(data,label){model=data?readMotifEvidence(data):null;source=label;live=true;if(!model?.capabilities.some(c=>c.id===selected))selected=model?.capabilities[0]?.id||null;render();},setError(text){error=text;render();},setTab(value){tab=value;render();},isPreview(){return model&&!live;},clear(){model=null;error='';revision++;render();}};
+  return {open,close:back,setWorkspace(value){workspace=value;if(tab==='library')tab='run';opened=true;render();},setEvidence(data,label){model=data?readMotifEvidence(data):null;source=label;live=true;if(!model?.capabilities.some(c=>c.id===selected))selected=model?.capabilities[0]?.id||null;render();},setError(text){error=text;render();},setTab(value){tab=value;render();},isPreview(){return model&&!live;},clear(){model=null;error='';revision++;if(embedded){workspace=null;opened=false;runState.taskId=null;host.replaceChildren();return;}render();}};
 }
 
 /** 一份账号目录，投影到当前工作区和全局库；公开样例不会绑定工作区。 */
 export function bindMotifLibrary(options){
   const panels=new Map();let rows=[],revision='',epoch=0,pending=null,abort=null,error='',ready=false,globalScope=null;
+  const compact=matchMedia('(max-width:1180px)');
+  let inspectorPreference=localStorage.getItem('geneloop.desktop.workspace-inspector'),authorized=true;
+  function syncInspector(){
+    const eligible=authorized&&document.body.dataset.desktopScreen==='workspace'&&!options.conversation.hidden&&options.conversation.dataset.page==='workspace-home'&&Boolean(options.getWorkspace?.());
+    const visible=eligible&&(inspectorPreference===null?!compact.matches:inspectorPreference==='yes');
+    if(options.inspector)options.inspector.hidden=!visible;
+    if(options.inspectorToggle){options.inspectorToggle.hidden=!eligible;options.inspectorToggle.setAttribute('aria-expanded',String(Boolean(visible)));}
+  }
+  if(options.inspectorToggle){options.inspectorToggle.replaceChildren(icon('sidebar'));options.inspectorToggle.addEventListener('click',()=>{inspectorPreference=options.inspector.hidden?'yes':'no';localStorage.setItem('geneloop.desktop.workspace-inspector',inspectorPreference);syncInspector();});}
+  compact.addEventListener('change',syncInspector);
   let collapsed=localStorage.getItem('geneloop.desktop.motif-summary-collapsed')==='yes';
-  const global=createMotifView({...options,onReset:project,scopeChoices:()=>rows.map(r=>({...r,title:options.getWorkspaceTitle?.(r.workspaceId)||r.workspaceId})),onScope:id=>{globalScope=id;const row=rows.find(r=>r.workspaceId===id);global.setEvidence(row?.evidence||null,'账户工作区 '+(options.getWorkspaceTitle?.(id)||id));global.setError(error||(row?.status==='unavailable'?'证据暂时无法读取，请重试。':''));}});
+  const global=createMotifView({...options,onVisibility:syncInspector,onReset:project,scopeChoices:()=>rows.map(r=>({...r,title:options.getWorkspaceTitle?.(r.workspaceId)||r.workspaceId})),onScope:id=>{globalScope=id;const row=rows.find(r=>r.workspaceId===id);global.setEvidence(row?.evidence||null,'账户工作区 '+(options.getWorkspaceTitle?.(id)||id));global.setError(error||(row?.status==='unavailable'?'证据暂时无法读取，请重试。':''));}});
   const getWorkspace=options.getWorkspace||(()=>null);
   function renderSummary(){const host=options.summaryHost;if(!host)return;const group=getWorkspace(),row=rows.find(r=>r.workspaceId===group?.workspaceId),view=row?.view;
     const b=button('',async()=>{if(group){panels.get(group.workspaceId)?.view.setTab('evolution');global.close();await options.onWorkspace?.(group.workspaceId);}else global.open();},'motif-evolution-card');
@@ -219,12 +210,12 @@ export function bindMotifLibrary(options){
     pending=(async()=>{try{const data=await request('/api/harless/motif-library',{signal:abort.signal});if(token!==epoch)return;
       if(data.format!=='geneloop-motif-catalog-v1'||!Array.isArray(data.workspaces)||!/^[a-f0-9]{64}$/.test(data.revision)||new Set(data.workspaces.map(r=>r.workspaceId)).size!==data.workspaces.length)throw Error('Invalid catalog');
       const next=data.workspaces.map(r=>{if(typeof r.workspaceId!=='string'||!['ready','unavailable'].includes(r.status)||!['local','cloud'].includes(r.executionLocation)||r.compatibility!=='unverified')throw Error('Invalid scope');return {...r,view:r.status==='ready'?readMotifEvidence(r.evidence):null};});
-      const changed=revision!==data.revision||error;rows=next;revision=data.revision;error='';ready=true;if(changed)project();
-    }catch(cause){if(token!==epoch)return;if(cause.status===401){reset();error='请重新登录后读取 Motif 数据。';project();return;}error=cause.status===404?'所连接的服务尚未提供 Motif 展示接口。':'证据暂时无法读取，请重试。';project();}finally{if(token===epoch){pending=null;abort=null;}}})();return pending;
+      const changed=revision!==data.revision||error;rows=next;revision=data.revision;error='';ready=true;authorized=true;if(changed)project();syncInspector();
+    }catch(cause){if(token!==epoch)return;if(cause.status===401){reset();options.onAuthorizationLost?.();error='请重新登录后读取 Motif 数据。';project();return;}error=cause.status===404?'所连接的服务尚未提供 Motif 展示接口。':'证据暂时无法读取，请重试。';project();}finally{if(token===epoch){pending=null;abort=null;}}})();return pending;
   }
-  function reset(){epoch++;abort?.abort();pending=null;abort=null;rows=[];revision='';error='';globalScope=null;ready=false;for(const panel of panels.values())panel.view.clear();panels.clear();global.clear();renderSummary();}
-  new MutationObserver(()=>{if(document.body.dataset.desktopScreen==='workspace')refresh();else reset();}).observe(document.body,{attributes:true,attributeFilter:['data-desktop-screen']});
+  function reset(){epoch++;abort?.abort();pending=null;abort=null;rows=[];revision='';error='';globalScope=null;ready=false;authorized=false;for(const panel of panels.values())panel.view.clear();panels.clear();global.clear();options.inspector?.replaceChildren();syncInspector();renderSummary();}
+  new MutationObserver(()=>{if(document.body.dataset.desktopScreen==='workspace'){authorized=true;syncInspector();refresh();}else reset();}).observe(document.body,{attributes:true,attributeFilter:['data-desktop-screen']});
   setInterval(refresh,10000);document.addEventListener('visibilitychange',refresh);
   options.trigger.addEventListener('click',()=>{project();refresh();});
-  return {open:global.open,close:global.close,refresh,workspaceHome(group,content){let panel=panels.get(group.workspaceId);if(!panel){const root=node('div',{class:'workspace-home motif-workspace'});panel={root,view:createMotifView({trigger:button('',()=>{}),host:root,embedded:true})};panels.set(group.workspaceId,panel);}panel.view.setWorkspace(content);const row=rows.find(r=>r.workspaceId===group.workspaceId);panel.view.setEvidence(row?.evidence||null,row?.executionLocation==='local'?'本机工作区导出':'云端工作区导出');renderSummary();return panel.root;}};
+  return {open:global.open,close:global.close,refresh,syncInspector,workspaceHome(group,content){let panel=panels.get(group.workspaceId);if(!panel){const root=node('div',{class:'workspace-home motif-workspace'});panel={root,view:createMotifView({trigger:button('',()=>{}),host:root,embedded:true,inspector:options.inspector,isActive:()=>authorized&&getWorkspace()?.workspaceId===group.workspaceId&&!options.conversation.hidden&&options.conversation.dataset.page==='workspace-home'})};panels.set(group.workspaceId,panel);}panel.view.setWorkspace(content);const row=rows.find(r=>r.workspaceId===group.workspaceId);panel.view.setEvidence(row?.evidence||null,row?.executionLocation==='local'?'本机工作区导出':'云端工作区导出');syncInspector();renderSummary();return panel.root;}};
 }
