@@ -1,0 +1,315 @@
+{
+  "format": "coding-motif-evidence-v1",
+  "scenario": "coding",
+  "display_only": true,
+  "execution_authorized": false,
+  "data_origin": "host_reverified_records",
+  "generated_at": "2026-11-06T09:46:57.974636+08:00",
+  "library": {
+    "generation": 1,
+    "snapshot_sha256": "7389cfab2e419b8fce87f575ff3850cf14d5a0c3798a1d5dbf11eb3417a7b1d8",
+    "registry_digest": "f6f917e995c3fa089b437bf237ac969654c32c70482150a6ddebd5dc48e0d3e3",
+    "certified_count": 1
+  },
+  "capabilities": [
+    {
+      "id": "46c421431583876cea65f7859e30558eb04c475e067d63d0cc928c21249ac85f",
+      "name": "参数化 pytest 执行",
+      "kind": "program",
+      "status": "certified",
+      "in_frozen_library": true,
+      "version": {
+        "library_generation": 1,
+        "candidate_digest": "46c421431583876cea65f7859e30558eb04c475e067d63d0cc928c21249ac85f",
+        "certificate_digest": "de849afde13d1c8041436e55c4b095bb8eda65b5aac0f72a60230dc933d80873"
+      },
+      "certification": {
+        "status": "certified",
+        "native_witness_tasks": 1,
+        "candidate_execution_tasks": 2,
+        "negative_kinds": [
+          "interrupted_recovery",
+          "permission_changed",
+          "tool_failure",
+          "version_changed"
+        ]
+      },
+      "contract": {
+        "language": "python",
+        "parameters_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "arguments"
+          ],
+          "properties": {
+            "arguments": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "-q",
+                      "-v",
+                      "-vv",
+                      "-x",
+                      "--disable-warnings",
+                      "--tb=short",
+                      "--tb=long",
+                      "--tb=no"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^(?![-/])(?!.*(?:^|/)\\.\\.(?:/|::|$))(?:\\./)?[\\w./-]+(?:::[\\w.\\[\\]=+-]+)*$"
+                  }
+                ]
+              },
+              "contains": {
+                "type": "string",
+                "pattern": "^(?![-/])(?!.*(?:^|/)\\.\\.(?:/|::|$))(?:\\./)?[\\w./-]+(?:::[\\w.\\[\\]=+-]+)*$"
+              }
+            }
+          }
+        },
+        "read_scope": [
+          "."
+        ],
+        "write_scope": [],
+        "dependency_sha256": "fb4b428c7ded4b032a3658e10c84d2c92911747f048c929558f3b1465de33b64",
+        "effect_contract_sha256": "97a1d446d2544081730e5e7a2f252796781f46c65f9edce2d3aa1ebafbd1aae1",
+        "environment_sha256": "d38f8926cf09f961f6c0ba4d933ba205a23887ddb505aa9d79b5c45d676c0a4a"
+      },
+      "dependencies": [
+        {
+          "kind": "environment",
+          "sha256": "d38f8926cf09f961f6c0ba4d933ba205a23887ddb505aa9d79b5c45d676c0a4a"
+        },
+        {
+          "kind": "dependency_lock",
+          "sha256": "fb4b428c7ded4b032a3658e10c84d2c92911747f048c929558f3b1465de33b64"
+        },
+        {
+          "kind": "effect_contract",
+          "sha256": "97a1d446d2544081730e5e7a2f252796781f46c65f9edce2d3aa1ebafbd1aae1"
+        }
+      ],
+      "cost": {
+        "amount_usd": null,
+        "known_model_cost_usd": null,
+        "currency": "USD",
+        "basis": "capability_attribution_unknown"
+      },
+      "evidence_refs": [
+        "3bda4ba68172d86c9c08e54b9f296ef32c6fca60ca25baff6ab0ee2b0ca91b2a",
+        "a477ee9f673563b3ae53eea6c3bf24bf2332c5aa79bfe54809675f0c7f791cf0"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "id": "c4258305d8a8264d389c99e6b2367aceed14e3b665ffcc88317e546384c13507",
+      "task_ref": "da2ca294e0a2ede546be0254437e7e5197a7bd0e2fd4a79e1b6df25566ccb6eb",
+      "task_kind": "maintain",
+      "library_sha256": "c758ba0a54ed13f63fb4875f2ce62a505074bcd5e3f2fca6dbc674adb06f6c17",
+      "host_environment_sha256": "69af6b49438288a4073ad6ebef830189a5f1409c01921b7de6d5e2c0db0ae4d4",
+      "quality": {
+        "hard_checks_passed": true,
+        "task_qualified": true,
+        "required_count": 674,
+        "executed_count": 674,
+        "skipped_count": 0
+      },
+      "cost": {
+        "requests": 9,
+        "known_model_cost_usd": 0.18326325000000002,
+        "cost_usd": 0.18326325000000002,
+        "unknown_usage_requests": 0,
+        "pending_requests": 0,
+        "usage_complete": true,
+        "tokens": {
+          "prompt_tokens": 323269,
+          "completion_tokens": 1403,
+          "prompt_cache_hit_tokens": 188672,
+          "prompt_cache_miss_tokens": 134597
+        },
+        "cost_basis": "original_local_ledger_estimate_not_provider_invoice"
+      },
+      "native_elapsed_seconds": 80.79030341599719,
+      "end_to_end_elapsed_seconds": null,
+      "evidence_refs": [
+        "4e6d56891fba578315c3186b580b6b2d20028bcf7810becf4d176ab930e6472e",
+        "ef8306370ca91de5b25f24e79a28f2934589cd5811e849ae6e1b568bc5dc7cd1",
+        "fe0de06754f8101440b48d49e85a3e6434c717da547c3a2c0bebd159fc32f254",
+        "e254e90364870068bbd6728971f6d8cfbdde85d5f8db1c913a7278f517bca7f7"
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "41a9f2bd500bac31544679790f7d2f2cbfd44ef295ffd9b4ee9fe4466600d154",
+      "kind": "match",
+      "status": "rejected",
+      "reason": "test_selector_not_found",
+      "actual_execution": false,
+      "run_id": "c4258305d8a8264d389c99e6b2367aceed14e3b665ffcc88317e546384c13507",
+      "capability_id": "46c421431583876cea65f7859e30558eb04c475e067d63d0cc928c21249ac85f",
+      "call_ref": "712db15d34a75d425e0677e9ec423daa69a082f6d8e8f25f7054d5faf5e73f38",
+      "origin": "explicit_coding_program_v1",
+      "project_sha256": "736eb1ac6aa6bd407e9d3ffc68c339b656fd11fc377f275f979116b26b7c3791",
+      "goal_sha256": "3e01d1a09983ae8c8bb1d63408c8af112b92af656265e24be8783955448449d0",
+      "model_request_id": 4,
+      "occurred_at": null,
+      "cost_usd": null,
+      "evidence_refs": [
+        "164ce84cb75bac7616e1c6c2a482c29ad9bd0b8c858b5367ae56459e597496be",
+        "a96c739b0d05c33038b78631f3fcfed8d64a6e1d8939f596001042dd04ab75b6",
+        "fbccbb99c1307ec97c1426cc79045e2c98303e50929a3a54332ad3795e3d1ba3"
+      ]
+    },
+    {
+      "id": "769e20369fb652e2276f639c6bdf1d8b7896ad93c9d7aa03ccdf9e211fd0a432",
+      "kind": "fallback",
+      "status": "ordinary_fallback",
+      "reason": "test_selector_not_found",
+      "actual_execution": false,
+      "run_id": "c4258305d8a8264d389c99e6b2367aceed14e3b665ffcc88317e546384c13507",
+      "capability_id": "46c421431583876cea65f7859e30558eb04c475e067d63d0cc928c21249ac85f",
+      "call_ref": "712db15d34a75d425e0677e9ec423daa69a082f6d8e8f25f7054d5faf5e73f38",
+      "origin": "explicit_coding_program_v1",
+      "project_sha256": "736eb1ac6aa6bd407e9d3ffc68c339b656fd11fc377f275f979116b26b7c3791",
+      "goal_sha256": "3e01d1a09983ae8c8bb1d63408c8af112b92af656265e24be8783955448449d0",
+      "model_request_id": 4,
+      "occurred_at": null,
+      "cost_usd": null,
+      "evidence_refs": [
+        "164ce84cb75bac7616e1c6c2a482c29ad9bd0b8c858b5367ae56459e597496be",
+        "a96c739b0d05c33038b78631f3fcfed8d64a6e1d8939f596001042dd04ab75b6",
+        "fbccbb99c1307ec97c1426cc79045e2c98303e50929a3a54332ad3795e3d1ba3"
+      ]
+    },
+    {
+      "id": "7145b7980e195df8c4fdcc492b31ecb2845aae3b059e10123ebf709133ee0568",
+      "kind": "match",
+      "status": "matched",
+      "reason": null,
+      "actual_execution": false,
+      "run_id": "c4258305d8a8264d389c99e6b2367aceed14e3b665ffcc88317e546384c13507",
+      "capability_id": "46c421431583876cea65f7859e30558eb04c475e067d63d0cc928c21249ac85f",
+      "call_ref": "7b04aefe3c15aa2c23b7fee13c2866a41e082881239c6fcbca577ab26b379edf",
+      "origin": "explicit_coding_program_v1",
+      "project_sha256": "736eb1ac6aa6bd407e9d3ffc68c339b656fd11fc377f275f979116b26b7c3791",
+      "goal_sha256": "3e01d1a09983ae8c8bb1d63408c8af112b92af656265e24be8783955448449d0",
+      "model_request_id": 6,
+      "occurred_at": null,
+      "cost_usd": null,
+      "evidence_refs": [
+        "38682786750dfee05fd232111a832fe5ed5355cdd210918f51dfce6ea5dfeb36",
+        "309c89c2bde75b4f386c6080dc04fa972cde12e94766bae0b1575947b4868bcc",
+        "4a8131d11b12c7ffe6f47c67f92e4c6dce15dd754944d303064f8787c87bda03"
+      ]
+    },
+    {
+      "id": "a1c6885c2f4c3b2ef30f8693d8e2d5df065bc171401a848d9b93803de7eb9223",
+      "kind": "invoke",
+      "status": "applied",
+      "reason": null,
+      "actual_execution": true,
+      "run_id": "c4258305d8a8264d389c99e6b2367aceed14e3b665ffcc88317e546384c13507",
+      "capability_id": "46c421431583876cea65f7859e30558eb04c475e067d63d0cc928c21249ac85f",
+      "call_ref": "7b04aefe3c15aa2c23b7fee13c2866a41e082881239c6fcbca577ab26b379edf",
+      "origin": "explicit_coding_program_v1",
+      "project_sha256": "736eb1ac6aa6bd407e9d3ffc68c339b656fd11fc377f275f979116b26b7c3791",
+      "goal_sha256": "3e01d1a09983ae8c8bb1d63408c8af112b92af656265e24be8783955448449d0",
+      "model_request_id": 6,
+      "occurred_at": null,
+      "cost_usd": null,
+      "evidence_refs": [
+        "38682786750dfee05fd232111a832fe5ed5355cdd210918f51dfce6ea5dfeb36",
+        "309c89c2bde75b4f386c6080dc04fa972cde12e94766bae0b1575947b4868bcc",
+        "4a8131d11b12c7ffe6f47c67f92e4c6dce15dd754944d303064f8787c87bda03"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "3bda4ba68172d86c9c08e54b9f296ef32c6fca60ca25baff6ab0ee2b0ca91b2a",
+      "kind": "candidate",
+      "sha256": "46c421431583876cea65f7859e30558eb04c475e067d63d0cc928c21249ac85f",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "a477ee9f673563b3ae53eea6c3bf24bf2332c5aa79bfe54809675f0c7f791cf0",
+      "kind": "certificate",
+      "sha256": "de849afde13d1c8041436e55c4b095bb8eda65b5aac0f72a60230dc933d80873",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "4e6d56891fba578315c3186b580b6b2d20028bcf7810becf4d176ab930e6472e",
+      "kind": "adoption_audit",
+      "sha256": "3597b5ba6dfe073099b7b06cd297e1c553a7480309ca54400e30cbdcb9a977d9",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "ef8306370ca91de5b25f24e79a28f2934589cd5811e849ae6e1b568bc5dc7cd1",
+      "kind": "acceptance",
+      "sha256": "708af7d405f010cca652e2052c6151026f3db670dac9e7c38e5f822eafe8a9da",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "fe0de06754f8101440b48d49e85a3e6434c717da547c3a2c0bebd159fc32f254",
+      "kind": "quality_review",
+      "sha256": "b97ff86008e588b99322a4567aaf6091d018029700d283a2573bb852ac2d33af",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "e254e90364870068bbd6728971f6d8cfbdde85d5f8db1c913a7278f517bca7f7",
+      "kind": "ledger",
+      "sha256": "739259e026fb591ed58d5903bfa85cbac3bb5e764f17a832127c6420303bd59c",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "164ce84cb75bac7616e1c6c2a482c29ad9bd0b8c858b5367ae56459e597496be",
+      "kind": "model_choice",
+      "sha256": "0fbfb98013db881d45909b0d34e5239a67e4998041350778b0bf5f45eeb92a9f",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "a96c739b0d05c33038b78631f3fcfed8d64a6e1d8939f596001042dd04ab75b6",
+      "kind": "tool_outcome",
+      "sha256": "232818147548ff5e32cb4c3df1aae25560f0378a6c8c4eeedc1fea66fb418e47",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "fbccbb99c1307ec97c1426cc79045e2c98303e50929a3a54332ad3795e3d1ba3",
+      "kind": "match",
+      "sha256": "2678c5161f9329c99550b181c4ade98d84236be072722de2de0d44b21467de4d",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "38682786750dfee05fd232111a832fe5ed5355cdd210918f51dfce6ea5dfeb36",
+      "kind": "model_choice",
+      "sha256": "dc05f2ff3cc8cf063fc43579afb9cac6f70211e1b8f89268e69511400925df3e",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "309c89c2bde75b4f386c6080dc04fa972cde12e94766bae0b1575947b4868bcc",
+      "kind": "tool_outcome",
+      "sha256": "dcc472376a9bbde919e99a30e371517f3a2fe8d5760b47543162a2e5e802c5ba",
+      "verification_scope": "host_reverified"
+    },
+    {
+      "id": "4a8131d11b12c7ffe6f47c67f92e4c6dce15dd754944d303064f8787c87bda03",
+      "kind": "match",
+      "sha256": "c5175eed624d1f8fccbd3ead56391e4a09b2741c89d4be9f0e996791204d903e",
+      "verification_scope": "host_reverified"
+    }
+  ],
+  "exporter": {
+    "source_sha256": "c41d3a40ad441633c986e1f3ed2d76aaf2decd23f84081451afcd1ce171688b2",
+    "schema_sha256": "ad4d9d94b0d79aa519ef04f655a7ea23f7c24ed48fb80005d1418d8b09d6b1c7",
+    "new_model_http_requests": 0
+  },
+  "export_digest": "3cb246c8e3c45e7bfe822ab23fcdbfe0a8f9168e073fc0cc4521247cb58ee0b2"
+}

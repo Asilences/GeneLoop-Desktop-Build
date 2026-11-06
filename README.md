@@ -7,6 +7,9 @@ Paper/PPT 的 [RSI 任务语义脱敏](docs/rsi-data-privacy.md#v3-任务语义�
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
 GeneLoop Desktop `0.3.0-preview.13` 提供 Windows x64、macOS ARM64 和 Intel 本机执行预览：六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。工具随包提供，Mac 使用 ZIP 分发 `.app`。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[本轮记录](docs/debug/desktop-preview13-full-tools-20261106.md)。安装包保存在私有本地目录，不发布 Release。
+
+桌面 Motif 展示候选在工作区首页融入运行、能力组合、评估、演化和版本，并提供全局库入口。它复用同伴的脱敏证据协议，通过账号隔离的只读接口展示，不授予执行权或虚构节省。接入配置、构建和验证边界见[工作区 Motif 说明](docs/product/desktop/motif-workspace.md)与[模块交接](docs/handoffs/motif-visualization.md)；尚未部署正式服务。
+
 模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。SkillFlow baseline 首请求的 Kouri Chat/工具调用冒烟已返回 HTTP 200，见[记录](docs/debug/kouri-env-models-20261106.md)；文件、搜索、思考能力、容量和实际费率仍待真实兼容性验收。当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。
 
 网页聊天的模型下拉按服务端列表工作。默认读取 [config/kouri-models.json](config/kouri-models.json)，已填好 Flash 模板；新增模型时在数组中追加条目即可。私有 `.env` 的 `KOURI_MODELS_FILE` 可指定其他完整模型 JSON 文件，相对路径按项目根目录解析。`KOURI_EXTRA_MODELS_JSON` 仍可追加模型，使用完整文件时通常留空，避免重复 ID。每项必须有 ID、上下文及输出容量、输入及输出美元/百万 token 估费；其他字段及示例见模板与 `.env.example`。目录、预算白名单与费率在启动时生成。正式服务的候选准备和独立预算进程须使用同一模型文件，并按发布流程切换。文件管理独立场景暂沿用 Flash/Off。模板中的容量和费率沿用现有假设，仍需核实 Kouri 实际能力与账单。

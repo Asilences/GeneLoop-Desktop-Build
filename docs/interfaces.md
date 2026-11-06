@@ -1675,3 +1675,12 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 `BenchmarkHost(..., owner='overnight-research')`允许调用方从创建时绑定同一研究owner，旧记录不改写。`review_skill`可选 `behavior_expectation`，使用既有独立review工具按需读配对动作。接受行为变化时必须引用两侧已经读取的宿主动作证据；输出 `verified_behavior_evidence`，质量仍走原oracle。此评审是有来源的模型判断，语义校准与因果归因另外验证。论文试验冻结300秒/64次读取，费用及请求沿原无限额账本。
 
 后继候选选择冻结为通过独立质量及行为检查、符合原质量/费用政策后，按质量降序、任务模型成本升序和策略摘要确定顺序。neutral、negative、unknown不改默认选择。选择只用于隔离后继，完整研究成本与正式发布仍分别判断。
+
+## 工作区 Motif 只读展示（2026-11-06）
+
+- `GET /api/harless/motif-library`：沿用网关账号 Cookie。可选 `workspaceId` 参数缩小范围，只返回该账号已由宿主绑定的工作区；未登录401、跨站403、无效查询400、其他方法405。无配置返回空目录。
+- 私有网关配置 `motifEvidence.sources` 的每项包含稳定 `accountId`、`workspaceId`、`executionLocation`（`cloud`/`local`）及物理绝对 `path`。客户端不能注册导出、指定路径、写入或执行能力；拒绝链接、硬链接和超过4MiB的文件。
+- 响应为 `geneloop-motif-catalog-v1`：`revision` 是响应数据摘要，`workspaces` 每项含范围ID、`status`（`ready`/`unavailable`）、来源执行位置、固定 `compatibility: unverified` 及 `evidence`。原件是同伴 `coding-motif-evidence-v1` 协议，复用 `config/motif-evidence-v1.schema.json` 与共享展示投影。读取失败不会返回物理路径。
+- 前端在已登录且页面可见时每10秒读取，退出清空。展示认证不授权执行；单项费用/完整耗时为null时保持未知，缺少配对质量与成本时不计算节省。公开样例不绑定账号或工作区。
+- 当前仅覆盖Coding v1，不推测缺失的组合、学习/发布事件或历史版本；来源执行位置不改变任务路由。正式服务及本机Runtime活证据桥未由本轮部署。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
+- 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。

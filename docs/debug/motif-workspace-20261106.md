@@ -1,0 +1,88 @@
+# 工作区 Motif 展示联调
+
+日期：2026-11-06。基线 main `d1863342`，独立分支 `codex/motif-library-ui`。
+
+## 问题与实现
+
+用户要求将能力组合、评估、演化和版本融入工作区首页，并保留全局库及左下摘要。实现与范围见[产品说明](../product/desktop/motif-workspace.md)和[交接](../handoffs/motif-visualization.md)。本轮未修改原 Windows/Mac 工具迁移工作树，未构建或上传安装包、未部署服务。
+
+前后端消费 #150 公开的 `coding-motif-evidence-v1` Schema、消费者与真实脱敏样例。样例只用于明确标识的预览和隔离联调；实际账号目录需要宿主绑定导出。没有新 Store、Agent 循环或执行授权接口。当前只有依赖条件、实际 match/invoke/fallback 和当前版本；其他关系、学习/发布、历史与收益数据未提供。
+
+## 代码锁兼容
+
+网关增加三处接线后，原 Paper v84 / PPT v82 的严格代码锁按预期拒绝新网关。没有放宽加载器、改写旧证书或增加通配允许名单。
+
+`scripts/reexport-motif-view-compat.py` 复用现有 `reexport-native-capabilities-compat.py` 的精确差异审阅、不可变原件校验、暂存准入与最终源码复查，为 Paper v85 / PPT v83 生成兼容版本。两侧唯一旧代码差异必须是 `scripts/harless_gateway.mjs`；额外锁定只读适配器、共享投影、Schema 和重导出脚本。原 IR、online manifest、task、完整工具 Schema 和来源证据字节不变；旧版保留。本次零训练、零原始轨迹重放、零模型请求，不作质量或收益晋级。
+
+```powershell
+python scripts/reexport-motif-view-compat.py --preview --validation-record docs/debug/motif-workspace-20261106.md
+# 仅在发布目录尚不存在且源码已冻结时首次生成：
+python scripts/reexport-motif-view-compat.py --write --update-registry --validation-record docs/debug/motif-workspace-20261106.md
+```
+
+命令不能覆盖已存在版本。回退时应整体回退本分支的网关、展示模块和 registry 选择；不能只将旧库指向新网关。与 PR #159 集成时须重新核对其精确兼容摘要及展示 GET 路径的网络用途白名单，不能泛化放行所有 API。
+
+## 验证记录
+
+Windows / Node 24.19.0 / Python 3.11.7。当前工程检查不调用模型，不等同于本机执行效果或新版本认证实测。
+
+- 桌面构建、12项桌面检查、4项 Motif/实际网关检查通过。
+- Electron 回环页面15组检查通过，控制台错误为0；五视图、全局库、导出更新、账号失效清理、工作区摘要与浅深色已验。深色标题继承黑色的问题在截图审阅中发现并修复。
+- 最终截图和回执：`apps/desktop/.local/validation/renderer-ba3bbd45-698c-4dc1-b615-5f531818948e/`；定向检查日志：`.local/debug/motif-library-ui/`。截图采集先请求一次合成帧，再等待绘制，避免将切页前画面误当作当前页。
+- 全量 `npm test` 的 Python 阶段：2892通过、272跳过、77失败、30错误。随后显式执行全量 Node 阶段：1602通过、63跳过、22失败。原始结果保存，不称全量通过。失败包括 Windows 符号链接权限、缺失 reportlab/OCR 环境、fixture/状态断言及上述代码锁差异；未经同环境基线对照，不将其全部归为历史问题。
+- 兼容修复后，`tests/test_harless_paper_product_bundle.py`、`test_harless_rsi_bundle.py`、`test_motif_view_compat.py`共53项通过；Motif路由加既有网关32项通过，原受代码锁影响的Paper挂载1项通过。原全量日志不覆盖。`build-continuation-policy.mjs --check`通过。代码锁失效、负向检查和既有语义回退测试保留。
+- `npm run motif:check`未通过：原标准样例在Windows退出临时目录时出现WinError145（目录非空），没有改动其生命周期来求绿，也不将部分运行算作通过。日志为`motif-example-final.log`。
+
+原始全量日志为 `.local/debug/motif-library-ui/npm-test.log`、`node-test.log`、`status.json`；最终定向复测在`compat-tests-final.log`、`gateway-final.log`、`paper-node-final.log`、`desktop-check-final.log`和`renderer-capture.log`。受限环境首次兼容导出的暂存目录保存在同目录`failed-compat-stage-restricted`，正常权限复测成功；提交前的临时候选也在同目录私有保留。无真实模型请求、供应商费用或 Mac CI 消耗。
+
+## 尚需集成
+
+正式宿主部署及账号导出绑定、本机 Runtime 的活证据桥、其他场景展示协议仍未接通。#150 同伴正式源码尚需集成共享协议，当前按其公开交付消费。真实同质量配对任务、历史版本、学习和发布事件须由来源提供后再呈现；页面不生成替代事实。
+
+## 左下摘要视觉重做
+
+用户认为初版的线框容器过于简陋，要求更接近原设想图。调研 Magic UI / GlassKit 后，按用户图中玻璃培养皿重绘原生 SVG：厚边、高光、水面、底部折射、立体能力球与柔和漂浮；卡片增加明暗材料、状态图例、两栏实际统计与紧凑收起状态。没有复制第三方代码或新增依赖。
+
+只改展示及现有截图采集，不修改后端、协议、代码锁、任务或账号数据。光学层没有假能力或关系；球体来自当前快照，未知数字仍为破折号。只提供认证状态，未伪造能力层级或演化次数。
+
+桌面构建和12项检查通过，现有 Electron 回环15组通过，控制台错误0。检查了浅色、深色和收起截图；系统减少动态效果通过 CSS 关闭漂浮。此次没有重跑全量回归，上一节失败边界继续有效。
+
+本轮日志 `summary-build.log`、`summary-check.log`、`summary-renderer.log` 在 `.local/debug/motif-library-ui/`；截图和回执在 `apps/desktop/.local/validation/renderer-e40b4794-47bd-4745-9f72-7e265db85a48/`，含 `motif-summary-light.png`、`motif-summary-dark.png`、`motif-summary-collapsed.png` 和整体页面。先前自动审批超时后重试成功；没有真实模型请求、生产部署、安装包构建或上传。
+
+## 工作区首页与侧边栏整理
+
+按用户要求统一首页和导航的视觉：紧凑的工作区标题与主操作、图标页签、四项实际统计、继续工作与最近对话、横向能力状态、最多三条实际动态。较窄窗口将两栏改为上下排列。侧栏调整品牌区、新会话、全局库、搜索、工作区与对话层级、选中态和细滚动条；玻璃卡片保留，头像区独立。没有新增依赖、接口、执行能力或服务器写入。
+
+首页只消费原协议：对话数来自原可见性筛选，实际复用继续要求 applied/invoke 回执；任务估费只在所有来源任务均有费用且存在任务时汇总，否则未知。费用是原账本估计，不是供应商账单或相对收益。最近动态按已有导出顺序反向显示，没有推测时间、执行进度或学习效果。
+
+构建和12项桌面检查通过；原15组 Electron 交互回归通过，控制台错误0，保留侧栏拖宽/折叠/搜索、草稿、原有菜单和认证失效检查。人工审阅了浅色、深色及900×700窗口截图；修正了搜索图标偏移和能力面板过高造成的首屏信息挤压。最终源码仅视觉/投影改动，本次没有重跑全量回归，前述未通过边界仍有效。
+
+最终日志为 `.local/debug/motif-library-ui/home-build-final.log`、`home-check-final.log`、`home-renderer-reviewed.log`。截图与回执在 `apps/desktop/.local/validation/renderer-330bc83d-c485-4972-9e37-ebbceda6823c/`：`workspace-overview-light.png`、`workspace-overview-dark.png`、`workspace-overview-compact.png`。正常提示自行收起后截图，不隐藏实际组件来制造结果。未构建、上传安装包或触碰并行工具迁移分支。
+
+## 按定稿接入最右侧工作区详情栏
+
+用户澄清此前「侧边栏」指最右侧，要求中央也更像定稿。当前重排为任务卡与公开计划、工具输出、上下文、效果/用量，右侧独立工作区详情，左侧保留已实现导航。原型的四个顶部KPI与两栏卡片布局被替代，不是新增另一套工作区。Issue #137当前仍开放；本轮没有修改Issue、合并或部署。
+
+`workspace-run.js`只投影原任务接口公开字段；首页每4秒读取原tasks列表并按工作区可见会话过滤。任务列表选择与公开todo决定展示，进度只按已完成项计算；没有固定阶段、定时生成的进度或推测耗时。右栏只把当前任务完成且有优化/核验标识的记录显示为Motif调用回执，不把能力库所有条目当作已经使用。匿名Coding证据没有会话绑定时单独标识，不推断它属于最近对话。节省、效率、演化次数和自动演化/模板功能没有依据时保持未知/待接入。
+
+复用原PPT预览、实际图像字节、翻页和受保护下载；将入口移到任务卡与右栏。原有预览检查第一次因旧`.workspace-resume`定位超时，记录在`inspector-renderer.log`；新定位保留全部原检查，通过后没有删除失败记录。右栏保留当前滚动位置，公开计划的收起状态在轮询后保持；窄窗默认关闭，显式打开为抽屉。登出与授权失效清理任务缓存、右栏及相关代次，迟到回包不更新其他工作区。
+
+最终构建、12项桌面检查及16组Electron检查通过，控制台错误0。新增覆盖当前任务范围过滤、公开计划2/3项、任务进度从1.2s到2.4s的协议刷新、收起状态保留、右栏页面导航/开合、窄窗默认隐藏、401清空详情；原PPT预览和菜单/草稿检查保留。全部任务步骤/回执明确标记合成，只证明界面协议，不是新增真实模型执行或Motif效果实验。
+
+日志为`.local/debug/motif-library-ui/inspector-build-final.log`、`inspector-check-final.log`、`inspector-renderer-final.log`。截图与回执为`apps/desktop/.local/validation/renderer-1a453f12-7d32-49b9-9e0f-920012e7bfe7/`，包含整体浅深色/窄窗、`workspace-inspector-light.png`、`workspace-inspector-resources.png`及`workspace-runtime-details.png`。没有修改认证代码锁或新增在线执行逻辑，本轮不重跑全量回归，既有全量失败边界继续保留。安装包未构建或上传，生产服务和并行工具迁移工作树未改。
+
+## PR 提交前整合 main
+
+用户授权推送 Motif 前后端并创建 PR、在 #137–#140 分别评论进度，不使用自动关闭关键词。提交前整合 main `cdc3a6a9`（#159/#160），保留隐私设置、逐次共享确认、诊断检查及集中模型配置。四处文本冲突按各自数据流合并；任务 fixture 同时保留 Motif 工作区任务和可选隐私任务，认证失效检查放在其他操作之后。
+
+桌面网络用途白名单只追加本次 GET 入口，并检查相似未知路径继续拒绝。新注册的 Paper v85/PPT v83 仍保持原提交的所有原件；沿用 main 的精确兼容表，将该网关的已认证摘要与合并后摘要显式绑定。其他 main 审阅过的源码摘要对保留，未加入通配允许或改写原证书。新兼容检查既接受精确原摘要，也接受此表中的精确摘要对；旧 v84/v82 因网关摘要不匹配继续拒绝。
+
+合并后桌面构建、13项检查、网关32项、Paper/PPT53项、Electron16组通过，控制台错误0。日志为 `merge-build.log`、`merge-desktop-check-unrestricted.log`、`merge-gateway.log`、`merge-compat.log`、`merge-renderer.log`。受限沙箱的桌面临时文件 rename EPERM 日志另存，正常权限重跑同一检查通过。最新截图目录为 `apps/desktop/.local/validation/renderer-9b3f3ed5-8dab-4727-a154-45b37a5ef70b/`；产品文档仅纳入明确标记合成任务的总览截图，不提交私人原始日志。
+
+`7a4a225f` 上完整 `npm test` 的 Python 阶段为2940通过、283跳过、56失败、30错误，717.96秒，未进入 Node 阶段；按项目清单显式运行 Node 得1618通过、59跳过、25失败。完整日志为 `merge-npm-test.log` 和 `merge-node-suite.log`。失败包括 Windows 符号链接特权、缺失 reportlab/PDF/OCR 依赖、路径/学习夹具断言等；未经同环境干净 main 对照，不把所有失败归为历史问题。最初 Node 清单表达式错误导致默认扫描了工程目录，错误运行日志另存 `merge-node-test.log`，不用于上述数量。
+
+完整 Node 回归另发现本轮直接引入的真实错误：新认证代码锁中的 `config/motif-evidence-v1.schema.json` 没有进入成员命名空间。最终只为这个公开文件增加精确只读挂载，更新相应白名单断言与网关精确兼容摘要；没有挂载整个 config 目录或用户证据。修复后 Motif/既有网关与原生产品策略36项通过（`final-gateway-prompt.log`），Paper/PPT兼容及负向53项通过（`final-compat.log`）。最终修复后没有重跑完整回归，不把定向通过当作全量结论。
+
+无模型 `npm run smoke` 通过（`merge-smoke.log`）；`motif:check`仍在Windows临时目录清理时报WinError145（`merge-motif-check.log`），未算通过。GitHub CI 的检查注释为“account is locked due to a billing issue”，任务没有启动；本次不修改账单/Actions设置。
+
+源码已推送并创建 [Draft PR #161](https://github.com/jingyio/GeneLoop/pull/161)，不使用自动关闭 Issue 的关键词；#137–#140 用评论分别交付真实范围。没有真实模型请求、生产部署或安装包构建/上传。桌面开发在其独立分支合入后统一提交整合源码与安装包。

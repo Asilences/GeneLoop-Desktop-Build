@@ -7,6 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {createMotifViewRoute} from '../../../scripts/harless_motif_view.ts';
 import {createRsiSharing} from '../../../src/adapters/rsi_sharing.ts';
 import {projectPrivateLearningTrace} from '../../../src/adapters/harless_learning_trace.ts';
 const require=createRequire(import.meta.url),{WebSocketServer}=require('ws');
@@ -50,6 +51,10 @@ const sharing=createRsiSharing({
   return projectPrivateLearningTrace(process.env.SSS_PYTHON,shareSources.get(taskId),taskId,'completed',0,{share:true});
  },
 });
+const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFileSync(join(app,'ui/desktop/motif-example.json')));
+const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'}]});
+let motifAuthenticated=true;
+let workspaceTasks=[];
 const requests=[],streams=new Map(),sessions=[],selections=new Map(),modelSelections=new Map();let questionPending=false;
 const archived=new Set(),deleted=new Set();
 const scenes=[['new-scene','Chat','chat'],['ppt','PPT','ppt'],['paper-proofreading','论文校对','paper'],['research-data-analysis','数据分析','data'],['files','文件管理','file'],['video-editing','视频编辑','video']].map(([id,label,shortcut])=>({id,label,shortcut,available:true}));
@@ -65,8 +70,11 @@ const json=(res,value,status=200)=>{res.writeHead(status,{'content-type':'applic
 const push=(endpoint,value,sessionId)=>{for(const [key,row]of streams)if(row.endpoint===endpoint&&(!sessionId||row.sessionId===sessionId))row.socket.send(JSON.stringify({type:'item',streamId:key,value}));};
 const server=createServer(async(req,res)=>{
  try{
+  if(await motifRoute(req,res,motifAuthenticated?{id:'renderer-fixture'}:null))return;
   const url=new URL(req.url,'http://127.0.0.1'),path=url.pathname;const buffers=[];for await(const chunk of req)buffers.push(chunk);const raw=Buffer.concat(buffers),body=raw.length&&(req.headers['content-type']||'').includes('json')?JSON.parse(raw):{};
   requests.push({path,method:req.method,body});
+  if(path==='/api/fixture/motif-logout'&&req.method==='POST'){motifAuthenticated=false;return json(res,{ok:true});}
+  if(path==='/api/fixture/motif-update'&&req.method==='POST'){const next=JSON.parse(readFileSync(motifFile,'utf8'));next.capabilities[0].name+=' · 更新诊断';writeFileSync(motifFile,JSON.stringify(next));return json(res,{ok:true});}
   if(path==='/api/account/me'){await new Promise(resolve=>setTimeout(resolve,600));return json(res,{user:{id:'diagnostic',displayName:'协议诊断账号',username:'diagnostic'}});}
   if(path==='/api/harless/desktop-model/lease')return json(res,{error:'诊断网关未开放模型'},404);
   if(path==='/api/workspace/ready')return json(res,{ready:true});
@@ -85,7 +93,16 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
-  if(path==='/api/harless/tasks')return json(res,{tasks:privacyDiagnostic?[...shareSources.keys()].map(scene=>({task_id:scene,scene,status:'completed'})):[]});
+  if(path==='/api/harless/tasks')return json(res,{tasks:[...workspaceTasks,...(privacyDiagnostic?[...shareSources.keys()].map(scene=>({task_id:scene,scene,status:'completed'})):[])]});
+  if(path==='/api/fixture/task-progress'&&req.method==='POST'){workspaceTasks[0].duration_ms=2400;return json(res,{ok:true});}
+  if(path==='/api/fixture/workspace-task'&&req.method==='POST'){
+   const time='2026-11-06T00:00:00.000Z';
+   workspaceTasks=[{task_id:'workspace-ui-task',session_id:'history',input_summary:'界面验收（合成）：核对材料并整理交付',scene:'files',status:'running',created_at:time,started_at:time,duration_ms:1200,stats:{model_requests:0,cost_usd:0},
+    todos:[{content:'读取已授权的材料目录（合成步骤）',status:'completed'},{content:'核对资料与来源标识（合成步骤）',status:'completed'},{content:'整理交付入口（合成步骤）',status:'in_progress'}],
+    progress:{label:'正在核对交付入口（合成进度）',status:'running'},trace:[{id:'ui-read',kind:'tool',label:'已读取目录信息（合成记录）',status:'completed',time},{id:'ui-motif',kind:'motif',label:'界面协议回执（合成）',status:'completed',optimized:true,verified_skip:false,time},{id:'ui-output',kind:'tool',label:'正在整理交付入口（合成记录）',status:'running',time}]},
+    {task_id:'foreign-ui-task',session_id:'foreign-session',input_summary:'另一工作区的任务不得显示',status:'running',created_at:time}];
+   return json(res,{ok:true});
+  }
   if(path==='/api/harless/rsi-sharing'){
    const response=await sharing.handle(new Request('http://local'+req.url,{
     method:req.method,...(req.method==='POST'?{body:raw.toString()}:{}),

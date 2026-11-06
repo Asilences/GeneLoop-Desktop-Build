@@ -44,8 +44,8 @@
     "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
   },
   "scripts/harless_gateway.mjs": {
-    "certified": "d0905b88d5e489f6d83e410eb44d32b7cbff518461aa6c89a99754d48a5ca2c4",
-    "current": "b654822faa5de0041afd76b50df732bc9af62f0cfc273c1a7669ec7d726a035f"
+    "certified": "0d55ab7993311aac55e4b0ccb4d22ae557454dc00de69957724362859f5b980a",
+    "current": "36af5951840a475792bc6cfd1412779c0e087a5dd8885d3947cdac030f56ae07"
   },
   "scripts/prepare-native-host.mjs": {
     "certified": "c4f9b1bf04712d361e6364600dcf2bd75a20d5410a09aaa92a028ea9ee94658f",

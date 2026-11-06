@@ -29,3 +29,6 @@ docs/experiments/research-ppt-reports/**/*.pdf
 
 # Private manuscript archives remain outside Git.
 /benchmarks/paper check/*.zip
+
+# Motif evidence browser bundle is generated from the versioned adapter.
+/apps/desktop/ui/desktop/motif-evidence.js
