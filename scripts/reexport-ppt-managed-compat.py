@@ -70,7 +70,157 @@ def compatibility_record(candidate, validation_record):
 
 compat.compatibility_record = compatibility_record
 if __name__ == '__main__':
-    if '--member-transport-fix' in sys.argv:
+    if '--evolution-execution-compat' in sys.argv:
+        sys.argv.remove('--evolution-execution-compat')
+        reviewed = {'src/adapters/capability_evolution_agent.py',
+                    'src/adapters/rsi_quality.py',
+                    'scripts/reexport-ppt-managed-compat.py'}
+        compat.RELEASES = [
+            ('ppt-master-v81', 'ppt-master-v82', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v83', 'paper-web-v84', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+    elif '--decision-quality-feedback-compat' in sys.argv:
+        sys.argv.remove('--decision-quality-feedback-compat')
+        reviewed = {'src/adapters/capability_decision_evidence.py',
+                    'src/adapters/capability_evolution_agent.py', 'src/adapters/rsi_quality.py',
+                    'scripts/reexport-ppt-managed-compat.py'}
+        compat.RELEASES = [
+            ('ppt-master-v80', 'ppt-master-v81', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v82', 'paper-web-v83', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+    elif '--execution-evidence-envelope-compat' in sys.argv:
+        sys.argv.remove('--execution-evidence-envelope-compat')
+        reviewed = {'src/adapters/capability_motif_learning.py', 'scripts/reexport-ppt-managed-compat.py'}
+        compat.RELEASES = [
+            ('ppt-master-v79', 'ppt-master-v80', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v81', 'paper-web-v82', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+    elif '--tool-schema-media-compat' in sys.argv:
+        sys.argv.remove('--tool-schema-media-compat')
+        reviewed = {'src/adapters/deepseek_cost_gate.py', 'scripts/reexport-ppt-managed-compat.py'}
+        compat.RELEASES = [
+            ('ppt-master-v78', 'ppt-master-v79', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v80', 'paper-web-v81', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+    elif '--overnight-evolution-integration' in sys.argv:
+        sys.argv.remove('--overnight-evolution-integration')
+        reviewed = {
+            'scripts/harness-web.py', 'scripts/reexport-ppt-managed-compat.py',
+            'src/adapters/capability_construction_history.py',
+            'src/adapters/capability_proposal.py', 'src/adapters/dsh_web_tasks.ts',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v77', 'ppt-master-v78', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v79', 'paper-web-v80', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= {
+            'src/adapters/capability_contract.py', 'src/adapters/capability_contract.ts',
+            'src/adapters/capability_strategy.py', 'src/adapters/capability_strategy.ts',
+            'src/adapters/capability_strategy_usage.py', 'src/adapters/harless_task_strategy.ts',
+            'src/adapters/capability_decision_evidence.py',
+            'src/adapters/capability_evolution_agent.py',
+            'src/adapters/capability_goal_proposal.py', 'scripts/run-strategy-evolution.py',
+        }
+
+        def integration_record(candidate, validation_record):
+            value = compatibility_record(candidate, validation_record)
+            value['release_scope'] = 'main_and_strategy_evolution_runtime_integration'
+            value['repairs'] += ['main_release_lineage_preserved',
+                                 'default_off_strategy_inheritance_and_usage',
+                                 'python_typescript_capability_contract_dependency_locks']
+            value['runtime_delta'] = (
+                'Main release bytes are retained for the original read IR, sources and MCP schemas. '
+                'Research strategy inheritance and usage are bound to current code; '
+                'the original Runtime remains the default execution path.'
+            )
+            return value
+
+        compat.compatibility_record = integration_record
+    elif '--strategy-evolution' in sys.argv:
+        sys.argv.remove('--strategy-evolution')
+        reviewed = {
+            'scripts/reexport-ppt-managed-compat.py',
+            'src/adapters/capability_construction_history.py',
+            'src/adapters/capability_proposal.py',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v76', 'ppt-master-v77', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v78', 'paper-web-v79', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= {
+            'src/adapters/capability_strategy.py',
+            'src/adapters/capability_decision_evidence.py',
+            'src/adapters/capability_evolution_agent.py',
+            'src/adapters/capability_goal_proposal.py',
+            'scripts/run-strategy-evolution.py',
+        }
+    elif '--prompt-scope-fix' in sys.argv:
+        sys.argv.remove('--prompt-scope-fix')
+        reviewed = {
+            'scripts/reexport-attachment-context-compat.py',
+            'scripts/reexport-attachment-reading-compat.py',
+            'scripts/reexport-cold-parent-compat.py',
+            'scripts/reexport-delivery-compat.py',
+            'scripts/reexport-file-chat-continuation-compat.py',
+            'scripts/reexport-gateway-polling-compat.py',
+            'scripts/reexport-multiuser-page-compat.py',
+            'scripts/reexport-native-capabilities-compat.py',
+            'scripts/reexport-ppt-learning-compat.py',
+            'scripts/reexport-ppt-managed-compat.py',
+            'scripts/reexport-provider-default-compat.py',
+            'scripts/reexport-provider-output-compat.py',
+            'scripts/reexport-sandbox-mount-compat.py',
+            'scripts/reexport-surface-context-compat.py',
+            'src/adapters/dsh_web_tasks.ts',
+            'src/adapters/geneloop_native_work.ts',
+            'src/adapters/harless_comparison.ts',
+            'src/adapters/harless_web_client/client.js',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v76', 'ppt-master-v77', 'ppt',
+             'scenarios/ppt_master/contracts.json', reviewed | {'scripts/reexport-ppt-render-workflow-compat.py', 'scripts/reexport-ppt-preview-boundary-compat.py'}),
+            ('paper-web-v78', 'paper-web-v79', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed | {'scenarios/paper-submission/README.md'}),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS.add('src/adapters/harless_product_prompt.ts')
+    elif '--rae-integration' in sys.argv:
+        sys.argv.remove('--rae-integration')
+        reviewed = {
+            'scripts/reexport-ppt-managed-compat.py',
+            'src/adapters/capability_improvement.py',
+            'src/adapters/capability_proposal.py',
+            'src/adapters/capability_scene.py',
+        }
+        compat.RELEASES = [
+            ('ppt-master-v75', 'ppt-master-v76', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed),
+            ('paper-web-v77', 'paper-web-v78', 'paper-proofreading',
+             'scenarios/paper_proofreading/document-read-contracts.json', reviewed),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= {
+            'schemas/capability-improvement-v1.schema.json',
+            'src/adapters/capability_motif_learning.py',
+            'src/adapters/capability_builder_application.py',
+            'src/adapters/capability_source_authoring.py',
+            'src/adapters/capability_program_training.py',
+            'src/adapters/capability_construction_history.py',
+            'src/adapters/capability_feedback.py',
+            'src/adapters/capability_evolution.py',
+        }
+    elif '--member-transport-fix' in sys.argv:
         sys.argv.remove('--member-transport-fix')
         reviewed = {
             'scripts/reexport-ppt-managed-compat.py', 'scripts/run-artifact-capability.mjs',

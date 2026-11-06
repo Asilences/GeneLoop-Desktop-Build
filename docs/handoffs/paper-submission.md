@@ -1,6 +1,6 @@
 # 论文生成与投稿场景当前交接
 
-- 2026-10-12阶段保存：`52cb0f4`已推送origin/feature/paper-submission，当前V6及此前论文/公共适配代码已保存；其他同学场景/参考PDF未纳入。该快照Ubuntu CI通过、Windows收集因fcntl失败。新增统一跨平台锁与控制器导入/竞争测试，本地385 Python/213 Node通过；远端新CI待确认，见[修复记录](../experiments/windows-rsi-lock-20261012-v1.md)。完整论文优先：私有副本已免费编译成功，参考文献表34条、Bib315条；有重复标签与未解析nocite placeholder，尚无新付费调用，累计7.96362748/10美元不变。
+- 2026-10-12阶段保存：`52cb0f4`已推送origin/feature/paper-submission，当前V6及此前论文/公共适配代码已保存；其他同学场景/参考PDF未纳入。该快照Ubuntu CI通过、Windows收集因fcntl失败。新增统一跨平台锁与控制器导入/竞争测试，本地385 Python/213 Node通过；远端新CI待确认，见[修复记录](../debug/windows-rsi-lock-20261012-v1.md)。完整论文优先：私有副本已免费编译成功，参考文献表34条、Bib315条；有重复标签与未解析nocite placeholder，尚无新付费调用，累计7.96362748/10美元不变。
 - 最新Windows修复：`a18660a`已推送，fcntl收集问题消除，远端Ubuntu通过、Windows5项路径断言失败；当前又修复native/parameter轨迹的Windows/POSIX词法路径绑定和预算path序列化。本地400 Python/213 Node通过，新增外部路径拒绝及CI失败摘要注释，不降低原断言；新CI确认前不宣布Windows验收、不开始付费长流程。锁/路径代码新增版本注册，旧库按各自归档复核。
 - 后续`dd89ce4`已推送，Windows Python通过，Node36失败（多数是同一catalog路径后缀检查的连带错误，另有导出符号链接保护）。当前改成basename+原SHA绑定、私有临时文件独占写入+版本核验+固定目标原子替换，拒绝已有链接/硬链接且不写链接目标；本机完整400 Python/213 Node通过，远端仍待确认，历史失败保留。AGENTS/README的v100迁移改动来自另一会话，未覆盖或纳入本次修复；未启动新付费实验。
 
@@ -159,7 +159,7 @@
 - 当前验证：本机全量 169 Python / 51 Node、服务器编译与预算专项 23 项通过。七次真实模型运行 completed，但认证库为空，实际 verified skip 为 0；七份 PDF 质量仍未验收。原生事件会话隔离、Unicode JSONL 和持久预留恢复已投入本轮；实际执行代码历史保存于私有目录。
 - 已验证（此前 MCP 实验）：真实模型采集 9 次请求，评测 baseline/shadow/execute 为 3/3/2 次；三组题面、schema 顺序和工具结果完全一致，各六个 MCP，无工具错误、无源变化。execute 三次读取组成一个 batch，逐结果通过后计一次 verified skip。本机修正后全量 153 Python / 48 Node 通过；服务器最终全量验证同为 153 Python / 48 Node。无模型 smoke 18 题/83 来源、既有四个 Motif 库重编译及 Harness/shadow/execute/旧版本回退通过。模拟检查不代表效果。
 - 当前实验记录：`docs/experiments/paper-reference-five-native-two-motif-20261010-v5.md`，包含完整七次请求/费用/耗时/产物表、23 候选与 0 认证、空库回退审计、34/314/315 范围不一致和字体提取问题。旧 v1/v2/v4 失败保留，不追改为通过。
-- 实验结论（此前）：`docs/experiments/paper-motif-shadow-execute-20261009-v1.md`。支持在该只读条件下跳过一次整请求；execute 估费 0.00343812 美元，比同工具基线 0.003314136 高约 3.7%，耗时 12.515 对 12.019 秒，未观察到降本。合成任务仅协议认证（`protocol_diagnostic`），非独立科研决定。三份回答质量未盲评；不能与前面 Native 85/PTC 128 次探索直接归因比较。前面两份报告误读与失败见各实验记录，未删除。
+- 实验结论（此前）：`docs/debug/paper-motif-shadow-execute-20261009-v1.md`。支持在该只读条件下跳过一次整请求；execute 估费 0.00343812 美元，比同工具基线 0.003314136 高约 3.7%，耗时 12.515 对 12.019 秒，未观察到降本。合成任务仅协议认证（`protocol_diagnostic`），非独立科研决定。三份回答质量未盲评；不能与前面 Native 85/PTC 128 次探索直接归因比较。前面两份报告误读与失败见各实验记录，未删除。
 - 配置与数据：服务器 `/root/autodl-tmp/jjy`，先加载 `.local/remote-env.sh`，统一 Python 入口。Node 22.23.3、控制器 Python 3.10.8、Harness 0.1.5-rc.3。密钥仅服务器 `DEEPSEEK_API_KEY`。本实验两端 `.local/paper-motif/paper-motif-shadow-execute-20261009-v1/` 保存输入、真实请求/事件/ledger、各模式答案、库/manifest、快照、verification、codex-audit、实际执行代码；公共工具契约在控制器 `contracts()`。旧 Native/PTC 私有目录保留。详见场景 README 的复现与依赖边界。
 - 未完成与阻塞：检查器事后修复了 ACM bibitem 注释导致渲染键漏读，以及未知 shell-escape 的布尔歧义；旧回答不改，离线重算恢复 34 个键，未知安全配置改 null，未再付费复验。检查器摘要变动使旧 task 版本失效，下一次需新快照。静态解析不等于完整 TeX，缺少真实编译动作/失败恢复、页面视觉、科研质量认证、脚本对照和独立论文泛化。实验入口依赖 Linux fcntl、五份旧账本及既有私人准备目录，未做通用化或 Windows 验收。新增 TS 入口尚复用 JS 核心，并非已完成全面 TS 迁移或独立插件打包；未接入 Web。原容器 bubblewrap/Landlock 阻塞仍存在。
 - 接手下一步：用户现阶段要求先证明结构接管，暂不谈完整效果。①让模型在真实论文任务中输出一次显式目标/选定输入绑定，验证连续多个参数化节点接管及反例恢复；②从现有正常轨迹扩展有输入输出、版本和副作用契约的脚本节点、数据依赖与选择守卫，不能用手写场景 DAG 冒充挖掘；③完整效果评测前仍须解决 v5 原稿范围/编号/逐条来源/逐页视觉和跨运行污染问题。不要重复已经结束的五次采集，也不要覆盖本次局部证明的原始记录。

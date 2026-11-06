@@ -1,0 +1,867 @@
+{
+  "schema_version": 1,
+  "new_training": true,
+  "method": "existing_witnessed_edge_compiler",
+  "training_tasks": 2,
+  "heldout_tasks": 1,
+  "artifacts": 1,
+  "library_digest": "0d8ea2f703b635f808e00b50cc64d429d901049aa752cadc5726498559d63f9c",
+  "manifest_digest": "18a69646917830c3d1206e9bdaa758125939e755f9aa6332ffb3b39b7fa05c83",
+  "evidence_sha256": "76ddb181021106915fea64ee02117c78db8fb3ef9d6324cb35a488fc9f459629",
+  "schema_capture_sha256": "0ba797b7a3ed5155d92e4fda235ba4b251162cc0e7f014bb778ea956d29da0b0",
+  "current_whole_schema_sha256": "f9b6146e3a51f6a783577809ed81168da2afb014c6e1350b00d1094363acc979",
+  "current_tool_count": 24,
+  "collection_source_sha": "30b5a37423f4f2b5e1568dc44d8442610069dc0c",
+  "collection_source_sha_basis": "optional_dataset_collection_metadata_not_inferred_from_current_checkout",
+  "current_candidate_source_tree_sha256": "e29f2a5f21ae6a804771b4255462ff36d67e91767811239e9d3ed6aaca9397bd",
+  "collection_tracked_dirty": true,
+  "collection_tree_scope": "Candidate tracked-source snapshot, including uncommitted changes when present; commit alone is not a clean-source claim.",
+  "compilation_source_sha": null,
+  "compilation_source_binding": "exact source locks; compatibility recompilation from unchanged collection evidence",
+  "compilation_model_requests": 0,
+  "compilation_seconds": 0.5014873370528221,
+  "model_weights_trained": false,
+  "compilation_executes_scene_tools": false,
+  "common_native_tools": [
+    "web_search",
+    "web_fetch",
+    "bash",
+    "job_list",
+    "job_output",
+    "job_kill",
+    "read",
+    "read_image",
+    "write",
+    "edit",
+    "glob",
+    "grep",
+    "ask_user_question",
+    "todo_write",
+    "skill",
+    "present",
+    "subagent",
+    "exit_plan_mode",
+    "get_goal",
+    "update_goal"
+  ],
+  "common_native_tools_in_certified_mcp_schema": false,
+  "common_capabilities_compatibility_scope": "Public native tools are separately admitted by current code-locked policy; they are not mined, certified, replayed, or claimed as newly learned by this MCP-only compatibility re-export.",
+  "trace_collection_requests": 15,
+  "trace_collection_proxy_usd": 0.00775239,
+  "excluded_collection": [
+    {
+      "task_id": "b285d931caea437b8eeffe3bdea9417b",
+      "status": "completed",
+      "mode": "baseline",
+      "events_sha256": "3434a02beb17385ec76b045f2b84f3b51ddca28cf704d0eb884971d9f846b544",
+      "failure_sha256": null,
+      "document_read_edge_observed": true,
+      "exclusion_scope": "retained_collection_attempt_not_used_for_independent_certification",
+      "requests": 10,
+      "tokens": {
+        "prompt_tokens": 50273,
+        "prompt_cache_hit_tokens": 46592,
+        "prompt_cache_miss_tokens": 3681,
+        "completion_tokens": 3879,
+        "total_tokens": 54152
+      },
+      "usage_complete": true,
+      "provider_response_statuses": {
+        "200": 10
+      },
+      "proxy_peak_usd": 0.0060386599999999995,
+      "actual_paid_usd": null,
+      "tool_calls": 8,
+      "tool_errors": 1,
+      "denials": 0,
+      "unknown_usage_requests": 0,
+      "pending_requests": 0
+    },
+    {
+      "task_id": "b285d931f2a64ee08e4cb700a4d08d92",
+      "status": "completed",
+      "mode": "baseline",
+      "events_sha256": "ecc549bdb1504d4b6355b6f8a13dfb6f0a9471f3998fb2ab44e06d076f8622f8",
+      "failure_sha256": null,
+      "document_read_edge_observed": false,
+      "exclusion_scope": "retained_collection_attempt_not_used_for_independent_certification",
+      "requests": 1,
+      "tokens": {
+        "prompt_tokens": 3481,
+        "prompt_cache_hit_tokens": 2944,
+        "prompt_cache_miss_tokens": 537,
+        "completion_tokens": 394,
+        "total_tokens": 3875
+      },
+      "usage_complete": true,
+      "provider_response_statuses": {
+        "200": 1
+      },
+      "proxy_peak_usd": 0.00065156,
+      "actual_paid_usd": null,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "denials": 0,
+      "unknown_usage_requests": 0,
+      "pending_requests": 0
+    },
+    {
+      "task_id": "b285d931fe6049aca440adbfbf0c0ca8",
+      "status": "completed",
+      "mode": "baseline",
+      "events_sha256": "d8910a32f333f81b38e8709a5afa8b0046b533c2f6edea4ffbfd43dac43ea2ac",
+      "failure_sha256": null,
+      "document_read_edge_observed": true,
+      "exclusion_scope": "retained_collection_attempt_not_used_for_independent_certification",
+      "requests": 4,
+      "tokens": {
+        "prompt_tokens": 15159,
+        "prompt_cache_hit_tokens": 13824,
+        "prompt_cache_miss_tokens": 1335,
+        "completion_tokens": 707,
+        "total_tokens": 15866
+      },
+      "usage_complete": true,
+      "provider_response_statuses": {
+        "200": 4
+      },
+      "proxy_peak_usd": 0.00133184,
+      "actual_paid_usd": null,
+      "tool_calls": 3,
+      "tool_errors": 0,
+      "denials": 0,
+      "unknown_usage_requests": 0,
+      "pending_requests": 0
+    },
+    {
+      "task_id": "b285d93193af4b5cac5061e87c1fc339",
+      "status": "completed",
+      "mode": "baseline",
+      "events_sha256": "2d535deef6173adb8847aa6e5bf45bd3499f071dbdc34e4435427fadc6414c92",
+      "failure_sha256": null,
+      "document_read_edge_observed": true,
+      "exclusion_scope": "retained_collection_attempt_not_used_for_independent_certification",
+      "requests": 5,
+      "tokens": {
+        "prompt_tokens": 20547,
+        "prompt_cache_hit_tokens": 19072,
+        "prompt_cache_miss_tokens": 1475,
+        "completion_tokens": 1681,
+        "total_tokens": 22228
+      },
+      "usage_complete": true,
+      "provider_response_statuses": {
+        "200": 5
+      },
+      "proxy_peak_usd": 0.00257413,
+      "actual_paid_usd": null,
+      "tool_calls": 4,
+      "tool_errors": 0,
+      "denials": 0,
+      "unknown_usage_requests": 0,
+      "pending_requests": 0
+    }
+  ],
+  "learning_total_requests": 35,
+  "learning_total_proxy_usd": 0.01834858,
+  "collection_cost_basis": "exact_task_id_ledger_observed_peak_estimate_not_provider_invoice",
+  "actual_paid_usd": null,
+  "review_scope": "structural_provenance_only",
+  "scientific_quality_reviewed": false,
+  "visual_quality_reviewed": false,
+  "quality_cost_promoted": false,
+  "scope": "model_selected_uploaded_document_default_first_page_read_not_manuscript_semantics_or_report_generation",
+  "new_training_for_recompilation": false,
+  "new_collection_tasks_for_recompilation": 0,
+  "compatibility_compilation_model_requests": 0,
+  "recompilation_of_manifest_digest": "18a69646917830c3d1206e9bdaa758125939e755f9aa6332ffb3b39b7fa05c83",
+  "previous_manifest_file_sha256": "7b5e9274b712501a59369403e5707b771a32bd7ffa75bf512844206bb85ad0d1",
+  "compatibility_changed_code_locks": [
+    "benchmarks/research_report_agent_v2/document_engine.py",
+    "config/geneloop-capabilities.json",
+    "config/geneloop-capabilities.md",
+    "config/pdf-ocr-assets.json",
+    "scenarios/data_analysis/table_inputs.py",
+    "scenarios/paper-submission/README.md",
+    "scenarios/paper-submission/checks.py",
+    "scenarios/paper-submission/environment/README.md",
+    "scenarios/paper-submission/patch-learning-server.ts",
+    "scenarios/paper-submission/patch-rsi-task-server.ts",
+    "scenarios/paper-submission/reference-audit.prompt.md",
+    "scenarios/paper-submission/revision-rsi-learning.prompt.md",
+    "scenarios/paper-submission/rsi-learning.prompt.md",
+    "scenarios/paper-submission/rsi-server.ts",
+    "scenarios/paper-submission/server.py",
+    "scenarios/paper-submission/trace-rsi-learning.prompt.md",
+    "scenarios/paper-submission/trace-rsi-server.ts",
+    "scenarios/paper-submission/trace-rsi-task-server.ts",
+    "scenarios/paper_proofreading/document-read-contracts.json",
+    "scenarios/paper_proofreading/document-read-version-fields.json",
+    "scenarios/paper_proofreading/motif-contracts.json",
+    "scenarios/paper_proofreading/motif-version-fields.json",
+    "scenarios/paper_proofreading/prompt.md",
+    "scenarios/paper_proofreading/revision_session.ts",
+    "scenarios/paper_proofreading/scenario.json",
+    "scenarios/paper_proofreading/server.py",
+    "scripts/check-common-capabilities.py",
+    "scripts/harless_gateway.mjs",
+    "scripts/harless_member_scenes.mjs",
+    "scripts/harness-web.py",
+    "scripts/learn-web-paper-document-motif.py",
+    "scripts/learn-web-paper-tasks.py",
+    "scripts/recompile-ppt-common-capabilities.py",
+    "scripts/serve-web-budget.py",
+    "scripts/web_budget_broker.mjs",
+    "src/adapters/deepseek_cost_gate.py",
+    "src/adapters/dsh_event_projection.py",
+    "src/adapters/dsh_online_motif.mjs",
+    "src/adapters/dsh_trajectory.py",
+    "src/adapters/dsh_web_tasks.ts",
+    "src/adapters/file_lock.py",
+    "src/adapters/geneloop_capabilities.ts",
+    "src/adapters/geneloop_command_broker.ts",
+    "src/adapters/geneloop_command_client.mjs",
+    "src/adapters/geneloop_pdf.py",
+    "src/adapters/geneloop_pdf_vision.ts",
+    "src/adapters/geneloop_presentation.py",
+    "src/adapters/geneloop_presentation.ts",
+    "src/adapters/geneloop_presentation_render.py",
+    "src/adapters/geneloop_shell.ts",
+    "src/adapters/geneloop_web_search.ts",
+    "src/adapters/harless_attachment_text.py",
+    "src/adapters/harless_comparison.ts",
+    "src/adapters/harless_legacy_motif.ts",
+    "src/adapters/harless_paper_learning.ts",
+    "src/adapters/harless_paper_recovery.ts",
+    "src/adapters/harless_paper_renderer.py",
+    "src/adapters/harless_rsi_binding.ts",
+    "src/adapters/harless_rsi_bundle.py",
+    "src/adapters/harless_scenarios.py",
+    "src/adapters/harless_task_scope.ts",
+    "src/adapters/paper_archive.py",
+    "src/adapters/paper_bibliography.py",
+    "src/adapters/paper_query_recovery.py",
+    "src/adapters/paper_renderer.py",
+    "src/adapters/paper_static_checks.py",
+    "src/adapters/ppt_master_recovery.ts",
+    "src/adapters/session_files.py",
+    "src/adapters/session_report.py",
+    "src/adapters/task_identity.py",
+    "src/adapters/tool_contract_loader.py",
+    "src/adapters/tool_schema_contracts.py",
+    "src/adapters/web_task_budget.py",
+    "src/motif_core/online_skill_runtime.mjs"
+  ],
+  "compatibility_scope": "Read-only public OCR manifest mounted in member namespaces for intact certificate verification; immutable source/lane checks retained. Same historical read artifacts, independent evidence, tool schemas and scientific scope. No new collection, model calls or quality/cost promotion.",
+  "previous_certification_sha256": "ade00648de422f520bfbf3120daff08b5be138b70008b5bb0d4fff5f7b29cc4a",
+  "compilation_base_commit": "7d74e9e2fa05353a3cf0a1fcb054378e196a66b3",
+  "compilation_timing_note": "New compatibility compilation wall time not independently recorded; do not reuse the previous compilation duration.",
+  "compilation_base_sha": "9a25a7d8b8ff10dfef4a93e6b88d812ec8654f98",
+  "compilation_timing_basis": "current compatibility recompilation only",
+  "delivery_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "previous_release": "paper-web-v12",
+    "previous_certification_sha256": "eb4dfd9ed9258013d0e850f694bea0bb5dc86fd8811ad5b849f0ce45763df47d",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/dsh_web_tasks.ts",
+      "src/adapters/harless_comparison.ts"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/clickable-generated-files-20261019.md"
+  },
+  "attachment_context_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "previous_release": "paper-web-v13",
+    "previous_certification_sha256": "2e7fc9dc0041d7ed086da95de28bd691da75c516cfe8d5553d0d18c2bbf4bfd3",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/dsh_web_tasks.ts",
+      "src/adapters/geneloop_pdf.py",
+      "src/adapters/geneloop_pdf_vision.ts",
+      "src/adapters/geneloop_presentation.ts",
+      "src/adapters/geneloop_presentation_render.py",
+      "src/adapters/harless_attachment_text.py",
+      "src/adapters/harless_comparison.ts",
+      "src/adapters/harless_task_scope.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-attachment-context-compat.py",
+      "src/adapters/geneloop_attachment_cache.ts",
+      "src/adapters/harless_attachment_context.ts",
+      "src/adapters/harless_public_output.ts",
+      "src/adapters/harless_task_progress.ts"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/attachment-context-streaming-20261019.md"
+  },
+  "attachment_surface_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "native_session_append_public_surface_option",
+      "comparison_preparation_progress_subscription"
+    ],
+    "previous_release": "paper-web-v14",
+    "previous_certification_sha256": "94fc7558e0654cf9aaa9a3f7fb0e56dec2ffc803f01cf18108c742bfb5bec34a",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/dsh_web_tasks.ts",
+      "src/adapters/harless_comparison.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-surface-context-compat.py"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/attachment-context-streaming-20261019.md"
+  },
+  "attachment_evidence_consumption_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "integration": "version_bound_evidence_consumption_policy_and_reading_index",
+    "previous_release": "paper-web-v15",
+    "previous_certification_sha256": "cdf35e92bb893e7f8d80bf04a06fc40350399fc0a9d286779492e28de8f61ad5",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/harless_attachment_context.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-attachment-reading-compat.py",
+      "src/adapters/harless_attachment_reading.ts"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/attachment-context-streaming-20261019.md"
+  },
+  "ppt_learning_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "ppt_learning_on_current_attachment_host",
+      "canonical_tool_result_observation"
+    ],
+    "previous_release": "paper-web-v75",
+    "previous_certification_sha256": "e28bc006fe688146b083447eaab051eec5af0b7fcaf979b3342ed2bfe2320ef5",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/ppt_delivery_pipeline.ts"
+    ],
+    "additional_code_locks": [
+      "scenarios/ppt_master/capability_adapter.py",
+      "scenarios/ppt_master/publish_capability.mjs",
+      "scripts/learn-web-ppt-tasks.py",
+      "scripts/reexport-ppt-learning-compat.py",
+      "scripts/run-artifact-capability.mjs",
+      "src/adapters/artifact_capability_runtime.ts",
+      "src/adapters/capability_cycle.ts",
+      "src/adapters/capability_improvement.py",
+      "src/adapters/capability_materials.ts",
+      "src/adapters/capability_proposal.py",
+      "src/adapters/capability_runtime.ts",
+      "src/adapters/capability_scene.py",
+      "src/adapters/capability_store.ts",
+      "src/adapters/harless_ppt_learning.ts",
+      "src/adapters/ppt_capability_budget.py",
+      "src/adapters/ppt_capability_learning.py",
+      "src/adapters/ppt_capability_online.ts"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/ppt-public-rsi-20261104.md"
+  },
+  "concurrent_chat_and_provider_output_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "header_routed_tasks_without_account_concurrency_cap",
+      "independent_comparison_scheduler_runs",
+      "retry_readiness_inside_admission_lock",
+      "provider_documented_maximum_instead_of_omitted_8k_default"
+    ],
+    "previous_release": "paper-web-v18",
+    "previous_certification_sha256": "619bf5b1f0d8854a7ee7867ad67f84af26e99d9f85158972c6612a80b50a6612",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/dsh_web_tasks.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-provider-default-compat.py",
+      "src/adapters/harless_reasoning.ts"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/concurrent-chat-20261020.md"
+  },
+  "public_history_paging_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "resolve_native_session_page_address",
+      "require_existing_task_before_original_content_resolution"
+    ],
+    "previous_release": "paper-web-v19",
+    "previous_certification_sha256": "8878bf1d570e009a72510fe25f74fe963917be1cb5282532a27e91a9f37ee806",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/dsh_web_tasks.ts",
+      "src/adapters/harless_public_output.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-multiuser-page-compat.py"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/five-user-stress-20261020.md"
+  },
+  "sandbox_mountpoint_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "prepare_fixed_scratch_child_mountpoints_before_readonly_parent_bind",
+      "reject_symlink_and_nondirectory_mountpoints"
+    ],
+    "preserved_guards": [
+      "readonly_inputs_and_scratch",
+      "network_namespace_isolation",
+      "session_scoped_workspaces"
+    ],
+    "previous_release": "paper-web-v20",
+    "previous_certification_sha256": "e1c808feb6cbeacf77d3627a29b2a76bec82947310d51fe5bede59cdc5a24d37",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/geneloop_shell.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-sandbox-mount-compat.py"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/five-user-stress-20261020.md"
+  },
+  "cold_parent_tool_scope_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "compare_restored_public_parent_tools_without_ordinary_task_record",
+      "close_obsolete_parent_tools_through_existing_legacy_history_path",
+      "admit_later_prompts_in_fresh_current_private_scopes"
+    ],
+    "preserved_guards": [
+      "immutable_historical_presets",
+      "session_scoped_authorization",
+      "unchanged_current_preset_capabilities"
+    ],
+    "previous_release": "paper-web-v21",
+    "previous_certification_sha256": "81914ccbe14762083e133b71d8088a33ae8b837e8fc739be75d987d85e29666a",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "changed_code_locks": [
+      "src/adapters/dsh_web_tasks.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-cold-parent-compat.py"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/five-user-stress-20261020.md"
+  },
+  "gateway_watcher_environment_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "explicit_allowlisted_member_chokidar_polling_environment",
+      "validate_boolean_polling_and_positive_integer_interval",
+      "default_member_polling_without_native_inotify_handles"
+    ],
+    "previous_release": "paper-web-v22",
+    "previous_certification_sha256": "a88c35621497a0735f132579ac3ffd47286365ba1fc07944e6ba0d677b9b6c4a",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "same_tool_schema": true,
+    "new_capabilities": false,
+    "changed_code_locks": [
+      "scripts/harless_gateway.mjs"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-gateway-polling-compat.py"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/five-user-stress-20261020.md"
+  },
+  "file_chat_public_context_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "repairs": [
+      "same_host_owned_public_conversation_reader",
+      "carry_human_text_and_public_final_assistant_context",
+      "continue_started_external_parent_in_fresh_private_chat_scope",
+      "reject_new_prompt_while_external_native_turn_is_unclosed",
+      "remove_cross_user_cold_start_count_gate_keep_per_user_deduplication"
+    ],
+    "preserved_guards": [
+      "session_ownership_and_host_identity",
+      "tool_argument_result_and_extraction_filtering",
+      "member_credentials_and_budget_route_ownership",
+      "immutable_started_parent_presets"
+    ],
+    "previous_release": "paper-web-v23",
+    "previous_certification_sha256": "b03a719e60c03b07d8c0cea132aae2cacad9489afd7aacc7c24db21383a16cd1",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "same_tool_schema": true,
+    "new_capabilities": false,
+    "changed_code_locks": [
+      "scripts/harless_gateway.mjs",
+      "src/adapters/dsh_web_tasks.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-file-chat-continuation-compat.py"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "larger_concurrency_capacity_measured": false,
+    "quality_cost_promoted": false,
+    "validation_record": "docs/experiments/five-user-stress-20261020.md"
+  },
+  "native_capabilities_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "previous_release": "paper-web-v78",
+    "previous_certification_sha256": "28811e31bf6056815b6c32cd28aad9bf507ae58a9f4a7ca82bf2b04c9bcdc35e",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "same_mcp_schema": true,
+    "public_native_tools": [
+      "web_search",
+      "web_fetch",
+      "bash",
+      "job_list",
+      "job_output",
+      "job_kill",
+      "read",
+      "read_image",
+      "write",
+      "edit",
+      "glob",
+      "grep",
+      "ask_user_question",
+      "todo_write",
+      "skill",
+      "present",
+      "subagent",
+      "exit_plan_mode",
+      "get_goal",
+      "update_goal"
+    ],
+    "public_native_tools_in_certified_mcp_schema": false,
+    "public_native_tools_learned_or_certified": false,
+    "changed_code_locks": [
+      "scenarios/paper-submission/README.md",
+      "scripts/reexport-attachment-context-compat.py",
+      "scripts/reexport-attachment-reading-compat.py",
+      "scripts/reexport-cold-parent-compat.py",
+      "scripts/reexport-delivery-compat.py",
+      "scripts/reexport-file-chat-continuation-compat.py",
+      "scripts/reexport-gateway-polling-compat.py",
+      "scripts/reexport-multiuser-page-compat.py",
+      "scripts/reexport-native-capabilities-compat.py",
+      "scripts/reexport-ppt-learning-compat.py",
+      "scripts/reexport-ppt-managed-compat.py",
+      "scripts/reexport-provider-default-compat.py",
+      "scripts/reexport-provider-output-compat.py",
+      "scripts/reexport-sandbox-mount-compat.py",
+      "scripts/reexport-surface-context-compat.py",
+      "src/adapters/dsh_web_tasks.ts",
+      "src/adapters/geneloop_native_work.ts",
+      "src/adapters/harless_comparison.ts",
+      "src/adapters/harless_web_client/client.js"
+    ],
+    "additional_code_locks": [
+      "src/adapters/harless_product_prompt.ts"
+    ],
+    "previous_code_lock_differences": {
+      "scenarios/paper-submission/README.md": {
+        "previous": "678449e192cb1249532e270a4416410f445119ede777b80d6adb125a77667bc3",
+        "current": "727c69416236bf13fbba17e784bf645ce4ba27fb83c51396335fb17d130269bf"
+      },
+      "scripts/reexport-attachment-context-compat.py": {
+        "previous": "6133deb21d46fc0770e354d98e2530e421c751cc8e2f4aab35b9376b1ec513a2",
+        "current": "fc290db71b540f231665316177058dc19a17748c2ec6ec04360a75cfd3c3cc66"
+      },
+      "scripts/reexport-attachment-reading-compat.py": {
+        "previous": "2ceae4f8bc99e37dc30640f121f4a0b3011bacd87933e05ed2f549ffc3872640",
+        "current": "fa93022311a5ab159219ace17a69be36929d120c2f33b8215644531df3d1bc50"
+      },
+      "scripts/reexport-cold-parent-compat.py": {
+        "previous": "99470f1f3359e9b5dfce8e6c93be2e7dfb817b7dcb539aea777d52c62872bff0",
+        "current": "9bbbed9fe2c9bb7367b2a1e43fd85704eca682ae661e85f16d62d28d2d3fad5e"
+      },
+      "scripts/reexport-delivery-compat.py": {
+        "previous": "99ac6bf92e8287229e773ccba2ff1a63398589b08f02c40ab2ae142a1d84cb85",
+        "current": "0852a56abdd4f40865b9724d4d6e417cec1b22269a25a3a8c0414fcae4d7913b"
+      },
+      "scripts/reexport-file-chat-continuation-compat.py": {
+        "previous": "bd09bb8cd52ce90119006236248ca3930a9fe1bf729ddd3537c882e97114768c",
+        "current": "855bc849f57e6c75f55517a1a873bc8bb1a03869f07a1df03e12efa54bbc45f0"
+      },
+      "scripts/reexport-gateway-polling-compat.py": {
+        "previous": "b24ef26dfbcd125382c5002834bccd1e514f05de6bed902d8e0697a484c2d47c",
+        "current": "38356dc0bb2227566aeb7dcd1f8fe7931fa8f012569ef714debdc9cba015ab88"
+      },
+      "scripts/reexport-multiuser-page-compat.py": {
+        "previous": "c9bea21ed2dc61a140189f4214d851ca851e06a1420a1eb79001645442be9d81",
+        "current": "07c1e614e693aaf8f404832961ef4adfcd5458b92e9ea5c5c9886d2748146461"
+      },
+      "scripts/reexport-native-capabilities-compat.py": {
+        "previous": "5f5b7d77763b4727ec6f52152ddcac72fdc2ef54779f98d419933f41652c3e41",
+        "current": "2172b632aa18512cf6e31ffcb42867930a9e6549c23750d0e99249b151e89695"
+      },
+      "scripts/reexport-ppt-learning-compat.py": {
+        "previous": "04ba0388ae89f72db4303ea20ef97dcc57117899051aa0d7e05307e6e21055c7",
+        "current": "f63d08710507e3d8b6235bc98e8d7fc7e78f93bb8f684f8656248656a89061a9"
+      },
+      "scripts/reexport-ppt-managed-compat.py": {
+        "previous": "cce1cdda1e549419d1305ebc6684076b43cb5a3e68eee0d62ec7e1a968a61329",
+        "current": "c69a4967a7f777820f891becb1f99eb336dceee74fed3005c52ada560111faf1"
+      },
+      "scripts/reexport-provider-default-compat.py": {
+        "previous": "5a0714d07d2d40202a36c9e16948787ab3746f3655ba442ba4f06a2836f4d230",
+        "current": "11204bf7aee24f296c7c50f854c9d2e5d4915e30c4c805d4333cab0fbd27f6f0"
+      },
+      "scripts/reexport-provider-output-compat.py": {
+        "previous": "6cb2d06ec29784df6626ac982bc0a5054c8ac56769b99d9d480b21790b30caf8",
+        "current": "559dd5a9e0ae4b11662a413ac8f73d1ff5eaab906e4a0236d260981497804aa9"
+      },
+      "scripts/reexport-sandbox-mount-compat.py": {
+        "previous": "51baf7009da43b753998ef080ca2f55e6ece7424e3f1a7c07ec72f47ff5d266d",
+        "current": "edc167f3c973ac1ed6b426ce04af0940c0e19d827a0e8a8f44e52c2160244e71"
+      },
+      "scripts/reexport-surface-context-compat.py": {
+        "previous": "22f03bac6d23fa86295e9d6f5a874a37224e25c3b2e2cda6d82bb35f059a585f",
+        "current": "fe666ddecbcc305b5c5b08bd40888a417fa2c67083a2629b4350185b132f323c"
+      },
+      "src/adapters/dsh_web_tasks.ts": {
+        "previous": "02c1289f8d753b08c8565837954769f5bf22f1398491ca32bb7b7c4a544d0eff",
+        "current": "dd69df54c9a610bd5f6b972a4caa066d24f209d9ef73be2118e686da8994dd55"
+      },
+      "src/adapters/geneloop_native_work.ts": {
+        "previous": "695418a665f011efa8f8bd023f1c92ecef7c7fdd32bf2b0683da9b90e201c359",
+        "current": "8f9c0a01434d179b2f2facc4e9b6b830033f6306fe623e3c68ad0777acc44fe4"
+      },
+      "src/adapters/harless_comparison.ts": {
+        "previous": "fc590e334b7a342397c575fe41c93b01c2d53ab5458c3dadf61ffcd831ec554c",
+        "current": "8e5b0bf1a742bf68f401de33ab0317f6d2f22d3d24d91fddb522d376473c4ab6"
+      },
+      "src/adapters/harless_web_client/client.js": {
+        "previous": "cada5a2bbb222d464549517d42b5d067b00b0178a4931bf4cc7fb2536936dc48",
+        "current": "a6d90ce3e4e7d09d12fa052d258b7ea4de2e10ce87c6b5a21cb6650820adb8f7"
+      }
+    },
+    "unchanged_artifact_sha256": {
+      "library.json": "61ff932d7143fa3784ef122d1dfbe598bf65319c8d86989ff6e534eff5d1ec41",
+      "online-manifest.json": "7b5e9274b712501a59369403e5707b771a32bd7ffa75bf512844206bb85ad0d1",
+      "task.json": "d527101604be85ea4c50ee3a8c018d8643c44749e986d1caf15a521f9ff72c65",
+      "tool-schemas.json": "0ba797b7a3ed5155d92e4fda235ba4b251162cc0e7f014bb778ea956d29da0b0",
+      "source-evidence.json": "76ddb181021106915fea64ee02117c78db8fb3ef9d6324cb35a488fc9f459629"
+    },
+    "repairs": [
+      "native_image_and_filesystem_channel_with_session_containment",
+      "native_search_in_existing_session_command_sandbox",
+      "skill_todo_present_and_question_surface_integration",
+      "same_task_metered_delegation",
+      "native_context_pressure_and_accounted_retry_boundaries",
+      "versioned_role_typography",
+      "shared_office_delivery",
+      "module_annotation_repair",
+      "immutable_single_task_learning_sources",
+      "independent_page_program_certification",
+      "version_guarded_component_revision",
+      "final_component_delivery_lineage"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "net_cost_reduction_proven": false,
+    "validation_record": "docs/debug/web-baseline-fairness-audit-20261104.md",
+    "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
+    "release_scope": "managed_ppt_delivery_and_account_local_learning_on_current_main",
+    "runtime_delta": "The original read IR, evidence and MCP schemas are retained. Learned page programs require separate Artifact certification and future-task validation."
+  },
+  "matching_cleanup_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "previous_release": "paper-web-v32",
+    "previous_certification_sha256": "0d7b0ca0e56a4a3d2e2ca7b6c549b58b5c25cd56d0e2b891bef86ee48dfc867e",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "same_mcp_schema": true,
+    "public_native_tools": [
+      "web_search",
+      "web_fetch",
+      "bash",
+      "job_list",
+      "job_output",
+      "job_kill",
+      "read",
+      "read_image",
+      "write",
+      "edit",
+      "glob",
+      "grep",
+      "ask_user_question",
+      "todo_write",
+      "skill",
+      "present",
+      "subagent",
+      "exit_plan_mode",
+      "get_goal",
+      "update_goal"
+    ],
+    "public_native_tools_in_certified_mcp_schema": false,
+    "public_native_tools_learned_or_certified": false,
+    "changed_code_locks": [
+      "src/adapters/dsh_online_motif.mjs",
+      "src/motif_core/offline/edge_compiler.py",
+      "src/motif_core/offline/trace_compiler.py",
+      "src/motif_core/online_skill_runtime.mjs"
+    ],
+    "additional_code_locks": [],
+    "previous_code_lock_differences": {
+      "src/adapters/dsh_online_motif.mjs": {
+        "previous": "997d3370e9284d52ac7b813d46b3f177b358e4297c3df0b84ae92a68c152b8d5",
+        "current": "148c3fed20a0c18d0c0a8fee1a45b3e9f0b3641cad60889a13aef875c9c01321"
+      },
+      "src/motif_core/offline/edge_compiler.py": {
+        "previous": "2fcaa79ac865984edde3788ee8add1912a909a8c82b2e8e487147e868243e7c4",
+        "current": "1ef4dda018d33e5120e37c2951928d617f582306e7f69552fcd343ab941c4261"
+      },
+      "src/motif_core/offline/trace_compiler.py": {
+        "previous": "9cdba279ad49ae79d3a19b7900c4023f1165999e4607346da3f2249fbe86e005",
+        "current": "a9f3ac8769e2aceddae94f11ef997c0df5e816f7b340ce8911209bf1a7cac714"
+      },
+      "src/motif_core/online_skill_runtime.mjs": {
+        "previous": "d951e7d0ab15ba49c00f99726f82c328e0bb283fd40af0d6eb0252c80d4e54ec",
+        "current": "7d26af278af8e231fea1e28ddad4b9ce75afdbf871e85ee85892a9419fe2ef2d"
+      }
+    },
+    "unchanged_artifact_sha256": {
+      "library.json": "61ff932d7143fa3784ef122d1dfbe598bf65319c8d86989ff6e534eff5d1ec41",
+      "online-manifest.json": "7b5e9274b712501a59369403e5707b771a32bd7ffa75bf512844206bb85ad0d1",
+      "task.json": "d527101604be85ea4c50ee3a8c018d8643c44749e986d1caf15a521f9ff72c65",
+      "tool-schemas.json": "0ba797b7a3ed5155d92e4fda235ba4b251162cc0e7f014bb778ea956d29da0b0",
+      "source-evidence.json": "76ddb181021106915fea64ee02117c78db8fb3ef9d6324cb35a488fc9f459629"
+    },
+    "repairs": [
+      "shared_single_and_batch_matcher",
+      "session_owned_history",
+      "remove_unused_batch_margin",
+      "repeated_parameter_values_allowed"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "net_cost_reduction_proven": false,
+    "validation_record": "docs/experiments/motif-matching-cleanup-20261030-v1.md",
+    "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
+    "scope": "matching_cleanup_compatibility_without_new_training_or_raw_trace_replay"
+  },
+  "capability_container_compatibility": {
+    "method": "reexport_certified_serialized_library",
+    "previous_release": "paper-web-v42",
+    "previous_certification_sha256": "0ef1b2166e75d054309d1c96a3e6552bfabf383cf045fd9bbb186f86f955b623",
+    "same_library_and_evidence": true,
+    "same_online_program": true,
+    "same_mcp_schema": true,
+    "public_native_tools": [
+      "web_search",
+      "web_fetch",
+      "bash",
+      "job_list",
+      "job_output",
+      "job_kill",
+      "read",
+      "read_image",
+      "write",
+      "edit",
+      "glob",
+      "grep",
+      "ask_user_question",
+      "todo_write",
+      "skill",
+      "present",
+      "subagent",
+      "exit_plan_mode",
+      "get_goal",
+      "update_goal"
+    ],
+    "public_native_tools_in_certified_mcp_schema": false,
+    "public_native_tools_learned_or_certified": false,
+    "changed_code_locks": [
+      "scenarios/remotion_edit/server.py",
+      "scripts/materialize-source-program.mjs",
+      "src/adapters/source_program_runtime.ts"
+    ],
+    "additional_code_locks": [
+      "scripts/reexport-capability-container-compat.py"
+    ],
+    "previous_code_lock_differences": {
+      "scenarios/remotion_edit/server.py": {
+        "previous": "9405bb9a9bc73320d8cd4d0d0fe769fc7bd6345c25077bd5727c8796353623c8",
+        "current": "201c87372690418e6a3c8457f5321be84a4bb03227ce23936ed776327be6a503"
+      },
+      "scripts/materialize-source-program.mjs": {
+        "previous": "a9ccedd2f27f58020b4e1dd7cedcaecca60364800a10752fbaa653da551d80b9",
+        "current": "e4330784668976c157e2bb7dfe0b9b10e0e10583d1cd10a0a4973e29df135acc"
+      },
+      "src/adapters/source_program_runtime.ts": {
+        "previous": "aad0b95322eef449c5462068a736c289260ad286e4faeea0b97327f9c48acaba",
+        "current": "610d7085ba2a9daabf424d221611f222fede026b1e1106c196a6a1c96214b558"
+      }
+    },
+    "unchanged_artifact_sha256": {
+      "library.json": "61ff932d7143fa3784ef122d1dfbe598bf65319c8d86989ff6e534eff5d1ec41",
+      "online-manifest.json": "7b5e9274b712501a59369403e5707b771a32bd7ffa75bf512844206bb85ad0d1",
+      "task.json": "d527101604be85ea4c50ee3a8c018d8643c44749e986d1caf15a521f9ff72c65",
+      "tool-schemas.json": "0ba797b7a3ed5155d92e4fda235ba4b251162cc0e7f014bb778ea956d29da0b0",
+      "source-evidence.json": "76ddb181021106915fea64ee02117c78db8fb3ef9d6324cb35a488fc9f459629"
+    },
+    "repairs": [
+      "optional_explicit_container_name_and_nonce_ownership",
+      "isolate_capability_workers_from_legacy_experiment_cleanup",
+      "single_decode_source_library_and_version_bound_materialization"
+    ],
+    "raw_traces_replayed": false,
+    "new_training_tasks": 0,
+    "model_requests": 0,
+    "quality_cost_promoted": false,
+    "net_cost_reduction_proven": false,
+    "validation_record": "docs/experiments/efficiency-rsi-script-20261102.md",
+    "training_flag_scope": "Existing entry/report new_training=true identifies the original independently trained library; this compatibility export adds zero training tasks.",
+    "runtime_delta": "The existing shared Docker launcher is reused. Without the two explicit Capability container environment variables the launch is unchanged; with a validated name/nonce only ownership/name/experiment labels change. Mounts, user, network, capabilities, resource limits, commands and native renderer remain unchanged. Source decoding now consumes one frozen byte buffer, checks duplicate IDs, and returns explicit version receipts; prior path-based calls remain supported. The Paper/PPT IR and independent evidence are unchanged. This is product source compatibility only; it neither certifies new Capability code nor promotes video/task quality or efficiency.",
+    "capability_runtime_certified": false
+  }
+}

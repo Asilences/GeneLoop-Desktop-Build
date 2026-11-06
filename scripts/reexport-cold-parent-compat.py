@@ -23,7 +23,7 @@ compat.RELEASES = [
      'scenarios/paper_proofreading/document-read-contracts.json'),
     ('ppt-master-v16', 'ppt-master-v17', 'ppt', 'scenarios/ppt_master/contracts.json'),
 ]
-RECORD = 'docs/experiments/five-user-stress-20261020.md'
+RECORD = 'docs/debug/five-user-stress-20261020.md'
 
 
 def main():

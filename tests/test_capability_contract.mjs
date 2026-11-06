@@ -18,6 +18,11 @@ print(json.dumps({'snapshot':create_capability_snapshot('owner',[capability_ref(
  assert.equal(run.status,0,run.stderr);return JSON.parse(run.stdout);
 }
 const data=fixture();
+test('empty initial library is valid without admitting unreferenced capabilities',()=>{
+ const empty=createCapabilitySnapshot('owner',[],[]);
+ assert.deepEqual(validateCapabilitySnapshot(empty),empty);
+ assert.throws(()=>createCapabilitySnapshot('owner',[],[data.snapshot.capabilities[0]]),/snapshot_extra_capability/);
+});
 test('Python/TS agree on Unicode scalar order, decimal float64 values and legacy mapping',()=>{
  for(const v of data.vectors)assert.equal(capabilityDigest(v.value),v.digest);
  for(const v of data.legacy)assert.deepEqual(mapLegacyLibrary(v.raw,'owner',v.backend,v.sha),v.mapped);

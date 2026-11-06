@@ -1,6 +1,6 @@
 # 自主递归构造：组会进度与定位结果
 
-- 日期：2026-11-03；本文件随当日上午真实运行更新。实验协议见[冻结协议](../recursive-construction-protocol-20261103.md)。
+- 日期：2026-11-03；本文件随当日上午真实运行更新。实验协议见[冻结协议](../research/evolution/recursive-construction-protocol-20261103.md)。
 - 起点：main `2f29d34a` 已合并 PR #123。当前开发分支 `codex/recursive-construction-20261103`，新接口源码 `4af5c56f`；本轮已推送[草稿PR #124](https://github.com/jingyio/GeneLoop/pull/124)，尚未合并或部署；CI以该PR当前head为准。
 - 研究问题：过去创造的抽象，是否能成为模型创造下一项能力的原语，并降低后继能力的获取成本？不能以工具数量、静态嵌套深度或宿主手写组合代替。
 

@@ -55,7 +55,7 @@ def create(kind, work):
         os.environ.update(HARLESS_REPORT_WORKSPACE=str(work), HARLESS_PRIVATE_ROOT=str(work.parent))
         return importlib.import_module('scenarios.data_analysis.report_session').server
     if kind == 'general':
-        from scenarios.general.runtime import create_server
+        from src.adapters.desktop_general import create_server
         return create_server(work)
     if kind == 'ppt':
         from scenarios.research_ppt.web_scope import configure_web_scope
@@ -79,6 +79,8 @@ def create(kind, work):
                     import hashlib
                     import pymupdf
                     from src.adapters.geneloop_pdf import read_pdf
+                    from src.adapters.desktop_general import verify_native_ocr
+                    verify_native_ocr()
                     data = path.read_bytes()
                     with pymupdf.open(stream=data, filetype='pdf') as pdf:
                         count = min(2, len(pdf))

@@ -4,7 +4,28 @@
 
 桌面模型 lease `toolsetVersion:3` 与宿主共用 `apps/desktop/runtime/native-workflow-catalog.mjs` 白名单。版本 2 和未声明版本保持原工具集合。`local_workflow_open` 固定授权资料快照并发现原场景 MCP Schema，以 `mcp__native_*` 直接注册到现有 DSH scope；不新增 Agent 循环，不自动转云端。提供通用 4、报告 17、论文 20、文件 13、PPT 21、官方源材料 5 项入口，另有 11 项原生视频入口。`local_workflow_close` 释放本轮工具状态，已交付文件保留。
 
-纯代码执行只向 QuickJS WASM 提供固定输入/新文本输出绑定；图像回传使用 DSH 附件存储并核验模型图像能力。文件方案由主进程展示并确认，作用于任务副本，交付 ZIP；不会移动或删除工作区原件。Python/Office 子进程沿 DSH 生命周期，凭证不传入。源码存在不代表正式站已部署，跨平台旧 Motif 认证不自动继承。详情及当前验证边界见[preview.13 记录](experiments/desktop-preview13-full-tools-20261106.md)。
+纯代码执行只向 QuickJS WASM 提供固定输入/新文本输出绑定；图像回传使用 DSH 附件存储并核验模型图像能力。文件方案由主进程展示并确认，作用于任务副本，交付 ZIP；不会移动或删除工作区原件。Python/Office 子进程沿 DSH 生命周期，凭证不传入。源码存在不代表正式站已部署，跨平台旧 Motif 认证不自动继承。详情及当前验证边界见[preview.13 记录](debug/desktop-preview13-full-tools-20261106.md)。
+## Recursive Abstraction Evolution（2026-11-04）
+
+规格、模块对应、T0–T8证据与研究边界见[实现记录](rae-implementation.md)。Capability IR、ID、Registry、账本不变；所有新增行为需要宿主显式启用。
+
+- `capture_capability_trace(snapshot, task_id=..., task_input=..., task_fingerprint=..., calls=..., role="task"|"builder")`：calls 含固定能力引用、外部 input_binding 与原 Runtime execution_ref；核验真实参数、结果、父子回执、原生完成事件和权限证据。返回原轨迹协议的类型化投影；内部回执保留，C 在学习视图中为一个节点。
+- `learn_capability_motifs(training, heldout, snapshot, regions=None)`：调用原 miner、compiler 和原 Capability 编译器；输出原 proposal/compiled/provenance。候选仍是 candidate，必须进入原 Store 验收。支持只读、嵌套必需字段封闭对象及 JSON 数组：学习观察采用可逆类型投影，候选恢复原 schema 和绑定。来源仅取明确 step 引用，不按值相等猜依赖。完整同名重复模式仍保留拒绝；同一 trace 可提供最大不重复连续窗口，不增加独立样本数。
+- `capture_composition_trace(snapshot, execution_ref=..., task_input=..., task_fingerprint=...)`：从成功 Script Runtime 原回执与 native stdout 恢复每次调用，核验每节点输入/输出 SHA、原父子关系和认证版本；保留原 trace，不伪造子调用为根执行。
+- `createCapabilityDischarge(host).run({signal})`：默认 disabled；宿主固定义务、独立 claim/predicate/verifier 与 binder 结果。调用原 Runtime 后独立验收并复核实时状态，成功返回有限 summary，未消解义务与组合新检查留在 remaining_frontier。完整 audit 必须保存；宿主将剩余内容交原语义路径。此接口不自行启动新 Agent。
+- `propose_evolution_boundary(..., enabled=True)` 将训练轨迹与已有反馈交宿主提案回调；`evolve_abstraction(..., enabled=True)` 核对反馈和新边界，调用同一学习器产生不同的可执行图。留出证据不送提案回调；不修改旧版本。同模块 `record_relation(feedback,...)` 将 proposed_parent/material_read/compile_ref/runtime_call/verify_used 写入原 CapabilityFeedback；`record_measured_effect` 只读复用原效率计量，未知费用不产生收益或预算。
+- 原 `prepare_capability_source_request` / `propose_once` 接受可选宿主 `construction_session`。`BuilderConstructionSession(enabled=True,...)` 经原 Runtime 记录实际解析、冻结绑定阶段，role=builder 进入同一学习器。已发布构造能力由宿主固定 selection 使用；仍与原编码器结果核对。默认关闭，失败留证并回原编码器，取消传播。尚未自动替换构造策略或证明提速。
+- `prepare_attempt/propose_once(..., abstraction_view=True)` 和提案 CLI `--abstraction-view` 隐藏 native ABI/组合内部图，仅提供语义接口；宿主任务 contract 固定，模型限 capability_source/defer，repair 不许更换视图模式。原始 snapshot 与映射仍保存供审计；输入样例只有 schema 检查，不冒充执行验证。
+
+离线入口：`npm run rsi:rae:learn -- --manifest MANIFEST --output .local/NEW_RUN [--execute]`。manifest 为 `{snapshot:<file_ref>, training:[<trace_ref>,...], heldout:[<trace_ref>,...]}`，可选 `evolution:{feedback_directory, prior_candidate:<compiled_ref>, proposal:<boundary_ref>}`。默认 preview 仅核验；execute 学习，不调用模型或发布。每次使用新私有目录，保存 effective、candidate_refs、拒绝/失败、源文件哈希；file_ref 复用原 `{path,sha256}`。
+
+发布复用 `capability_improvement_plan_v1`：`recursive_abstraction:{enabled:true,semantic_view?:true}`，job 可填 `learned_candidate:<candidate_ref>`。该引用来自学习 CLI 的 `result.candidates[].candidate_ref`，包含原 proposal/compiled/provenance；原 scene 再核验来源、当前版本、host contract 并重新编译，之后按原 Controller/Store 独立发布。`npm run rsi:improve -- --plan PLAN --execute` 仅接无发现/无模型/无学习路由的冻结候选 jobs；其他任务仍用既有 `--call-model`。新 schema 字段全部可选，未启用的旧 plan 行为不变。
+
+Builder 原生训练材料准备可显式配置 `recursive_abstraction:{enabled:true,builder_learning:{enabled:true,selection?:{root:<capability_ref>,candidate:<file_ref>,source_trace:<file_ref>}}}`。公共 scene 与 Paper Frontier 均将它传给原 `prepare_program_cases`。默认关闭；开启时保留实际候选前缀的宿主验证 grant/manifest、原回执和 `role=builder` 投影，容器仍为未认证 candidate。selection 必须已在当前库认证可见，来源为构造轨迹，符号展开与原参数流一致，否则退回原前缀；取消不回退执行。该接线尚未观察真实模型产生并复用学习组合，不能称自主策略学习。
+
+真实研究薄入口 `examples/capability-scenes/run-rae-real-acceptance.py` 默认预检，`--call-model` 显式调用原 Controller，`--observe-builder` 显式启用上述采集。固定任务、原独立验证、原累计账本与代码摘要；费用、失败和材料续构全部记录。
+
+模型请求为零只意味着没有模型费用；总执行/验证/维护成本仍未知。以上机制不授予生产执行、跨账号读写、上传或预算再投资权限。
 
 ## 成员PPT学习/验证传输（2026-11-04修复）
 
@@ -58,7 +79,7 @@ PPT已通过`scenarios/ppt_master/capability_adapter.py`接入公共`CapabilityI
 
 `mcp__ppt_master__read_converted_source(converted_id)`保留既有工具schema及完整正文`content`，新增显式MCP `structuredContent`作为执行观察：`version_sha256`、`markdown_sha256`、`markdown_bytes`、`markdown_path`、`directory`、`name`、`file_count`及读取范围标记。结构化部分不重复长正文；它只能在来源授权、源版本和派生字节核验后产生。DSH展示层附加spill提示不改变该执行回执。普通文本中的伪造JSON、失败结果及错误版本不能成为回执。
 
-`ppt-master-v48`兼容导出保留v47的已学习IR、MCP schema和来源证据，旧包不改、没有新学习或模型调用。真实读取诊断和未部署边界见[修复记录](experiments/ppt-read-receipt-fix-20261103.md)。此变更不保证完整PPT降本，也不表示已接入通用参数化排版学习。
+`ppt-master-v48`兼容导出保留v47的已学习IR、MCP schema和来源证据，旧包不改、没有新学习或模型调用。真实读取诊断和未部署边界见[修复记录](debug/ppt-read-receipt-fix-20261103.md)。此变更不保证完整PPT降本，也不表示已接入通用参数化排版学习。
 
 ## PPT 历史页面组件接口（2026-11-04，实验候选）
 
@@ -139,9 +160,9 @@ PPT已通过`scenarios/ppt_master/capability_adapter.py`接入公共`CapabilityI
 File 公共种子的历史 `runtime_source` 作为来源记录保留，安装不再要求它与当前整份源码快照相同。Python 安装路径使用已有 `policy_current()` 核对当前工具契约与执行版本；TypeScript 验证发布载荷与当前注册表源码绑定，实际接管仍核对任务的工具契约、执行版本和权限。证书及旧库载荷不改写。
 ## F02 执行与更新协议（审核候选）
 
-新增显式 opt-in 的 `geneloop.rsi/v1` 信封、Python 离线校验/导出及 TypeScript 在线准入/更新接缝；共同例子、最短命令、可信宿主要求与兼容表见 [F02 协议说明](rsi-protocol-v1.md)。运行 `npm run rsi:demo` / `npm run rsi:check`。当前只验证局部计数和协议接缝，候选检索、自动学习、生产适配和实际净收益未据此成立；旧库证书不能由新信封自动升级。
+新增显式 opt-in 的 `geneloop.rsi/v1` 信封、Python 离线校验/导出及 TypeScript 在线准入/更新接缝；共同例子、最短命令、可信宿主要求与兼容表见 [F02 协议说明](research/rsi/rsi-protocol-v1.md)。运行 `npm run rsi:demo` / `npm run rsi:check`。当前只验证局部计数和协议接缝，候选检索、自动学习、生产适配和实际净收益未据此成立；旧库证书不能由新信封自动升级。
 
-2026-10-25 补充显式机会评估/启动/配对验证：Python `assess_opportunities`、`evaluate_optimization`，TS `startRsiOptimization`、`publishOptimizedRsiUpdate`。最短入口 `npm run rsi:optimize`；[输入信任、成本公式与组件责任](rsi-optimization-v1.md)明确证据不足不启动，以及先独立效果审核再通过原认证。当前 v1 尚未冻结，新增六类 `optimization_*` 记录；没有迁移旧认证、改上游 Harness 或生产入口。
+2026-10-25 补充显式机会评估/启动/配对验证：Python `assess_opportunities`、`evaluate_optimization`，TS `startRsiOptimization`、`publishOptimizedRsiUpdate`。最短入口 `npm run rsi:optimize`；[输入信任、成本公式与组件责任](research/rsi/rsi-optimization-v1.md)明确证据不足不启动，以及先独立效果审核再通过原认证。当前 v1 尚未冻结，新增六类 `optimization_*` 记录；没有迁移旧认证、改上游 Harness 或生产入口。
 
 ## 不限额Web与模型容量（2026-10-20）
 
@@ -149,7 +170,7 @@ File 公共种子的历史 `runtime_source` 作为来源记录保留，安装不
 
 File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原state_root和pool。持久FileJob的budget_usd、max_requests、max_steps、max_repairs支持null；数值零预算仍不允许付费。null不参与减法、min、累计上界或数值比较。SDK输出使用393216，原验收、权限、不可变任务、账本和取消继续生效；共享文件工作区的写冲突保护保留。有限历史实验不被追改为不限额，旧证书不重新写哈希；File v7按新源码真实重新认证。
 
-上线与测试限制见[本轮记录](experiments/provider-output-20261020.md)。
+上线与测试限制见[本轮记录](debug/provider-output-20261020.md)。
 
 ## 附件与多轮上下文（2026-10-19）
 
@@ -165,7 +186,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 
 ## 正式网站服务生命周期（2026-10-19）
 
-`npm run service -- <start|status|check|restart|rollback>` 通过 `scripts/project.mjs` 调用 `scripts/geneloop_service.py`。Linux 私有计划 version=1 指定 owner/gateway 配方和持久路径，使用 `GENELOOP_SERVICE_CONFIG` 或 `--config`；不通过 HTTP 接收启动配置，不输出凭证。`start` 幂等，认证同步与健康检查强制执行；`restart`/`rollback` 校验现有进程身份、活动任务和持久路径，启动失败尝试上一份冻结计划。模型预算服务和累计账本不在其启停范围。准备场景配置/证书和维护窗口仍须按[统一流程](service-lifecycle.md)完成，内部检查不能代替公网与场景验证。
+`npm run service -- <start|status|check|restart|rollback>` 通过 `scripts/project.mjs` 调用 `scripts/geneloop_service.py`。Linux 私有计划 version=1 指定 owner/gateway 配方和持久路径，使用 `GENELOOP_SERVICE_CONFIG` 或 `--config`；不通过 HTTP 接收启动配置，不输出凭证。`start` 幂等，认证同步与健康检查强制执行；`restart`/`rollback` 校验现有进程身份、活动任务和持久路径，启动失败尝试上一份冻结计划。模型预算服务和累计账本不在其启停范围。准备场景配置/证书和维护窗口仍须按[统一流程](operations/service-lifecycle.md)完成，内部检查不能代替公网与场景验证。
 
 ## PPT/PPTX 风格输入（2026-10-18）
 
@@ -181,14 +202,14 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 
 ## PDF 上传 OCR 与图片输入（2026-10-18）
 
-- `sceneAttachmentContext` 在已验证的本任务原件上运行公共 PDF 读取器；每页返回原件 SHA、页号、文字来源、OCR 状态和视觉覆盖。文字层直接读取，扫描页自动 OCR；PPT/Paper 的版本化逐页工具使用同一读取器。完整约定见[附件输入](attachment-input-behavior.md)。
+- `sceneAttachmentContext` 在已验证的本任务原件上运行公共 PDF 读取器；每页返回原件 SHA、页号、文字来源、OCR 状态和视觉覆盖。文字层直接读取，扫描页自动 OCR；PPT/Paper 的版本化逐页工具使用同一读取器。完整约定见[附件输入](product/web/attachment-input-behavior.md)。
 - `GENELOOP_PDF_OCR_ROOT/tessdata` 只保存固定摘要的 `eng`、`chi_sim`，由 `scripts/install-pdf-ocr.py` 安装。成员部署使用 `pdfOcrRoot` 验证后只读挂载；文件解析子进程不继承模型密钥。
 - 辅助图像分析固定 Flash Off，整页像素连同图注、当前/相邻正文及独立于当前问题的来源观察指令进入 `/v1/vision/<owning-session>/chat/completions`。账号网关检查该账号持有的会话，broker 映射到已激活 task，预算 gate 验证内联 JPEG、模型与无工具请求。只有此路由允许 Pro 任务使用辅助 Flash；正常模型请求仍必须与任务确认模型一致。
 - 图片分析与最终回复同属原任务计费；账本回执保留实际 `model` 与 `kind=pdf_vision`。取消可中断准备过程；已发生的上游请求继续结算。视觉分析仅为来源绑定的模型观察，不可作为 Motif 可复用的科学判断或独立事实认证。
 
 ## 网页 Paper 默认 Execute（2026-10-17）
 
-公共 Registry 的 `/ppt`、`/paper`、`/data` Motif 均默认 Execute。产品种类 `paper_document_read_v1` 当前使用 `paper-web-v3`（自动学习接线的兼容重编，原 v1/v2 保留），完整 24 工具不变；只授权模型已观察到的 `pin_document` 结果续接同源默认 `read_pinned_document(source_id, page=1)`。绑定检查完整上传许可、实际 Schema、独立轨迹证据、来源版本和代码锁；通过既有 `closedContinuation` 插件钩子，不修改核心或训练模型权重。未命中仍回到模型，Shadow 历史和管理员研究入口保持原协议。学习证据见 [原始记录](experiments/all-scene-motif-execute-20261017-v1.md)，最新接线见[自动学习验收](experiments/web-paper-auto-learning-20261017-v1.md)。
+公共 Registry 的 `/ppt`、`/paper`、`/data` Motif 均默认 Execute。产品种类 `paper_document_read_v1` 当前使用 `paper-web-v3`（自动学习接线的兼容重编，原 v1/v2 保留），完整 24 工具不变；只授权模型已观察到的 `pin_document` 结果续接同源默认 `read_pinned_document(source_id, page=1)`。绑定检查完整上传许可、实际 Schema、独立轨迹证据、来源版本和代码锁；通过既有 `closedContinuation` 插件钩子，不修改核心或训练模型权重。未命中仍回到模型，Shadow 历史和管理员研究入口保持原协议。学习证据见 [原始记录](debug/all-scene-motif-execute-20261017-v1.md)，最新接线见[自动学习验收](experiments/web-paper-auto-learning-20261017-v1.md)。
 
 ## Paper 自动学习接线
 
@@ -223,7 +244,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 - `ppt_master` 的 provider-length 恢复观察原生 finish reason；仅在 `max-tokens` 或该截断恢复中的 tool-calls 结束时，通过 Harness steering 续做同一任务。记录 `provider_length_continuations`，取消/权限检查及累计预算保持。该能力两侧相同，不计为 verified skip，也不以 task completed 单独证明 PPT 已生成。
 - Web 白名单包括完整 21 工具及 `read_pending_plan` / `repair_pending_plan`；草稿读取限明确的 1–5 页，更新针对旧版本页号，返回新版本。宿主真实交付后不重复执行原子链。Web 的修复次数由原任务预算控制；CLI 默认有限次数保持兼容。无修改重试、并发未确认结果、来源/权限/实现/旧版本变化仍拒绝。
 - PPT 的 `attachment_context_strategy=versioned_mcp_sources`：完整用户文字、附件原件及来源回执保留，由实际 MCP 读取，不再同时附加一份完整提取文本。其他场景保留只读提取并通过原生已记录消息传给模型，以满足模型请求可重建与只读约束；网页投影只显示用户文字及文件卡片，隐藏带真实文件卡片的自动提取块，适用于新旧记录。不得在 `llm/stream` 修改已冻结的请求或消息。
-- 已绑定附件的原生 Chat 再上传新资料时，通过现有单路任务机制创建独立执行目录，继续同一公开对话；重新核验并复制同一父对话的旧原件，与新附件合并。同名不同版本单独命名，旧任务范围不变。跨场景继承包含 DOCX；普通 Chat 的任务期代码交付和双栏对应侧交付经不可变索引核验后带入。网页排队消息仅投影用户正文和文件卡片，模型证据保留。详见[附件输入与视觉边界](attachment-input-behavior.md)。
+- 已绑定附件的原生 Chat 再上传新资料时，通过现有单路任务机制创建独立执行目录，继续同一公开对话；重新核验并复制同一父对话的旧原件，与新附件合并。同名不同版本单独命名，旧任务范围不变。跨场景继承包含 DOCX；普通 Chat 的任务期代码交付和双栏对应侧交付经不可变索引核验后带入。网页排队消息仅投影用户正文和文件卡片，模型证据保留。详见[附件输入与视觉边界](product/web/attachment-input-behavior.md)。
 - `ppt_read_v2` / `ppt_uploaded_sources_v2` 加载本轮真实轨迹编译的只读结构，支持来源读取与已选成稿页读取。来源工具绑定批准文件 SHA；成稿页工具绑定有序来源版本摘要，另外由实际适配器核验 deck 文件 SHA 与选定页投影。语义选源、选页、内容、修改及所有写步骤由模型/原工具负责。
 - 新库锁定完整 schema 变体、代码、两项训练决定和独立认证证据；审查完成与质量通过分别记录。`quality_cost_promoted=false`，不把结构认证、复用次数或普通脚本的请求减少当作同质成本优势。旧库的原始 library/manifest/certificate 不改，兼容记录单列。
 
@@ -241,7 +262,7 @@ File独立SDK从同一Web policy创建新的只读RSI配置，复用账号原sta
 - `paper_checks.export_review_report` 与 `research_report.export_input_review` 接受 `title`、`sections:[{heading,paragraphs:[string]}]`、完整 `source_versions` 文件名/摘要映射。后者只在无可分析数值表时开放，不能替代统计。成功生成经布局检查的 PDF/Markdown 后发布到本会话 `outputs/documents/<id>/`，receipt 绑定实际字节及来源；不声称科学或文献真实性认证。
 - 数据比较侧回收资料核对报告必须有本次任务成功的工具事件、相同来源版本和文件摘要；不能扫描别轮文件冒充本轮交付。成员环境映射同时为三个场景提供已验证的解析器路径及论文报告字体。新建对话只复用当前窗口的空输入框，避免取走另一窗口仍被标记为空的会话。
 
-依赖、端到端记录和原分支差异见 [修复验收](experiments/geneloop-scene-delivery-repair-20261016-v1.md)。普通 Word 指 DOCX，PDF 表格支持可提取单元格，不代表已支持扫描 OCR、任意复杂表格或长论文全部版式校验。
+依赖、端到端记录和原分支差异见 [修复验收](debug/geneloop-scene-delivery-repair-20261016-v1.md)。普通 Word 指 DOCX，PDF 表格支持可提取单元格，不代表已支持扫描 OCR、任意复杂表格或长论文全部版式校验。
 
 ## 输入默认场景、模型目录与页面加载（2026-10-15）
 
@@ -253,13 +274,15 @@ Web 每次发送从本轮序列化文本的前导 `/data`、`/ppt`、`/paper` �
 
 设置复用公开 `settings.section` 与原生 shell；同 id 模型页只显示一个导航项，归档、最近删除、账户表单在右栏切换。加载遮罩依赖公开 sessions list、`openState`、视图布局提交和当前页对照快照读取；不等待任务完成，不抓取更早分页。读取错误即时释放遮罩，异常长等待显示已加载内容与重试提示，减少动画偏好受支持。
 
-2026-10-14 四分支兼容：`offeredSchemaMatches` 保留第四参数的冻结 Schema 摘要校验；`proposeReadyBatch.closedContinuation` 仅补充论文的闭合结构判定，授权计划仍由独立的 `approvedContinuation` 检查，失效权限不能被论文回调或相似度救回。成员场景的 `/app/.local/web/sessions` 只有在部署根与 `/user/tasks` 的设备/inode 完全相同时才进入原生文件允许范围。详情及验收层级见 [整合记录](experiments/four-scenario-main-integration-20261014-v1.md)。
+2026-10-14 四分支兼容：`offeredSchemaMatches` 保留第四参数的冻结 Schema 摘要校验；`proposeReadyBatch.closedContinuation` 仅补充论文的闭合结构判定，授权计划仍由独立的 `approvedContinuation` 检查，失效权限不能被论文回调或相似度救回。成员场景的 `/app/.local/web/sessions` 只有在部署根与 `/user/tasks` 的设备/inode 完全相同时才进入原生文件允许范围。详情及验收层级见 [整合记录](debug/four-scenario-main-integration-20261014-v1.md)。
 
-成员账号的文件与工作区 API 在独立 `bubblewrap` 后端中额外校验：`workspaceFiles/{read,readAll,readBytes,readRelated,stat,list}` 经公开 Fetch 路由限制到 header 派生的会话工作区；`workspace/create` 与 `directoryPicker/{list,createDirectory}` 限制到该账号的 workspace/sessions 目录。路径按 realpath 校验，拒绝父目录与符号链接越界；失败以原生 RPC envelope 的 `gateway/forbidden` 返回。公开 `workspaceFileScope` Lookup 限制包括 WebSocket changes feed 在内的根目录，未知/跨账号 Session 不得到 scope。详见 [账号网关](harless-account-gateway.md)。
+成员账号的文件与工作区 API 在独立 `bubblewrap` 后端中额外校验：`workspaceFiles/{read,readAll,readBytes,readRelated,stat,list}` 经公开 Fetch 路由限制到 header 派生的会话工作区；`workspace/create` 与 `directoryPicker/{list,createDirectory}` 限制到该账号的 workspace/sessions 目录。路径按 realpath 校验，拒绝父目录与符号链接越界；失败以原生 RPC envelope 的 `gateway/forbidden` 返回。公开 `workspaceFileScope` Lookup 限制包括 WebSocket changes feed 在内的根目录，未知/跨账号 Session 不得到 scope。详见 [账号网关](operations/harless-account-gateway.md)。
 
 ## GeneLoop Web 产品身份与消息展示（2026-10-15）
 
 `config/geneloop-persona.json` 是 Web 产品身份的共同配置，包含 `prefix`、`suffix` 和固定为 `false` 的 `includeRuntimeContext`。Python Web 启动器、场景 registry 与 TypeScript 会话 preset 使用同一配置；`prepare_scenario(..., web_deployment=False)` 默认保持研究 CLI 的原提示。运行中的 Web Agent 通过公开 `systemPrompt.section` 与 `suppressRuntimeContext()` 绑定产品规则，旧 preset 恢复后也应用，退出作用域时释放。该绑定不更换场景工具、原有证据规则或权限；真实模型与提供商名称仍据实际配置显示。
+
+2026-11-04 提示清理候选通过公开 `system-prompt/assemble` 钩子移除与产品身份重复的 preset persona 段，使 Web 身份和隐私规则各保留一份。已锁定的 `ppt-master` Skill 随 `ppt` 场景绑定到该执行 Agent 的原生 skills 作用域，解绑时释放；普通 Chat、Paper、Data 和 Video 的初始目录由各自作用域决定。对应兼容库为 PPT77/Paper79，首请求审计与诊断记录见[调试记录](debug/web-baseline-fairness-audit-20261104.md)。
 
 `harless_public_output.ts` 为浏览器生成分离的展示对象：覆盖 Session controller 的 `page`、`follow`、`list`、`search` 和 `control` 的相关返回值，以及任务/对照 JSON 与 SSE 快照。它处理已知框架标识和常见主机绝对路径，系统提示只显示应用设置的通知；公开 header/summary 省略 `cwd`，工作区分组继续依赖 `workspaceId` 与 `sessionIds`。原始 journal、执行所用 `inspect()`、用户来源消息、排队用户输入和附件/交付文件字节不因此改写。评分标识、输出 SHA、事件序号、游标与下载回执保持原协议。
 
@@ -269,17 +292,17 @@ Web 每次发送从本轮序列化文本的前导 `/data`、`/ppt`、`/paper` �
 
 普通聊天通过公开 `conversation.chat.node` 插槽汇总每个回合的过程，默认仅显示最终回答；生成中显示当前真实回答和状态。工具、上下文、早期消息与推理文字按需展开，可再次收起，新会话/回合默认折叠。最终正文复用已注册的原生 assistant renderer，保留 Markdown、图片、授权文件入口；`turn-tail` 复制、评分和分支操作未被替换，错误与中断提示保留。上游 Compact 的回答边界决定承载节点，避免旧节点被外层隐藏。轨迹页通过公开 `conversation.view` 插槽、trajectory/chat 快照统一按用户消息 `seq` 与任务 `anchorSeq` 连续分轮，不能沿用旧任务中重复的 native turn 编号；加载全部历史后显示最终轮号。普通及单路任务一列，真正的双路任务左右展示 Baseline/Motif，上方每轮独立选侧、查看事件时间分布；优化标记仅使用实际 `optimized` / `verified_skip`。保留原 inject 的分页/图片加载能力，授权图片镜像到独立 child slot；使用 composer overlay 标记与原生高度变量，保证图表固定、正文可滚动。不修改上游源码。对照标题只改展示名称 Baseline / Motif，协议仍使用 `baseline`、`execute`、`shadow`。
 
-PPT 的本轮兼容锁仅更新共享 `harless_task_scope.ts` 产品身份组合所需代码 SHA 及其 `runtime-bindings.json` 登记摘要；原学习边、上传来源归属与字节摘要、job 绑定、工具参数和完整 MCP schema 不变，不是新训练证书。检查结果与尚待补充的真实/UI/发布验收见 [本轮记录](experiments/geneloop-message-privacy-20261015-v1.md)。
+PPT 的本轮兼容锁仅更新共享 `harless_task_scope.ts` 产品身份组合所需代码 SHA 及其 `runtime-bindings.json` 登记摘要；原学习边、上传来源归属与字节摘要、job 绑定、工具参数和完整 MCP schema 不变，不是新训练证书。检查结果与尚待补充的真实/UI/发布验收见 [本轮记录](debug/geneloop-message-privacy-20261015-v1.md)。
 
 ## 官方 Web 与统一任务接口（0.1.5-rc.3）
 
 `npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`；浏览器通过 `src/adapters/harless_web_client/` 装饰原生 `/harless` 命令，选择场景/模式/RSI。独立 `/tasks`、`/sss` 与 `/harless` 页面已移除，旧地址跳转聊天首页；任务 API 保留，历史代码/环境变量标识保持兼容。
 
-后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。官方聊天真实任务发送后直接执行；任务 API 仍支持显式 preview/submit，SDK 入口仍先预览。两者均保留原有预算代理。用户已授权此测试用途，Web 当前默认不限费用，外部副作用仍须另行授权；独立 SDK 实验按各自有效配置执行。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](experiments/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
+后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。官方聊天真实任务发送后直接执行；任务 API 仍支持显式 preview/submit，SDK 入口仍先预览。两者均保留原有预算代理。用户已授权此测试用途，Web 当前默认不限费用，外部副作用仍须另行授权；独立 SDK 实验按各自有效配置执行。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](debug/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
 
 ### 前端提交与任务生命周期
 
-官方真实聊天的 `session/prompt` 登记 `entrypoint=native_chat` 的任务，随后在服务端校验输入、场景/工具版本并激活双层预算，再派发给官方 `Controller.prompt`。无需额外点击确认；相同请求 ID 幂等，不会重复调用模型。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。旧版确认流程的[实验记录](experiments/native-chat-confirm-20261009-v1.md)仅作历史依据，当前直接发送的浏览器交互仍待验收。
+官方真实聊天的 `session/prompt` 登记 `entrypoint=native_chat` 的任务，随后在服务端校验输入、场景/工具版本并激活双层预算，再派发给官方 `Controller.prompt`。无需额外点击确认；相同请求 ID 幂等，不会重复调用模型。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。旧版确认流程的[实验记录](debug/native-chat-confirm-20261009-v1.md)仅作历史依据，当前直接发送的浏览器交互仍待验收。
 
 先打开本次私有 `access-url.txt` 的官方认证地址，用根路径 token 交换 HttpOnly/SameSite cookie。`/api/harless/tasks` 复用官方连接认证；不是可匿名访问的 API，也未开放其他前端域名的 CORS。不要在 URL/header 中另传认证 token。旧 `/api/sss/tasks` 保留同语义兼容路由，新调用统一使用产品路由。
 
@@ -365,17 +388,17 @@ library/在线 manifest 新增可选 `certification_scope`（`independent_decisi
 
 `dsh_online_motif.mjs` 导出共享 `installOnlineMotif`，原 `apply` 行为不变。新 `dsh_paper_motif.ts` 显式 opt-in `SSS_PAPER_MOTIF_DIAGNOSTIC=1`，只允许上述诊断 scope，并复用共享 Runtime；需要语义排名时返回真实模型，不调用 embedding、不强行接管。shadow 只记候选，execute 返回标准工具 stream，由 Harness 执行并逐结果复核，整个 batch 成功后才计 verified skip。任务/Session/题面、参数来源、工具可见性、权限及版本守卫仍然有效。
 
-实验入口 `scripts/paper-motif-experiment.py` 默认预览，付费阶段显式 `--call-model`，累计原论文账本并保留 1 美元上限、不设请求次数上限；这不是 Web 产品入口或跨平台通用运行器。协议、依赖和复现边界见[场景说明](../scenarios/paper-submission/README.md)，实际结果见[实验记录](experiments/paper-motif-shadow-execute-20261009-v1.md)。
+实验入口 `scripts/paper-motif-experiment.py` 默认预览，付费阶段显式 `--call-model`，累计原论文账本并保留 1 美元上限、不设请求次数上限；这不是 Web 产品入口或跨平台通用运行器。协议、依赖和复现边界见[场景说明](../scenarios/paper-submission/README.md)，实际结果见[实验记录](debug/paper-motif-shadow-execute-20261009-v1.md)。
 
 ## 官方 Web 与统一任务接口（0.1.5-rc.3）
 
 `npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`，DeepSeek Harless 界面为同源 `/tasks`。旧 `/sss` 是兼容别名，历史代码/环境变量标识保持不变。
 
-后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。前者仍通过工作台预览确认任务，后者直接执行预算预览后的一次场景；均保留原有预算代理。用户已授权此测试用途；当前共享服务器按 2026-10-16 授权取消任务、对照每侧及累计费用上限；Web 不额外限制单次文字输入或输出长度，其余独立入口按有效配置执行。外部副作用仍须另行授权。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](experiments/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
+后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。前者仍通过工作台预览确认任务，后者直接执行预算预览后的一次场景；均保留原有预算代理。用户已授权此测试用途；当前共享服务器按 2026-10-16 授权取消任务、对照每侧及累计费用上限；Web 不额外限制单次文字输入或输出长度，其余独立入口按有效配置执行。外部副作用仍须另行授权。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](debug/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
 
 ### 前端提交与任务生命周期
 
-官方真实聊天的 `session/prompt` 首次提交登记 `entrypoint=native_chat` 的待确认任务，返回 accepted，不直接调用模型。公开 Web `tapIndex` 注入题面/预算确认框，显式确认通过下述 submit API 才派发原消息；相同请求 ID 幂等，取消零模型调用。工作台 `?task_id=...` 和任务卡可以恢复同一待确认预览。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。实际接口验收见[记录](experiments/native-chat-confirm-20261009-v1.md)，真实浏览器点击待确认。
+官方真实聊天的 `session/prompt` 首次提交登记 `entrypoint=native_chat` 的待确认任务，返回 accepted，不直接调用模型。公开 Web `tapIndex` 注入题面/预算确认框，显式确认通过下述 submit API 才派发原消息；相同请求 ID 幂等，取消零模型调用。工作台 `?task_id=...` 和任务卡可以恢复同一待确认预览。`entrypoint` 是服务器响应字段，不接受客户端自行指定；新的要求仍需新的任务/Session。实际接口验收见[记录](debug/native-chat-confirm-20261009-v1.md)，真实浏览器点击待确认。
 
 先打开本次私有 `access-url.txt` 的官方认证地址，用根路径 token 交换 HttpOnly/SameSite cookie。工作台及 `/api/harless/tasks` 复用官方连接认证；不是可匿名访问的 API，也未开放其他前端域名的 CORS。不要在 URL/header 中另传认证 token。旧 `/api/sss/tasks` 保留同语义兼容路由，新调用统一使用产品路由。
 
@@ -466,7 +489,7 @@ Harness 原生 `SessionPromptRequest.content` 的实际格式为：
 
 ### 旧固定入口与验收范围
 
-`npm run web -- --frozen` 保留原 `dsh_web_policy.ts`：一个启动周期一个固定题面/session，题面仅两端空白规范化，内部字符必须一致。服务器最终验收通过 146 项 Python、44 项 Node、`web:check` 的 11 组冻结协议、`web:tasks:check` 的 13 组动态 HTTP/MCP，以及 18 题/83 来源 smoke；Motif 样例闭环已通过，新增实际付费为零。详细条件与限制见[动态任务验收](experiments/dynamic-web-tasks-20261009-v1.md)和[Web 交接](handoffs/harness-web.md)。原生会话 unary `/api/session/<method>` 使用官方 client-request envelope，队列/事件流使用 `/api/remote.mux`；DeepSeek Harless 不替换 Agent 循环。
+`npm run web -- --frozen` 保留原 `dsh_web_policy.ts`：一个启动周期一个固定题面/session，题面仅两端空白规范化，内部字符必须一致。服务器最终验收通过 146 项 Python、44 项 Node、`web:check` 的 11 组冻结协议、`web:tasks:check` 的 13 组动态 HTTP/MCP，以及 18 题/83 来源 smoke；Motif 样例闭环已通过，新增实际付费为零。详细条件与限制见[动态任务验收](debug/dynamic-web-tasks-20261009-v1.md)和[Web 交接](handoffs/harness-web.md)。原生会话 unary `/api/session/<method>` 使用官方 client-request envelope，队列/事件流使用 `/api/remote.mux`；DeepSeek Harless 不替换 Agent 循环。
 
 HTTP 检查不能代替实际浏览器和科研质量验收。安全边界仍是单操作人服务器联调：没有多账号、跨启动恢复或论文流程，认证浏览器的官方文件能力也不是多人文件沙箱。上游包只读，升级必须复核 Controller、Gateway、附件、事件与 preset 接缝。详见 [Web 交接](handoffs/harness-web.md)。
 
@@ -730,7 +753,7 @@ V11.2 的 `evidence-focus` 几何选择增加原图面积下限 `min(10平方英
 
 Web 会话归属使用持久 `DSH_HOME` 与可信 `principal` 作为 scope，记录在该 Home 的 `harless-web-ownership-*.json`，不再随代码部署的 `output` 变化。未提供 Home 时保留旧 output scope。记录中的 `sessions/bound` 保持原义，新增可选 `chat_only_sessions` 必须是 `sessions` 的子集；任务索引与模型选择仍使用原运行 scope，不迁移预算或重放任务。
 
-私有 policy 可选 `ownership_legacy_outputs:string[]`，只接受管理员配置的绝对路径。自动迁移当前 output，另只导入与同一个 Home 匹配的旧 scope；不能按客户端 session ID 或标题认领。成员启动器将此列表清空。跨旧 output 导入的已锁定会话以无工具文字模式恢复，`GET /api/harless/settings` 返回 `conversation_only:true`，附件请求返回 `409 new_session_required`。没有逐轮预算 broker 的入口不因此获得多任务复用权限。操作说明见 [账号网关](harless-account-gateway.md)，验证见 [恢复实验](experiments/chat-session-recovery-20261014-v1.md)。
+私有 policy 可选 `ownership_legacy_outputs:string[]`，只接受管理员配置的绝对路径。自动迁移当前 output，另只导入与同一个 Home 匹配的旧 scope；不能按客户端 session ID 或标题认领。成员启动器将此列表清空。跨旧 output 导入的已锁定会话以无工具文字模式恢复，`GET /api/harless/settings` 返回 `conversation_only:true`，附件请求返回 `409 new_session_required`。没有逐轮预算 broker 的入口不因此获得多任务复用权限。操作说明见 [账号网关](operations/harless-account-gateway.md)，验证见 [恢复实验](debug/chat-session-recovery-20261014-v1.md)。
 
 ### 场景快捷词、绑定和工作区（2026-10-14）
 
@@ -739,7 +762,7 @@ Web 会话归属使用持久 `DSH_HOME` 与可信 `principal` 作为 scope，记
 启用 `comparison_scenes` 与逐轮预算 broker 的账号，`select` 可修改已完成父会话的后续场景，不改写已有任务 preset；下一次发送由新私有子会话执行。运行中返回 `409 session_busy`，未知/跨账号会话仍先拒绝。未启用路由的固定任务才保留 `409 scene_requires_new_session`。`new_session` 是明确的新建操作，支持可选 selection 覆盖；inherit_session 必须属于当前账号，新会话继承其工作区。`scene_locked` 保留冻结范围的兼容标识，客户端不能仅凭它新建聊天。
 
 原生会话创建不再同时给出 workspaceId 和 cwd；网关中的工作区 ID 交给同账号注册表核验。MCP workspace/input/job 仍是服务器分配的私有路径。同场景、同来源文字续聊保留对应子会话；切换场景或新上传会轮换私有执行子会话，保留父聊天和旧结果。已冻结输出/页数等 scene_options 的直接变更仍受单独检查，不能更改旧任务权限。详见 [控制协议](harless-controls.md)。
-用户边界沿用账号网关的独立 Harness/bwrap 与预算代理；启动器接受可信 `--user-id`，客户端不能指定 cwd/工作区、库或命令。上传收据经官方 Agent scope 解析，确认时检查字节摘要；任务 `approved-inputs.json` 同时约束后端 pin/read，不允许重新 pin 接受确认后漂移的文件。两成员真实环境部署诊断见 [上线准备记录](experiments/harless-launch-readiness-20261014-v1.md)。
+用户边界沿用账号网关的独立 Harness/bwrap 与预算代理；启动器接受可信 `--user-id`，客户端不能指定 cwd/工作区、库或命令。上传收据经官方 Agent scope 解析，确认时检查字节摘要；任务 `approved-inputs.json` 同时约束后端 pin/read，不允许重新 pin 接受确认后漂移的文件。两成员真实环境部署诊断见 [上线准备记录](debug/harless-launch-readiness-20261014-v1.md)。
 
 ### 2026-10-14 场景选项、认证与成员部署
 
@@ -861,7 +884,7 @@ Python 从正常基线编译 `source_bound_readonly_batch_shadow` v1：当前任
 
 ## 跨平台实验／学习互斥锁
 
-`src/adapters/file_lock.py::exclusive_lock(path)`提供非阻塞独占进程锁：POSIX沿用历史flock，Windows用msvcrt锁同一固定文件的字节0；竞争者拒绝，异常后释放，不删除锁文件或重置账本。只在取得锁时加载平台模块，免费预览、编译及测试导入不依赖fcntl。调用方仍负责授权、累计账本和预算限制；此模块不替代预算代理。新生成任务将其纳入代码hash注册，旧manifest不可改，见[Windows修复记录](experiments/windows-rsi-lock-20261012-v1.md)。
+`src/adapters/file_lock.py::exclusive_lock(path)`提供非阻塞独占进程锁：POSIX沿用历史flock，Windows用msvcrt锁同一固定文件的字节0；竞争者拒绝，异常后释放，不删除锁文件或重置账本。只在取得锁时加载平台模块，免费预览、编译及测试导入不依赖fcntl。调用方仍负责授权、累计账本和预算限制；此模块不替代预算代理。新生成任务将其纳入代码hash注册，旧manifest不可改，见[Windows修复记录](debug/windows-rsi-lock-20261012-v1.md)。
 
 `src/adapters/trace_paths.py::relative_trace_path(value, roots)`按轨迹路径自身风格做词法绑定，输出正斜杠依赖键；Windows编译机可解析Linux历史轨迹，POSIX编译机可检查Windows绝对路径。外部根/盘符、上级跳转或盘符相对路径不绑定；真实文件/来源/版本守卫仍是授权必要条件。native参数中的file_path/workdir只有成功根绑定才替换为`${WORK}`，不能通过相似目录前缀伪造依赖。预算授权path用正斜杠作为跨平台协议字段。
 
@@ -1232,7 +1255,7 @@ sidecar新增`captureCurrentReport:true`（默认关闭），同时需要`reuseL
 - 覆盖、永久删除和工作区外操作经原生 approval 服务逐计划确认，证明绑定任务摘要、当前树、计划摘要及恢复方向。同一确认的中断重试不再次询问；已拒绝计划留存拒绝记录，不重复弹窗。低风险副本操作直接执行，MCP 仍核对状态、效果和恢复日志。
 - 公共 `file-v*` 种子只含当前重新认证的 IR 与脱敏摘要；原资料、轨迹、私有证书、费用及旧授权不发布。安装与在线执行均核验源码/目录版本，账号后续学习相互独立，未认证或失配时回普通 Harness。
 
-文件内容工具、质量v7、复杂控制流和历史迁移契约见 [使用说明](management-local.md) 与文件场景 `docs/changes/`；本次移植不将所有自然语言目标视为可自动严格验收，未完整解析的目标继续标记复核。
+文件内容工具、质量v7、复杂控制流和历史迁移契约见 [使用说明](product/files/management-local.md) 与文件场景 `docs/changes/`；本次移植不将所有自然语言目标视为可自动严格验收，未完整解析的目标继续标记复核。
 
 文件场景通用 MCP 的注册目录、请求、回执和任务文本均显式 UTF-8。下游 Python MCP 强制 `PYTHONUTF8=1` / `PYTHONIOENCODING=utf-8`，补传 Windows 必需系统变量；凭证仍只通过既有已登记 provider 的显式环境引用绑定，不整包转发主机环境。实际 native MCP 的中文目标/产物往返与独立源版本认证保留在本轮实验记录。
 
@@ -1296,7 +1319,7 @@ TypeScript Runtime 在首次模型请求前验证当前任务ID、输出授权�
 
 `/compact`处理当前真实上下文，`/plan [off|内容]`选择原生计划协作；目标仅通过`/goal --rounds <正整数> <目标>`显式开始。目标控制及子Agent继承原任务计量，原生Goal mutation RPC不直接开放；没有新增平台费用/请求/输出额度。独立File SDK模式与原任务恢复沿其自身入口，主聊天模式命令不会假成功。
 
-候选配置使用`node scripts/prepare-native-host.mjs --plan ABS --root ABS`预览，核对后`--apply`仅更新隔离候选host组合；正式启停仍统一`npm run service -- ...`。部署和验证状态以[本轮记录](experiments/dsh-native-capabilities-20261021.md)为准，源码存在不等于生产已发布。
+候选配置使用`node scripts/prepare-native-host.mjs --plan ABS --root ABS`预览，核对后`--apply`仅更新隔离候选host组合；正式启停仍统一`npm run service -- ...`。部署和验证状态以[本轮记录](debug/dsh-native-capabilities-20261021.md)为准，源码存在不等于生产已发布。
 
 ### File公开费用元数据（2026-10-21）
 
@@ -1322,7 +1345,7 @@ TypeScript runtime 核对账号／Task、输入类型和版本、输出授权及
 
 独立脚本认证器新增可选 `certification.receipt_protocol: "bounded_zlib_v1"`。当前来源及独立输入均须通过明文／压缩完整回执一致性校验。Runtime 只在 `compactContext:true` 与该认证标记同时成立时使用 `script_motif_envelope`，`encoding: "zlib_base64_v1"`、base64 `payload` 和解码字节 `sha256`；字段集合严格校验，payload最多48,000字符、解码最多256,000字节，原stdout16,000字节上限不变。
 
-该信封只用于传输。解码后仍检查当前call、session授权、nonce、程序、输入版本和输出摘要；模型收到完整可读stdout，不能为了缩短上下文保留base64。旧明文回执仍支持；既有代码锁不得跳过，冻结库迁移须重新执行认证。显式cache及HTTP demand协议不变。不包含中间集合或关系学习，不产生语义质量证明。见[独立修复记录](experiments/script-receipt-transport-20261023-v1.md)。
+该信封只用于传输。解码后仍检查当前call、session授权、nonce、程序、输入版本和输出摘要；模型收到完整可读stdout，不能为了缩短上下文保留base64。旧明文回执仍支持；既有代码锁不得跳过，冻结库迁移须重新执行认证。显式cache及HTTP demand协议不变。不包含中间集合或关系学习，不产生语义质量证明。见[独立修复记录](debug/script-receipt-transport-20261023-v1.md)。
 # 参数化程序与复用形式外环（实验入口）
 
 `source_program_compiler.py`输出 `parameterized_source_program_v1` 与 `source_program_library_v1`。模板只有一个JSON参数插入点；程序身份覆盖语言、模板和参数schema，另存正常模型调用及来源渲染证据。`source_program_runtime.ts`是实例化和任务开始时策略解析入口；MCP复用现有场景的沙箱/写入/渲染，不执行任意模板求值，也不返回旧产物。此实验的MCP桥接仍依赖Python。
@@ -1353,7 +1376,7 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 
 旧 Source 场景新增 `FrozenSourceLibrary`：一次读取并验证任务库字节，后续 catalog/materialize 使用同一字节，runner 保存私有 `source-library.frozen.json`，通过 `REMOTION_SOURCE_LIBRARY_SHA256` / `REMOTION_SOURCE_LIBRARY_DIGEST` 绑定子进程。bridge 保留旧 `library` 路径参数，并支持冻结字节及期望版本；库限制为4 MB且拒绝重复program ID；返回 library 原字节 SHA、原生 digest、program identity 和 certificate digest。`phase=materialized` 只表示源码实例化；场景完成写入/渲染并核对 source_version 后才返回 `source_program_render_receipt_v1`，关联调用 ID、源码及视频摘要。失败留审计，不能生成成功回执。此旧路径已由后述Source Capability adapter接入新内核；其他后端仍待接入。
 
-效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](efficiency-rsi-evaluation.md)。
+效率研究使用独立 `efficiency_rsi_study_v1`，不改旧优化器的发布门槛。`scripts/measure-efficiency-rsi.py --study STUDY --observations OBS --registry REGISTRY --evidence-root ROOT` 读取可信 runner/评估者导出；冻结矩阵、尝试库存和账本请求全集必须完整。基线失败候选成功报告可达性观察，不虚构省费；未知费用为 null，执行预算和全组构造/认证分摊成本分别报告。完整字段、信任边界与 CLI 见[评价协议](research/rsi/efficiency-rsi-evaluation.md)。
 
 当前 registry 为 `efficiency_rsi_registry_v2`，报告为 `efficiency_rsi_measurement_v2`；旧 registry v1 不能直接用于新口径。`StudyRequestRegistry(plan, journal, create=True)` 由宿主在执行前登记 owner，`CumulativeProposalGate(..., study_registry=registry)` 在真实 booking 边界持久绑定 request→attempt/overhead；`export(provider_request_refs)` 对照独立完整请求库存导出。只读 CLI 为 `scripts/export-efficiency-rsi-registry.py`。此接线为可选研究接口，其他 runner 未自动接入。全 cell 支出判预算，双方首成功获取成本算条件节省；无界/未知/未关闭结果只保留质量观察，不计有限预算能力增益。十进制金额边界与精确字符串、原账本保留及故障边界见上述协议。
 
@@ -1371,7 +1394,7 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 
 ## Capability 离线改进流程（2026-11-02）
 
-共同流程由 `src/adapters/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
+共同流程由 `src/adapters/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](research/capability/capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
 
 Store新增`constructionLibrary(seed)`：读取并核验提交历史，保留原语和已发布根，输出`capability_construction_library_v1`及共用Capability Snapshot。完整证据验证失败则拒绝；新候选不能靠模型自报认证进入目录。每个新机会重新读取，修复链内冻结目录。新记录只用于实验改进流程，不伪装成旧`reuse_form`协议或授予生产权限。
 
@@ -1381,12 +1404,12 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 
 ### 模型侧精简构造接口
 
-`capability_compose_draft_v1`由宿主固定版本：模型提交`steps:[{id,use,args}]`及`output`；无预设接口时另提交`contract`。use是冻结目录别名，普通对象/数组及`$input/$step/$literal`编码数据流。宿主展开为原`capability_compose_proposal_v1`后复用原编译/执行/认证，旧完整proposal仍可校验。别名映射与格式纳入修复上下文检查；诊断携带展开proposal坐标和通过的检查。离线重放入口与语法见[共同协议](capability-improvement-v1.md)。
+`capability_compose_draft_v1`由宿主固定版本：模型提交`steps:[{id,use,args}]`及`output`；无预设接口时另提交`contract`。use是冻结目录别名，普通对象/数组及`$input/$step/$literal`编码数据流。宿主展开为原`capability_compose_proposal_v1`后复用原编译/执行/认证，旧完整proposal仍可校验。别名映射与格式纳入修复上下文检查；诊断携带展开proposal坐标和通过的检查。离线重放入口与语法见[共同协议](research/capability/capability-improvement-v1.md)。
 
 
 ### 正常记录、反馈与执行选择（2026-11-02续）
 
-`capability_improvement_plan_v1`新增可选`discovery`和`feedback_directory`，jobs允许为空但须提供discovery；job可携带`source_evidence/feedback_key/execution_scope`。Source适配器复用旧源码见证采集，或消费带独立QA绑定的Capability execute轨迹；生成job进入原控制器。schema与字段示例见[共同协议](capability-improvement-v1.md)。
+`capability_improvement_plan_v1`新增可选`discovery`和`feedback_directory`，jobs允许为空但须提供discovery；job可携带`source_evidence/feedback_key/execution_scope`。Source适配器复用旧源码见证采集，或消费带独立QA绑定的Capability execute轨迹；生成job进入原控制器。schema与字段示例见[共同协议](research/capability/capability-improvement-v1.md)。
 
 `CapabilityFeedback`持久化执行/构造/尝试证据，向Builder提供稳定别名下的展示顺序，向宿主已准入的执行候选提供排序，并影响机会准入与队列；未知收益/费用仍为null。withdraw传递过滤依赖闭包且保存恢复清单，archive只退出执行入口，恢复需新任务独立验证。
 
@@ -1399,7 +1422,7 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 
 共同发现器改为接收可信inspector，不枚举固定场景kind；相同输入失败/成功记录都保留，支持数按不同输入计。发布失败的repairable由宿主场景给出，不在核心扩充场景错误码。`completeCapabilityCycle`共用真实执行、严格Store发布、不同任务/输入/真实路径后继验证；`publicationVerdict`分离QA传输绑定与严格发布字段，未知字段不丢弃。
 
-构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。模型不能直接安装原语；宿主可显式配置下述学习路由。接口、样例和当前边界见[跨场景协议](capability-scenes-v1.md)。
+构造draft增加可选终止形式`{"defer":{"reason":"missing_primitive","requirement":"..."}}`，另支持incompatible_contracts/insufficient_evidence；保存缺口和费用，停止修复，相同目录/证据暂缓，新认证目录可重新尝试。模型不能直接安装原语；宿主可显式配置下述学习路由。接口、样例和当前边界见[跨场景协议](research/capability/capability-scenes-v1.md)。
 
 ### 原生材料登记与执行轨迹投影（2026-11-02续）
 
@@ -1413,7 +1436,7 @@ Source独立检查器新增宿主固定的`outputs[].result_path`，支持嵌套
 
 新增`script_motif` legacy_ref backend，由`buildScriptCapabilities(path,owner,expectedSha256?)`经原生loader核验库、身份和证书。`runScriptCapability`使用可信`script_capability_task_v1`，沿原沙箱执行，返回绑定native receipt的`script_capability_trace_v1`。公共材料登记支持该后端。raw bytes的旧`mapLegacyLibrary`仍只映射Source/Artifact；Script应使用原生路径入口核验执行版本。
 
-论文场景共享公共改进控制器和发布生命周期。计划、输入/输出、获取路由及限制见[场景协议](capability-scenes-v1.md#论文-script-接入2026-11-02续)。旧认证编译哈希改为来源记录，执行版本可按仓库精确白名单兼容；不改旧证书、不开放未知执行版本。
+论文场景共享公共改进控制器和发布生命周期。计划、输入/输出、获取路由及限制见[场景协议](research/capability/capability-scenes-v1.md#论文-script-接入2026-11-02续)。旧认证编译哈希改为来源记录，执行版本可按仓库精确白名单兼容；不改旧证书、不开放未知执行版本。
 ## 视频网页发布程序接口（2026-11-02）
 
 video_program_v1 通过原 source-program runtime 加载已接受的发布形式。两侧按实际 mode 派生工具表并核对完整 schema；Baseline 清空 Motif 环境变量，execute 侧加载类型化程序。video_program_reused 是已核对当前交付的审计事件，前端 program_reuses 与 verified_skips 分开。部署字段及边界见[视频双路记录](experiments/video-paired-motif-20261102.md)。
@@ -1457,7 +1480,7 @@ Frontier 作者新增 `{program,composition}`，其中 composition 沿用 `{step
 
 `source_callable_interfaces` 对精确 Script JSON ABI 展示领域对象参数/返回值，宿主恢复原生 `value` 包装，完整原契约和映射保存在审计记录。组合能力自身的业务 `value` 字段不剥离。新研究 `creation_value_v1` 使用同一 `source_primary_v1` 作者视图：模型只见语义接口，完整版本、原生包装和证据仍留在 `authoring-context-audit.json`；旧 JSON、旧作者视图和完整普通程序入口保留。C说明卡只提供信息，只有目录中的alias能调用。
 
-新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](recursive-efficiency-protocol-v2.md)。
+新 helper 的训练输入由所选已认证前缀在两份构造任务上真实执行得到，不使用最终验收数据。worker失败的有界异常类型/模块行号写入私有 `failure.json`；只在调用、参数哈希及数组绑定证据精确匹配时进入原修复流程。原错误回执、证书与权限含义不变。运行时仅在一次执行内缓存已验证解析结果，每次守卫仍核验实际库/注册表字节、权限、输入与执行版本。工程提速与创造价值分别验证，见[新对照协议](research/evolution/recursive-efficiency-protocol-v2.md)。
 
 ### 能力更新后的机会重新评价（2026-11-03，默认关闭）
 
@@ -1474,7 +1497,7 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 单次Harness提案须由研究宿主提供有限预算gate；可通过`opportunity_gate_factory`在该次提案期间持有原账本锁，或在同一研究gate内提供`opportunity_gate`。缺失时不调用模型。原平台null、累计账本与正常任务授权不变；当前不生成节余信用。
 
-私有账本保留`claim/request/response/decisions/result`及每次构造outcome。预期依赖和编译依赖不等于实际调用；只有绑定当前候选的Runtime trace可填actual_dependencies，缺失为null。真实任务证据的零模型重放入口为`examples/capability-scenes/replay-opportunities.py`，固定旧提案/算法不能作为自主目标发现或创造效率收益证据。详细设计及验收见[协议](capability-aware-opportunities-v1.md)。
+私有账本保留`claim/request/response/decisions/result`及每次构造outcome。预期依赖和编译依赖不等于实际调用；只有绑定当前候选的Runtime trace可填actual_dependencies，缺失为null。真实任务证据的零模型重放入口为`examples/capability-scenes/replay-opportunities.py`，固定旧提案/算法不能作为自主目标发现或创造效率收益证据。详细设计及验收见[协议](research/capability/capability-aware-opportunities-v1.md)。
 
 ### 公共构造与原生材料接线（2026-11-03续）
 
@@ -1492,7 +1515,7 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 
 ### 网页大文件传输（2026-11-03）
-`POST /api/harless/uploads?action=begin|chunk|complete|abort&session=...` 是已登录所属会话的分块传输接口。begin 提交名称/总字节并取得随机上传 ID；chunk 携 ID/offset 顺序提交最多 8 MiB，完全相同的最近块可幂等重放；complete 要求收到声明全部字节并调用原生 fileUploads.uploadStream，返回原生 `{ok:true,value:{receiptId,file}}`；abort 只清理该会话的上传。仍校验来源、会话归属、长度和取消；不接受私有对照子会话。完整容量规则见 [upload-rules](upload-rules.md)。
+`POST /api/harless/uploads?action=begin|chunk|complete|abort&session=...` 是已登录所属会话的分块传输接口。begin 提交名称/总字节并取得随机上传 ID；chunk 携 ID/offset 顺序提交最多 8 MiB，完全相同的最近块可幂等重放；complete 要求收到声明全部字节并调用原生 fileUploads.uploadStream，返回原生 `{ok:true,value:{receiptId,file}}`；abort 只清理该会话的上传。仍校验来源、会话归属、长度和取消；不接受私有对照子会话。完整容量规则见 [upload-rules](product/web/upload-rules.md)。
 ## 构造经历与做法重新选择（2026-11-03）
 
 离线`capability_improvement_plan_v1`可选：
@@ -1514,6 +1537,22 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 启用上下文时，模型可返回`{"strategy":{"approach":"简述做法","reason":"依据","uses":["c1"]},"proposal":原支持提案}`。宿主编码精确依赖并剥离策略元数据后交原编译器。旧提案仍可解析；`strategy.json`只代表声明，实际依赖与策略增益保持未知，须看Runtime回执和独立效果比较。历史alias属于旧snapshot，同时展示当前对应alias，失效引用为null。
 
 历史只读索引入口：`node scripts/project.mjs python scripts/inspect-capability-construction.py --manifest <host-manifest.json> --output .local/<new-directory>`。manifest含`goal_id/task`和`attempts`，每项包含原`directory`、snapshot字节引用和可选独立`verification`结果字节引用。输出目录必须全新，不写旧尝试；缺少原请求或验证证据时保留未知。
+## Evidence-Grounded Evolution Agent（2026-11-04）
+
+离线研究入口：`node scripts/project.mjs python scripts/run-evolution-agent.py --manifest <private.json> --output <new-.local-directory>`。默认只预检；`--call-model --budget-usd 3 --max-requests 1` 显式执行一个提案请求。复用原累计账本，不修改在线 Runtime。
+
+manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / acceptance / ledger_root`。除 scope 和 ledger_root 外，snapshot、prior_candidate、acceptance 是既有 `{path,sha256}` 证据引用，training/heldout 是引用列表；acceptance 沿用 `validate-recursive-paper-candidate.py` 的原独立验证配置。不是新的 Registry 或执行 IR。
+
+`capability_evolution_agent.packet` 从可信 inspector 的事实按 scope、阶段、关系与能力版本确定性聚合。内置 `inspect_graph` 校验真实调用回执与文件版本；非文件后端由宿主提供相应 inspector，不能提交模型编写的摘要冒充事实。`role=builder` 的真实图使用同一入口。完整索引留在私有目录；最多6条代表记录、默认30,000 UTF-8字节上限，未虚报为模型 tokenizer 精确上限。
+
+`run(..., enabled=False)` 默认不读取或执行。启用后重建证据包，使用固定 Prompt 和原 `propose_json` 传输；外发仅匿名接口/调用结构，保留调用编号的本地反向映射。运行层级与已有容器覆盖信息显式提供，不把 Runtime 节点数当作模型决策数。
+
+候选最多2个，字段为 `kind / burden / evidence_ids / scope / expected_behavior / verification / failure_conditions / proposal`。verification/failure_conditions 可为非空文字或非空文字列表；没有认证权限。空列表是 `no_change`。boundary 的 proposal 是 `{regions:{task_id:[call_id,...]}}`，只接受观察到的连续区域。模型仅使用匿名训练任务标识，不得选择留出输入或验收标准。
+
+`boundary_handler` 接原 `evolve_abstraction`，宿主提供独立留出区域及原认证回调。论文 CLI 以冻结的“能力序列唯一匹配”规则从留出图定位区域，歧义即拒绝；支持的候选走原 Store 与 followup。`construction_handler` 要求宿主独立 admit，返回既有 job 与验收计划，再交原 `run_improvement`。未配置宿主或不可表达的策略保留 pending，不把文本建议直接写进生产执行策略。
+
+费用、修复、失败与无改进保留，`measured_net_benefit` 默认 null。正向机制诊断不等于真实模型改进；当前结果见[实验](experiments/evidence-evolution-20261104.md)。
+
 
 ## GeneLoop Desktop 接入（2026-11-03）
 
@@ -1551,3 +1590,77 @@ Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使
 所有六场景共用 `local_document_pin(path)` / `local_document_read(source_id,page)`，凭证绑定当前会话和来源 SHA-256。新增 `local_data_inspect` / `local_data_analyze`、`local_files_export`、`local_paper_audit_sources`、`local_ppt_edit_template`。工具目录见 [桌面说明](desktop.md#preview12-跨平台场景工具)。表格只使用显式单元格，不执行工作簿公式；CSV 副本对公式样文字加前导单引号，并在回执记录数量，统计仍使用原值。文件整理仅创建 ZIP 副本；原件不移动或删除。
 
 模型授权仍使用原 `/lease`，响应新增 `toolsetVersion:2`，账号、计量、撤回和超时协议不变。新版客户端连接未声明版本的旧网关时，仅注册 preview.11 的工具集，保留旧功能并说明新增能力需要更新网关；不把新名称发给旧网关导致所有对话被拒绝，也不自动切换云端执行。客户端和网关共用 `localSceneTools` 目录，旧 Motif 证书不会因此自动获得新工具权限。
+
+## 条件化策略演化（2026-11-04）
+
+版本策略、宿主独立准入、语义证据、单次Evolution与Builder继承见[接口](research/evolution/strategy-evolution-v1.md)，树状实施顺序见[计划](changes/strategy-evolution-20261104.md)。均需显式研究配置。
+
+### 分层自主调查与同条件benchmark（2026-11-05）
+
+`capability_investigation.Investigation`提供overview/search/read/note，按需读取当前能力、真实经历及构造反馈。`capability_evolution_investigation.run_investigation`向原Harness注册提交与结束工具，候选仍由原策略、Script认证、Motif学习及Store流程处理。下一代continuation保留能力快照、经历及构造反馈的原FileRef，调查费用按研究范围记录。
+
+`node scripts/project.mjs python scripts/run-evolution-benchmark.py --help`提供trial、geneloop及skill-infinity三种隔离入口。真实调用需`--call-model`，费用沿原`--ledger-root`累计。根目录、公开来源版本、任务划分和输出目录必须显式提供。`--prewarm-dependencies`仅对精确匹配的原评分脚本准备公共依赖，时长和版本另存，原评分脚本及限时保留。论文复现差异见[基线记录](debug/skill-infinity-reproduction-20261105.md)。
+
+`--validation-split TASK=test`可将一个官方变体用于验证，最终题仍须保留未观察输入。`dataset_split`记录原数据划分，`evaluation_role`记录本次用途，输入内容摘要用于识别重复。历史观察不能重新标成独立最终评测。
+
+原生材料后端提供`evolution_example_files`分页查询可用于认证的执行前文件，返回合法文件ID、相对路径和来源观察，不默认发送文件正文。候选的格式、来源与权限预检通过后才计入实际候选构造次数。原始证据继续通过`evolution_read`按需读取。
+
+`evolution_submit`可用`repair_of`指向此前真实构造失败的提交，保留原scope及观察集合。单轮最多两个独立候选，每个候选累计最多两次真实修订，分叉引用不重置次数。格式或来源预检失败保留诊断，实际构造及每次修订均沿原认证和费用归属记录。
+
+任务工具`capability_call.input_binding`沿用原Binding，将前次真实调用结果传入后继能力。可选`export_result={path:[结果字段],container_path:绝对容器路径}`把结果直接交付当前任务文件并返回摘要，普通调用继续返回结果。文件交接失败单独记录，保留原Runtime执行状态与参数流。见[交接记录](debug/benchmark-capability-result-export-20261105.md)。
+
+跨代学习逐条按原快照检查真实轨迹，再以实际执行的能力和递归依赖版本形成学习输入。无关能力新增不会拆散同版本图，发布前仍按当前catalog独立重核。原快照和回执完整保留。原生认证拒绝的行列、短片段及诊断FileRef会返回同轮调查，原文件可按需读取，见[闭包诊断](debug/recursive-snapshot-closure-20261105.md)。
+
+原评分器退出码1与官方0分同时出现时，只有完整原CTRF证实调用阶段质量断言失败，才记录`quality_rejected`并继续优化。环境失败、超时及不完整报告仍保留未知评分，原退出码和评分日志可追溯。
+
+模型任务结束后先冻结产物，再注入原评分器。超时保留部分产物和实际费用。真实能力调用轨迹可进入原Motif学习器及Store，后继行为与净收益需按实际结果判断。当前boundary与construction-strategy的benchmark宿主仍待接通，生产默认关闭。实施及失败记录见[今晚记录](debug/evolution-overnight-20261105.md)。
+
+## 匿名双栏展示与审计绑定（2026-11-04）
+
+`/api/harless/comparisons` 在 paired 结果中新增 `display_order`，为 `baseline`、`motif` 的一次随机排列。服务器在本轮准入时保存排列，GET、SSE、重试与重启恢复沿用同一值；旧记录首次读取其 store 时补齐并持久化。single 的排列为 `['baseline']`。
+
+网页按该排列展示，结果卡片仅显示状态和原始结果；评分、赞踩、复制、下载、分支及轨迹选择使用匿名位置，提交时仍绑定原 lane 和 `output_sha256`。后台原任务与 lane 键继续保存；新增评分/赞踩事件含 `display_order` 和从 1 起计的 `display_position`。排序不参与模型输入、执行准入、预算与任务调度。
+
+结果卡片隐藏方法名称、机制计数和回退标识。原始模型正文、工具内容和交付文件保留，开发 API 也保留真实字段；此接口提供产品界面的匿名比较，证据和版本归属仍可追查。
+
+## 离线语义质量反馈与Evolution调查
+
+`rsi_quality.review_quality`接受宿主固定的任务、工件、评分标准与来源FileRef，通过宿主提供的`call_judge`调用原模型和账本，生成已有`quality_evaluation`协议记录。模型只填写检查结果、观察与已提供的证据ID，任务、工件和标准摘要由宿主绑定。请求、原回复及失败保存到研究目录，不授予能力认证。真实裁判仍须独立校准。
+
+`record_web_decision`和`record_construction_decision`新增可选`quality_review`。该对象包含`evaluation`、`rubric`、`artifact`、`required_checks`、`evidence_root`及`role`。前三项为FileRef；artifact必须属于原始任务或构造证据。role为`discovery`或`evaluation`。旧记录不提供该字段时，原行为保留，缺失质量仍为未知或未评审。
+
+`inspect_decision`复核原RSI质量记录及来源字节，保留执行status与独立quality的区别，提供逐项`quality_findings`和按需原始证据引用。评价记录不声明语义判断必然正确。
+
+原`evolution_search`新增quality过滤，原`evolution_read`新增`section="quality"`的分页检查结果和来源ID。只有主动读取才返回局部发现与原文；默认概览仍为统计。标为evaluation的经历不能进入原Investigation或单轮packet的发现输入。旧策略CLI沿原inspect_decision接收这些反馈，无新增Registry、IR或Agent循环。
+
+## Evolution修订3离线调查（2026-11-05）
+
+- `Investigation(..., sealed_evidence=(), development_evidence=())`沿原证据视图增加宿主冻结的排除范围。`expose_development()`仅供可信宿主更新开发暴露，封存摘要、索引和原件仍排除。
+- `run_investigation`沿原Harness接入有限工具/期限、显式局部范围、完成no_change重访及原件/笔记检查。原调用默认兼容，生产接管与候选认证沿旧入口。
+- `compare_research_outcomes`读取预冻FileRef策略，分别返回effect与研究发布建议。实际认证及生产默认版本沿旧权限，未知保持pending。
+- 首轮论文历史入口为`scripts/run-paper-evolution.py`。Linux加载原私有环境后传入`--history`、`--policy`、`--output`、原`--ledger-root`、`--max-tool-calls 100 --timeout-seconds 5400`，真实调用使用`--call-model`。有效配置冻结源码、能力、策略、评价任务摘要及数据角色，费用/请求null沿原账本。
+- 当前真实调查Prompt位于`src/adapters/capability_evolution_investigation.py`的`SYSTEM`及request构造处；每轮`agent/request.json`保留完整实际文本与工具。用户选择沿现有代码形式讨论。
+
+完整语义见[通用协议](evolution-context-protocol.md)，实际候选、失败、费用及接收器边界见[真实实验](experiments/paper-evolution-20261105-001.md)。
+
+### 调查完成语义补充
+
+`completion_scope=investigation_only`与`investigation_decision`明确调查结束维度。`candidate_counts`分别统计尝试、schema/证据通过、宿主评价已启动、pending和拒绝。只有非法尝试时默认inconclusive；合法候选的独立验收失败仍保留失败，调查结束不授予认证或后继采用。局部模式来源工具说明按单来源生成，家族模式沿两独立来源检查。
+
+### 组合输入与后继连续性
+
+`src/adapters/evolution_cycle.py::run_evolution_cycle(investigation, call_agent=..., handlers=..., output=..., limits=..., followup_evaluator=None, load_current_capabilities=None, prior_results=())`是场景无关的薄编排。它沿原`run_investigation`接收候选结果，调用宿主后继评价，并将回调返回的entries、inspector、history和可选snapshot合入原调查。公共层不定义具体工具、benchmark、质量分数或产物后端。场景回调不能覆盖原调查status/submissions/identity，失败保留cycle-error及原调查证据。
+
+`accumulate_evolution_feedback`复用同一个反馈完成阶段，可在新目录中以原始调查结果FileRef恢复G5，不再调用模型或任务。原status与investigation_identity必须匹配，不能将原inconclusive改写为成功。开发暴露操作幂等；BenchmarkHost索引捕获时的不可变日志副本，晚到的请求结算留在原追加日志中，不改变已登记摘要。捕获点和源路径由独立索引保留，捕获时未知费用仍保持未知。
+
+现用pytest-json-ctrf0.3.5可能省略raw_status、合并参数化用例名称。对于已完成pytest退出1、reward为零或部分分且报告有明确AssertionError的情况，沿原独立检查识别质量拒绝；setup/import/不完整报告继续unknown。该修正不改变题目、gold或成功要求，旧实验状态不原地改写。
+
+Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责经历解析、实际receivers、论文评分及后继评价。`scripts/run-paper-evolution.py`仅负责配置/启动；`--investigation-history`可追加宿主已经批准的原研究证据FileRef，实际清单写入effective.json。其它场景复用同一cycle，不复制Paper main中的生命周期。
+
+论文历史入口的 `--evolution-input-manifest` 为可选 Builder 输入，普通执行经历可独立调查。`--require-builder-evidence` 仅用于额外要求 C/Builder 材料的专项输入检查。当前入口的 receiver 仍为 `task_strategy`，有效配置固定 `experiment_scope=task_strategy_pilot`，Creation Efficiency 等待真实 Builder 评价器。
+
+`Investigation.continue_with(directory, entries=(), inspector=None, snapshot=None, history=(), expose_evaluation=False)`沿同一调查器保留旧经历及其 inspector、能力目录、笔记和历史，再追加新证据。默认保留旧 snapshot；显式更新必须同 owner 并保留旧经历引用版本。开发材料的已暴露状态继续保留；消费最终评价后须显式暴露该角色，`transition.json`记下数据角色转移及需要新独立评价材料。
+
+`BenchmarkHost(..., owner='overnight-research')`允许调用方从创建时绑定同一研究owner，旧记录不改写。`review_skill`可选 `behavior_expectation`，使用既有独立review工具按需读配对动作。接受行为变化时必须引用两侧已经读取的宿主动作证据；输出 `verified_behavior_evidence`，质量仍走原oracle。此评审是有来源的模型判断，语义校准与因果归因另外验证。论文试验冻结300秒/64次读取，费用及请求沿原无限额账本。
+
+后继候选选择冻结为通过独立质量及行为检查、符合原质量/费用政策后，按质量降序、任务模型成本升序和策略摘要确定顺序。neutral、negative、unknown不改默认选择。选择只用于隔离后继，完整研究成本与正式发布仍分别判断。

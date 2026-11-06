@@ -32,7 +32,7 @@ RELEASES = [
      'scenarios/paper_proofreading/document-read-contracts.json'),
     ('ppt-master-v11', 'ppt-master-v12', 'ppt', 'scenarios/ppt_master/contracts.json'),
 ]
-VALIDATION_RECORD = 'docs/experiments/file-ppt-integration-20261019.md'
+VALIDATION_RECORD = 'docs/debug/file-ppt-integration-20261019.md'
 
 
 def write(path, value):

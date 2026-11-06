@@ -1,14 +1,22 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+文档分类与入口见 [docs/README.md](docs/README.md)。
+
+Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
+
+2026-11-04，新增默认关闭的 [Evidence-Grounded Evolution Agent 离线原型](docs/research/evolution/evidence-grounded-evolution-agent.md)：单个跨任务证据包、一次有界模型提案，复用原边界学习与宿主构造/认证入口。运行 `node scripts/project.mjs python scripts/run-evolution-agent.py --help`。两轮真实提案最终为 `no_change`，未产生新认证能力或收益；上下文、失败和费用见[实验记录](docs/experiments/evidence-evolution-20261104.md)。
+
+2026-11-04，新增默认关闭的 [Recursive Abstraction Evolution 研究机制](docs/rae-implementation.md)：真实 Capability 调用可进入原 Motif 学习器，学出的后代仍经原 Store 独立验收；反馈可改变下一轮抽象边界，Builder 的实际解析/绑定轨迹可走同一流程。`npm run rsi:rae:check` 保留机制执行证据，`npm run rsi:rae:learn -- --help` 查看离线入口。当前验收为确定性任务上的实际执行闭环，不等于真实模型自主创造或持续收益；生产路径不变。
+
 PPT新增公共RSI接线。合格单路轨迹与原生认证页面程序自动进入账户材料池，宿主显式配置公共计划后复用Builder、独立验证、Store发布及后继目录。真实模型候选已完成发布、换输入执行与原`create_ppt_page`→`finalize_ppt`交付，学习1请求约USD0.00091104，后继执行新增模型请求0。科研质量、额外净降本和生产部署继续独立验收。配置、失败与恢复见[本轮记录](docs/experiments/ppt-public-rsi-20261104.md)。
 
-GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
+GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件和交互，参考网页视觉与六类场景，复用服务器账号/API；Agent/工具仍在服务器执行。不打包DSH网页或网页插件。0.1.5顶部黑条修复版单独冻结作基线。源码、构建与验收边界见[桌面说明](docs/product/desktop/desktop.md)，当前证据见[桌面交接](docs/handoffs/desktop.md)。
 
-本机工作区 preview.13 继续复用 DSH Agent，接入原场景 MCP 的统计报告、论文证据、文件方案和 PPT 交付/修复流程，使用 QuickJS WASM 与原生 Office/媒体工具替换 Linux 底座。包含固定中英文 OCR 数据，不要求用户使用 WSL。工具诊断、真实模型与人工验收分别记录，见[桌面说明](docs/desktop.md#本机工作区-windows-预览)及[本轮记录](docs/experiments/desktop-preview13-full-tools-20261106.md)。
+本机工作区 preview.13 继续复用 DSH Agent，接入原场景 MCP 的统计报告、论文证据、文件方案和 PPT 交付/修复流程，使用 QuickJS WASM 与原生 Office/媒体工具替换 Linux 底座。包含固定中英文 OCR 数据，不要求用户使用 WSL。工具诊断、真实模型与人工验收分别记录，见[桌面说明](docs/product/desktop/desktop.md#本机工作区-windows-预览)及[本轮记录](docs/debug/desktop-preview13-full-tools-20261106.md)。
 
-离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
+离线构造新增默认关闭的[构造经历反馈与做法重新选择](docs/interfaces.md#构造经历与做法重新选择2026-11-03)：复用原Builder、费用记录和验证流程，研究入口可读取历史失败/成本并重新选择实现。开发范围见[计划](docs/research/evolution/creation-efficiency-development-plan.md)，[本轮真实验收](docs/experiments/creation-feedback-20261103.md)观察到合格D与主动选择扁平实现，没有新增C→D或效率增益结论。
 
-新增默认关闭的[能力变化后机会重新评价](docs/capability-aware-opportunities-v1.md)：独立发布成功后，结合仍未满足的真实需求提出候选，宿主提供冻结验收条件，再交原Builder。保留全部候选、筛选和结果，区分预期、编译与执行依赖。当前仅机制诊断，不包含节余再投资，不自动开启生产或付费探索。
+新增默认关闭的[能力变化后机会重新评价](docs/research/capability/capability-aware-opportunities-v1.md)：独立发布成功后，结合仍未满足的真实需求提出候选，宿主提供冻结验收条件，再交原Builder。保留全部候选、筛选和结果，区分预期、编译与执行依赖。当前仅机制诊断，不包含节余再投资，不自动开启生产或付费探索。
 
 2026-11-03公共机制续：`rsi:improve`的公共提案入口已接单源构造，原生Script学习、前缀取数与执行移入公共模块；场景提供宿主训练输入及独立发布验收。执行费用进入已有同范围选择，已撤回后继不再增加当前构造排序信用。接口见[公共接线](docs/interfaces.md#公共构造与原生材料接线2026-11-03续)。新增场景研究未启动，自动资源再投资与普遍有效性仍未证明，生产未改。
 
@@ -18,7 +26,7 @@ GeneLoop Desktop 0.2.40 提供独立桌面前端，自行实现布局、组件�
 
 2026-11-03，论文书目公共 Capability 完成首个受控真实验收：正常任务学习、缺口补材料、模型组合，经显式工程恢复后通过 27 条验证和 29 条后继，发布能力进入下一 Builder。尚未接管聊天或证明新增机制降本；范围、费用与失败见[真实记录](docs/experiments/paper-capability-real-20261102.md)。
 
-2026-11-02，离线 Capability 机制新增原生 Script 后端与论文盘点适配器，复用已有编译、沙箱及公共发布流程；旧库采用来源/执行分离和精确兼容白名单。入口见[场景协议](docs/capability-scenes-v1.md#论文-script-接入2026-11-02续)，[原生诊断记录](docs/experiments/efficiency-rsi-script-20261102.md)不作为新增模型或效率收益证据，默认聊天不接管。
+2026-11-02，离线 Capability 机制新增原生 Script 后端与论文盘点适配器，复用已有编译、沙箱及公共发布流程；旧库采用来源/执行分离和精确兼容白名单。入口见[场景协议](docs/research/capability/capability-scenes-v1.md#论文-script-接入2026-11-02续)，[原生诊断记录](docs/experiments/efficiency-rsi-script-20261102.md)不作为新增模型或效率收益证据，默认聊天不接管。
 
 PPT受管制作候选已接通字体校准、统一Office交付、版本化组件改页及正常页面自动参数化。两条正常轨迹产生的程序经认证后用于独立ResNet成品，来源漏记经单独副本复核；该题费用低18.92%，稳定同质降本仍待验证。服务器Python1807/最终Node1492通过，202/4跳过。24项真实API材料任务已启动，学习费用单列，当前验收范围见记录。见[结果、负例与成品位置](docs/experiments/ppt-managed-learning-20261104-results.md)。
 
@@ -26,43 +34,43 @@ PPT交付修复候选已加入字体/对比预检、自动输出目录、共同`
 
 此前PPT历史页面程序已接入原生 `create_ppt_page` 入口，并完成真实后继试执行。79 个历史页面进入隔离候选材料池，组件成功执行后因预览缺字和配色问题被模型弃用，最终手写重做。该次费用比普通组高 30.97%，成品层面的复用、降本与严格题面验收尚未通过，未部署。范围、负例与成品位置见[页面组件实验](docs/experiments/ppt-component-learning-20261103.md)。
 
-PPT候选现将完整原文展示与MCP版本回执分离，避免长输出提示使已认证读取边回退；真实长论文读取诊断完成两次已验证请求旁路，尚不代表完整PPT降费或正式上线。修复、测试及同伴RSI机制接入边界见[回执修复记录](docs/experiments/ppt-read-receipt-fix-20261103.md)。
+PPT候选现将完整原文展示与MCP版本回执分离，避免长输出提示使已认证读取边回退；真实长论文读取诊断完成两次已验证请求旁路，尚不代表完整PPT降费或正式上线。修复、测试及同伴RSI机制接入边界见[回执修复记录](docs/debug/ppt-read-receipt-fix-20261103.md)。
 
 PPT 真实任务的账户内学习新增共享质量证据与独立程序复用接线：正常单路通过宿主不可变成品receipt自动准入，学习/认证/后续试用不依赖配对降费证据；复用已有 Artifact 编译/沙箱认证器，后续质量与完整费用另行评估，无明确科研/视觉评审时保持未知。新附件改稿优先继承 PPTX/PDF，避免预览 PNG 挤掉原稿。当前验证和未部署边界见[接线记录](docs/experiments/ppt-rsi-reuse-integration-20261102.md)及[单路准入与12题重启](docs/experiments/ppt-single-12tasks-20261103.md)。旧版12题生成已结束，费用下降与质量未完成的边界见[汇报分析](docs/experiments/ppt-real-12tasks-20261102-analysis.md)。
 
 新增[RSI 共享质量证据与复用形式整合](docs/experiments/rsi-meta-overnight-20261030.md)：F02 统一记录任务/产物/评价标准和逐项证据，视频形式更新复用共同版本核验与发布回执。Python/TypeScript 都能核对新记录；视频帧/音频检查仍由场景提供。已完成一次真实发布、后继TS加载和下一学习/认证/反思；六对限定质量通过任务44→33请求、前向代理估费降约21%，后继两题仍有基线质量失败与候选重渲染开销，未证明持续净收益。完整证据与边界见实验记录，未部署正式服务。
-2026-11-02：已合并服务器运行版本与 GitHub main，并新增网页 `/video` 视频剪辑入口；每条视频任务需选择该场景，不带场景命令的消息仍按普通 Chat 执行。实现与验收范围见 [视频场景集成记录](docs/experiments/video-web-integration-20261101.md)。视频已接入原实验中通过发布校验的程序库，恢复 Baseline / Motif 双路执行；本轮部署与验收见[视频双路记录](docs/experiments/video-paired-motif-20261102.md)。
+2026-11-02：已合并服务器运行版本与 GitHub main，并新增网页 `/video` 视频剪辑入口；每条视频任务需选择该场景，不带场景命令的消息仍按普通 Chat 执行。实现与验收范围见 [视频场景集成记录](docs/debug/video-web-integration-20261101.md)。视频已接入原实验中通过发布校验的程序库，恢复 Baseline / Motif 双路执行；本轮部署与验收见[视频双路记录](docs/experiments/video-paired-motif-20261102.md)。
 
 
 新增[视频程序复用与复用形式RSI实验](scenarios/remotion_edit/structured/README.md)：从正常视频工具轨迹学习参数化TSX，并让目录/类型化工具、调用策略和下一轮编译方式进入可验证的外环。普通基线保留同样的源码写入与渲染融合能力；当前实现及实际效果边界见[实验记录](docs/experiments/remotion-program-rsi-20261030-v1.md)，尚未部署正式服务。
-F02 审核候选提供一个免费可运行的经验执行协议演示：`npm run rsi:demo` 展示两个任务目标共享局部计数，以及版本/权限/证据失效时停止；`npm run rsi:check` 检查 Python/TypeScript 一致性。先看[通俗说明与接口](docs/rsi-protocol-v1.md)。当前使用人工算子与合成数据，不代表自动学习、完整任务或降本验收。
+F02 审核候选提供一个免费可运行的经验执行协议演示：`npm run rsi:demo` 展示两个任务目标共享局部计数，以及版本/权限/证据失效时停止；`npm run rsi:check` 检查 Python/TypeScript 一致性。先看[通俗说明与接口](docs/research/rsi/rsi-protocol-v1.md)。当前使用人工算子与合成数据，不代表自动学习、完整任务或降本验收。
 
-新增[Capability离线改进协议](docs/capability-improvement-v1.md)与`npm run rsi:improve:source`：串联机会准入、构造/失败修复、独立发布和下一轮Builder目录更新，分别记录执行与构造贡献。默认预览；真实调用使用服务器原账本。机制接线、实际观察和效果pending分开记录，先完善机制，再接产品聊天入口；见[本轮记录](docs/experiments/efficiency-rsi-recursive-20261102.md)。 模型侧已改为精简draft，宿主补固定字段；支持具体错误定位和零模型[历史提案重放](docs/experiments/efficiency-rsi-authoring-replay-20261102.md)。
+新增[Capability离线改进协议](docs/research/capability/capability-improvement-v1.md)与`npm run rsi:improve:source`：串联机会准入、构造/失败修复、独立发布和下一轮Builder目录更新，分别记录执行与构造贡献。默认预览；真实调用使用服务器原账本。机制接线、实际观察和效果pending分开记录，先完善机制，再接产品聊天入口；见[本轮记录](docs/experiments/efficiency-rsi-recursive-20261102.md)。 模型侧已改为精简draft，宿主补固定字段；支持具体错误定位和零模型[历史提案重放](docs/debug/efficiency-rsi-authoring-replay-20261102.md)。
 
-Source记录到Capability机会、双价值反馈到后续选择现已接入离线控制器；新增`npm run rsi:select:source`连接现有TS执行与独立检查，默认预览。限定场景机制与效果待验证分别记录，见[协议](docs/capability-improvement-v1.md)。
+Source记录到Capability机会、双价值反馈到后续选择现已接入离线控制器；新增`npm run rsi:select:source`连接现有TS执行与独立检查，默认预览。限定场景机制与效果待验证分别记录，见[协议](docs/research/capability/capability-improvement-v1.md)。
 
-新增[跨场景Capability接入](docs/capability-scenes-v1.md)及`npm run rsi:improve`：Source特定逻辑已拆成适配器，公共发现/提案/反馈/发布生命周期可复用。另有非视频原生计数诊断；实际视频旧候选通过新流程重放，不把接口通用或合成诊断称为普遍有效。
+新增[跨场景Capability接入](docs/research/capability/capability-scenes-v1.md)及`npm run rsi:improve`：Source特定逻辑已拆成适配器，公共发现/提案/反馈/发布生命周期可复用。另有非视频原生计数诊断；实际视频旧候选通过新流程重放，不把接口通用或合成诊断称为普遍有效。
 
-共同控制器现支持原生材料登记后的机会重新评价；Source可显式配置既有学习/认证路由，并按原生库版本执行新叶节点。论文新增独立只读轨迹采集入口，旧认证工作器和库保留；论文Script/读取Motif到新Capability的适配仍待补齐。配置与边界见[材料与轨迹协议](docs/capability-scenes-v1.md#原生材料获取与重新评价2026-11-02续)。
+共同控制器现支持原生材料登记后的机会重新评价；Source可显式配置既有学习/认证路由，并按原生库版本执行新叶节点。论文新增独立只读轨迹采集入口，旧认证工作器和库保留；论文Script/读取Motif到新Capability的适配仍待补齐。配置与边界见[材料与轨迹协议](docs/research/capability/capability-scenes-v1.md#原生材料获取与重新评价2026-11-02续)。
 
-效率驱动 RSI 的开发入口为 `npm run rsi:efficiency:check`：检查固定版本能力契约、组合执行和全尝试评价。该入口只做免费诊断；研究方案、真实联调进度与限制见[当前交接](docs/handoffs/efficiency-rsi.md)，评价口径见[评价协议](docs/efficiency-rsi-evaluation.md)。新能力层尚未接管生产任务。
+效率驱动 RSI 的开发入口为 `npm run rsi:efficiency:check`：检查固定版本能力契约、组合执行和全尝试评价。该入口只做免费诊断；研究方案、真实联调进度与限制见[当前交接](docs/handoffs/efficiency-rsi.md)，评价口径见[评价协议](docs/research/rsi/efficiency-rsi-evaluation.md)。新能力层尚未接管生产任务。
 
 Capability 离线创建/编译也需安装 Node/npm 依赖：Python 复用 DSH 的 schema 校验入口，线上 TypeScript 不依赖 Python。当前已在Source视频实验中完成真实模型Compose提案、新Runtime实际渲染、独立检查、版本化保存及新任务复用；另通过实际取消检查。共1次模型请求，未做效率对照，未部署正式服务。见[首个闭环记录](docs/experiments/efficiency-rsi-source-loop-20261102.md)。
 
-`npm run rsi:optimize` 补充“值得改哪里、怎样启动、改后是否接受”的免费决策演示；[十来行结果与接入说明](docs/rsi-optimization-v1.md)区分预计收益、配对结果和实际总支出。真实任务评审器与修改生成器仍待后续模块接入。
+`npm run rsi:optimize` 补充“值得改哪里、怎样启动、改后是否接受”的免费决策演示；[十来行结果与接入说明](docs/research/rsi/rsi-optimization-v1.md)区分预计收益、配对结果和实际总支出。真实任务评审器与修改生成器仍待后续模块接入。
 
 新增独立的 Artifact Motif 实验：从真实任务中学到可换输入的 Python 计算／排版程序，经独立输入认证后，通过原生 Bash 复用并保留逐次回执。它仍是显式启用的实验入口，不替换正式服务或默认库；费用下降与反例一起记录。见[接口与复现](docs/interfaces.md#artifact-motif-独立实验接口2026-10-21)和[三场景成本学习](docs/experiments/three-scene-motif-cost-learning-20261021.md)。
 
-管理员可在“设置 → 账户与安全 → 邀请同学”生成一个统一邀请码：永久有效、可供多人重复注册，每个人仍设置自己的用户名和密码。明文仅生成时显示，请复制保存；更换需明确确认，旧共享码立即失效，已注册账号不受影响。旧批量单次邀请码保留在折叠选项中。实现与验证见[统一邀请码记录](docs/experiments/shared-invite-20261103.md)。
+管理员可在“设置 → 账户与安全 → 邀请同学”生成一个统一邀请码：永久有效、可供多人重复注册，每个人仍设置自己的用户名和密码。明文仅生成时显示，请复制保存；更换需明确确认，旧共享码立即失效，已注册账号不受影响。旧批量单次邀请码保留在折叠选项中。实现与验证见[统一邀请码记录](docs/debug/shared-invite-20261103.md)。
 
-正式DeepSeek Web已移除账号级并发数量上限，费用、请求次数和应用输出额度均为null，原账本继续累计。普通Chat、三场景及File转发使用393216输出容量，File独立SDK继承同一策略。2026-10-21当前后端运行7e167ed（Paper31/PPT28/File15），已统一发布并完成新一轮五成员、本机网关783次真实请求复测。公网旧Quick Tunnel失效，候选隧道已由统一入口准备且浏览器登录页正常，原Worker更新仍需维护者登录Cloudflare；不能把本机压力结果称为公网恢复。质量反例、费用、测试判据缺陷与未接入能力均见[本轮记录](docs/experiments/dsh-native-capabilities-20261021.md)；早期额度修复见[历史记录](docs/experiments/provider-output-20261020.md)。
+正式DeepSeek Web已移除账号级并发数量上限，费用、请求次数和应用输出额度均为null，原账本继续累计。普通Chat、三场景及File转发使用393216输出容量，File独立SDK继承同一策略。2026-10-21当前后端运行7e167ed（Paper31/PPT28/File15），已统一发布并完成新一轮五成员、本机网关783次真实请求复测。公网旧Quick Tunnel失效，候选隧道已由统一入口准备且浏览器登录页正常，原Worker更新仍需维护者登录Cloudflare；不能把本机压力结果称为公网恢复。质量反例、费用、测试判据缺陷与未接入能力均见[本轮记录](docs/debug/dsh-native-capabilities-20261021.md)；早期额度修复见[历史记录](docs/debug/provider-output-20261020.md)。
 
 
-**开发者与 AI 先阅读 [AGENTS.md](AGENTS.md)。正式网站统一使用 `npm run service -- start` 启动，私有计划由 `GENELOOP_SERVICE_CONFIG` 指定；不得另写发布启动脚本。** 状态检查、重启、发布与回退见 [统一启动与发布流程](docs/service-lifecycle.md)。公网使用同一入口的 `public-check`、`public-prepare`、`public-confirm` 单独核验和恢复，后端正常时保留正在执行的任务。本地开发仍用 `npm run web`。
+**开发者与 AI 先阅读 [AGENTS.md](AGENTS.md)。正式网站统一使用 `npm run service -- start` 启动，私有计划由 `GENELOOP_SERVICE_CONFIG` 指定；不得另写发布启动脚本。** 状态检查、重启、发布与回退见 [统一启动与发布流程](docs/operations/service-lifecycle.md)。公网使用同一入口的 `public-check`、`public-prepare`、`public-confirm` 单独核验和恢复，后端正常时保留正在执行的任务。本地开发仍用 `npm run web`。
 
 PPT 账户内结构学习现接入已启用PPT双路对照的真实聊天任务：后台从原始 Baseline 轨迹取两个独立训练任务和一个留出任务，经原编译器认证后，仅在后续任务试用；两个独立对照确实调用候选、交付检查通过且包含重试的费用下降，才自动保留。用户无需填写验收表，普通踩可停用候选。只学习已支持的来源固定→转换、转换→读取两条结构，不学习科研结论或任意生成代码；无明确人评时科研质量与人工时间仍未知。状态、证据和失败保留在账号私有目录；无合格候选回原库。该轮历史兼容库为 `ppt-master-v9` / `paper-web-v14`，生成技能仍为官方 ppt-master；当前版本以本页开头及本轮记录为准。部署条件、实现和真实验证边界见[接线记录](docs/experiments/ppt-user-learning-20261019.md)。
 
-普通Chat、Paper/PPT/Data现接入DSH原生读写/读图/搜索文件、Web搜索与读取、Bash后台任务、任务清单、可信skill、用户提问/计划批准、同任务子Agent、显式有限Goal、上下文摘要与present交付。图片由模型按需调用read_image，源码与成品均须真实返回像素，不以文字描述冒充查看。File是独立文件管理SDK场景，使用27个文件MCP工具与todo_write；它的看页工具同样向模型返回图片，但工具表和执行上下文不同，不假称具备主聊天全部原生工具。原生Workflow的共享宿主执行、无Task归属的Files缓存接口、File逐字delta尚未开放，详见[能力与限制](docs/experiments/dsh-native-capabilities-20261021.md)。
+普通Chat、Paper/PPT/Data现接入DSH原生读写/读图/搜索文件、Web搜索与读取、Bash后台任务、任务清单、可信skill、用户提问/计划批准、同任务子Agent、显式有限Goal、上下文摘要与present交付。图片由模型按需调用read_image，源码与成品均须真实返回像素，不以文字描述冒充查看。File是独立文件管理SDK场景，使用27个文件MCP工具与todo_write；它的看页工具同样向模型返回图片，但工具表和执行上下文不同，不假称具备主聊天全部原生工具。原生Workflow的共享宿主执行、无Task归属的Files缓存接口、File逐字delta尚未开放，详见[能力与限制](docs/debug/dsh-native-capabilities-20261021.md)。
 
 独立 Script Motif 实验现支持当前语义选择、文件参数自动绑定与认证片段连续执行；复用原生 Bash，不增加模型工具表。真实任务已发生两节点自动接管，但三轮仍**未证明稳定净降本或合格交付**。最新对照发现不同报告路径及大量失败恢复，不能将费用差归为纯 Motif 开销。配置见 [接口](docs/interfaces.md#script-motif-实验接口)，结果和全部失败见 [实验记录](docs/experiments/paper-script-frontier-20261019-v1.md)。早期实验保留独立记录，本轮恢复验证与 PR 状态见文末。 新增从真实失败轨迹编译 Negative Motif 的实验入口，支持从已审阅校验器自动编译字段失败条件，按“当前失败提示 → 重算条件 → 仍失败则局部早停”执行；无关字段和版本变化不再自动放行。现支持循环/分支内多种错误的数据与控制依赖、双向原因干预，真实历史的重复 ID 和枚举错误已认证；其他类型仅有局部诊断，见 [原因学习记录](docs/experiments/paper-negative-causes-20261019-v1.md)。随后已完成原论文真实三组重测与历史恢复：完整任务均未合格，负面机制仅在恢复中实际提示一次、未触发硬早停，尚未证明合格净降本；详见 [真实重测](docs/experiments/paper-negative-real-20261019-v1.md)。 后续对448次真实请求的 [费用与接管障碍 Breakdown](docs/experiments/paper-takeover-breakdown-20261019-v1.md) 确认当前仅一个两节点片段、后续普通匹配未进入，报告语义数据与搜索内部模型也未被接管；本次重放不作为新增省费成绩。
 
@@ -76,7 +84,7 @@ PPT 账户内结构学习现接入已启用PPT双路对照的真实聊天任务�
 
 提示型Negative也已接入同一私有RSI流程：真实失败→编译→模型生成/独立审核→发布→后继任务加载并实际收到提示。最终连续两次局部真实检查通过；修复了新增Positive算子却缺少Embedding配置时连带停用Negative的问题。自动库只有提示权限，默认关闭；同论文恢复和投递检查尚未证明净降本。全部失败、两次局部worker恢复及USD0.5192保守估费见[负面闭环验收](docs/experiments/paper-negative-rsi-20261021-v1.md)。
 
-同步新版DSH后，实验续接仅处理原生标记的Agent请求；提示规则可逐失败见证绑定精确的目标工具参数schema，新增无关工具不再使其失效。44工具环境下的局部真实检查已加载自动发布库并送达5次提示，未交付PDF或证明净降本；费用与取消记录见[兼容验证](docs/experiments/paper-rsi-main-compat-20261021-v1.md)。早停权限不变，未部署。
+同步新版DSH后，实验续接仅处理原生标记的Agent请求；提示规则可逐失败见证绑定精确的目标工具参数schema，新增无关工具不再使其失效。44工具环境下的局部真实检查已加载自动发布库并送达5次提示，未交付PDF或证明净降本；费用与取消记录见[兼容验证](docs/debug/paper-rsi-main-compat-20261021-v1.md)。早停权限不变，未部署。
 
 独立实验进一步支持默认关闭的Positive Motif描述学习：基于已认证代码与契约生成、独立审核并发布短描述，最终真实后继任务精确加载并执行；失败时保留适用的已审核描述，同证据不重复付费。脚本、契约和执行守卫保持不变。学习费用与更贵的运行全部计入，未证明该描述更新单独净降本，未部署；配置与限制见[描述更新实验](docs/experiments/paper-description-rsi-20261020-v1.md)。
 
@@ -84,17 +92,17 @@ PPT 账户内结构学习现接入已启用PPT双路对照的真实聊天任务�
 
 论文 Breakdown 的 [具体读写实例](docs/experiments/paper-operation-breakdown-20261019-v1.md) 现展示实际命令、工具参数、费用和复用边界。同一读取算子在另一真实多文件论文中，单主文件覆盖失败，绑定10个来源文件后覆盖一致；这仅为局部无模型检查，不是新端到端降费成绩。
 
-PPT/PPTX 输入现结合原生主题/母版/布局、字体颜色和对象位置声明，以及隔离渲染的逐页视觉观察。GeneLoop 可用上传 PPT 作为设计参考；沿用原生模板填新内容时使用 ppt-master 的 round-trip 编辑流程，原件保留。旧 PPT 可隔离转换为标准 PPTX；字体、媒体和复杂效果仍有保真边界。见[附件说明](docs/attachment-input-behavior.md#pptpptx-的视觉与风格输入)。兼容库更新为 `ppt-master-v6` / `paper-web-v11`，沿用原证据与结构，旧库保留。
+PPT/PPTX 输入现结合原生主题/母版/布局、字体颜色和对象位置声明，以及隔离渲染的逐页视觉观察。GeneLoop 可用上传 PPT 作为设计参考；沿用原生模板填新内容时使用 ppt-master 的 round-trip 编辑流程，原件保留。旧 PPT 可隔离转换为标准 PPTX；字体、媒体和复杂效果仍有保真边界。见[附件说明](docs/product/web/attachment-input-behavior.md#pptpptx-的视觉与风格输入)。兼容库更新为 `ppt-master-v6` / `paper-web-v11`，沿用原证据与结构，旧库保留。
 
-PDF 上传现已共用逐页文字读取、扫描页本地中英文 OCR、论文图片与矢量图的图文分析，适用于全部场景。图片分析使用 Flash，最终回复仍使用用户选择的模型；费用计入同一任务，原件、附件卡片和多轮继承保留。安装、覆盖与识别限制见[附件输入说明](docs/attachment-input-behavior.md)，真实五场景验收见[实验记录](docs/experiments/pdf-ocr-vision-20261018.md)。当前兼容库为 `ppt-master-v5` / `paper-web-v10`，原有结构和历史证据不变，旧库留存。
+PDF 上传现已共用逐页文字读取、扫描页本地中英文 OCR、论文图片与矢量图的图文分析，适用于全部场景。图片分析使用 Flash，最终回复仍使用用户选择的模型；费用计入同一任务，原件、附件卡片和多轮继承保留。安装、覆盖与识别限制见[附件输入说明](docs/product/web/attachment-input-behavior.md)，真实五场景验收见[实验记录](docs/debug/pdf-ocr-vision-20261018.md)。当前兼容库为 `ppt-master-v5` / `paper-web-v10`，原有结构和历史证据不变，旧库留存。
 
 GeneLoop 网页的 Chat、`/ppt`、`/data`、`/paper` 和已登记 Files 场景共用联网搜索、网页读取、Bash/Python/Node 执行及后台任务。模型按需求调用工具，过程沿用原生流式事件。正式运行依赖 Linux `bubblewrap`；命令只接触本会话上传文件和工作目录，账号密钥不传入命令环境。当前服务器未安装 PowerShell。接口与隔离约定见 [网页通用能力](docs/interfaces.md#网页通用能力)。
 
 真实 Web 的 Paper 完成普通任务后，会复用已保存的轨迹和 Python 编译器，在当前账号运行目录内自动编译、验证并发布下一版只读 Motif。至少需要两项不同的正常任务和一项固定留出任务；当前只支持文档固定版本后的第一页读取。下一任务冻结新版本，运行中和已确认任务保持原版；编译失败继续使用原库。编译不调用模型，不共享用户轨迹，不代表已证明净降本。入口与限制见 [Paper 自动学习接口](docs/interfaces.md#paper-自动学习接线)。
 
-网页使用独立的 GeneLoop 视觉样式，统一明暗主题、侧栏、聊天、菜单、设置、账户页、双栏结果与轨迹。用户已选定 A 的清晰聊天排版与 C 的登录布局：登录页固定黑灰配色、原色螺旋动效和白底黑字按钮，工作区默认清晰风格；工作区的明暗及其他风格偏好不影响登录页。选择工作区方案时使用原生字号设置将阅读字号调整为 16px，之后仍可手动调整。减少动态偏好继续生效，单栏和双栏场景保持无框。样式范围、验证与仅回退代码的方法见 [视觉规范](docs/geneloop-visual-system.md)。已于北京时间 2026-10-17 20:56 随 `f8a04e4` 发布，保留同期回复缓冲修复；服务器旧源码差异的保留与整合见[核对记录](docs/experiments/geneloop-server-source-reconciliation-20261017.md)。
+网页使用独立的 GeneLoop 视觉样式，统一明暗主题、侧栏、聊天、菜单、设置、账户页、双栏结果与轨迹。用户已选定 A 的清晰聊天排版与 C 的登录布局：登录页固定黑灰配色、原色螺旋动效和白底黑字按钮，工作区默认清晰风格；工作区的明暗及其他风格偏好不影响登录页。选择工作区方案时使用原生字号设置将阅读字号调整为 16px，之后仍可手动调整。减少动态偏好继续生效，单栏和双栏场景保持无框。样式范围、验证与仅回退代码的方法见 [视觉规范](docs/geneloop-visual-system.md)。已于北京时间 2026-10-17 20:56 随 `f8a04e4` 发布，保留同期回复缓冲修复；服务器旧源码差异的保留与整合见[核对记录](docs/debug/geneloop-server-source-reconciliation-20261017.md)。
 
-普通 Chat 现可直接打开 Bash/Python 生成的 HTML、SVG、Markdown 等交付文件，正文文件名和独立预览/下载入口共用本轮快照。文件保留私有权限；仅当前账号、本会话、本轮已核验的文件可读取，后续修改不覆盖旧交付。HTML 预览显示源代码，可下载后在浏览器运行。修复和兼容库 `paper-web-v13` / `ppt-master-v8` 的验证边界见[文件点击修复记录](docs/experiments/clickable-generated-files-20261019.md)。
+普通 Chat 现可直接打开 Bash/Python 生成的 HTML、SVG、Markdown 等交付文件，正文文件名和独立预览/下载入口共用本轮快照。文件保留私有权限；仅当前账号、本会话、本轮已核验的文件可读取，后续修改不覆盖旧交付。HTML 预览显示源代码，可下载后在浏览器运行。修复和兼容库 `paper-web-v13` / `ppt-master-v8` 的验证边界见[文件点击修复记录](docs/debug/clickable-generated-files-20261019.md)。
 
 交付文件卡片与已登记的正文文件链接点击后，在原生右侧标签页预览，独立下载图标才下载。支持 PDF、图片、Markdown、CSV/TSV、JSON 和文本；DOCX/PPTX/XLSX 提供内容预览，DOCX/PPTX 有同名配套 PDF 时优先预览排版。内容预览不保证原始图形、排版或公式；其他格式保留下载。读取沿用账号认证、文件大小与 SHA 校验，不向外部文档服务发送文件。当前实现与浏览器验收边界见[交付预览说明](docs/geneloop-visual-system.md#交付文件预览与三套候选风格2026-10-17)。
 
@@ -102,43 +110,43 @@ GeneLoop 网页的 Chat、`/ppt`、`/data`、`/paper` 和已登记 Files 场景�
 
 新库 `ppt-master-v4`（v3 的来源继承兼容重编，原轨迹和结构不变）扩展到“固定模型选定 PDF → 官方转换”和“转换回执 → 核验并读取完整正文”两条结构续接，使用两项真实完整制作任务与独立留出任务编译。来源转换包装同样提供给 Baseline；只有在线实际跳过的模型请求才计作 Motif 收益。它不复用页面制作、科研判断或任意命令。来源、派生文件、权限、版本检查与取消继续生效；结构认证不代表成品合格或总费用下降。同模板网页对照见[新实验记录](docs/experiments/ppt-master-structure-style-20261018.md)。原 v1、`research-design-v3`、`host_delivery` 和历史检查保留；回退须连同匹配实现和证书恢复。
 
-多轮附件会合并旧原件与新附件，切到 `/paper` 可继承同一对话的 DOCX；同名版本、排队气泡显示和视觉/OCR 边界见[附件说明](docs/attachment-input-behavior.md)。
+多轮附件会合并旧原件与新附件，切到 `/paper` 可继承同一对话的 DOCX；同名版本、排队气泡显示和视觉/OCR 边界见[附件说明](docs/product/web/attachment-input-behavior.md)。
 
-文件管理入口为 **`/file 文件管理`**，与另外三个场景共用输入框、工作区、上传和交付预览/下载。任务副本内自动允许复制、移动、重命名和创建目录；覆盖、永久删除及工作区外访问单独确认。文件管理自动开启执行与持续 RSI，不增加开关；各账号使用独立的长期经验库，只安装脱敏且重新认证的公共种子。工具、读取覆盖、恢复与认证边界见[文件管理说明](docs/management-local.md)。
+文件管理入口为 **`/file 文件管理`**，与另外三个场景共用输入框、工作区、上传和交付预览/下载。任务副本内自动允许复制、移动、重命名和创建目录；覆盖、永久删除及工作区外访问单独确认。文件管理自动开启执行与持续 RSI，不增加开关；各账号使用独立的长期经验库，只安装脱敏且重新认证的公共种子。工具、读取覆盖、恢复与认证边界见[文件管理说明](docs/product/files/management-local.md)。
 
 每轮输入默认 Chat，默认不显示场景、Origin 或 RSI 标签；本轮需要数据、PPT、论文或文件管理场景时重新输入 `/data`、`/ppt`、`/paper` 或 `/file`。输入栏标签直接订阅当前草稿，手写、粘贴和候选选中都会立即更新，删除后隐藏。斜杠菜单列出 `/file 文件管理`，不列出默认 Chat；加号菜单提供带图标的场景和“添加照片或文件”，沿用原生附件上传。菜单可直接替换已有场景标签，保留正文和附件。成功发送后下一轮自动恢复 Chat，已有任务、历史和交付保持；旧 Files 工作台对话也可在同一对话中继续 Chat。切换模型使用目标模型默认的 Off，原模型内调整思考强度仍按明确选择执行。
 
 Chat 与场景对照共用实时状态文案：正在回复、思考、阅读文档、搜索资料或执行工具/命令；阅读状态可展示安全的文件名，不公开服务器路径或原始参数。运行期间底部显示 `GeneLooping…`，结束即消失。工作区行仅保留最右侧操作菜单，新聊天仍使用顶部“新会话”。
 
-网页版移除 `export`、`feedback`、`harless`、`permission`、`model` 这五项指令及输入框权限选择器，保留场景入口。模型与思考强度调整后立即更新，后台按顺序保存；紧接着发送的消息等待该选择确认，失败恢复已生效选项并保留待发草稿。详见 [输入栏验收](docs/experiments/geneloop-instant-model-picker-20261015-v1.md)。
+网页版移除 `export`、`feedback`、`harless`、`permission`、`model` 这五项指令及输入框权限选择器，保留场景入口。模型与思考强度调整后立即更新，后台按顺序保存；紧接着发送的消息等待该选择确认，失败恢复已生效选项并保留待发草稿。详见 [输入栏验收](docs/debug/geneloop-instant-model-picker-20261015-v1.md)。
 
-归档对话、最近删除和账户与安全统一放在设置右侧面板，分别使用归档盒、垃圾桶和账户安全线条图标。切换对话时只在聊天区域显示 GeneLoop 圆环，工作区侧栏保持可用；没有“显示已加载内容”按钮，进行中的回复继续实时输出。已归档对话可恢复到原工作区或移入最近删除；最近删除支持核对清单后永久清空，清空后无法从网页访问或恢复。清空属于持久访问撤销，服务器底层历史、文件及备份的保留策略不变，并非物理擦除。原设置验收见 [记录](docs/experiments/geneloop-settings-model-loading-20261015-v1.md)。
+归档对话、最近删除和账户与安全统一放在设置右侧面板，分别使用归档盒、垃圾桶和账户安全线条图标。切换对话时只在聊天区域显示 GeneLoop 圆环，工作区侧栏保持可用；没有“显示已加载内容”按钮，进行中的回复继续实时输出。已归档对话可恢复到原工作区或移入最近删除；最近删除支持核对清单后永久清空，清空后无法从网页访问或恢复。清空属于持久访问撤销，服务器底层历史、文件及备份的保留策略不变，并非物理擦除。原设置验收见 [记录](docs/debug/geneloop-settings-model-loading-20261015-v1.md)。
 
 场景回复与 Chat 使用同一套原生操作图标、提示及用量/用时文案。最新一轮常显，历史轮在桌面悬停或键盘聚焦时显示；触屏始终可用。每侧统计可点击查看真实明细；网页在每侧回复下提供 1–5 分评分，双方完成后可保存、修改，保留赞/踩反馈。
 
-交付文件使用与上传附件一致的类型图标、名称、类型和大小卡片，右侧提供独立下载图标；未知格式使用通用文件图标。正文中的已登记文件链接显示为蓝色文字，去掉文件代码胶囊，普通行内代码保持。下载继续核验原账号、文件大小和 SHA，详见[界面验收](docs/experiments/geneloop-delivery-file-cards-20261016-v1.md)。
+交付文件使用与上传附件一致的类型图标、名称、类型和大小卡片，右侧提供独立下载图标；未知格式使用通用文件图标。正文中的已登记文件链接显示为蓝色文字，去掉文件代码胶囊，普通行内代码保持。下载继续核验原账号、文件大小和 SHA，详见[界面验收](docs/debug/geneloop-delivery-file-cards-20261016-v1.md)。
 
 DeepSeek 场景对照的 Baseline / Motif 两侧并行执行，各自保留会话、工具范围和任务预算；同一对话的下一轮仍等待当前轮结束。历史结果切换时恢复已确认的状态，首次读取显示加载状态。无 Session 路由的旧模型适配器继续串行执行。
 
 会话开始后会根据用户内容生成简短名称；同一工作区自动重名时追加编号，手动改名和分支名保持。模型菜单按服务器实际可用目录提供 Flash / Pro；Flash / Pro 均提供关闭/低/高/最高的横向思考强度滑杆，选择立即反馈，后台依次保存；发送使用该轮实际选择，不静默替换模型。
 
-场景对照在生成中逐段保留真实文字增量，并显示思考、工具和 MCP 执行状态。每侧末尾提供复制、赞/踩、分支、用量与耗时；轨迹页按真实对话顺序连续编号，普通轮次单列、对照轮次左右展示 Baseline / Motif，上方图表按轮独立切换侧别。已验证的 Motif 模型请求跳过用绿色文字标识。实现与浏览器证据见 [统一轨迹验收](docs/experiments/geneloop-unified-trajectory-20261016-v1.md)，真实模型行为证据见 [流式工作验收](docs/experiments/geneloop-live-workflow-20261015-v1.md)。
+场景对照在生成中逐段保留真实文字增量，并显示思考、工具和 MCP 执行状态。每侧末尾提供复制、赞/踩、分支、用量与耗时；轨迹页按真实对话顺序连续编号，普通轮次单列、对照轮次左右展示 Baseline / Motif，上方图表按轮独立切换侧别。已验证的 Motif 模型请求跳过用绿色文字标识。实现与浏览器证据见 [统一轨迹验收](docs/debug/geneloop-unified-trajectory-20261016-v1.md)，真实模型行为证据见 [流式工作验收](docs/debug/geneloop-live-workflow-20261015-v1.md)。
 
 Web 的 DeepSeek 模型提供 **关闭 / 低 / 高 / 最高** 的横向思考强度滑杆（`off/low/high/max`），默认 Off。拖动、点击档位及方向键/Home/End 均可调整；显示立即更新，后台按顺序保存，发送等待该选择确认。Off 发送 `thinking.disabled`；其他档位发送 `thinking.enabled` 与原生 `reasoning_effort`。按会话保存并应用到本轮两侧任务，旧 On 的 `high` 值继续有效。附件入口不按场景限制扩展名，PDF、Word 和需求文本可随数据一起上传。平台会向模型提供可提取的正文和表格文本；未知二进制、损坏文件或未识别的扫描文字会明确标记，不能冒充已读。统计工具仍以真实数据表为依据，不从资料中臆造统计值。
 
 三种文件场景共用上传版本与读取边界：`/ppt` 可使用 Word、CSV、PDF、JSON、TXT 资料生成可编辑 PPTX、PDF 和逐页预览，并绑定本轮明确要求的总页数；`/paper` 为普通资料校对导出 PDF/Markdown，原有结构化参考条目修订另行保留；`/data` 从 CSV/TSV、JSON 记录数组、Word 表格、带单元格边界的 PDF 表格、分隔文本表中提取原值，再完成统计及图表/PDF 交付。只有说明、没有观测数据时，交付明确注明“未进行统计”的资料核对报告；多表需选择，扫描 OCR 和任意复杂表格不在已验证范围内。非分页资料使用逻辑段引用，不冒充原 Word 页码。
 
-这些导出依赖服务器的 ReportLab、PyMuPDF、中文字体及 PPT 渲染工具。部署须重新生成场景 policy、MCP 白名单和提示词，不能只替换前端文件。统计单位与合成数据声明通过带原文证据的分析计划绑定；要求 R² 时同时校验正文与统计表。真实下载、布局与内容复测记录见 [三场景修复验收](docs/experiments/geneloop-scene-delivery-repair-20261016-v1.md)。
+这些导出依赖服务器的 ReportLab、PyMuPDF、中文字体及 PPT 渲染工具。部署须重新生成场景 policy、MCP 白名单和提示词，不能只替换前端文件。统计单位与合成数据声明通过带原文证据的分析计划绑定；要求 R² 时同时校验正文与统计表。真实下载、布局与内容复测记录见 [三场景修复验收](docs/debug/geneloop-scene-delivery-repair-20261016-v1.md)。
 
-图片附件通过 Harness 的原生附件服务送入模型，同时在每侧任务保存独立的版本化原图。PPT 和论文场景可基于原生视觉内容生成来源绑定的报告；数据图片须先逐格转录为冻结表格，再进入原有统计复算流程。视觉转录不等于独立 OCR 或数值认证，报告须说明识别误差风险；看不清的单元格不能猜补。清晰 PNG/JPG 的真实网页验证与边界见 [图片场景验收](docs/experiments/geneloop-native-image-scenes-20261016-v1.md)。
+图片附件通过 Harness 的原生附件服务送入模型，同时在每侧任务保存独立的版本化原图。PPT 和论文场景可基于原生视觉内容生成来源绑定的报告；数据图片须先逐格转录为冻结表格，再进入原有统计复算流程。视觉转录不等于独立 OCR 或数值认证，报告须说明识别误差风险；看不清的单元格不能猜补。清晰 PNG/JPG 的真实网页验证与边界见 [图片场景验收](docs/debug/geneloop-native-image-scenes-20261016-v1.md)。
 
-普通聊天默认展示最终回答，工具调用、上下文和早期回复收在可展开的过程区；生成中继续显示真实文字增量和简明状态。原生 Markdown、图片、文件入口以及最终回复的复制、分支操作保留。对照标题统一为 Baseline / Motif，影子模式另标“影子评估”。Web 共用 GeneLoop 产品身份；旧会话也在公开读取与实时输出时隐藏内部环境信息，原始 journal、用户消息和文件字节保持不变。代码行为、定向检查、真实浏览器及正式部署验收记录在 [本轮说明](docs/experiments/geneloop-message-privacy-20261015-v1.md)。
+普通聊天默认展示最终回答，工具调用、上下文和早期回复收在可展开的过程区；生成中继续显示真实文字增量和简明状态。原生 Markdown、图片、文件入口以及最终回复的复制、分支操作保留。对照标题统一为 Baseline / Motif，影子模式另标“影子评估”。Web 共用 GeneLoop 产品身份；旧会话也在公开读取与实时输出时隐藏内部环境信息，原始 journal、用户消息和文件字节保持不变。代码行为、定向检查、真实浏览器及正式部署验收记录在 [本轮说明](docs/debug/geneloop-message-privacy-20261015-v1.md)。
 
 已有 PPT、论文、数据分析 Motif 库已统一到版本化的 [motif-libraries/](motif-libraries/README.md)。管理员在成员 Web policy 配置 `comparison_scenes: ["ppt", "paper-proofreading", "research-data-analysis"]` 后，原生 `/ppt`、`/paper`、`/data` 聊天分别执行 Baseline 与 Motif 两路，保留各自多轮历史、交付文件与赞/踩反馈。三个场景的 Motif 默认均为 **Execute**；Paper 新库只续接模型已选定来源的默认第一页读取，旧 Shadow 库及历史记录保留。历史数值评分继续显示，网页评分绑定本轮结果版本并持久保存。资料通过原生附件上传，账号隔离与预算沿用现有服务。库缺失或兼容锁失效会明确回退，不能把回退记为优化成功。
 
-持续部署可使用 `scripts/serve-web-budget.py`，显式指定私有 output、现有累计 checkpoint 和获准上限；缺少 checkpoint 会拒绝启动，禁止因重启清零。用户于 2026-10-15 取消当前共享服务器累计 1 美元费用上限，配置使用 `--budget-usd 0`（policy 的 `run_budget_usd: null`），请求次数也不限；用户于 2026-10-16 进一步取消每任务及对照每侧的费用上限，`--task-budget-usd 0`、policy 的 `budget_usd: null` 表示不限。按后续指示，Web 单次文字输入不设应用长度上限，输出使用 `max_output_tokens: null` 表示无应用额度；2026-10-20起正式 DeepSeek Web 请求显式使用官方最大单次输出容量393216 tokens，避免省略参数触发默认8K截断，服务商上下文/容量边界仍适用。调用前持久化预约费用，未知使用量继续占用任务预算，累计账本照常记录。Linux 服务器的真实三场景功能验收和失败边界见 [联调记录](docs/experiments/trained-three-scenes-20261014-v1.md)。
+持续部署可使用 `scripts/serve-web-budget.py`，显式指定私有 output、现有累计 checkpoint 和获准上限；缺少 checkpoint 会拒绝启动，禁止因重启清零。用户于 2026-10-15 取消当前共享服务器累计 1 美元费用上限，配置使用 `--budget-usd 0`（policy 的 `run_budget_usd: null`），请求次数也不限；用户于 2026-10-16 进一步取消每任务及对照每侧的费用上限，`--task-budget-usd 0`、policy 的 `budget_usd: null` 表示不限。按后续指示，Web 单次文字输入不设应用长度上限，输出使用 `max_output_tokens: null` 表示无应用额度；2026-10-20起正式 DeepSeek Web 请求显式使用官方最大单次输出容量393216 tokens，避免省略参数触发默认8K截断，服务商上下文/容量边界仍适用。调用前持久化预约费用，未知使用量继续占用任务预算，累计账本照常记录。Linux 服务器的真实三场景功能验收和失败边界见 [联调记录](docs/debug/trained-three-scenes-20261014-v1.md)。
 
-四场景研究代码的分支整合与兼容验收见 [当前整合记录](docs/experiments/four-scenario-main-integration-20261014-v1.md)。论文生成工具/轨迹 RSI 的显式实验入口在 [论文场景](scenarios/paper-submission/README.md)，文献处理在 [文献场景](scenarios/literature-notes/README.md)。研究 CLI 与统一 Web 的工具契约不同，分支合并不会自动赋予旧实验库产品 Execute 权限；文献的任务级 Web 绑定和双栏评分仍需单独验收。
+四场景研究代码的分支整合与兼容验收见 [当前整合记录](docs/debug/four-scenario-main-integration-20261014-v1.md)。论文生成工具/轨迹 RSI 的显式实验入口在 [论文场景](scenarios/paper-submission/README.md)，文献处理在 [文献场景](scenarios/literature-notes/README.md)。研究 CLI 与统一 Web 的工具契约不同，分支合并不会自动赋予旧实验库产品 Execute 权限；文献的任务级 Web 绑定和双栏评分仍需单独验收。
 
 Web 场景快捷入口提供 `/ppt`、`/paper`、`/data`，输入前缀即可选择并显示有色标识，也可直接输入完整短命令和请求；普通对话无需选择 `/chat`，旧手写指令仍兼容。启用三场景对照的账号部署允许在同一可见对话中先 `/data` 再 `/ppt`，无需新建聊天；后台按场景轮换独立任务子会话，承接有界历史，并重新核验可用来源与交付文件。正在运行的回复须完成或取消后再切换。删除未发送的场景标记会切回普通对话；发送后清空编辑器只重置下一轮，不改变正在执行的任务。详见 [场景与账号控制](docs/harless-controls.md)。
 
@@ -150,15 +158,15 @@ GeneLoop 是本项目的产品名称，界面使用依据用户参考图绘制�
 
 工作区名称行可再次点击折叠，右侧菜单与新建按钮独立操作；聊天可从标题栏或侧栏菜单移入回收站，并在“最近删除”恢复原会话及文件。网页数据报告测试包位于 [examples/web-data-report-demo/](examples/web-data-report-demo/)，包含 40 行合成材料实验数据、研究说明和可直接粘贴的 `/data` 提示词；它用于软件验证，不代表实际实验结论。
 
-既有论文/DeepSeek 对照继续使用真实 DeepSeek API；共享 Web 现在可按服务器配置选择 GLM。服务器先加载 `.local/remote-env.sh`，在私有 `.env` 配置所需模型密钥（SDK 场景仍需 `DEEPSEEK_API_KEY`）；Web 用 `npm run web:real`，SDK 场景用 `npm run scenario:real -- --scenario scenarios/example/scenario.json --budget-usd 0.25`。Web 每任务与整次启动均默认不限；SDK 每次运行默认上限 0.25 美元，运行前核对预览与有效配置，超出既有上限另行确认。已完成一次 SDK/Harness/MCP 的真实 API 闭环：3 次 HTTP 200、4 次工具、来源引用一致，见[最小真实调用记录](docs/experiments/deepseek-real-api-smoke-20261009-v1.md)。3080 的历史服务为模拟模式；3086 真实 Web 后端两项任务已通过，浏览器点击体验仍待确认，见[连接恢复与真实 Web 验收](docs/experiments/web-real-recovery-20261009-v1.md)。
+既有论文/DeepSeek 对照继续使用真实 DeepSeek API；共享 Web 现在可按服务器配置选择 GLM。服务器先加载 `.local/remote-env.sh`，在私有 `.env` 配置所需模型密钥（SDK 场景仍需 `DEEPSEEK_API_KEY`）；Web 用 `npm run web:real`，SDK 场景用 `npm run scenario:real -- --scenario scenarios/example/scenario.json --budget-usd 0.25`。Web 每任务与整次启动均默认不限；SDK 每次运行默认上限 0.25 美元，运行前核对预览与有效配置，超出既有上限另行确认。已完成一次 SDK/Harness/MCP 的真实 API 闭环：3 次 HTTP 200、4 次工具、来源引用一致，见[最小真实调用记录](docs/debug/deepseek-real-api-smoke-20261009-v1.md)。3080 的历史服务为模拟模式；3086 真实 Web 后端两项任务已通过，浏览器点击体验仍待确认，见[连接恢复与真实 Web 验收](docs/experiments/web-real-recovery-20261009-v1.md)。
 
 `npm test`、无模型 `smoke`、故障注入及旧模拟回归继续检查协议、权限和失败恢复。它们仅是开发诊断；不能作为模型回答、科研交付或真实降本的验收依据。真实 API 失败时记录失败，不切回固定模拟回复来报告通过。
 
-旧试验、报告、应用专用启动器和失败试跑均在 `archive` / `archive-pre-cleanup-20261009` 分支。本机 `.local/` 是私有运行区，仍保留且不提交。清理范围与恢复方式见 [清理记录](docs/main-cleanup.md)。
+旧试验、报告、应用专用启动器和失败试跑均在 `archive` / `archive-pre-cleanup-20261009` 分支。本机 `.local/` 是私有运行区，仍保留且不提交。清理范围与恢复方式见 [清理记录](docs/operations/main-cleanup.md)。
 
 ## 十分钟启动
 
-当前 SDK 场景入口使用 `import.meta.main`，需要 Node.js 22.18+；安装清单的宽松 engine 范围不能代替实际启动验证。Python 3.10.8 与 3.12 均已通过主线免费运行验收；科研 PPT 场景在服务器使用 Python 3.12，额外渲染依赖按场景说明安装。服务器 3.10.8 的主线验收见[验收记录](docs/experiments/server-python310-free-loop-20261009-v1.md)。先安装固定依赖，再跑不付费的检查：
+当前 SDK 场景入口使用 `import.meta.main`，需要 Node.js 22.18+；安装清单的宽松 engine 范围不能代替实际启动验证。Python 3.10.8 与 3.12 均已通过主线免费运行验收；科研 PPT 场景在服务器使用 Python 3.12，额外渲染依赖按场景说明安装。服务器 3.10.8 的主线验收见[验收记录](docs/debug/server-python310-free-loop-20261009-v1.md)。先安装固定依赖，再跑不付费的检查：
 
 ```sh
 npm ci
@@ -199,7 +207,7 @@ ssh -N -L 3080:127.0.0.1:3080 -p SSH_PORT USER@SERVER
 
 默认动态运行时使用 `scenarios/general/`（New Scene），免费模拟模型、Shadow（RSI On），监听 `127.0.0.1:3080`。从本次 `.local/web/runs/<RUN_ID>/access-url.txt` 复制官方认证地址到本地浏览器，打开聊天首页即可。认证地址/token 为私有数据。原生 `/harless` 菜单的 PPT、Paper Proofreading、Research Data Analysis、Files 和 New Scene 分别加载服务器登记的 MCP、白名单与 Prompt：PPT 使用既有19工具；论文提供PDF/文本与静态LaTeX检查；数据提供CSV/TSV描述统计与Pearson相关；Files 盘点、读取、查重和索引任务上传文件，可显式授权整理副本；New Scene读取本Session上传文本。模式和RSI独立，菜单不调用模型，选择影响下一任务。PPT菜单可设置页数、模板及生成新副本权限；Files 菜单可设置只读或整理任务副本。免费和真实任务从聊天直接发送，服务端保留费用、请求上限与工具权限；旧页面跳回聊天，任务 API 保留。
 
-PPT先安装 `scenarios/research_ppt/requirements.txt`，在该目录 `npm ci && npm run build`；需要兼容的LibreOffice、中文字体与静态Fontconfig才能输出。部署论文读取与报告导出时安装 `scenarios/paper_proofreading/requirements.txt`，普通校对报告也需要 PDF 渲染依赖；仅只读提取不需 PPT 渲染器。管理员在私有环境设置 `HARLESS_PPT_RENDERER_ROOT/HARLESS_PPT_FONT_ROOT`，缺失时只读可用、输出明确拒绝。`HARLESS_PPT_RUNTIME_BUNDLE` 指向已认证且代码锁有效的五文件包，当前仅接管闭合pin/read；没有库的场景可用Origin/Shadow，Execute On拒绝。部署成员能力只增加网关 `memberSceneDeployment` 只读挂载，输入、Session、产物和预算继续隔离。完整配置、范围与诊断见 [控制协议](docs/harless-controls.md)、[账号网关](docs/harless-account-gateway.md) 和 [上线准备记录](docs/experiments/harless-launch-readiness-20261014-v1.md)。V100 Ubuntu18/Node22.23.3/Python3.10.21已验证；完整模型自主PPT生成与科研质量未在本轮验收。
+PPT先安装 `scenarios/research_ppt/requirements.txt`，在该目录 `npm ci && npm run build`；需要兼容的LibreOffice、中文字体与静态Fontconfig才能输出。部署论文读取与报告导出时安装 `scenarios/paper_proofreading/requirements.txt`，普通校对报告也需要 PDF 渲染依赖；仅只读提取不需 PPT 渲染器。管理员在私有环境设置 `HARLESS_PPT_RENDERER_ROOT/HARLESS_PPT_FONT_ROOT`，缺失时只读可用、输出明确拒绝。`HARLESS_PPT_RUNTIME_BUNDLE` 指向已认证且代码锁有效的五文件包，当前仅接管闭合pin/read；没有库的场景可用Origin/Shadow，Execute On拒绝。部署成员能力只增加网关 `memberSceneDeployment` 只读挂载，输入、Session、产物和预算继续隔离。完整配置、范围与诊断见 [控制协议](docs/harless-controls.md)、[账号网关](docs/operations/harless-account-gateway.md) 和 [上线准备记录](docs/debug/harless-launch-readiness-20261014-v1.md)。V100 Ubuntu18/Node22.23.3/Python3.10.21已验证；完整模型自主PPT生成与科研质量未在本轮验收。
 
 原生模型选择可切换服务器已启用的 DeepSeek Flash 与 GLM；默认免费模拟仍使用 DeepSeek。真实 Web 可在服务器私有 `.env` 配置 GLM 模型、密钥和价格。选定模型会绑定任务和预算账本；GLM 当前只接文字输入，真实 GLM 请求仍待验收。Codex 登录入口已撤销，当前不提供 GPT 登录。
 
@@ -231,7 +239,7 @@ npm run web -- --scenario portfolio-v1 --mode execute
 
 Mode 菜单显示 Origin、Shadow、Execute；Origin 在协议中仍为 `baseline`。RSI 默认 On，切换模式不改变开关；Off 保留所选模式，但下一任务按 Origin 执行。没有有效认证库或所需匹配服务时 Execute 会被服务端拒绝；Shadow 可以运行并明确记录普通 Harness 回退。菜单选择本身不调用模型，只影响后续任务；每轮独立登记任务及预算，不能沿用旧任务授权或证据绕过新输入检查。
 
-目前登记 `example`、`portfolio-v1`、`portfolio-v2` 三个合成资料场景；新增场景由服务器维护登记表和 MCP 配置。PPT MCP 与自动持续学习发布尚未实现。可选的 Linux 账号网关提供邀请码注册、独立 Harness Home/工作区及按账号隔离的预算路由；它需要单独配置并通过反向代理公开，直接运行 `npm run web` 仍是单用户开发入口。配置与限制见[账号网关部署说明](docs/harless-account-gateway.md)，任务接口见 [Harless 控制接口](docs/harless-controls.md)。
+目前登记 `example`、`portfolio-v1`、`portfolio-v2` 三个合成资料场景；新增场景由服务器维护登记表和 MCP 配置。PPT MCP 与自动持续学习发布尚未实现。可选的 Linux 账号网关提供邀请码注册、独立 Harness Home/工作区及按账号隔离的预算路由；它需要单独配置并通过反向代理公开，直接运行 `npm run web` 仍是单用户开发入口。配置与限制见[账号网关部署说明](docs/operations/harless-account-gateway.md)，任务接口见 [Harless 控制接口](docs/harless-controls.md)。
 
 后台保留双层费用记账：Web 每任务、全启动和输出上限默认均为 `null`；请求次数默认不限，新任务不重置累计费用与请求计数。任务费用用 `--budget-usd` 配置，全启动费用用 `--run-budget-usd` 配置；可选 `--request-limit/--run-request-limit` 正整数仍支持次数上限，CLI `0` 或配置 `null` 表示不限次数。推理档位按本轮 Off / On 选择，默认关闭压缩；请求、缓存输入/输出 token、费用和 verified skips 仍完整记录，代理估值需与账单核对。免费模拟不展示额度表单，实际支出为零。
 
@@ -241,7 +249,7 @@ Mode 菜单显示 Origin、Shadow、Execute；Origin 在协议中仍为 `baselin
 npm run web:real
 ```
 
-这个显式入口只开放真实连接。官方聊天发送后立即登记并执行任务，不显示预算确认页面；任务 API 仍保留显式预览和提交操作。发送前可在输入框旁选择场景、RSI 与模式，服务端继续累计费用和请求数，并保留管理员配置可选上限的能力。此前的[确认流程验收](docs/experiments/native-chat-confirm-20261009-v1.md)记录的是旧界面；SDK 的真实 API 基本连通已通过，真实 Web 后端最小闭环已通过；当前直接发送的浏览器体验和科研交付质量仍待验收。
+这个显式入口只开放真实连接。官方聊天发送后立即登记并执行任务，不显示预算确认页面；任务 API 仍保留显式预览和提交操作。发送前可在输入框旁选择场景、RSI 与模式，服务端继续累计费用和请求数，并保留管理员配置可选上限的能力。此前的[确认流程验收](docs/debug/native-chat-confirm-20261009-v1.md)记录的是旧界面；SDK 的真实 API 基本连通已通过，真实 Web 后端最小闭环已通过；当前直接发送的浏览器体验和科研交付质量仍待验收。
 
 GLM 请求通过本地预算代理绑定已提交任务；`HARLESS_GLM_BASE_URL` 仅接受智谱官方 HTTPS API 根地址。价格由管理员按所用模型与账户填写，代理估值不等于账单实付。当前 GLM 已完成假密钥启动、模型目录与任务预览验证，真实 GLM 请求和工具调用仍待配置有效密钥后验收。
 
@@ -260,9 +268,9 @@ npm run web -- --frozen --scenario portfolio-v1 --mode execute
 node scripts/project.mjs python scripts/stop-harness-web.py RUN_ID
 ```
 
-服务器已通过 146 项 Python、44 项 Node、13 组动态 HTTP/MCP、11 组冻结协议诊断，以及 18 题/83 来源 smoke；Motif 样例闭环也已通过。实际付费为零，详见[动态任务验收](docs/experiments/dynamic-web-tasks-20261009-v1.md)与[Web 交接](docs/handoffs/harness-web.md)。HTTP 诊断不代替浏览器体验和真实质量评审。每个动态任务的数据独立位于 `.local/web/runs/<RUN_ID>/tasks/<TASK_ID>/`，含输入/配置快照、会话事件、答案、ledger 和 Motif 审计；启动目录另保留全局预算账本。goal 续轮、队列编辑、fork 或 steer 不能绕过既有任务绑定，改变要求需创建新任务。
+服务器已通过 146 项 Python、44 项 Node、13 组动态 HTTP/MCP、11 组冻结协议诊断，以及 18 题/83 来源 smoke；Motif 样例闭环也已通过。实际付费为零，详见[动态任务验收](docs/debug/dynamic-web-tasks-20261009-v1.md)与[Web 交接](docs/handoffs/harness-web.md)。HTTP 诊断不代替浏览器体验和真实质量评审。每个动态任务的数据独立位于 `.local/web/runs/<RUN_ID>/tasks/<TASK_ID>/`，含输入/配置快照、会话事件、答案、ledger 和 Motif 审计；启动目录另保留全局预算账本。goal 续轮、队列编辑、fork 或 steer 不能绕过既有任务绑定，改变要求需创建新任务。
 
-当前适用于同一获授权操作人的服务器联调，没有多人账号隔离、跨启动任务恢复或论文工具闭环；官方文件浏览能力也不是多人文件沙箱。具体实现与限制见[接口文档](docs/interfaces.md)、[Web 交接](docs/handoffs/harness-web.md)及[冻结入口验收](docs/experiments/harness-web-v1-20261009.md)。
+当前适用于同一获授权操作人的服务器联调，没有多人账号隔离、跨启动任务恢复或论文工具闭环；官方文件浏览能力也不是多人文件沙箱。具体实现与限制见[接口文档](docs/interfaces.md)、[Web 交接](docs/handoffs/harness-web.md)及[冻结入口验收](docs/debug/harness-web-v1-20261009.md)。
 
 ## 代码从哪里读
 
@@ -329,7 +337,7 @@ V7/V8 的同任务 MCP 重启恢复及 TypeScript 有限交付入口见 [恢复�
 
 `/paper` 保留普通 PDF/Word/CSV/JSON/TXT 校对、来源表格摘要与 PDF/Markdown 交付，同一场景按需使用安全 LaTeX ZIP、参考文献取证、历史脚本与只读 Motif；不会为每种任务另建 Agent。当前为 24 个工具，普通报告无需私人排版包。服务器默认继续加载 `motif-libraries/paper`；管理员可配置 `HARLESS_PAPER_RUNTIME_BUNDLE` 覆盖默认库，配置错误会拒绝激活。历史参考文献排版另用 `HARLESS_PAPER_RENDERER_ROOT`。原 23 工具包须按当前完整 MCP Schema 和代码重编，不能直接复制旧认证文件。
 
-场景选择、RSI On/Off、三种模式、用户隔离和预算沿用 main。普通校对不强制输出参考文献报告；正文输入仍可先咨询或请求上传。机制验证与净降本结论分开，历史记录见 [RSI 闭环](docs/paper-rsi-loop.md)，整合部署步骤见 [论文交接](docs/handoffs/paper-proofreading.md)。
+场景选择、RSI On/Off、三种模式、用户隔离和预算沿用 main。普通校对不强制输出参考文献报告；正文输入仍可先咨询或请求上传。机制验证与净降本结论分开，历史记录见 [RSI 闭环](docs/research/rsi/paper-rsi-loop.md)，整合部署步骤见 [论文交接](docs/handoffs/paper-proofreading.md)。
 
 
 实验分支新增脚本内部依赖片段挖掘、当前数据引用/局部修改以及原生工具连续执行，仍经原生 Evidence/版本/权限守卫。它们由私有 Script sidecar 显式启用，生产默认保持不变。当前真实完整任务尚未证明稳定合格净降本；配置、复现与边界见[统一复用接口](docs/interfaces.md#实验性统一复用协议2026-10-19)和[实验记录](docs/experiments/paper-unified-reuse-20261019-v1.md)。

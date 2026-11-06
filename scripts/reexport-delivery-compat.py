@@ -60,7 +60,7 @@ def main():
             'same_library_and_evidence': True, 'same_online_program': True,
             'changed_code_locks': sorted(changed), 'raw_traces_replayed': False,
             'new_training_tasks': 0, 'model_requests': 0, 'quality_cost_promoted': False,
-            'validation_record': 'docs/experiments/clickable-generated-files-20261019.md',
+            'validation_record': 'docs/debug/clickable-generated-files-20261019.md',
         }
         write(new / 'learning-report.json', report)
         locks = set(cert['code_locks']) | {'src/adapters/harless_comparison_artifacts.ts', 'scripts/reexport-delivery-compat.py'}

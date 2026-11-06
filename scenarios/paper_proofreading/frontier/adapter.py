@@ -170,8 +170,12 @@ class FrontierAdapter(CapabilityImprovementAdapter):
                 if result.get('program_training_mode')=='bound_prefix_v1':
                     refs=[reference(output/'answer.txt'),result['capability_source_ref'],result['capability_source_encoding_ref']]
                     libraries=template['libraries']+[r['library'] for r in self.materials.records() if r['backend']=='script_motif']
+                    rae=self.plan.get('recursive_abstraction',{})
+                    learning_options=({'builder_learning':rae['builder_learning']}
+                        if rae.get('enabled') is True and rae.get('builder_learning',{}).get('enabled') is True else {})
                     training=prepare_program_cases(task,library['snapshot'],reference(output/'program.json'),
-                        result['composition_intent_ref'],template.get('construction_cases'),libraries,output/'program-training',source_refs=refs)
+                        result['composition_intent_ref'],template.get('construction_cases'),libraries,output/'program-training',source_refs=refs,
+                        **learning_options)
                     cases=training['cases'];result['program_training_ref']=training['evidence']
                 result['native_library']=learn(program,cases,output/'native',
                     reference(output/'answer.txt'),large_output=True)

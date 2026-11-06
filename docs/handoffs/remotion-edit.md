@@ -2,7 +2,7 @@
 
 > 2026-11-02 双路接入：`/video` 沿现有并行对照宿主分别运行 Baseline / Motif，普通侧 11 个视频工具，优化侧额外 4 个已发布程序工具。原库和算法未改；部署及实际效果以[本轮记录](../experiments/video-paired-motif-20261102.md)为准。
 
-> 2026-11-02 网页产品接入：新增独立的 `web_server.py` / `web-scenario.json` / `web-prompt.md`，原实验 server.py、structured/server.py 与全部实验结果保持不变。普通 `/video` 由原 DSH Agent 自主写TSX、调用固定只读依赖与隔离渲染器，实际交付MP4/源码，此前产品未接入视频 Motif，本轮已接入原发布程序库。每条视频任务选择场景，普通Chat不自动继承。真实两轮检查和冷恢复维护见[产品集成记录](../experiments/video-web-integration-20261101.md)；PR #118描述记录最终发布/合并状态。正式运维仍走统一入口，私有 renderer、原日志与用户媒体不进入Git。
+> 2026-11-02 网页产品接入：新增独立的 `web_server.py` / `web-scenario.json` / `web-prompt.md`，原实验 server.py、structured/server.py 与全部实验结果保持不变。普通 `/video` 由原 DSH Agent 自主写TSX、调用固定只读依赖与隔离渲染器，实际交付MP4/源码，此前产品未接入视频 Motif，本轮已接入原发布程序库。每条视频任务选择场景，普通Chat不自动继承。真实两轮检查和冷恢复维护见[产品集成记录](../debug/video-web-integration-20261101.md)；PR #118描述记录最终发布/合并状态。正式运维仍走统一入口，私有 renderer、原日志与用户媒体不进入Git。
 
 # Remotion 视频剪辑 当前交接
 

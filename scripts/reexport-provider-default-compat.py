@@ -30,7 +30,7 @@ RELEASES = [
      'scenarios/paper_proofreading/document-read-contracts.json'),
     ('ppt-master-v13', 'ppt-master-v14', 'ppt', 'scenarios/ppt_master/contracts.json'),
 ]
-VALIDATION_RECORD = 'docs/experiments/concurrent-chat-20261020.md'
+VALIDATION_RECORD = 'docs/debug/concurrent-chat-20261020.md'
 
 
 def write(path, value):

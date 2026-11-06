@@ -4,7 +4,7 @@ on:
     inputs:
       packageMode:
         type: choice
-        options: [installers, app, tools]
+        options: [installers, app, tools, delivery]
         default: installers
   push:
     branches: ['codex/desktop-local-runtime']
@@ -67,13 +67,13 @@ jobs:
           node scripts/check-native-code.mjs
           desktop-tools-bundle/python/bin/geneloop-python scripts/check-native-ocr.py desktop-tools-bundle
       - name: Native Remotion render and full video decode (no model)
-        if: ${{ inputs.packageMode != 'tools' }}
+        if: ${{ inputs.packageMode != 'tools' && inputs.packageMode != 'delivery' }}
         run: npm run runtime:stage && npm run smoke:remotion
       - name: Native PPT template and LibreOffice PDF export (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'delivery' }}
         run: npm run smoke:ppt
       - name: Native document, table, paper and archive tools (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'delivery' }}
         run: node scripts/check-native-scenes.mjs
       - name: Credential scrubbing and cancellation of descendants
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
@@ -99,12 +99,30 @@ jobs:
           test -n "$APP"
           export GENELOOP_NATIVE_RUNTIME="$PWD/$APP/Contents/Resources/geneloop-runtime.asar"
           export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
-          "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
-          "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-scenes.mjs
+          if [ '${{ inputs.packageMode }}' = 'delivery' ]; then
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-workflows.mjs
+          else
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-scenes.mjs
+          fi
       - name: Packaged DSH Agent start, tools and cancellation (no model)
         if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
           node scripts/probe-local-runtime.mjs --installed "$APP"
-      # Intentionally no upload-artifact or release publishing step.
+      - name: Record local delivery checksums
+        if: ${{ success() && inputs.packageMode == 'delivery' }}
+        run: shasum -a 256 release/GeneLoop-Desktop-*.dmg release/GeneLoop-Desktop-*.zip > release/SHA256SUMS-${{ matrix.arch }}.txt
+      # Explicit user authorization: private one-day transit, delete after local retrieval.
+      # Other modes still do not upload. Never publish a Release.
+      - uses: actions/upload-artifact@v4
+        if: ${{ success() && inputs.packageMode == 'delivery' }}
+        with:
+          name: geneloop-desktop-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            apps/desktop/release/GeneLoop-Desktop-*.dmg
+            apps/desktop/release/GeneLoop-Desktop-*.zip
+            apps/desktop/release/SHA256SUMS-*.txt
+          retention-days: 1
+          compression-level: 0

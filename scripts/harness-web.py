@@ -190,6 +190,18 @@ def prepare(args, output, endpoint):
               'max_output_tokens': public['max_output_tokens'], 'mode': args.mode,
               'embedding_endpoint': args.embedding_endpoint,
               'fixture': args.fixture}
+    strategy_config = getattr(args, 'task_strategy_config', None)
+    if strategy_config:
+        if args.frozen:
+            raise ValueError('task_strategy_requires_dynamic_runtime')
+        strategy_path = Path(strategy_config).resolve()
+        strategy_bytes = strategy_path.read_bytes()
+        strategy = json.loads(strategy_bytes)
+        if not isinstance(strategy, dict) or strategy.get('enabled') is not True:
+            raise ValueError('task_strategy_research_config_invalid')
+        policy['research_strategy'] = strategy
+        policy['research_strategy_source'] = {'path': str(strategy_path),
+            'sha256': hashlib.sha256(strategy_bytes).hexdigest()}
     if (not args.frozen and args.scenario == 'portfolio-v1') or (args.frozen and args.mode != 'baseline') or args.manifest:
         bundle = ROOT / 'examples/motif-library/research-portfolio-v1'
         task = json.loads((bundle / 'task.json').read_text())
@@ -342,6 +354,8 @@ def main():
     parser.add_argument('--manifest', help='certified online manifest for this capability profile')
     parser.add_argument('--task', help='certified task/version binding, paired with --manifest')
     parser.add_argument('--resources', help='private server-owned resource registry JSON: ID -> {text_file}')
+    parser.add_argument('--task-strategy-config', type=Path,
+                        help='private host-approved task strategy configuration for isolated research')
     parser.add_argument('--embedding-endpoint', default='')
     parser.add_argument('--embedding-model', default='fixture-vectors-not-a-semantic-model')
     parser.add_argument('--mode', choices=['baseline', 'shadow', 'execute'], default=None)
