@@ -17,7 +17,7 @@ internal sealed class InstallerWindow : Window
 {
     private readonly InstallTarget target;
     private readonly StackPanel options;
-    private readonly TextBlock pathLabel, spaceLabel, status;
+    private readonly TextBlock pathLabel, status;
     private readonly Button install, close, details, browse;
     private readonly CheckBox openApp;
     private readonly ProgressBar progress;
@@ -107,10 +107,6 @@ internal sealed class InstallerWindow : Window
         Grid.SetColumn(browse, 1);
         browse.Click += delegate { ChooseFolder(); };
         location.Children.Add(browse);
-        spaceLabel = Text("", 11, "#526277", false);
-        spaceLabel.TextAlignment = TextAlignment.Left;
-        spaceLabel.Margin = new Thickness(2, 8, 0, 0);
-        options.Children.Add(spaceLabel);
         RefreshLocation();
         details.Click += delegate
         {
@@ -141,19 +137,6 @@ internal sealed class InstallerWindow : Window
     {
         pathLabel.Text = target.Path;
         pathLabel.ToolTip = target.Path;
-        string available;
-        try { available = FormatSize(new DriveInfo(Path.GetPathRoot(target.Path)).AvailableFreeSpace); }
-        catch (IOException) { available = "未知"; }
-        catch (UnauthorizedAccessException) { available = "未知"; }
-        catch (ArgumentException) { available = "未知"; }
-        spaceLabel.Text = "所需空间约 " + FormatSize(SetupBuild.PayloadBytes) + "    可用空间 " + available;
-        spaceLabel.ToolTip = target.Machine ? "为所有 Windows 用户安装" : "仅为当前 Windows 用户安装";
-    }
-
-    private static string FormatSize(long bytes)
-    {
-        return bytes >= 1073741824 ? (bytes / 1073741824d).ToString("0.0") + " GB" :
-            (bytes / 1048576d).ToString("0.0") + " MB";
     }
 
     internal void VerifyLocationControls()
