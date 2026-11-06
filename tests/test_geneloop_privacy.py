@@ -41,6 +41,8 @@ def test_scanner_failure_and_anonymized_key_collision_fail_closed(monkeypatch):
     monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: '<PERSON>')
     with pytest.raises(privacy.PrivacyRejected):
         privacy.learning_view({'Alice': 1, 'Bob': 2})
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'input_schema':{'type':'object','properties':{'Alice':{},'Bob':{}}}})
     def failed(value):
         raise RuntimeError('/private/account synthetic-secret')
     monkeypatch.setattr(privacy, '_scan', failed)

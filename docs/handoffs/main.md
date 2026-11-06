@@ -1,5 +1,10 @@
 # 主线当前交接
 
+## 2026-11-06：全场景公共脱敏候选
+
+- `codex/rsi-privacy` / 草稿 PR159 继续扩展公共脱敏模块，接两个 Web 宿主、SDK、离线导入和研究学习模型边界；新 MCP 场景继承规则。复用本地 Presidio/Gitleaks，保留账号内任务语义，公开共享只允许匿名工具流程。
+- 正式服务未切换，原任务证据、费用与版本守卫保持私有权威。隔离回归和 Issue141–144 边界见[隐私交接](rsi-data-privacy.md)及[本轮记录](../debug/privacy-platform-20261106.md)，不能由工程诊断代替 Mac Coding 产品验收。
+
 ## 2026-11-05：PR156 整合 main 候选
 
 - 以 PR156 `8e697e51` 为起点，合入 #158 后的 main `a71e30ce`；在隔离检出处理冲突，共享工作区与原研究检出的未提交改动未覆盖。保留 main 的精简 AGENTS、文档分类与 README 布局，Evolution 研究进展仍在 docs。

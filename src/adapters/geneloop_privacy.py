@@ -134,8 +134,13 @@ def learning_view(value):
                 # Reuse jsonschema's validation before treating them as such;
                 # descriptions and actual defaults/const/enum still sanitize.
                 if schema and key=='properties' and isinstance(child,dict):
-                    output[key]={text(name):walk(definition,depth+2,schema=True,property_name=name)
-                                 for name,definition in child.items()}
+                    properties={}
+                    for name,definition in child.items():
+                        safe_name=text(name)
+                        if safe_name in properties:
+                            raise PrivacyRejected()
+                        properties[safe_name]=walk(definition,depth+2,schema=True,property_name=name)
+                    output[key]=properties
                     continue
                 if schema and key in ('default','const','enum') and property_name:
                     output[key]=next(iter(walk({property_name:child},depth+1).values()))
