@@ -28,6 +28,7 @@ from urllib.parse import urlparse
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_wire_id, model_api_key
 from src.adapters.harness_runtime import create_harness
 from src.adapters.scenario import prepare_scenario
 from src.adapters.native_budget import NativeBudgetGuard
@@ -112,15 +113,15 @@ def estimated_cost(usage, rates):
 
 class BudgetGate:
     def __init__(self, *, ledger, output, run_id, pricing, cap=100, output_cap=4096,
-                 max_requests=30, key="", upstream="https://api.deepseek.com"):
+                 max_requests=30, key="", upstream=model_api_root()):
         self.ledger, self.output = Path(ledger), Path(output)
         self.run_id, self.pricing, self.cap = run_id, pricing, cap
         self.output_cap, self.max_requests, self.key = output_cap, max_requests, key
         self.upstream = upstream.rstrip("/")
         parsed = urlparse(self.upstream)
-        if not ((parsed.scheme == "https" and parsed.netloc == "api.deepseek.com" and not parsed.path)
+        if not ((parsed.scheme == "https" and parsed.netloc == urlparse(model_api_root()).netloc and not parsed.path)
                 or (parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost", "::1"))):
-            raise ValueError("upstream_must_be_official_DeepSeek_or_an_offline_loopback_test")
+            raise ValueError("upstream_must_match_configured_model_API_or_an_offline_loopback_test")
         self.local_token = "rra-local-" + uuid4().hex
         self.count = 0
         self.rows = []
@@ -206,7 +207,9 @@ class BudgetGate:
                 folder = gate.output / "model-requests"
                 save(folder / f"{request_id}.request.json", request)
                 started = time.monotonic()
-                upstream_request = urllib.request.Request(gate.upstream + self.path, data=body, headers={
+                wire = json.dumps({**request, 'model': model_wire_id(request['model'])},
+                                  ensure_ascii=False).encode('utf-8')
+                upstream_request = urllib.request.Request(gate.upstream + self.path, data=wire, headers={
                     "Authorization": "Bearer " + gate.key, "Content-Type": "application/json"})
                 try:
                     with urllib.request.urlopen(upstream_request, timeout=900) as response:
@@ -350,9 +353,7 @@ def main():
                       "tool_count": len(manifest["tool_order"])}, ensure_ascii=False), flush=True)
     if not args.call_model:
         return 0
-    key = os.environ.get("DEEPSEEK_API_KEY")
-    if not key:
-        raise ValueError("DEEPSEEK_API_KEY must be supplied in the parent environment")
+    key = model_api_key()
     gate = BudgetGate(ledger=args.budget_ledger, output=out, run_id=manifest["run_id"], pricing=pricing,
                       cap=args.budget_cny, output_cap=args.max_output, max_requests=args.max_requests, key=key)
     server = gate.create_server()

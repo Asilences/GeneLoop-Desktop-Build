@@ -68,7 +68,7 @@ def schema_tools(payload: dict | list) -> dict:
     return {'tools': payload['tools']}
 
 
-def load_dataset(path: Path) -> tuple[dict, list[dict]]:
+def load_dataset(path: Path, *, projected=False) -> tuple[dict, list[dict]]:
     data = read(private_path(path, exists=True))
     if (not isinstance(data, dict) or set(data) != {'train', 'heldout'}
             or not isinstance(data['train'], list) or len(data['train']) < 2
@@ -84,9 +84,9 @@ def load_dataset(path: Path) -> tuple[dict, list[dict]]:
             if not directory.is_dir() or directory in directories:
                 raise ValueError('训练与认证必须使用不同运行目录')
             directories.append(directory)
-            events = directory / 'agent-events.jsonl'
+            events = directory / ('learning-trace.json' if projected else 'agent-events.jsonl')
             identity_path = directory / 'task-identity.json'
-            identity = load_trace_identity(identity_path, events, ROOT / '.local')
+            identity = load_trace_identity(identity_path, events, ROOT / '.local', projected=projected)
             identities.append(identity)
             rows[split].append({'trace_id': directory.name, 'events': str(events),
                                 'identity': str(identity_path)})
@@ -135,14 +135,16 @@ def learn(dataset: Path, *, contracts_path: Path = SCENE / 'contracts.json',
           version_fields_path: Path = SCENE / 'version-fields.json',
           tool_schema_path: Path | None = None, out_dir: Path | None = None,
           generated_tool: str | None = None, guard_paths: tuple[Path, ...] = (),
-          mining='sequence', admit_edges_only=False) -> Path:
+          mining='sequence', admit_edges_only=False, projected_scene=None) -> Path:
     """从实际事件挖掘、独立认证、导出；没有新候选时如实保留结果。"""
     if mining not in {'sequence', 'witnessed_edges'}:
         raise ValueError('mining 只能为 sequence 或 witnessed_edges')
     if admit_edges_only and mining != 'witnessed_edges':
         raise ValueError('edge-only admission requires witnessed mining')
     dataset = private_path(dataset, exists=True)
-    rows, identities = load_dataset(dataset)
+    if projected_scene and mining != 'witnessed_edges':
+        raise ValueError('privacy projection requires witnessed mining')
+    rows, identities = load_dataset(dataset, projected=bool(projected_scene))
     if mining == 'witnessed_edges' and len(rows['heldout']) != 1:
         raise ValueError('公共 witnessed compiler 入口需恰好一个独立 heldout')
     contracts_path = contracts_path.resolve(strict=True)
@@ -200,6 +202,8 @@ def learn(dataset: Path, *, contracts_path: Path = SCENE / 'contracts.json',
             command = [sys.executable, str(ROOT / 'scripts/compile-witnessed-read-chains.py'),
                        '--contracts', str(output / 'contracts.json'),
                        '--out', str(output / 'witnessed-edge-report.json')]
+            if projected_scene:
+                command += ['--projected-scene', projected_scene]
             for split in ('train', 'heldout'):
                 for row in rows[split]:
                     command += ['--' + split, row['trace_id'], row['identity'], row['events']]

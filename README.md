@@ -1,8 +1,17 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+Paper/PPT 的 [RSI 任务语义脱敏](docs/rsi-data-privacy.md#v3-任务语义诊断)可在隔离 Web 和离线导入中显式启用，使用本地 Presidio 和 Gitleaks。普通运行只需原有依赖。
+
+轨迹、源码共享和可选遥测默认关闭。桌面设置中的[数据与隐私](docs/rsi-data-privacy.md#默认私有与可选共享)提供工具流程预览、逐次授权、保存本地副本与取消；接收端由部署方在私有配置中指定。
+
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
 GeneLoop Desktop `0.3.0-preview.13` 提供 Windows x64、macOS ARM64 和 Intel 本机执行预览：六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。工具随包提供，Mac 使用 ZIP 分发 `.app`。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[本轮记录](docs/debug/desktop-preview13-full-tools-20261106.md)。安装包保存在私有本地目录，不发布 Release。
+模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。SkillFlow baseline 首请求的 Kouri Chat/工具调用冒烟已返回 HTTP 200，见[记录](docs/debug/kouri-env-models-20261106.md)；文件、搜索、思考能力、容量和实际费率仍待真实兼容性验收。当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。
+
+网页聊天的模型下拉按服务端列表工作。默认读取 [config/kouri-models.json](config/kouri-models.json)，已填好 Flash 模板；新增模型时在数组中追加条目即可。私有 `.env` 的 `KOURI_MODELS_FILE` 可指定其他完整模型 JSON 文件，相对路径按项目根目录解析。`KOURI_EXTRA_MODELS_JSON` 仍可追加模型，使用完整文件时通常留空，避免重复 ID。每项必须有 ID、上下文及输出容量、输入及输出美元/百万 token 估费；其他字段及示例见模板与 `.env.example`。目录、预算白名单与费率在启动时生成。正式服务的候选准备和独立预算进程须使用同一模型文件，并按发布流程切换。文件管理独立场景暂沿用 Flash/Off。模板中的容量和费率沿用现有假设，仍需核实 Kouri 实际能力与账单。
+
+本地审阅模型下拉可运行 `npm run web -- --preview-model-picker --port 39080`；此选项只在动态模拟 Web 生效，增加一个标为“本地模拟 · 第二模型”的选择项，不启用真实 API。正式模型目录仍只列出已配置的 Kouri 模型。
 
 Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
 
@@ -160,7 +169,7 @@ GeneLoop 是本项目的产品名称，界面使用依据用户参考图绘制�
 
 工作区名称行可再次点击折叠，右侧菜单与新建按钮独立操作；聊天可从标题栏或侧栏菜单移入回收站，并在“最近删除”恢复原会话及文件。网页数据报告测试包位于 [examples/web-data-report-demo/](examples/web-data-report-demo/)，包含 40 行合成材料实验数据、研究说明和可直接粘贴的 `/data` 提示词；它用于软件验证，不代表实际实验结论。
 
-既有论文/DeepSeek 对照继续使用真实 DeepSeek API；共享 Web 现在可按服务器配置选择 GLM。服务器先加载 `.local/remote-env.sh`，在私有 `.env` 配置所需模型密钥（SDK 场景仍需 `DEEPSEEK_API_KEY`）；Web 用 `npm run web:real`，SDK 场景用 `npm run scenario:real -- --scenario scenarios/example/scenario.json --budget-usd 0.25`。Web 每任务与整次启动均默认不限；SDK 每次运行默认上限 0.25 美元，运行前核对预览与有效配置，超出既有上限另行确认。已完成一次 SDK/Harness/MCP 的真实 API 闭环：3 次 HTTP 200、4 次工具、来源引用一致，见[最小真实调用记录](docs/debug/deepseek-real-api-smoke-20261009-v1.md)。3080 的历史服务为模拟模式；3086 真实 Web 后端两项任务已通过，浏览器点击体验仍待确认，见[连接恢复与真实 Web 验收](docs/experiments/web-real-recovery-20261009-v1.md)。
+当前真实模型上游使用 Kouri；共享 Web 另可按服务器配置选择 GLM。服务器先加载 `.local/remote-env.sh`，在私有 `.env` 配置 `KOURI_API_KEY`；Web 用 `npm run web:real`，SDK 场景用 `npm run scenario:real -- --scenario scenarios/example/scenario.json --budget-usd 0.25`。Web 每任务与整次启动均默认不限；SDK 每次运行默认上限 0.25 美元，运行前核对预览与有效配置，超出既有上限另行确认。此前在 DeepSeek 官方 API 上完成过一次 SDK/Harness/MCP 的真实闭环：3 次 HTTP 200、4 次工具、来源引用一致，见[历史调用记录](docs/debug/deepseek-real-api-smoke-20261009-v1.md)；这不能替代 Kouri 的真实兼容性验收。
 
 `npm test`、无模型 `smoke`、故障注入及旧模拟回归继续检查协议、权限和失败恢复。它们仅是开发诊断；不能作为模型回答、科研交付或真实降本的验收依据。真实 API 失败时记录失败，不切回固定模拟回复来报告通过。
 
@@ -245,7 +254,7 @@ Mode 菜单显示 Origin、Shadow、Execute；Origin 在协议中仍为 `baselin
 
 后台保留双层费用记账：Web 每任务、全启动和输出上限默认均为 `null`；请求次数默认不限，新任务不重置累计费用与请求计数。任务费用用 `--budget-usd` 配置，全启动费用用 `--run-budget-usd` 配置；可选 `--request-limit/--run-request-limit` 正整数仍支持次数上限，CLI `0` 或配置 `null` 表示不限次数。推理档位按本轮 Off / On 选择，默认关闭压缩；请求、缓存输入/输出 token、费用和 verified skips 仍完整记录，代理估值需与账单核对。免费模拟不展示额度表单，实际支出为零。
 
-真实连接在服务器根目录的私有 `.env` 填写 `DEEPSEEK_API_KEY` 或 `HARLESS_GLM_API_KEY`；GLM 还要配置 `HARLESS_GLM_MODEL`、官方 `HARLESS_GLM_BASE_URL` 和两项保守的美元/百万 token 价格，字段见 `.env.example`。密钥只由服务器读取；浏览器 API 仅收到模型名称和可用状态，不读取 `.env`。不要提交或发送密钥。统一 npm 入口通过 Node `loadEnvFile` 读取它（要求 Node 20.12+），已有环境变量优先。填写密钥不会自动调用付费模型：
+真实连接在服务器根目录的私有 `.env` 填写 `KOURI_API_KEY` 或 `HARLESS_GLM_API_KEY`；GLM 还要配置 `HARLESS_GLM_MODEL`、官方 `HARLESS_GLM_BASE_URL` 和两项保守的美元/百万 token 价格，字段见 `.env.example`。正式多用户服务还须把 `KOURI_API_KEY` 显式写入私有 gateway 启动环境，独立预算服务也须取得该变量。密钥只由服务器读取；浏览器 API 仅收到模型名称和可用状态，不读取 `.env`。不要提交或发送密钥。统一 npm 入口通过 Node `loadEnvFile` 读取它（要求 Node 20.12+），已有环境变量优先。填写密钥不会自动调用付费模型：
 
 ```sh
 npm run web:real

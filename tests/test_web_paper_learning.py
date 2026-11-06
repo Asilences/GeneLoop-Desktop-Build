@@ -89,6 +89,14 @@ def test_existing_traces_compile_and_publish_next_private_version_without_changi
     release=store/pointer['round']/'release'
     admitted=load_product_bundle(ROOT,release,'paper-proofreading',private_root=store)
     assert admitted['runtime_kind']=='paper_document_read_v1'
+
+    for split in ("train-1", "train-2", "heldout-1"):
+        exported = release.parent / "compile" / split
+        assert not (exported / "agent-events.jsonl").exists()
+        assert not (exported / "events.jsonl").exists()
+        assert not (exported / "task.json").exists()
+        assert "question" not in json.loads((exported / "manifest.json").read_text(encoding="utf-8"))
+        assert json.loads((exported / "learning-trace.json").read_text(encoding="utf-8"))["bindings"]
     assert len(json.loads((release/'library.json').read_text())['artifacts'])==1
     assert json.loads((release/'learning-report.json').read_text())['compilation_model_requests']==0
     assert before=={str(path):worker.sha(path) for path in (out/'tasks').rglob('*') if path.is_file()}

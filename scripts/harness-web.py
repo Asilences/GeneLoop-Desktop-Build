@@ -24,10 +24,12 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import (model_api_root, model_catalog_snapshot,
+    model_api_key_configured, model_sdk_key, model_ids)
 from src.adapters.scenario import prepare_scenario
 from src.adapters.harless_scenarios import prepare_scene_registry
 from src.adapters.harless_product_prompt import product_persona, product_system_prompt
-from src.adapters.harless_models import discover_deepseek_models, model_options, price_basis
+from src.adapters.harless_models import model_options, price_basis
 from src.adapters.deepseek_cost_gate import (State, create_server, normalize_request_limit,
     request_limit_argument, cost_cap_argument, PEAK_USD_PER_MILLION, CACHE_HIT_PEAK_USD_PER_MILLION)
 from src.adapters.web_task_budget import TaskBudgetRegistry, create_control_server
@@ -186,6 +188,7 @@ def prepare(args, output, endpoint):
     save(preset / 'preset.yml', {'name': f'GeneLoop · {prepared["name"]}（{"真实模型" if args.real_model else "免费模拟"}）'})
     canonical_prompt_sha = hashlib.sha256(prepared['prompt'].strip().encode()).hexdigest()
     policy = {'learning_python':sys.executable, 'output': str(output), 'prompt_sha256': canonical_prompt_sha,
+              'rsi_sharing_endpoint':os.environ.get('GENELOOP_RSI_SHARING_ENDPOINT'),
               'allowed_tools': prepared['allowed_tools'], 'endpoint': endpoint,
               'max_output_tokens': public['max_output_tokens'], 'mode': args.mode,
               'embedding_endpoint': args.embedding_endpoint,
@@ -230,9 +233,12 @@ def prepare(args, output, endpoint):
             certified_input_sha256=canonical_prompt_sha, resources=resources,
             embedding_model=args.embedding_model)
         catalog = (getattr(args, 'deepseek_catalog', None) if args.real_model else
-                   {'data': [{'id': 'deepseek-flash'}]})
+                   {'data': [{'id': 'deepseek-flash'},
+                             *([{'id': 'deepseek-v4-pro'}] if getattr(args, 'preview_model_picker', False) else [])]})
         policy['models'] = (model_options(catalog, budget_usd=args.budget_usd,
                             max_output_tokens=public['max_output_tokens']) if catalog else [])
+        if getattr(args, 'preview_model_picker', False):
+            policy['models'][1]['label'] = '本地模拟 · 第二模型'
         if args.glm:
             policy['models'].append({'provider': 'harless-glm', 'model': args.glm['model'],
                                      'label': args.glm['model'].upper(), 'available': True})
@@ -350,7 +356,9 @@ def main():
     parser.add_argument('--case', default='')
     parser.add_argument('--scene-registry', default='config/harless-scenes.json', help='server-owned versioned scene registry')
     parser.add_argument('--frozen', action='store_true', help='legacy single-task mock regression entry')
-    parser.add_argument('--real-model', action='store_true', help='enable real DeepSeek connection; native chat sends tasks immediately')
+    parser.add_argument('--real-model', action='store_true', help='enable real Kouri connection; native chat sends tasks immediately')
+    parser.add_argument('--preview-model-picker', action='store_true',
+                        help='show a second mock-only model in the local picker; never enables real API calls')
     parser.add_argument('--manifest', help='certified online manifest for this capability profile')
     parser.add_argument('--task', help='certified task/version binding, paired with --manifest')
     parser.add_argument('--resources', help='private server-owned resource registry JSON: ID -> {text_file}')
@@ -400,17 +408,19 @@ def main():
     if bool(args.manifest) != bool(args.task): parser.error('--manifest and --task must be supplied together')
     if args.real_model and (args.frozen or args.fixture != 'normal'):
         parser.error('real provider cannot use frozen/failure fixtures')
+    if args.preview_model_picker and (args.real_model or args.frozen):
+        parser.error('model picker preview requires the dynamic mock Web mode')
     try: args.glm = configured_glm(args.real_model and not args.frozen)
     except ValueError as error: parser.error(str(error))
-    if args.real_model and not (os.environ.get('DEEPSEEK_API_KEY', '').strip() or args.glm):
-        parser.error('configure DEEPSEEK_API_KEY or HARLESS_GLM_API_KEY in private .env')
+    if args.real_model and not (model_api_key_configured() or args.glm):
+        parser.error('configure KOURI_API_KEY or HARLESS_GLM_API_KEY in private .env')
     if args.run_id is not None and not re.fullmatch('[0-9a-f]{32}', args.run_id):
         parser.error('run-id must be 32 lowercase hexadecimal characters')
     if args.resume and (not args.run_id or args.frozen):parser.error('--resume requires --run-id and dynamic Web mode')
     args.deepseek_catalog = None
-    if args.real_model and os.environ.get('DEEPSEEK_API_KEY', '').strip():
+    if args.real_model and model_api_key_configured():
         try:
-            args.deepseek_catalog = discover_deepseek_models(os.environ['DEEPSEEK_API_KEY'])
+            args.deepseek_catalog = model_catalog_snapshot()
             model_options(args.deepseek_catalog, budget_usd=args.budget_usd,
                           max_output_tokens=defaults['max_output_tokens'])
         except ValueError as error:
@@ -443,7 +453,7 @@ def main():
     provider = ThreadingHTTPServer(('127.0.0.1', 0), handler)
     upstream = f'http://127.0.0.1:{provider.server_port}'
     if not args.real_model: args.embedding_endpoint = args.embedding_endpoint or upstream + '/v1/embeddings'
-    else: upstream = 'https://api.deepseek.com'
+    else: upstream = model_api_root()
     rates = dict(PEAK_USD_PER_MILLION)
     cache_rates = dict(CACHE_HIT_PEAK_USD_PER_MILLION)
     if args.glm:
@@ -465,7 +475,7 @@ def main():
     gate = create_server('127.0.0.1', 0, upstream, state,
                          state_selector=registry.state_for if registry else None,
                          allow_search=not args.frozen, allow_vision=not args.frozen,
-                         allowed_models={'deepseek-flash', 'deepseek-v4-pro'})
+                         allowed_models=model_ids() if args.real_model else {'deepseek-flash', 'deepseek-v4-pro'})
     servers.append(gate)
     if args.glm:
         args.glm_gate_token = token_hex(32)
@@ -479,7 +489,7 @@ def main():
         threading.Thread(target=server.serve_forever, daemon=True).start()
     prepare(args, output, f'http://127.0.0.1:{gate.server_port}/v1')
     env = {**os.environ, 'DSH_HOME': str(output / 'dsh'), 'SSS_WEB_POLICY': str(output / 'policy.json'),
-           'DEEPSEEK_API_KEY': os.environ.get('DEEPSEEK_API_KEY', '') if args.real_model else 'sss-mock-only',
+           'DEEPSEEK_API_KEY': model_sdk_key() if args.real_model and model_api_key_configured() else 'sss-mock-only',
            'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{gate.server_port}/v1',
            'SSS_ONLINE_MOTIF_MANIFEST': '', 'SSS_ONLINE_MOTIF_TASK': ''}
     log = startup_path.open('w')

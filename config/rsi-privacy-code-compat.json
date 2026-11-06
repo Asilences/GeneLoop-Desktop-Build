@@ -1,0 +1,70 @@
+{
+  "scenarios/research_ppt/motif_v6.py": {
+    "certified": "2a8d6cc9c27bdb30d3bae6dc598460635c2be1a4a5aa4190c605c813096ce1ad",
+    "current": "b129d91b8fb1069fd13c36ca585075a02f8d418ab35f1e94fa47785faa9e387b"
+  },
+  "scripts/compile-witnessed-read-chains.py": {
+    "certified": "a0111bc4254d982b27a38d591c00e71d4c090bdf3e35e72c8b9abb1730989fc3",
+    "current": "b1dd62ebd6d824125e99dd12f5f483ffab87aca6f5ce9d065a2207c34329402b"
+  },
+  "scripts/harness-web.py": {
+    "certified": "04e3bb997cc76f974312dcbb05fc4aa01dadf01428500258ff187bdc8f26f5ef",
+    "current": "a9d2a1b0e1bbf8f4706cc01664b442993df067b178f695b633e8fed387b8223b"
+  },
+  "scripts/learn-ppt-master-motif.py": {
+    "certified": "42b928b1df3eb83b6c096823651afe8e1c82885c57f6b772500eb630e327dfe0",
+    "current": "2f55f219cac3c8e70cf97bd7d3d89c771f030bb120f1a260bdf8d6071e6996d0"
+  },
+  "scripts/learn-web-paper-document-motif.py": {
+    "certified": "09c7d55ac6ed6f6ac297a7dfc4586cbff6c2d0c0ce4f374ed2f7db429fc34edd",
+    "current": "ea42f445fdda555561dea936371aef8c20f310f42a5e093a366401723867bb15"
+  },
+  "scripts/learn-web-paper-tasks.py": {
+    "certified": "bb3a8caecf84921446cc446358ccc2204283ade7549b8aaa8a0a2d83e2fa7c71",
+    "current": "5e91b22ebe26e077813c7731ef01356dc1c7c6dbb18fda4f7a667fed600cffbe"
+  },
+  "scripts/learn-web-ppt-tasks.py": {
+    "certified": "43796d1faa5d56ff679a0a90677b012215791275ae24912279208e2533851954",
+    "current": "79f1743f6d7efa2b6c59a494e177aa6a6ed18ef21700fef89870dd63ba17abe5"
+  },
+  "src/adapters/dsh_web_tasks.ts": {
+    "certified": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284",
+    "current": "7b230e08ce49578a61280427f7dd5eaedab2e792b10119d220782b9b460f77f3"
+  },
+  "src/adapters/harless_rsi_bundle.py": {
+    "certified": "06af97b2a465a439dd4323a37f764c492cd3927bb1bed232afeef8f389f5fe91",
+    "current": "9a8ab054a4d130395c5fe6f515e6a2afefdda6a2fb671f6ec00a622d4b3aa4ac"
+  },
+  "src/adapters/task_identity.py": {
+    "certified": "cc81e05c7eaf8e17a7bf9e0e04443a922ea7cbee6eb1745e199a3b8cd4081bb8",
+    "current": "53f1fad9248777d87c17c7518b689b0f2556ab754cdd86b5621d3bc1b2adf4c6"
+  },
+  "src/motif_core/offline/edge_compiler.py": {
+    "certified": "1ef4dda018d33e5120e37c2951928d617f582306e7f69552fcd343ab941c4261",
+    "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
+  },
+  "scripts/harless_gateway.mjs": {
+    "certified": "d0905b88d5e489f6d83e410eb44d32b7cbff518461aa6c89a99754d48a5ca2c4",
+    "current": "b654822faa5de0041afd76b50df732bc9af62f0cfc273c1a7669ec7d726a035f"
+  },
+  "scripts/prepare-native-host.mjs": {
+    "certified": "c4f9b1bf04712d361e6364600dcf2bd75a20d5410a09aaa92a028ea9ee94658f",
+    "current": "9ff3b7d2788eff56278adb61ac827587ff638e070f948e4a2572afd07ea4e13e"
+  },
+  "scripts/serve-web-budget.py": {
+    "certified": "516b39bfd04365fd3cd9f0ccce1b16705c71bc8b1385b178c7bfc579604acc9a",
+    "current": "a8f35702a97ed44d270f07a0cccbf1c6161b843a2f287026d19431d8745ff239"
+  },
+  "src/adapters/capability_proposal.py": {
+    "certified": "26b9fe45909001bd8f0a36352be20d8406b49a7d5a2fed11028d710ea2b44a59",
+    "current": "3a5b38403779607ebb25f583bf35693b928335c91d15ba66096009b065e78c0e"
+  },
+  "src/adapters/deepseek_cost_gate.py": {
+    "certified": "b42ea0cdcf2f2ebc4ddf7efb42761270a98a7d204868caea35b6550523875675",
+    "current": "2de53acfbf29d4849e3a729a285b85454875318cede93826abec3219d1a373f3"
+  },
+  "src/adapters/harless_reasoning.ts": {
+    "certified": "7e734662ea4169ac8a94154a65ea226f3f6d933675a0557c59cd445601bb4967",
+    "current": "e02a83bea475ff7e5e2e62d4eedf718ef2f69730971ef70ce321ff9034a53461"
+  }
+}

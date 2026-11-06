@@ -5,6 +5,8 @@ already present in recorded DeepSeek requests for the same public-film study.
 Each phase has an explicit finite request count; failures are not auto-retried.
 """
 from __future__ import annotations
+
+from .model_api import model_api_root, model_sdk_key
 import hashlib,json,os,re,threading,urllib.request,urllib.error
 from pathlib import Path
 from .deepseek_cost_gate import State,create_server
@@ -27,8 +29,8 @@ class ResearchRequests:
         self.base=Path(base);self.output=Path(output);self.phase=phase
         self.max_output=max_output;self.max_requests=max_requests
         self.output.mkdir(parents=True,exist_ok=True);self.ids=[];self.current=phase
-        self.key=os.environ.get('DEEPSEEK_API_KEY')
-        if not self.key:raise ValueError('private_model_credential_required')
+        try:self.key=model_sdk_key()
+        except ValueError:raise ValueError('private_model_credential_required') from None
 
     def __enter__(self):
         owner=self
@@ -47,7 +49,7 @@ class ResearchRequests:
         # checked below without resetting the old counter or old paid failures.
         self.state=AccountedState(cap_usd=None,output_cap=self.max_output,record=self.base/'cost-ledger.jsonl',
                                  request_limit=None,checkpoint=self.base/'budget-checkpoint.json')
-        self.gate=create_server('127.0.0.1',0,'https://api.deepseek.com',self.state)
+        self.gate=create_server('127.0.0.1',0,model_api_root(),self.state)
         self.thread=threading.Thread(target=self.gate.serve_forever,daemon=True);self.thread.start()
         return self
 

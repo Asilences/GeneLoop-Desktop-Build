@@ -18,6 +18,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.harness_runtime import create_harness
 from src.adapters.scenario import prepare_scenario
 from src.adapters.deepseek_cost_gate import State, create_server
@@ -107,7 +108,7 @@ def main():
     if not jobs:
         parser.error('no selected jobs')
     image = os.environ['REMOTION_IMAGE']
-    if args.call_model and not os.environ.get('DEEPSEEK_API_KEY'):
+    if args.call_model and not model_api_key_configured():
         raise ValueError('private model credential required')
     checkpoint = BASE / 'budget-checkpoint.json'
     if not checkpoint.exists():
@@ -136,7 +137,7 @@ def main():
 
     state = AuditedState(cap_usd=None, output_cap=6000, record=BASE / 'cost-ledger.jsonl',
                          request_limit=None, checkpoint=checkpoint)
-    gate = create_server('127.0.0.1', 0, 'https://api.deepseek.com', state)
+    gate = create_server('127.0.0.1', 0, model_api_root(), state)
     worker = threading.Thread(target=gate.serve_forever, daemon=True)
     worker.start()
     try:
@@ -269,7 +270,7 @@ def main():
             session = 'remotion-structured-' + uuid4().hex
             patches = [prepared['patch']]
             env = {'SSS_SCENARIO_TOOLS': json.dumps(prepared['allowed_tools']),
-                   'DEEPSEEK_API_KEY': os.environ.get('DEEPSEEK_API_KEY', ''),
+                   'DEEPSEEK_API_KEY': model_sdk_key() if args.call_model else 'sss-mock-only',
                    'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{gate.server_port}/v1',
                    'SSS_BUDGET_GATE_ACTIVE': '1', 'SSS_BUDGET_CAP_USD': '0',
                    'SSS_BUDGET_LEDGER': str(BASE / 'cost-ledger.jsonl')}

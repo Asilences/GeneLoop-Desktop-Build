@@ -245,13 +245,13 @@ app.whenReady().then(async()=>{
  const deleteWorkspace=()=>evaluate(`document.querySelector('section[aria-label="诊断工作区"] .workspace-more').click();document.querySelector('[data-action=workspace-delete]').click()`);
  await deleteWorkspace();
  assert.equal(await evaluate(`document.querySelectorAll('.workspace-delete-list input').length===2&&!document.querySelector('.workspace-delete-list input:checked')`),true);
- await evaluate(`document.querySelector('dialog footer .secondary').click()`);
- await until(()=>evaluate(`!document.querySelector('dialog')`),'取消后关闭第一次确认框');
+ await evaluate(`document.querySelector('dialog[open] footer .secondary').click()`);
+ await until(()=>evaluate(`!document.querySelector('.workspace-delete-list')`),'取消删除后移除旧确认框');
  assert.equal(await evaluate(`!!document.querySelector('section[aria-label="诊断工作区"]')`),true);
  await deleteWorkspace();
- await evaluate(`document.querySelector('.workspace-delete-list input[value="menu-fixture"]').click();document.querySelector('dialog footer .primary').click()`);
+ await evaluate(`document.querySelector('dialog[open] .workspace-delete-list input[value="menu-fixture"]').click();document.querySelector('dialog[open] footer .primary').click()`);
  await until(()=>evaluate(`!document.querySelector('section[aria-label="诊断工作区"]')&&!!document.querySelector('[data-session-id="history"]')&&!document.querySelector('[data-session-id="menu-fixture"]')`),'删除分组，仅将勾选对话移入最近删除');
- await until(()=>evaluate(`!document.querySelector('dialog')`),'删除工作区确认框关闭');
+ await until(()=>evaluate(`!document.querySelector('.workspace-delete-list')`),'删除完成后移除当前确认框');
  check('工作区删除须确认，可保留未勾选对话');
  await evaluate(`document.getElementById('workspace-view').click();document.querySelector('[data-action=view-group-flat]').click()`);
  assert.equal(await evaluate(`!!document.querySelector('#workspace-list > [data-session-id="history"]')`),true);
@@ -336,6 +336,49 @@ app.whenReady().then(async()=>{
      assert.deepEqual(registry(),[]);
      check('已有工作区绑定后复用本机输入框，解除后返回云端首页');
    }finally{dialog.showOpenDialog=originalPicker;}
+ }
+ if(fixture.privacy){
+  const openPrivacy=async()=>{
+   await until(()=>evaluate(`!document.querySelector('dialog[open]')`),'旧对话框已关闭');
+   await evaluate(`document.getElementById('account-nav').click();document.querySelector('[data-action=account-settings]').click();document.querySelector('[data-page="privacy"]').click()`);
+   await until(()=>evaluate(`!!document.querySelector('[data-privacy-preview]')`),'共享对象选择');
+  };
+  const prepare=async scene=>{
+   await evaluate(`document.querySelector('select[aria-label="选择共享对象"]').value='${scene}';document.querySelector('[data-privacy-preview]').click()`);
+   await until(()=>evaluate(`!!document.querySelector('[data-privacy-payload]')`),'本地公共投影完成');
+   assert.equal(await evaluate(`document.querySelector('[data-privacy-consent]').checked`),false);
+   assert.equal(await evaluate(`document.querySelector('[data-privacy-send]').disabled`),true);
+  };
+  const receiver=mode=>evaluate(`fetch('/api/fixture/privacy-receiver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'${mode}'})}).then(response=>response.json())`);
+  await openPrivacy();assert.equal((await receiver('accept')).received,0);
+  await prepare('paper-proofreading');
+  assert.doesNotMatch(await evaluate(`document.querySelector('[data-privacy-payload]').textContent`),/Alice|alice-private|\/mnt\/private/);
+  await evaluate(`document.querySelector('dialog.settings-dialog[open] > header button').click()`);
+  await until(()=>evaluate(`!document.querySelector('dialog.settings-dialog')`),'关闭取消预览');
+  await openPrivacy();assert.equal((await receiver('accept')).received,0);
+  await prepare('ppt');
+  report.sharing_payload=await evaluate(`document.querySelector('[data-privacy-payload]').textContent`);
+  await evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
+  writeFileSync(join(fixture.output,'privacy-preview.png'),(await desktop.workspace.webContents.capturePage()).toPNG());
+  const saved=join(fixture.output,'privacy-local-copy.json');
+  let copied;
+  desktop.workspace.webContents.session.once('will-download',(_event,item)=>{
+   item.setSavePath(saved);item.once('done',(_event,status)=>{copied=status;});
+  });
+  await desktop.workspace.webContents.executeJavaScript(`document.querySelector('[data-privacy-download]').click()`,true);
+  await until(()=>copied,'保存独立的本地共享副本');
+  assert.equal(copied,'completed');assert.equal(readFileSync(saved,'utf8'),report.sharing_payload);
+  check('本地共享副本与完整预览字节一致');
+  await evaluate(`document.querySelector('[data-privacy-consent]').click();document.querySelector('[data-privacy-send]').click()`);
+  await until(()=>evaluate(`document.querySelector('[data-privacy-panel] [role=status]').textContent.includes('接收端已确认接收')`),'明确同意后接收');
+  assert.equal((await receiver('drop')).received,1);
+  await evaluate(`document.querySelector('dialog.settings-dialog[open] > header button').click()`);
+  await until(()=>evaluate(`!document.querySelector('dialog.settings-dialog')`),'关闭已完成预览');
+  await openPrivacy();await prepare('paper-proofreading');
+  await evaluate(`document.querySelector('[data-privacy-consent]').click();document.querySelector('[data-privacy-send]').click()`);
+  await until(()=>evaluate(`document.querySelector('[data-privacy-panel] [role=status]').textContent.includes('接收状态尚未确认')`),'网络中断保留未知回执');
+  assert.equal((await receiver('drop')).received,2);
+  check('真实Electron隐私预览、逐次同意、关闭取消和网络中断不自动重传');
  }
  report.ok=true;
 }).catch(async error=>{report.ok=false;report.error=error.stack;try{report.body=await desktop.workspace.webContents.executeJavaScript('document.body.innerText');}catch{}console.error(error);}).finally(()=>{writeFileSync(join(fixture.output,'summary.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,artifact_directory:fixture.output},null,2));desktop?.permitClose();app.quit();});

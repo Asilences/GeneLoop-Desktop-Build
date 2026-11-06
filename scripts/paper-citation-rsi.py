@@ -23,6 +23,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
 from src.adapters.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State, create_server
@@ -217,9 +218,9 @@ def run(exp, inputs, case, mode, budget_record, label, library_tag=''):
             return result
     state=Recorded(cap_usd=cap,output_cap=OUTPUT_CAP,request_limit=None,record=out/'cost-ledger.jsonl')
     state.request_count=len(rows); state.reserved_usd=prior
-    gate=create_server('127.0.0.1',0,'https://api.deepseek.com',state)
+    gate=create_server('127.0.0.1',0,model_api_root(),state)
     worker=threading.Thread(target=gate.serve_forever,daemon=True);worker.start()
-    env.update(DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',SSS_BUDGET_GATE_ACTIVE='1',
+    env.update(DEEPSEEK_API_KEY=model_sdk_key(),DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',SSS_BUDGET_GATE_ACTIVE='1',
                SSS_BUDGET_CAP_USD=str(cap),SSS_BUDGET_LEDGER=str(out/'cost-ledger.jsonl'))
     save(out/'manifest.json',{'session_id':session,'mode':mode,'case':case,'input_version':version,
         'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest(),'model':'deepseek-flash','reasoning_effort':'off',
@@ -433,7 +434,7 @@ def main():
             'budget_record_path':budget_record['path'],'budget_record_sha256':budget_record['sha256']}));return
     if args.phase=='compile':compile_library(exp,args.library_tag);return
     if args.phase=='preflight': asyncio.run(preflight(exp,prepare(exp)));return
-    if not args.call_model or not os.environ.get('DEEPSEEK_API_KEY'): raise ValueError('explicit server model run required')
+    if not args.call_model or not model_api_key_configured(): raise ValueError('explicit server model run required')
     if ROOT != Path('/root/autodl-tmp/jjy'): raise ValueError('real experiment must run on authorized server')
     if COMPOSITE_EVIDENCE:
         expected_mode='off' if args.phase=='collect' else 'shadow' if args.mode=='shadow' else 'enforce'
