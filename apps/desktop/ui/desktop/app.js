@@ -1,3 +1,4 @@
+import {bindMotifLibrary} from './motif-library.js';
 import {request,post,rpc,upload,RemoteStreams} from './api.js';
 import {Conversation} from './conversation.js';
 import {node,button,blocks,markdown,dialog,icon,popupMenu,choiceControl,refreshChoice,replyAction} from './components.js';
@@ -7,6 +8,7 @@ import {comparisonCard} from './comparison.js';
 import {bindScenePicker} from './scene-picker.js';
 import {deliveryPath,deliveryFiles,deliveryName,presentation,presentationCard,previewPresentation} from './deliveries.js';
 const $=id=>document.getElementById(id),state={user:null,sessions:[],workspaces:[],archived:new Set(),session:null,workspace:null,settings:null,models:[],conversation:new Conversation(),attachments:[],trace:false,generation:0,submitting:false,drafts:new Map(),comparisons:new Map(),pending:new Map()};
+const motifUI=bindMotifLibrary({trigger:$('motif-nav'),host:$('motif-library'),conversation:document.querySelector('.conversation'),deliveries:$('deliveries'),navigation:[$('workspace-list'),$('new-session')],summaryHost:$('motif-summary'),getWorkspace:()=>state.workspaces.find(row=>row.workspaceId===state.workspace),getWorkspaceTitle:id=>state.workspaces.find(row=>row.workspaceId===id)?.title||id,onWorkspace:id=>Promise.resolve().then(()=>openWorkspace(id)).catch(fail)});
 const labels={'new-scene':'Chat',ppt:'PPT','paper-proofreading':'论文校对','research-data-analysis':'数据分析',files:'文件管理','video-editing':'视频编辑'};
 const examples=[
   ['paper-proofreading','检查论文引用','请检查我上传的论文，列出正文引用与参考文献不一致的地方，并标明位置。'],
@@ -248,6 +250,7 @@ function saveComposer(){
   else scratchText=content.text;
 }
 async function beginWorkspaceDraft(id){
+  motifUI.close();
   if(creatingSession||state.submitting)return;
   const wasCollapsed=collapsedWorkspaces.delete(id);
   if(activeWorkspaceDraft?.workspaceId===id){if(wasCollapsed)renderSidebar();$('prompt').focus();return;}
@@ -263,6 +266,7 @@ async function beginWorkspaceDraft(id){
   if(activeWorkspaceDraft===draft)$('prompt').focus();
 }
 function openWorkspace(id,{focus=false}={}){
+  motifUI.close();
   if(creatingSession||state.submitting)return;
   saveComposer();
   if(id!==state.workspace){
@@ -296,6 +300,7 @@ async function ensureSession(){
   try{return await creatingSession;}finally{creatingSession=null;}
 }
 async function selectSession(id,{fromScratch=false,force=false,workspaceDraft=null}={}){
+  motifUI.close();
   if((creatingSession||state.submitting)&&!fromScratch)return;
   if(state.session===id&&!force&&!historyError)return;
   if(!workspaceDraft){
@@ -438,7 +443,7 @@ function workspaceHome(group){
     }
     section.append(list);
   }
-  return node('div',{class:'workspace-home'},summary,resume,section);
+  return motifUI.workspaceHome(group,{heading:summary,run:node('div',{},resume,section)});
 }
 function renderConversation(){
   const history=$('history'),previousTop=history.scrollTop,nearBottom=history.scrollHeight-previousTop-history.clientHeight<140;

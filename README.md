@@ -2,6 +2,8 @@
 
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
+桌面 Motif 展示候选在工作区首页融入运行、能力组合、评估、演化和版本，并提供全局库入口。它复用同伴的脱敏证据协议，通过账号隔离的只读接口展示，不授予执行权或虚构节省。接入配置、构建和验证边界见[工作区 Motif 说明](docs/product/desktop/motif-workspace.md)与[模块交接](docs/handoffs/motif-visualization.md)；尚未部署正式服务。
+
 Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
 
 2026-11-04，新增默认关闭的 [Evidence-Grounded Evolution Agent 离线原型](docs/research/evolution/evidence-grounded-evolution-agent.md)：单个跨任务证据包、一次有界模型提案，复用原边界学习与宿主构造/认证入口。运行 `node scripts/project.mjs python scripts/run-evolution-agent.py --help`。两轮真实提案最终为 `no_change`，未产生新认证能力或收益；上下文、失败和费用见[实验记录](docs/experiments/evidence-evolution-20261104.md)。

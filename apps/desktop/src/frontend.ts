@@ -4,8 +4,8 @@ import type { Session } from 'electron';
 import { sameServer } from './policy.ts';
 type RequestWithOrigin = Request & { readonly initiatorOrigin?: string };
 type Options = { session: Session; server: string; assets: string; ui: string; fail: (message: string) => void };
-const FILES = ['app.js','api.js','conversation.js','components.js','lucide-icons.js','composer.js','scene-picker.js','panels.js','comparison.js','deliveries.js','desktop.css'];
-const TYPES: Record<string,string> = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
+const FILES = ['app.js','api.js','conversation.js','components.js','lucide-icons.js','composer.js','scene-picker.js','panels.js','comparison.js','deliveries.js','desktop.css','motif-library.css','motif-library.js','motif-evidence.js','motif-example.json'];
+const TYPES: Record<string,string> = {'.json':'application/json; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 /** 独立桌面页面与服务器API的传输边界；不读取、组合或执行服务器网页。 */
 export class LocalFrontendHost {
   readonly served = {local:0,network:0,localScripts:[] as string[],networkScripts:[] as string[]};

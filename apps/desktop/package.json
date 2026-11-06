@@ -9,7 +9,7 @@
   "main": "dist/main.js",
   "engines": { "node": ">=22.18" },
   "scripts": {
-    "build": "tsc && node scripts/prepare-assets.mjs",
+    "build": "tsc && node scripts/build-motif-evidence.mjs && node scripts/prepare-assets.mjs",
     "dev": "npm run build && electron .",
     "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs ../../tests/test_desktop_frontend.mjs",
     "smoke": "npm run build && node scripts/check-local-ui.mjs",
@@ -18,7 +18,8 @@
     "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
     "pack": "npm run build && electron-builder --dir --publish never",
-    "dist": "npm run build && node scripts/wrap-installer.mjs"
+    "dist": "npm run build && node scripts/wrap-installer.mjs",
+    "check:motif": "node scripts/build-motif-evidence.mjs && node --test ../../tests/test_desktop_motif_library.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",
@@ -26,7 +27,9 @@
     "electron": "45.2.1",
     "electron-builder": "26.18.0",
     "sharp": "0.35.5",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.1"
   },
   "dependencies": {},
   "build": {

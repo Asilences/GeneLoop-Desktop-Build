@@ -7,9 +7,13 @@ import {randomUUID} from 'node:crypto';
 import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {createMotifViewRoute} from '../../../scripts/harless_motif_view.ts';
 const require=createRequire(import.meta.url),{WebSocketServer}=require('ws');
 const app=fileURLToPath(new URL('../',import.meta.url));
 const output=join(app,'.local/validation/renderer-'+randomUUID());mkdirSync(output,{recursive:true});
+const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFileSync(join(app,'ui/desktop/motif-example.json')));
+const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'}]});
+let motifAuthenticated=true;
 const requests=[],streams=new Map(),sessions=[],selections=new Map(),modelSelections=new Map();let questionPending=false;
 const archived=new Set(),deleted=new Set();
 const scenes=[['new-scene','Chat','chat'],['ppt','PPT','ppt'],['paper-proofreading','论文校对','paper'],['research-data-analysis','数据分析','data'],['files','文件管理','file'],['video-editing','视频编辑','video']].map(([id,label,shortcut])=>({id,label,shortcut,available:true}));
@@ -25,8 +29,11 @@ const json=(res,value,status=200)=>{res.writeHead(status,{'content-type':'applic
 const push=(endpoint,value,sessionId)=>{for(const [key,row]of streams)if(row.endpoint===endpoint&&(!sessionId||row.sessionId===sessionId))row.socket.send(JSON.stringify({type:'item',streamId:key,value}));};
 const server=createServer(async(req,res)=>{
  try{
+  if(await motifRoute(req,res,motifAuthenticated?{id:'renderer-fixture'}:null))return;
   const url=new URL(req.url,'http://127.0.0.1'),path=url.pathname;const buffers=[];for await(const chunk of req)buffers.push(chunk);const raw=Buffer.concat(buffers),body=raw.length&&(req.headers['content-type']||'').includes('json')?JSON.parse(raw):{};
   requests.push({path,method:req.method,body});
+  if(path==='/api/fixture/motif-logout'&&req.method==='POST'){motifAuthenticated=false;return json(res,{ok:true});}
+  if(path==='/api/fixture/motif-update'&&req.method==='POST'){const next=JSON.parse(readFileSync(motifFile,'utf8'));next.capabilities[0].name+=' · 更新诊断';writeFileSync(motifFile,JSON.stringify(next));return json(res,{ok:true});}
   if(path==='/api/account/me'){await new Promise(resolve=>setTimeout(resolve,600));return json(res,{user:{id:'diagnostic',displayName:'协议诊断账号',username:'diagnostic'}});}
   if(path==='/api/workspace/ready')return json(res,{ready:true});
   if(path==='/api/harless/settings'){
