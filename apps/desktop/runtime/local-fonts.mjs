@@ -1,7 +1,16 @@
-import {readFileSync,lstatSync} from 'node:fs';
+import {readFileSync,lstatSync,writeFileSync,mkdirSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {runNativeProcess} from './native-process.mjs';
+export function nativeFontEnvironment(tools,cwd) {
+  if(process.platform!=='darwin')return {};
+  const root=dirname(tools.sourceRoot),fontRoot=join(root,'fonts'),cache=join(cwd,'font-cache'),config=join(cwd,'fontconfig.xml');
+  mkdirSync(cache,{recursive:true,mode:0o700});
+  const escape=s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  const directories=[fontRoot,join(root,'libreoffice/Contents/Resources/fonts/truetype')];
+  writeFileSync(config,'<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig>'+directories.map(p=>'<dir>'+escape(p)+'</dir>').join('')+'<cachedir>'+escape(cache)+'</cachedir></fontconfig>',{mode:0o600});
+  return {FONTCONFIG_FILE:config,SAL_FONTPATH_PRIVATE:fontRoot};
+}
 export async function ensureNativeFonts(ctx,tools,cwd,signal) {
   if(process.platform!=='darwin'||!tools?.sourceRoot)return;
   const root=join(dirname(tools.sourceRoot),'fonts'),font=join(root,'NotoSansCJKsc-Regular.otf');

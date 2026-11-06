@@ -9,7 +9,7 @@ import {NativeMcpTransport} from './local-mcp-transport.mjs';
 import {removeScratchDirectory,publishArtifacts} from './local-artifacts.mjs';
 import {workflowTools,workflowKinds as kinds,workflowToolName} from './native-workflow-catalog.mjs';
 import {ocrData} from './native-ocr-data.mjs';
-import {ensureNativeFonts} from './local-fonts.mjs';
+import {ensureNativeFonts,nativeFontEnvironment} from './local-fonts.mjs';
 
 const sha=data=>createHash('sha256').update(data).digest('hex');
 // Python's canonical representation is shared with the existing file planner.
@@ -110,6 +110,7 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
           SSS_PPT_NODE_EXECUTABLE:process.execPath,
           ELECTRON_RUN_AS_NODE:'1',NODE_OPTIONS:undefined,NODE_PATH:undefined,FM_NATIVE_PDF:'1',GENELOOP_PPT_MASTER_ROOT:tools.skill,
           GENELOOP_PDF_OCR_ROOT:join(dirname(tools.sourceRoot),'ocr'),GENELOOP_DESKTOP_OCR_LOCK:'1'};
+        Object.assign(env,nativeFontEnvironment(tools,root));
         const {fileURLToPath}=await import('node:url');
         env.GENELOOP_NATIVE_CODE_RUNNER=join(dirname(fileURLToPath(import.meta.url)),'local-code.mjs');
         // The top-level PPT proxy is the same typed delivery/recovery adapter as Web.
