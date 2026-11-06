@@ -73,10 +73,24 @@ def create(kind, work):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scenarios/file-management'))
         from common import digest
         from plan_tools import PlanScene
+        class NativePlanScene(PlanScene):
+            def parse(self, path):
+                if path.suffix.lower() == '.pdf':
+                    import hashlib
+                    import pymupdf
+                    from src.adapters.geneloop_pdf import read_pdf
+                    data = path.read_bytes()
+                    with pymupdf.open(stream=data, filetype='pdf') as pdf:
+                        count = min(2, len(pdf))
+                    rows = [read_pdf(data, page_number=page)['pages'][0] for page in range(1, count + 1)]
+                    return 'readable', '\n'.join(row['text'] for row in rows), {
+                        'parser': 'native_pymupdf', 'scope': 'first two physical pages',
+                        'native_adapter_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+                return super().parse(path)
         os.environ['FM_WEB_WORKSPACE'] = str(work)
         spec = settings['file_task']
         spec['workspace'] = str(inputs)
-        scene = PlanScene(spec, work / 'file-results' / (spec['task_id'] + '-' + digest(spec)[:16]))
+        scene = NativePlanScene(spec, work / 'file-results' / (spec['task_id'] + '-' + digest(spec)[:16]))
         server = MCPServer('GeneLoop native file management')
         names = ('read_task', 'list_files', 'pin_file', 'read_file', 'hash_files', 'build_index',
                  'search_index', 'compare_snapshot', 'preview_actions', 'authorize_plan',

@@ -90,7 +90,9 @@ class ConvertedSources:
         completed = subprocess.run([sys.executable, str(self.skill.root / 'scripts/source_to_md.py'),
                                     str(original)], env=env, cwd=directory,
                                    capture_output=True, timeout=90)
-        (directory / 'conversion.stderr.log').write_bytes(completed.stderr)
+        diagnostic = getattr(completed, 'stderr', b'')
+        if diagnostic:
+            (directory / 'conversion.stderr.log').write_bytes(diagnostic)
         self.sources.pinned(source_id)
         if completed.returncode:
             raise ValueError('official_source_conversion_failed_exit_' + str(completed.returncode))

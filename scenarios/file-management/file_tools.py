@@ -155,10 +155,6 @@ class FileScene:
                 stream=io.StringIO(); csv.writer(stream).writerows(rows)
                 return 'readable', stream.getvalue(), {'rows': rows}
         if ext == '.pdf':
-            if os.environ.get('FM_NATIVE_PDF') == '1':
-                from src.adapters.geneloop_pdf import read_pdf
-                result = read_pdf(path.read_bytes())
-                return 'readable', '\n'.join(page['text'] for page in result['pages'][:2]), {'parser': 'native_pymupdf'}
             cmd = [os.environ.get('FM_PDFTOTEXT', 'pdftotext'), '-f', '1', '-l', '2', str(path), '-']
             result = subprocess.run(cmd, capture_output=True, timeout=20)
             if result.returncode: raise ValueError('PDF parser failed')

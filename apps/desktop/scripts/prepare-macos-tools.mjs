@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureBrowser } from '@remotion/renderer';
+import {installNativePythonDeps} from './native-python-deps.mjs';
 
 assert.equal(process.platform,'darwin','此准备步骤必须在真实 macOS 上执行。');
 const app = fileURLToPath(new URL('../',import.meta.url)),repo = resolve(app,'../..');
@@ -36,7 +37,7 @@ await download('https://github.com/astral-sh/python-build-standalone/releases/do
 if(!existsSync(join(root,'python')))run('python3',['-c',
   "import tarfile,sys;tarfile.open(sys.argv[1]).extractall(sys.argv[2],filter='data')",pythonArchive,root]);
 const python=join(root,'python/bin/python3');
-run(python,['-m','pip','install','--only-binary=:all:','-r',join(app,'native-tools-requirements.txt'),'-c',join(app,'native-tools-constraints.txt')]);
+installNativePythonDeps(python,app);
 
 const skill=join(root,'ppt-master');
 if(!existsSync(skill)) {
