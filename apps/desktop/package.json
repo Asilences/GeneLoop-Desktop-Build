@@ -90,6 +90,18 @@
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist"
     },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "format": "UDZO",
+      "backgroundColor": "#f7f7fa",
+      "window": { "width": 540, "height": 380 },
+      "iconSize": 96,
+      "iconTextSize": 13,
+      "contents": [
+        { "x": 130, "y": 190, "type": "file" },
+        { "x": 410, "y": 190, "type": "link", "path": "/Applications" }
+      ]
+    },
     "nsis": {
       "include": "installer.nsh",
       "installerHeader": "assets/installerHeader.bmp",
