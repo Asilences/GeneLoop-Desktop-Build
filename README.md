@@ -2,6 +2,8 @@
 
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
+GeneLoop Desktop `0.3.0-preview.13` 提供 Windows x64、macOS ARM64 和 Intel 本机执行预览：六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。工具随包提供，Mac 使用 ZIP 分发 `.app`。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[本轮记录](docs/debug/desktop-preview13-full-tools-20261106.md)。安装包保存在私有本地目录，不发布 Release。
+
 Web 公平展示候选去除结果前的方法标名，每轮随机并持久化左右顺序，评分和后台记录仍绑定真实方法。产品身份与隐私规则各保留一份，原生 ppt-master Skill 目录限定在 PPT 场景作用域。调试记录统一放 `docs/debug/`，原始材料放私有 `.local/debug/`。本轮以 PR 交付，验证状态见[记录](docs/debug/web-baseline-fairness-audit-20261104.md)。
 
 2026-11-04，新增默认关闭的 [Evidence-Grounded Evolution Agent 离线原型](docs/research/evolution/evidence-grounded-evolution-agent.md)：单个跨任务证据包、一次有界模型提案，复用原边界学习与宿主构造/认证入口。运行 `node scripts/project.mjs python scripts/run-evolution-agent.py --help`。两轮真实提案最终为 `no_change`，未产生新认证能力或收益；上下文、失败和费用见[实验记录](docs/experiments/evidence-evolution-20261104.md)。

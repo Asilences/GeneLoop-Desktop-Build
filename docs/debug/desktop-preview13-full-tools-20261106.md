@@ -29,7 +29,11 @@ Windows/Mac 随包提供目标平台 Python wheels、原场景代码、Office、
 - Windows 最终 ASAR 完整 MCP 检查与 DSH 启动/读写/权限拒绝/取消通过，实际归档摘要记录在私有 `preview13-windows-package.json`。未使用开发目录的 Python/工具代替随包版本。
 - 完整 `npm test` 在合入新 main 前执行：2174通过、84失败、272跳过、30错误，不能报告全绿。相较 preview.12 增加的转换日志兼容与认证版本16项问题已修复；转换相关定向检查通过，保留原网页字节后公共文件种子20项通过。既有 Windows 权限/环境及历史套件失败保留；未为形式重复全量或删除检查。
 - 首轮 Mac 增量检查失败：Intel 无当前 cryptography 官方 wheel，ARM 的增量启动脚本调用了受限 PATH 下的 dirname。已修正；Intel 在构建端从固定 SHA 的当前源包编译并静态链接 OpenSSL，不降级依赖，不要求用户编译。首轮失败与费用保留。
-- 用户要求暂停工具扩展，优先交付 Windows/Mac 预览。Mac 两架构正式包内验证、真实模型完整流程仍须按实际结果更新，不能沿用 preview.12 的成功记录冒充本轮通过。
+- 用户要求暂停工具扩展，优先交付 Windows/Mac 预览。最终私有构建 run `42204458341` 的 macOS ARM64、Intel 两项均成功；包内 PPT 中文字形、Office/PDF/PNG、原生 Remotion 完整解码与音轨、DSH 启动/读写/权限拒绝/取消检查通过。最终压缩格式为 ZIP，解压后将 `.app` 拖入应用程序。文件取回与摘要另存私有交付目录；不把 CI 成功写成人工安装或真实模型完整验收。
+- Mac 修复保留失败证据：初轮依赖准备问题后，交付轮先后暴露运行时准备顺序、精简 FFmpeg 缺少 raw PCM muxer、headless Office 缺少中文字体。音频分析改读严格校验的 WAV PCM16；Noto CJK 固定版本/摘要随包提供，CoreText 仅会话注册，Office 使用任务私有 Fontconfig。最终两架构实际中文导出通过，没有删除字形验收或改写旧失败结论。
+- Windows 安装包由 `b5efd6a7` 构建；Mac 由本地 `4c30fefe` 的源码镜像构建（私有工作流提交 `c41ab2e7`），后续修复限定 Mac 字体、媒体与交付流程。构建基线 main `d1863342` 已合入。新增真实模型请求仍为0，Mac人工界面、干净系统安装及 Apple Developer 签名/公证未完成，新 Motif 认证未完成。
+- 构建结束后已关闭私有仓库 Actions。原账本保留所有失败/取消轮，按完成任务时间及余量估算累计免费计算用量 USD 13.64，低于本轮上限15；这不是 GitHub 实际账单，`timing` 的零值未按免费零消耗解释，不授权付费超额。
+- Windows Setup 与两个 Mac ZIP 已全部取回并核对 SHA-256，私有交付目录含使用说明及 `delivery-receipt.json`。Mac 中转产物删除后再次列举为0；没有公开 Release。按 #155/#136 的原文，仍须 Mac 正常启动连接已有服务及一条真实 Coding 任务，不能以包内无模型探针替代。
 
 ## 后续验收与回退
 
