@@ -25,6 +25,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[2]
 SCENE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_sdk_key
 from scenarios.research_ppt import generated_tools as host
 from scenarios.research_ppt.documents import file_hash
 from scenarios.research_ppt.accounting import lines, token_totals, version
@@ -129,27 +130,28 @@ def _load_key(path: Path | None):
         value = raw.strip()
         if value.startswith('export '):
             value = value[7:].lstrip()
-        if value.startswith('DEEPSEEK_API_KEY='):
+        if value.startswith('KOURI_API_KEY='):
             parts = shlex.split(value.partition('=')[2], comments=True)
             if len(parts) != 1 or not parts[0] or any(token in parts[0] for token in ('$', '`', '\n')):
-                raise ValueError('API 环境文件仅接受字面量 DEEPSEEK_API_KEY')
+                raise ValueError('API 环境文件仅接受字面量 KOURI_API_KEY')
             matches.append(parts[0])
     if len(matches) != 1:
-        raise ValueError('API 环境文件须恰好包含一个 DEEPSEEK_API_KEY')
-    os.environ['DEEPSEEK_API_KEY'] = matches[0]
+        raise ValueError('API 环境文件须恰好包含一个 KOURI_API_KEY')
+    os.environ['KOURI_API_KEY'] = matches[0]
 
 
 @contextmanager
 def _budget(area: Path, cap: float, api_env: Path | None):
-    names = ('DEEPSEEK_API_KEY', 'DEEPSEEK_BASE_URL', 'SSS_BUDGET_GATE_ACTIVE',
+    names = ('KOURI_API_KEY', 'DEEPSEEK_API_KEY', 'DEEPSEEK_BASE_URL', 'SSS_BUDGET_GATE_ACTIVE',
              'SSS_BUDGET_CAP_USD', 'SSS_BUDGET_LEDGER')
     previous = {name: os.environ.get(name) for name in names}
     gate = worker = None
     try:
         _load_key(api_env)
+        os.environ['DEEPSEEK_API_KEY'] = model_sdk_key()
         # Harness 凭证存储也可提供密钥；不读取/输出该存储内容。
         state = State(cap_usd=cap, output_cap=MAX_OUTPUT_TOKENS, record=area / 'cost-ledger.jsonl')
-        gate = create_server('127.0.0.1', 0, 'https://api.deepseek.com', state)
+        gate = create_server('127.0.0.1', 0, model_api_root(), state)
         worker = threading.Thread(target=gate.serve_forever, daemon=True)
         worker.start()
         os.environ.update(DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',

@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.scenario import prepare_scenario
 from src.adapters.harness_runtime import create_harness
 from src.adapters.dsh_client import _usage
@@ -225,7 +226,8 @@ def main():
     print(json.dumps(preview, ensure_ascii=False, indent=2), flush=True)
     if not args.call_model:
         return 0
-    missing = [name for name in prepared['required_env'] if not os.environ.get(name)]
+    missing = [name for name in prepared['required_env']
+               if not (name == 'DEEPSEEK_API_KEY' and model_api_key_configured()) and not os.environ.get(name)]
     if missing:
         raise ValueError('required environment variables are missing: ' + ', '.join(missing))
     if args.mode != 'baseline':
@@ -239,9 +241,10 @@ def main():
     ledger = out / 'cost-ledger.jsonl'
     state = State(cap_usd=args.budget_usd, output_cap=args.max_output, record=ledger)
     # Bind port 0 directly to avoid racing another process for a free port.
-    gate = create_server('127.0.0.1', 0, 'https://api.deepseek.com', state)
+    gate = create_server('127.0.0.1', 0, model_api_root(), state)
     worker = threading.Thread(target=gate.serve_forever, daemon=True); worker.start()
-    child_env.update(DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',
+    child_env.update(DEEPSEEK_API_KEY=model_sdk_key(),
+                     DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',
                      SSS_BUDGET_GATE_ACTIVE='1', SSS_BUDGET_CAP_USD=str(args.budget_usd),
                      SSS_BUDGET_LEDGER=str(ledger))
     # Baseline runs must not inherit opt-in plugins from the caller's shell.

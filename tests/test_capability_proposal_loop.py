@@ -150,7 +150,7 @@ def test_duplicate_or_nonfinite_json_is_not_silently_repaired():
 
 
 def test_cumulative_gate_preserves_prior_spend_and_unknown_request(tmp_path, monkeypatch):
-    monkeypatch.setenv('DEEPSEEK_API_KEY', 'diagnostic-not-a-real-key')
+    monkeypatch.setenv('KOURI_API_KEY', 'diagnostic-not-a-real-key')
     with pytest.raises(ValueError, match='existing_cumulative_ledger_required'):
         with pilot.CumulativeProposalGate(tmp_path): pass
     pilot.write(tmp_path/'budget-checkpoint.json', {'request_count': 7, 'reserved_usd': 2.0})

@@ -11,16 +11,23 @@ export const WEB_REASONING_EFFORTS = ['off', 'low', 'high', 'max'] as const;
 export type WebReasoningEffort = typeof WEB_REASONING_EFFORTS[number];
 export const WEB_REASONING_LABELS: Record<WebReasoningEffort, string> = {off:'Off', low:'Low', high:'High', max:'Max'};
 export type WebModelOption = { provider: string; model: string; label: string; available: boolean;
+  context_window?: number; max_output_tokens?: number; input_modalities?: readonly ('text'|'image')[];
   supported_reasoning_efforts?: readonly WebReasoningEffort[];
   reasoning_unavailable?: Partial<Record<WebReasoningEffort, string>> };
 
-/** Filter installed native metadata, without inventing model capabilities. */
+/** Use explicit server metadata for Kouri ids outside the installed defaults. */
 export function webDeepSeekModels<T extends {id: string; name?: string}>(native: readonly T[], configured: readonly WebModelOption[]): T[] {
   return configured.filter(row => row.available && row.provider === 'deepseek-official').map(row => {
     const model = native.find(item => item.id === row.model);
-    if (!model || !['deepseek-flash', 'deepseek-v4-pro'].includes(model.id))
-      throw new Error('Configured DeepSeek model is not supported by the installed provider');
-    return {...model, name: row.label};
+    if ((!model || !['deepseek-flash','deepseek-v4-pro'].includes(model.id)) &&
+      (!Number.isSafeInteger(row.context_window) || row.context_window! < 1 ||
+       !Number.isSafeInteger(row.max_output_tokens) || row.max_output_tokens! < 1 ||
+       !row.input_modalities?.length || row.input_modalities.some(value => !['text','image'].includes(value))))
+      throw new Error('Configured DeepSeek model is not supported by the installed provider without explicit capabilities');
+    return {...model, id:row.model, name:row.label,
+      ...(row.context_window === undefined ? {} : {contextWindow:row.context_window}),
+      ...(row.max_output_tokens === undefined ? {} : {maxTokens:row.max_output_tokens}),
+      ...(row.input_modalities === undefined ? {} : {inputModalities:[...row.input_modalities]})} as T;
   });
 }
 
@@ -74,8 +81,9 @@ export class WebDeepSeekAdapter extends DeepSeekAdapter {
   }
   private withOutputCapacity(request:Parameters<DeepSeekAdapter['stream']>[0]) {
     const connection=this.connectionOptions();
-    return request.maxTokens!==undefined?request:{...request,maxTokens:
-      connection.models.find(row=>row.id===request.model)?.maxTokens??connection.maxTokens??WEB_DEEPSEEK_OUTPUT_CAPACITY};
+    const providerCapacity=connection.models.find(row=>row.id===request.model)?.maxTokens??WEB_DEEPSEEK_OUTPUT_CAPACITY;
+    const applicationCapacity=connection.maxTokens??WEB_DEEPSEEK_OUTPUT_CAPACITY;
+    return request.maxTokens!==undefined?request:{...request,maxTokens:Math.min(providerCapacity,applicationCapacity)};
   }
   private async *transportStream(request:Parameters<DeepSeekAdapter['stream']>[0],
     stream:(request:Parameters<DeepSeekAdapter['stream']>[0])=>ReturnType<DeepSeekAdapter['stream']>) {

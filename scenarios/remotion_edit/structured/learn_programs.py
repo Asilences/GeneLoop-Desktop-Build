@@ -16,6 +16,7 @@ import urllib.request
 
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT))
+from src.adapters.model_api import model_api_root, model_sdk_key
 from src.adapters.source_program_compiler import compile_source_program,source_library
 from src.adapters.script_motif_compiler import sha,digest
 from src.adapters.deepseek_cost_gate import State,create_server
@@ -113,7 +114,8 @@ def main():
     if not args.call_model:
         print(json.dumps({'witnesses':[w[0]['task_id'] for w in witnesses],'model':'deepseek-flash',
             'reasoning_effort':'off','max_output_tokens':args.max_output_tokens,'cap_usd':None,'reset_history':False}));return
-    key=os.environ.get('DEEPSEEK_API_KEY')
+    try:key=model_sdk_key()
+    except ValueError:key=None
     if not key:raise ValueError('private_model_credential_required')
     args.output.mkdir(parents=True,exist_ok=False)
     attribution={};current=None;receipts={}
@@ -133,7 +135,7 @@ def main():
             return booked
     state=AuditedState(cap_usd=None,output_cap=args.max_output_tokens,record=ledger/'cost-ledger.jsonl',request_limit=None,
                        checkpoint=ledger/'budget-checkpoint.json')
-    gate=create_server('127.0.0.1',0,'https://api.deepseek.com',state)
+    gate=create_server('127.0.0.1',0,model_api_root(),state)
     thread=threading.Thread(target=gate.serve_forever,daemon=True);thread.start()
     programs=[];rejected=[]
     try:

@@ -555,6 +555,24 @@ test('Native model picker selection is used by the next chat task', options, asy
   } finally { await f.close(); }
 });
 
+test('configured Kouri model appears in the picker and binds the next chat request',options,async()=>{
+  const model={provider:'deepseek-official',model:'kouri-diagnostic',label:'Kouri diagnostic',available:true,
+    context_window:16000,max_output_tokens:4000,input_modalities:['text'],supported_reasoning_efforts:['off']};
+  const f=await fixture({broker:true,models:[{provider:'deepseek-official',model:'deepseek-flash',label:'Flash',available:true},model]});
+  try{
+    const {sessionId}=await f.ctx.sessionController.create({});
+    const request=new Request('http://local/api/harless/models?session_id='+sessionId);request.authorized=true;
+    const catalog=await (await f.routes.get('/api/harless/models').fetch(request)).json();
+    assert.deepEqual(catalog.models.map(row=>row.model),['deepseek-flash','kouri-diagnostic']);
+    await f.ctx.sessionController.selectModel({sessionId,provider:'deepseek-official',model:'kouri-diagnostic'},new AbortController().signal);
+    await f.ctx.sessionController.prompt({sessionId,requestId:'native-kouri',mode:'queue',content:[{type:'text',text:'Diagnostic'}]},new AbortController().signal);
+    const task=(await f.api()).value.tasks[0];
+    assert.equal(task.model,'kouri-diagnostic');
+    assert.equal([...f.registrations.values()].find(row=>row.task_id===task.task_id).model,'kouri-diagnostic');
+    await f.complete(task);
+  }finally{await f.close();}
+});
+
 test('task preview model-only switching defaults to Off but omitted model keeps the current On',options,async()=>{
  const f=await fixture({broker:true,models:[
   {provider:'deepseek-official',model:'deepseek-flash',label:'Flash',available:true},

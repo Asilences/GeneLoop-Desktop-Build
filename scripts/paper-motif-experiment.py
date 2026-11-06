@@ -22,6 +22,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
 from src.adapters.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State, create_server, reservation
@@ -256,9 +257,9 @@ def run(exp, inputs, case, mode, label):
             return booked
     state=RecordedState(cap_usd=1.0,output_cap=3000,request_limit=None,record=out/'cost-ledger.jsonl')
     state.reserved_usd=prior_cost;state.request_count=len(rows)
-    gate=create_server('127.0.0.1',0,'https://api.deepseek.com',state)
+    gate=create_server('127.0.0.1',0,model_api_root(),state)
     worker=threading.Thread(target=gate.serve_forever,daemon=True);worker.start()
-    env.update(DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',SSS_BUDGET_GATE_ACTIVE='1',
+    env.update(DEEPSEEK_API_KEY=model_sdk_key(),DEEPSEEK_BASE_URL=f'http://127.0.0.1:{gate.server_port}/v1',SSS_BUDGET_GATE_ACTIVE='1',
                SSS_BUDGET_CAP_USD='1.0',SSS_BUDGET_LEDGER=str(out/'cost-ledger.jsonl'))
     guard=NativeBudgetGuard(max_model_requests=None,max_observed_input_tokens=None)
     def observe(notification):
@@ -367,7 +368,7 @@ def main():
         inputs=load(exp/'inputs.json')
         if args.phase=='compile':compile_library(exp);return 0
         if not args.call_model:parser.error('real API phase requires explicit --call-model')
-        if not os.environ.get('DEEPSEEK_API_KEY'):raise ValueError('missing server credential; value is never printed')
+        if not model_api_key_configured():raise ValueError('missing server credential; value is never printed')
         if args.phase=='collect':
             for case in ('fixture_clear','fixture_missing','fixture_labels'):run(exp,inputs,case,'baseline','collect-'+case)
         else:

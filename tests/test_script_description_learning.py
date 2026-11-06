@@ -125,7 +125,7 @@ def test_changed_source_does_not_reuse_previous_review(tmp_path):
 
 def test_provider_failure_keeps_reserved_cost_and_no_credentials_are_logged(tmp_path, monkeypatch):
     store, output, _ = fixture(tmp_path)
-    monkeypatch.setenv('DEEPSEEK_API_KEY', 'diagnostic-secret-not-a-real-key')
+    monkeypatch.setenv('KOURI_API_KEY', 'diagnostic-secret-not-a-real-key')
     def fail(*args, **kwargs): raise TimeoutError('do not log private network details')
     monkeypatch.setattr(learner.urllib.request, 'urlopen', fail)
     client = learner.MeteredDescriptionModel(store, learner.configuration(store/'description-learning.json'), output)
@@ -147,7 +147,7 @@ def test_empty_update_does_not_request_review(tmp_path):
 
 def test_complete_usage_settles_cost_even_when_proposed_json_is_invalid(tmp_path, monkeypatch):
     store, output, _ = fixture(tmp_path)
-    monkeypatch.setenv('DEEPSEEK_API_KEY', 'diagnostic-secret-not-a-real-key')
+    monkeypatch.setenv('KOURI_API_KEY', 'diagnostic-secret-not-a-real-key')
     class Response:
         status = 200
         def __enter__(self): return self
