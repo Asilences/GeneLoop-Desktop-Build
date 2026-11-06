@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
+import {ensureNativeFonts} from './local-fonts.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
 export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false, fullWorkflows = false, approveFilePlan }) {
@@ -10,6 +11,7 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
   let writer, handle, sceneTools;
   try {
     writer = openReportWriter(directory);
+    await ensureNativeFonts(ctx,ppt,directory,signal);
     const options = {
       agentOptions: model,
       signal,

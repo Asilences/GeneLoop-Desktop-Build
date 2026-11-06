@@ -9,6 +9,7 @@ import {NativeMcpTransport} from './local-mcp-transport.mjs';
 import {removeScratchDirectory,publishArtifacts} from './local-artifacts.mjs';
 import {workflowTools,workflowKinds as kinds,workflowToolName} from './native-workflow-catalog.mjs';
 import {ocrData} from './native-ocr-data.mjs';
+import {ensureNativeFonts} from './local-fonts.mjs';
 
 const sha=data=>createHash('sha256').update(data).digest('hex');
 // Python's canonical representation is shared with the existing file planner.
@@ -70,6 +71,7 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
       const row={root,work,kind,sources:snapshots.map(({path,sha256})=>({path,sha256})),published:new Map()};
       pending=true;
       try {
+        await ensureNativeFonts(ctx,tools,root,signal);
         // A TeX tree is supplied as one approved archive to preserve includes.
         if(kind==='paper'&&snapshots.some(s=>s.name.endsWith('.tex'))&&snapshots.some(s=>s.path.includes('/')||s.path.includes('\\'))) {
           const archive=new JSZip();for(const item of snapshots)archive.file(item.path.replaceAll('\\','/'),item.bytes);
