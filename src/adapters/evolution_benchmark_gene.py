@@ -580,10 +580,13 @@ def run_gene_benchmark(host, *, development_tasks, validation_tasks, test_tasks,
                 nonlocal lookups
                 if name != 'evolution_example_files':
                     return dispatch(name, arguments)
-                requested = dict(arguments)
-                identities = requested.pop('observation_ids', list(investigation.observations))
-                context = investigation.context(identities)
-                result = _example_file_cards(context, investigation, **requested)
+                try:
+                    requested = dict(arguments)
+                    identities = requested.pop('observation_ids', list(investigation.observations))
+                    context = investigation.context(identities)
+                    result = _example_file_cards(context, investigation, **requested)
+                except Exception as error:
+                    result = {'status':'error','error':type(error).__name__+':'+str(error)}
                 from .geneloop_privacy import learning_view, PrivacyRejected
                 try:
                     visible = learning_view(result)

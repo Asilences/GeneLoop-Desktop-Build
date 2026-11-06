@@ -942,7 +942,7 @@ def test_strategy_errors_without_a_host_validation_keep_original_diagnostic(tmp_
     assert 'outcome' not in host.submissions[0]
 
 
-def test_native_example_lookup_pages_only_admissible_files_with_original_provenance(tmp_path):
+def test_native_example_lookup_pages_only_admissible_files_with_original_provenance(tmp_path, monkeypatch):
     host = NativeHost(tmp_path / 'trials')
     original = host.agent
     seen = []
@@ -964,6 +964,15 @@ def test_native_example_lookup_pages_only_admissible_files_with_original_provena
             assert 'value' in json.loads(raw['content'])
         unmatched = dispatch('evolution_example_files', {'query': 'result.json'})
         assert unmatched['total'] == 0 and unmatched['available_files'] == 2
+        import src.adapters.evolution_benchmark_gene as gene
+        with monkeypatch.context() as patcher:
+            def unavailable(*args, **kwargs):
+                raise FileNotFoundError('/home/synthetic-owner@example.com/private/data.json')
+            patcher.setattr(gene, '_example_file_cards', unavailable)
+            failed = dispatch('evolution_example_files', {'observation_ids':ids})
+            assert failed['status'] == 'error'
+            assert 'synthetic-owner@example.com' not in json.dumps(failed)
+            assert '/home/' not in json.dumps(failed)
         seen.extend(cards)
         return original(request, dispatch)
     host.agent = agent
