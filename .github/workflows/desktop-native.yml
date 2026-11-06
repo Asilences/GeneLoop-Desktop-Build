@@ -9,6 +9,12 @@ on:
       timeout:
         type: number
         default: 50
+      armTimeout:
+        type: number
+        default: 13
+      intelTimeout:
+        type: number
+        default: 27
       packageMode:
         type: choice
         options: [installers, app, tools, delivery]
@@ -25,7 +31,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.target == 'arm64' && '{"include":[{"os":"macos-15","arch":"arm64"}]}' || inputs.target == 'x64' && '{"include":[{"os":"macos-15-intel","arch":"x64"}]}' || '{"include":[{"os":"macos-15","arch":"arm64"},{"os":"macos-15-intel","arch":"x64"}]}') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ fromJSON(inputs.timeout) }}
+    timeout-minutes: ${{ fromJSON(matrix.arch == 'x64' && inputs.intelTimeout || inputs.armTimeout) }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     defaults:
@@ -75,7 +81,7 @@ jobs:
       - name: Package on target architecture
         id: package
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
-        run: ${{ inputs.packageMode == 'app' && 'npm run pack' || 'npm run dist' }}
+        run: ${{ (inputs.packageMode == 'app' || inputs.packageMode == 'delivery') && 'npm run pack' || 'npm run dist' }}
       - name: Verify ASAR runtime in packaged app
         if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         run: |
@@ -107,7 +113,12 @@ jobs:
           node scripts/probe-local-runtime.mjs --installed "$APP"
       - name: Record local delivery checksums
         if: ${{ success() && inputs.packageMode == 'delivery' }}
-        run: shasum -a 256 release/GeneLoop-Desktop-*.dmg release/GeneLoop-Desktop-*.zip > release/SHA256SUMS-${{ matrix.arch }}.txt
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          VERSION=$(node -p "require('./package.json').version")
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "release/GeneLoop-Desktop-$VERSION-macOS-${{ matrix.arch }}.zip"
+          shasum -a 256 release/GeneLoop-Desktop-*.zip > release/SHA256SUMS-${{ matrix.arch }}.txt
       # Explicit user authorization: private one-day transit, delete after local retrieval.
       # Other modes still do not upload. Never publish a Release.
       - uses: actions/upload-artifact@v4
