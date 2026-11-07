@@ -2,7 +2,7 @@
 
 ## Desktop 安装后工具准备（preview.18 候选）
 
-小包模式的 `tool-packs.json` 是随应用固定的平台／架构工具清单，含包与逐文件 SHA-256；只允许该清单列出的工具包进入解码器。`ToolPackStore` 在应用数据目录按 toolset ID 保存下载、验证和完成标记；来源为固定 HTTPS 根地址或用户选择的本机工具包目录。独立隔离准备页仅向其自身主 frame 暴露 state/start/cancel/import/close，不能更改清单、凭证、下载源或启动任意进程。原本机 Agent、场景 MCP、模型认证不变。旧完整离线构建仍可使用；本轮未发布在线工具源，参见[分发记录](debug/desktop-preview18-distribution-20261107.md)。
+小包模式的 `tool-packs.json` 是随应用固定的平台／架构工具清单，含包与逐文件 SHA-256；只允许该清单列出的工具包进入解码器。`ToolPackStore` 在应用数据目录按 toolset ID 保存下载、验证和完成标记；来源为固定 HTTPS 根地址或用户选择的本机工具包目录。独立隔离准备页仅向其自身主 frame 暴露 state/start/cancel/import/close，不能更改清单、凭证、下载源或启动任意进程。`tool-releases.json` 固定已发布的 Windows 工具集与下载根；构建时仅工具集完整摘要相符才自动绑定，不把旧版地址套给新工具或 Mac。原本机 Agent、场景 MCP、模型认证不变。旧完整离线构建仍可使用；用户已授权仅发布七个 Windows 工具包，安装包不上传，参见[分发记录](debug/desktop-preview18-distribution-20261107.md)。
 
 ## Desktop 可选依赖与私有工具（preview.17 候选）
 
