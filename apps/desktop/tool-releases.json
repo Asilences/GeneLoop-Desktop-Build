@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "releases": {
+    "win32-x64": {
+      "toolsetId": "21e5190b5076c9c28586e197e1aca8754e4638800ea7f7d0424062f554d00ebf",
+      "baseUrl": "https://github.com/Asilences/GeneLoop-Desktop-Build/releases/download/desktop-tools-win32-x64-21e5190b5076c9c28586e197/"
+    }
+  }
+}

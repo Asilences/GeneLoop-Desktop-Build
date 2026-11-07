@@ -66,7 +66,10 @@ for(const [id,label,required,prefixes]of definitions){
 }
 assert.equal(selected.size,entries.length,'存在未分配到工具包的文件，停止生成小安装包');
 const toolsetId=createHash('sha256').update(JSON.stringify(packages.map(p=>[p.id,p.sha256]))).digest('hex');
-const baseUrl=process.env.GENELOOP_TOOL_PACK_BASE_URL??null;
+const releases=JSON.parse(readFileSync(join(app,'tool-releases.json'),'utf8'));
+assert.equal(releases.schema,1,'工具发布目录版本无效');
+const published=releases.releases[process.platform+'-'+process.arch];
+const baseUrl=process.env.GENELOOP_TOOL_PACK_BASE_URL??(published?.toolsetId===toolsetId?published.baseUrl:null);
 if(baseUrl){const url=new URL(baseUrl);assert.equal(url.protocol,'https:');assert.ok(!url.username&&!url.password);}
 const catalog={schema:1,toolsetId,platform:process.platform,arch:process.arch,baseUrl,codec:{filename:codec.filename,sha256:codec.sha256,version:codec.version},packages};
 writeFileSync(join(output,'tool-packs.json'),JSON.stringify(catalog)+'\n');

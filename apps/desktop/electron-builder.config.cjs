@@ -10,6 +10,8 @@ if(process.env.GENELOOP_DESKTOP_TOOL_PACKS==='1'){
   if(catalog.toolsetId!==proof.toolsetId||catalog.platform!==process.platform||catalog.arch!==process.arch||
     catalog.packages.reduce((n,p)=>n+p.files.length,0)!==proof.filesBefore||
     !existsSync(join(root,'installer-tools',catalog.codec.filename)))throw Error('工具目录、平台或解码器不匹配');
+  const published=require('./tool-releases.json').releases[process.platform+'-'+process.arch];
+  if(published?.toolsetId===catalog.toolsetId&&!catalog.baseUrl)throw Error('该工具版本已有下载源，请重新生成工具目录');
   config.extraResources=[{from:join(root,'tool-packs.json'),to:'tool-packs.json'},{from:join(root,'installer-tools'),to:'installer-tools'}];
 }
 module.exports=config;
