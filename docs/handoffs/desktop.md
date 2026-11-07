@@ -1,5 +1,12 @@
 # GeneLoop Desktop 当前交接
 
+## 2026-11-07 preview.19 双架构 Mac 分包交付（准备中）
+
+- 范围：Apple Silicon／Intel 最新小 DMG、七包工具下载，以及三平台各六个简单真实任务；保留六场景工具和现有界面，不改 Motif／隐私核心／正式服务。安装包不公开发布；Mac 临时 Actions 中转取回后删除。
+- 已实现单文件两阶段手动工作流、严格工具资产发布、实际包内下载校验和真实模型六场景入口；源码已推构建仓库独立分支 `codex/desktop-macos-delivery-20261107`。Windows preview.19 小安装器已在 `.local/desktop-preview19-online/` 生成，269,434,368 字节，SHA `57fb23c489e4eeb65e05fb60862452aa41a691ef95fd0cd5df11c20c4b7f81d8`；14 项专项、实际包内导入和128文件完整载荷解压核对通过，没有执行系统安装或真实模型调用。
+- 未完成：Mac Actions 当前关闭，启用／登记流程的自动审批被拒，等待用户明确最小授权；真实验收还缺安全提供的临时测试凭据。Mac 构建与真实模型调用均未启动，本轮新增费用0；原预算账本不重置。不能将脚本和语法检查当作 Mac DMG 或真实任务通过。
+- 可核对入口、失败边界与接续步骤见[本轮记录](../debug/desktop-preview19-macos-delivery-20261107.md)。前一已验证 Windows preview.18 及完整 preview.17 均保留。
+
 ## 2026-11-07 preview.18 分发与安装界面候选
 
 - 范围：根据用户新增要求，将大工具移到安装后统一准备；保留六场景、DSH Runtime、全部工具文件，未改 Motif／隐私／正式服务器。分支 `codex/desktop-local-runtime`；源码仅本地提交。用户随后授权仅发布七个 Windows 工具包，安装包仍未上传。
