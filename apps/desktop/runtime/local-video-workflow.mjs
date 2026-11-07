@@ -69,7 +69,10 @@ export function nativeVideoTools(ctx,reader,writer,media,signal,onReport,common)
       for(const [i,frame]of selected.entries()){
         const path=join(scratch,'frame-'+i+'.rgb');
         await runNativeProcess(ctx,[media.ffmpeg,'-v','error','-nostdin','-protocol_whitelist','file,pipe','-f','mov','-enable_drefs','0','-use_absolute_path','0','-i',video,
-          '-vf','select=eq(n\\,'+frame.frame_index+')','-vsync','0','-frames:v','1','-c:v','rawvideo','-pix_fmt','rgb24','-f','rawvideo','-n',path],scratch,signal,{timeoutMs:100000});
+          // Remotion's native FFmpeg includes image2 and the rawvideo encoder,
+          // but omits the rawvideo muxer and optional select filter. Seek the
+          // CFR output frame and use image2 to write its uncompressed pixels.
+          '-ss',frame.frame_seconds.toFixed(9),'-frames:v','1','-c:v','rawvideo','-pix_fmt','rgb24','-f','image2','-update','1','-n',path],scratch,signal,{timeoutMs:100000});
         const pixels=readFileSync(path);if(pixels.length!==info.width*info.height*3)throw Error('抽帧像素尺寸不符');
         const jpeg=await sharp(pixels,{raw:{width:info.width,height:info.height,channels:3}}).jpeg({quality:90}).toBuffer();
         content.push({type:'image',mimeType:'image/jpeg',data:jpeg.toString('base64')});
