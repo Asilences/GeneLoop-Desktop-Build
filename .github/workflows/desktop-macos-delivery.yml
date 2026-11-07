@@ -14,6 +14,10 @@ on:
         type: choice
         options: [all, windows, macos]
         default: all
+      testScenes:
+        description: Empty means all six; comma-separated scene IDs for a focused regression
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -153,20 +157,21 @@ jobs:
           await prepareInstallerCodec(resolve('.'),join(out,'installer-tools'));
           '@ | node --input-type=module
       - name: Package the corrected Windows runtime without publishing an installer
-        run: npm run pack -- -c.directories.output=.local/windows-real-package
+        run: npm run pack
       - name: Download and verify all seven native tool packs
         run: |
           $env:ELECTRON_RUN_AS_NODE='1'
-          $app=Join-Path $PWD '.local/windows-real-package/win-unpacked'
+          $app=Join-Path $PWD 'release/win-unpacked'
           $p=Start-Process -FilePath (Join-Path $app 'GeneLoop Desktop.exe') -ArgumentList @('scripts/check-packaged-tool-download.mjs',(Join-Path $app 'resources'),'.local/windows-real-tools') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput '.local/windows-tool-download.stdout' -RedirectStandardError '.local/windows-tool-download.stderr'
           if($p.ExitCode -ne 0){throw 'Windows 工具下载校验未通过'}
       - name: Simple real six-scene acceptance using Kouri
         env:
           GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
           GENELOOP_TEST_PROVIDER: kouri
+          GENELOOP_TEST_SCENES: ${{ inputs.testScenes }}
         run: |
           $env:ELECTRON_RUN_AS_NODE='1'
-          $app=Join-Path $PWD '.local/windows-real-package/win-unpacked'
+          $app=Join-Path $PWD 'release/win-unpacked'
           $tools=(Get-Content .local/windows-real-tools/download-receipt.json -Raw | ConvertFrom-Json).tools
           $p=Start-Process -FilePath (Join-Path $app 'GeneLoop Desktop.exe') -ArgumentList @('scripts/check-real-six-scenes.mjs',(Join-Path $app 'resources'),$tools,'.local/windows-real-six-scenes') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput '.local/windows-real.stdout' -RedirectStandardError '.local/windows-real.stderr'
           if($p.ExitCode -ne 0){throw 'Windows 真实任务简验未全部通过，保留状态摘要'}
@@ -230,6 +235,7 @@ jobs:
         env:
           GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
           GENELOOP_TEST_PROVIDER: kouri
+          GENELOOP_TEST_SCENES: ${{ inputs.testScenes }}
         run: |
           APP="$PWD/.local/real-mounted/GeneLoop Desktop.app"
           TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/real-tool-download/download-receipt.json")).tools)')
