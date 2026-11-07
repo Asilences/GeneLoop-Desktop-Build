@@ -4,7 +4,7 @@ on:
     inputs:
       packageMode:
         type: choice
-        options: [installers, app, tools, complete-tools, delivery, dmg-delivery]
+        options: [installers, app, tools, complete-tools, cli-only, delivery, dmg-delivery]
         default: installers
   push:
     branches: ['codex/desktop-local-runtime']
@@ -21,6 +21,7 @@ permissions:
   contents: read
 jobs:
   macos:
+    if: ${{ inputs.packageMode != 'cli-only' }}
     name: macOS ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -165,3 +166,19 @@ jobs:
             apps/desktop/release/SHA256SUMS-*.txt
           retention-days: 1
           compression-level: 0
+  cli:
+    if: ${{ inputs.packageMode == 'cli-only' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install mammoth==1.13.0 markdownify==1.2.3 lxml==6.1.3
+      - run: python -B apps/desktop/scripts/prepare-native-cli-fixture.py
+    # No package build, model API call, artifact upload or paid runner.
