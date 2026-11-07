@@ -5,6 +5,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSyn
 import { basename, dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
+import { loadNativeToolProviders } from './native-tool-providers.ts';
 import type { LocalMediaTools, LocalPptTools, LocalScene, LocalTaskUpdate, VideoApproval, FilePlanApproval } from './local-runtime.ts';
 import { reopenDirectory } from './local-workspaces.ts';
 import type { LocalWorkspace } from './local-workspaces.ts';
@@ -191,6 +192,7 @@ export class LocalWorkspaceConversation {
       token = lease.token;
       abort.signal.throwIfAborted();
       this.controller = startLocalWorker({
+        nativeProviders:loadNativeToolProviders(join(app.getPath('userData'),'local-tools','providers.json')),
         ...task, legacyTools:![2,3,4].includes(lease.toolsetVersion),fullWorkflows:[3,4].includes(lease.toolsetVersion),commonCapabilities:lease.toolsetVersion===4,executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
         token: lease.token, model: lease.model,
         approveVideo: task.scene === 'video' && lease.videoRendering === true ? this.options.approveVideo : undefined,

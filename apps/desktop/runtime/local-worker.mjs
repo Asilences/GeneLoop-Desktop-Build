@@ -45,7 +45,7 @@ export function apply(ctx) {
         directory: task.directory, signal: cancellation.signal, sessionId: task.sessionId, resume: task.resume, scene: task.scene, media: task.media,legacyTools:task.legacyTools===true,fullWorkflows:task.fullWorkflows===true,commonCapabilities:task.commonCapabilities===true,approveFilePlan,askUser,
         model: { provider: 'deepseek-official', model: task.model, reasoningEffort: 'off' },
         onReport: report => send({ kind: 'report', report }),
-        approveVideo: task.videoRendering === true ? approveVideo : undefined, ppt: task.ppt,
+        approveVideo: task.videoRendering === true ? approveVideo : undefined, ppt: task.ppt?{...task.ppt,nativeProviders:task.nativeProviders}:undefined,
         onVideoPhase: phase => send({ kind: 'progress', phase }),
       });
       cancellation.signal.throwIfAborted();

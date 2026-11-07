@@ -77,9 +77,12 @@ class Gateway:
         self.config=Path(config or os.environ.get('SSS_TOOL_PROVIDERS',Path(os.environ.get('HARLESS_MANAGEMENT_PRIVATE_ROOT', ROOT/'.local'))/'general-tools/providers.json'))
         self.clients={};self.locks={};self.generation=uuid4().hex
 
+    def private_providers(self):
+        return json.loads(self.config.read_text(encoding='utf-8')) if self.config.exists() else {'format':FORMAT,'providers':[]}
+
     def providers(self):
         public=json.loads(self.public_registry.read_text(encoding='utf-8'))
-        custom=json.loads(self.config.read_text(encoding='utf-8')) if self.config.exists() else {'format':FORMAT,'providers':[]}
+        custom=self.private_providers()
         if custom.get('format')!=FORMAT:raise ToolError('unsupported host tool registry version')
         entries={}
         for raw in [*public['providers'],*custom['providers']]:

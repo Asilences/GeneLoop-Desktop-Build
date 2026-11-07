@@ -116,7 +116,7 @@ stageCjkFont(app,destination);
 if (process.platform === 'win32') {
   const pth = join(destination, 'python', 'python312._pth');
   if (!readFileSync(pth, 'utf8').includes('python312.zip')) throw Error('需要 Windows Python 3.12 嵌入式分发。');
-  writeFileSync(pth, 'python312.zip\n.\nsite\nsite/win32\nsite/win32/lib\nsite/pythonwin\nsite/pywin32_system32\n../source\n../ppt-master/scripts\n../ppt-master/scripts/source_to_md\n');
+  writeFileSync(pth, 'python312.zip\n.\nsite\nsite/win32\nsite/win32/lib\nsite/pythonwin\nsite/pywin32_system32\n../source\n../ppt-master/scripts\n../ppt-master/scripts/source_to_md\nimport site\n');
 } else {
   // python-build-standalone is relocatable; preserve its library layout and
   // expose a real file in place of python3's internal symlink.

@@ -1,5 +1,9 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## Desktop 可选依赖与私有工具（preview.17 候选）
+
+原 Gateway 新增 `private_providers()` 读取接缝，注册校验、权限和回执协议不变。桌面 `NativeGateway` 只从宿主私有 IPC 的内存注册读取扩展；凭证引用保持为引用，秘密值不写入回执。Skill 原文件保持逐文件锁定，桌面绑定私有项目根和原生 Office 转换。构建、平台差异和外部条件见[工具说明](product/desktop/native-optional-tools.md)。
+
 ## Windows 安装事务与工具复用（preview.15 安装提速修订2）
 
 `wrap-installer.mjs` 编译 `InstallTransaction.cs`。在同一磁盘的受限临时目录整体保留旧应用，原NSIS继续处理进程检查、卸载登记、快捷方式和安装注册。私有用户数据不在事务目录内；成功验证安装版本后清理备份，失败时恢复目录、相关注册表和快捷方式。多个不同路径的用户级／全机安装并存时沿用原NSIS处理。崩溃或恢复失败的备份保留恢复记录，不宣称断电自动恢复。

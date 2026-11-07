@@ -25,6 +25,7 @@ export function startLocalWorker(options: {
   endpoint: string; token: string; model: string; prompt: string;
   sessionId?: string; resume?: boolean; scene?: LocalScene; media?: LocalMediaTools;
   ppt?: LocalPptTools; legacyTools?: boolean; fullWorkflows?: boolean; commonCapabilities?: boolean;
+  nativeProviders?: object;
   approveVideo?: (request: VideoApproval) => Promise<boolean>;
   approveFilePlan?: (request: FilePlanApproval) => Promise<boolean>;
   onUpdate: (event: LocalTaskUpdate) => void;
@@ -84,7 +85,7 @@ export function startLocalWorker(options: {
       options.onUpdate({ kind: 'ready' });
       send({ kind: 'run', directory: options.directory, model: options.model, prompt: options.prompt,
         sessionId: options.sessionId, resume: options.resume, scene: options.scene, media: options.media,
-        ppt: options.ppt, legacyTools:options.legacyTools===true,fullWorkflows:options.fullWorkflows===true,commonCapabilities:options.commonCapabilities===true,videoRendering: !!options.approveVideo });
+        ppt: options.ppt, nativeProviders:options.nativeProviders, legacyTools:options.legacyTools===true,fullWorkflows:options.fullWorkflows===true,commonCapabilities:options.commonCapabilities===true,videoRendering: !!options.approveVideo });
     } else if (message.kind === 'video-approval') {
       const answer = (allowed: boolean) => send({ kind: 'video-approved', id: message.id, allowed: allowed && !canceled && !ending });
       if (canceled || !options.approveVideo) answer(false);

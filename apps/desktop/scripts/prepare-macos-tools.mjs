@@ -7,6 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureBrowser } from '@remotion/renderer';
 import {installNativePythonDeps} from './native-python-deps.mjs';
+import {prepareNativeExtras} from './prepare-native-extras.mjs';
 
 assert.equal(process.platform,'darwin','此准备步骤必须在真实 macOS 上执行。');
 const app = fileURLToPath(new URL('../',import.meta.url)),repo = resolve(app,'../..');
@@ -63,6 +64,8 @@ try {
     GENELOOP_DESKTOP_BROWSER:browser.path,
   }});
 } finally {run('hdiutil',['detach',mount]);}
+prepareNativeExtras(join(app,'desktop-tools-bundle/python/bin/geneloop-python'),join(app,'desktop-tools-bundle'));
+run(join(app,'desktop-tools-bundle/python/bin/geneloop-python'),['-B',join(app,'scripts/prepare-native-speech.py'),join(app,'desktop-tools-bundle/speech')]);
 writeFileSync(join(root,'build-inputs.json'),JSON.stringify({platform:process.platform,arch:process.arch,
   python:{version:'3.12.16+20261026',sha256:target.sha},libreoffice:{version:'26.8.2',sha256:officeHash},
   remotion:'4.0.539',pptMaster:{version:'6.6.0',...pptMaster}},null,2)+'\n');

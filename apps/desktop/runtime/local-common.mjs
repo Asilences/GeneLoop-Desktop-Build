@@ -64,21 +64,25 @@ export async function openCommonCapabilities(ctx,{reader,writer,tools,media,sess
   if(windows){
     const quote=p=>'"'+p.replaceAll('"','""')+'"';
     writeFileSync(join(work,'bin/node.cmd'),'@echo off\r\n'+quote(process.execPath)+' %*\r\n');
-    for(const name of ['python','python3'])writeFileSync(join(work,'bin',name+'.cmd'),'@echo off\r\n'+quote(tools.python)+' %*\r\n');
+    for(const name of ['python','python3'])writeFileSync(join(work,'bin',name+'.cmd'),'@echo off\r\n'+quote(tools.python)+' '+quote(join(tools.sourceRoot,'src/adapters/desktop_python_entry.py'))+' %*\r\n');
   }else{
     const quote=p=>"'"+p.replaceAll("'","'\\''")+"'";
     for(const [name,exe] of [['node',process.execPath],['python',tools.python],['python3',tools.python]]){
-      const path=join(work,'bin',name);writeFileSync(path,'#!/bin/sh\nexec '+quote(exe)+' "$@"\n');chmodSync(path,0o700);
+      const path=join(work,'bin',name);writeFileSync(path,'#!/bin/sh\nexec '+quote(exe)+(name==='node'?'':' '+quote(join(tools.sourceRoot,'src/adapters/desktop_python_entry.py')))+' "$@"\n');chmodSync(path,0o700);
     }
   }
   const shell=ctx.get('shell'),resolveShell=shell.resolve.bind(shell);
   shell.resolve=request=>{
     const spec=resolveShell(request);spec.workdir=taskCwd(spec.workdir);if(!under(work,resolve(spec.workdir)))throw Error('命令目录必须在本轮工作目录');
-    const paths=[join(work,'bin'),dirname(tools.python),dirname(tools.soffice),...(media?[dirname(media.ffmpeg)]:[]),process.env.SystemRoot?join(process.env.SystemRoot,'System32'):'/usr/bin','/bin'];
+    const toolRoot=dirname(tools.sourceRoot);
+    const paths=[join(work,'bin'),dirname(tools.python),dirname(tools.soffice),join(toolRoot,'extras','pandoc'),...(media?[dirname(media.ffmpeg)]:[]),process.env.SystemRoot?join(process.env.SystemRoot,'System32'):'/usr/bin','/bin'];
     spec.env={HOME:work,USERPROFILE:work,APPDATA:work,LOCALAPPDATA:work,TEMP:work,TMP:work,TMPDIR:work,
       PATH:paths.join(windows?';':':'),...(windows?{SystemRoot:process.env.SystemRoot,ComSpec:join(process.env.SystemRoot,'System32/cmd.exe'),PATHEXT:'.COM;.EXE;.BAT;.CMD'}:{}),
       ELECTRON_RUN_AS_NODE:'1',GENELOOP_PPT_MASTER_ROOT:tools.skill,PYTHONUTF8:'1',PYTHONDONTWRITEBYTECODE:'1',
-      NODE_PATH:join(dirname(fileURLToPath(import.meta.url)),'node_modules'),PYTHONPATH:tools.sourceRoot};
+      NODE_PATH:join(dirname(fileURLToPath(import.meta.url)),'node_modules'),PYTHONPATH:tools.sourceRoot,
+      PLAYWRIGHT_BROWSERS_PATH:join(toolRoot,'chromium'),TIKTOKEN_CACHE_DIR:join(toolRoot,'python-data','tiktoken'),RL_renderPMBackend:'_renderPM',
+      GENELOOP_NATIVE_SKILL_RUNTIME:'1',GENELOOP_NATIVE_WORKSPACE:work,GENELOOP_NATIVE_SOFFICE:tools.soffice,
+      GENELOOP_NATIVE_SPEECH_ROOT:join(toolRoot,'speech')};
     spec.sandboxPolicy={mode:'workspace-write',workspaceRoot:work};return spec;
   };
   await load('dsh-shell-env');await load(process.platform==='win32'?'dsh-tool-pwsh':'dsh-tool-bash',{enableRunInBackground:true});await load('dsh-tool-jobs');

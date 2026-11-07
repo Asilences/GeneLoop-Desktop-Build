@@ -46,13 +46,17 @@ def create(kind, work):
     work = Path(work).resolve(strict=True)
     if work.name != 'work' or '.local' not in work.parts or work.is_symlink():
         raise ValueError('native_private_work_required')
+    if os.environ.get('GENELOOP_NATIVE_SKILL_RUNTIME') == '1':
+        from src.adapters.desktop_skill_runtime import install
+        install()
     settings = json.loads((work / 'native-settings.json').read_text(encoding='utf-8')) if (work / 'native-settings.json').exists() else {}
     inputs = work / 'inputs'
     if kind == 'gateway':
         from mcp.server import MCPServer
         from mcp.types import ToolAnnotations
-        from src.adapters.general_tools import Gateway, NAMES
-        gateway = Gateway(work, {'native_task': True}, private_root=work.parent,
+        from src.adapters.general_tools import NAMES
+        from src.adapters.desktop_native_providers import NativeGateway
+        gateway = NativeGateway(work, {'native_task': True}, private_root=work.parent,
                           public_registry=work / 'native-providers.json', config=work / 'no-private-providers.json')
         server = MCPServer('GeneLoop native general tool gateway')
         for name in NAMES:
@@ -69,9 +73,12 @@ def create(kind, work):
         from management_tools import ManagementScene, TOOLS
         class NativeManagementScene(ManagementScene):
             def gateway(self):
-                result = super().gateway()
-                result.public_registry = work / 'native-providers.json'
-                return result
+                if not hasattr(self, '_native_gateway'):
+                    from src.adapters.desktop_native_providers import NativeGateway
+                    original = super().gateway()
+                    self._native_gateway = NativeGateway(original.workspace, original.scope, guard=original.guard,
+                        private_root=work.parent, public_registry=work / 'native-providers.json', config=work / 'no-private-providers.json')
+                return self._native_gateway
         scene = NativeManagementScene(settings['management_task'], work / 'management-results')
         server = MCPServer('GeneLoop native complete management')
         for name in TOOLS:

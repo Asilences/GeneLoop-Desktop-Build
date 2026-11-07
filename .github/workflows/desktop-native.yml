@@ -4,7 +4,7 @@ on:
     inputs:
       packageMode:
         type: choice
-        options: [installers, app, tools, delivery, dmg-delivery]
+        options: [installers, app, tools, complete-tools, delivery, dmg-delivery]
         default: installers
   push:
     branches: ['codex/desktop-local-runtime']
@@ -50,8 +50,11 @@ jobs:
           python-version: '3.12'
       - run: node -e "if(process.arch !== '${{ matrix.arch }}')process.exit(1)"
       - run: npm ci
-      - run: npm run build && npm run check
+      - run: npm run build
+      - run: npm run check
+        if: ${{ inputs.packageMode != 'complete-tools' }}
       - name: Native file permission checks (no model)
+        if: ${{ inputs.packageMode != 'complete-tools' }}
         run: npm run smoke:native
       - name: Prepare pinned offline tools
         id: tools
@@ -67,23 +70,23 @@ jobs:
           node scripts/check-native-code.mjs
           desktop-tools-bundle/python/bin/geneloop-python scripts/check-native-ocr.py desktop-tools-bundle
       - name: Native Remotion render and full video decode (no model)
-        if: ${{ inputs.packageMode != 'app' && inputs.packageMode != 'tools' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ inputs.packageMode != 'complete-tools' && inputs.packageMode != 'app' && inputs.packageMode != 'tools' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: npm run runtime:stage && npm run smoke:remotion
       - name: Native PPT template and LibreOffice PDF export (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'complete-tools' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: npm run smoke:ppt
       - name: Native document, table, paper and archive tools (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'complete-tools' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: node scripts/check-native-scenes.mjs
       - name: Credential scrubbing and cancellation of descendants
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: npm run runtime:stage && node scripts/check-native-process.mjs
       - name: Package on target architecture
         id: package
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
-        run: ${{ (inputs.packageMode == 'app' || inputs.packageMode == 'delivery' || inputs.packageMode == 'dmg-delivery') && 'npm run pack' || 'npm run dist' }}
+        run: ${{ (inputs.packageMode == 'app' || inputs.packageMode == 'complete-tools' || inputs.packageMode == 'delivery' || inputs.packageMode == 'dmg-delivery') && 'npm run pack' || 'npm run dist' }}
       - name: Verify ASAR runtime in packaged app
-        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: |
           export ELECTRON_RUN_AS_NODE=1
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
@@ -92,7 +95,7 @@ jobs:
           export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
           "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-remotion.mjs
       - name: Verify ASAR PPT in packaged app
-        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: |
           export ELECTRON_RUN_AS_NODE=1
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
@@ -110,11 +113,17 @@ jobs:
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-scenes.mjs
           fi
       - name: Packaged DSH Agent start, tools and cancellation (no model)
-        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
           node scripts/probe-local-runtime.mjs --installed "$APP"
+      - name: One compact offline check for completed native tools
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode == 'complete-tools' }}
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          "$APP/Contents/Resources/geneloop-tools/python/bin/geneloop-python" -B scripts/check-native-extras.py "$APP/Contents/Resources/geneloop-tools"
       - name: Create and mount drag-to-Applications DMG
         if: ${{ success() && inputs.packageMode == 'dmg-delivery' }}
         run: |

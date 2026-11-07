@@ -128,11 +128,15 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
         save('native-settings.json',nativeSettings);
         const bootstrap="import runpy,sys;sys.path.insert(0,sys.argv.pop(1));runpy.run_module(sys.argv.pop(1),run_name='__main__')";
         let argv=[tools.python,'-E','-s','-B','-X','utf8','-c',bootstrap,codeRoot,'src.adapters.desktop_workflow_server',kind,work];
-        const env={PATH:[dirname(tools.python),dirname(tools.soffice)].join(process.platform==='win32'?';':':'),
+        const toolRoot=dirname(tools.sourceRoot);
+        const env={PATH:[dirname(tools.python),dirname(tools.soffice),join(toolRoot,'ffmpeg'),join(toolRoot,'extras','pandoc')].join(process.platform==='win32'?';':':'),
           HOME:root,USERPROFILE:root,APPDATA:root,LOCALAPPDATA:root,TEMP:root,TMP:root,TMPDIR:root,PYTHONUTF8:'1',
           SSS_PPT_NODE_EXECUTABLE:process.execPath,
           ELECTRON_RUN_AS_NODE:'1',NODE_OPTIONS:undefined,NODE_PATH:undefined,FM_NATIVE_PDF:'1',GENELOOP_PPT_MASTER_ROOT:tools.skill,
-          GENELOOP_PDF_OCR_ROOT:join(dirname(tools.sourceRoot),'ocr'),GENELOOP_DESKTOP_OCR_LOCK:'1'};
+          GENELOOP_PDF_OCR_ROOT:join(dirname(tools.sourceRoot),'ocr'),GENELOOP_DESKTOP_OCR_LOCK:'1',
+          GENELOOP_NATIVE_SKILL_RUNTIME:'1',GENELOOP_NATIVE_WORKSPACE:work,GENELOOP_NATIVE_SOFFICE:tools.soffice,
+          GENELOOP_NATIVE_SPEECH_ROOT:join(toolRoot,'speech'),PLAYWRIGHT_BROWSERS_PATH:join(toolRoot,'chromium'),
+          TIKTOKEN_CACHE_DIR:join(toolRoot,'python-data','tiktoken'),RL_renderPMBackend:'_renderPM',PYTHONDONTWRITEBYTECODE:'1'};
         Object.assign(env,nativeFontEnvironment(tools,root));
         const {fileURLToPath}=await import('node:url');
         env.GENELOOP_NATIVE_CODE_RUNNER=join(dirname(fileURLToPath(import.meta.url)),'local-code.mjs');
@@ -146,6 +150,7 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
             policy:id==='paper-checks'?'read_only':'provider_guarded',cost:'local_no_model',timeout_seconds:180,
           }));
           save('native-providers.json',{format:'sss-general-tools-v1',providers});
+          if(tools.nativeProviders)env.GENELOOP_NATIVE_PROVIDER_CONFIG=Buffer.from(JSON.stringify(tools.nativeProviders)).toString('base64');
         }
         // The top-level PPT proxy is the same typed delivery/recovery adapter as Web.
         if(kind==='ppt') {
