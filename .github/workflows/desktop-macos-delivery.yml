@@ -14,6 +14,10 @@ on:
         type: choice
         options: [all, windows, macos]
         default: all
+      testScenes:
+        description: Empty means all six; comma-separated scene IDs for a focused regression
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -164,6 +168,7 @@ jobs:
         env:
           GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
           GENELOOP_TEST_PROVIDER: kouri
+          GENELOOP_TEST_SCENES: ${{ inputs.testScenes }}
         run: |
           $env:ELECTRON_RUN_AS_NODE='1'
           $app=Join-Path $PWD 'release/win-unpacked'
@@ -230,6 +235,7 @@ jobs:
         env:
           GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
           GENELOOP_TEST_PROVIDER: kouri
+          GENELOOP_TEST_SCENES: ${{ inputs.testScenes }}
         run: |
           APP="$PWD/.local/real-mounted/GeneLoop Desktop.app"
           TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/real-tool-download/download-receipt.json")).tools)')

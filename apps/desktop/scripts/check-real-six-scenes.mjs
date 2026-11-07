@@ -41,7 +41,10 @@ mkdirSync(destination,{recursive:true});const out=realpathSync(destination);
 assert.ok(!existsSync(join(out,'summary.json')),'为本轮验收创建新目录，不覆盖旧结果');
 const nonce='GL-'+randomUUID().slice(0,8),records=[];
 const sha=value=>createHash('sha256').update(value).digest('hex');
-const summary=()=>writeFileSync(join(out,'summary.json'),JSON.stringify({schema:1,platform:process.platform,arch:process.arch,version:JSON.parse(readFileSync(join(resources,'app.asar/package.json'),'utf8')).version,provider,endpoint,model,logicalModel:'deepseek-flash',reasoning:'off',modelLocation:'cloud',agentAndToolsLocation:'local',syntheticInputs:true,fullWorkflows:true,commonCapabilities:true,cases:records},null,2)+'\n');
+const localAgentCodeSha256=sha(readFileSync(join(runtime,'local-agent.mjs'),'utf8').replaceAll('\r\n','\n'));
+const appSource=JSON.parse(readFileSync(join(resources,'app.asar/assets/manifest.json'),'utf8')).sourceCommit;
+const toolsetId=JSON.parse(readFileSync(join(resources,'tool-packs.json'),'utf8')).toolsetId;
+const summary=()=>writeFileSync(join(out,'summary.json'),JSON.stringify({schema:1,platform:process.platform,arch:process.arch,version:JSON.parse(readFileSync(join(resources,'app.asar/package.json'),'utf8')).version,sourceCommit:appSource,localAgentCodeSha256,toolsetId,provider,endpoint,model,logicalModel:'deepseek-flash',reasoning:'off',modelLocation:'cloud',agentAndToolsLocation:'local',syntheticInputs:true,fullWorkflows:true,commonCapabilities:true,expectedScenes:selected,cases:records},null,2)+'\n');
 const cases={
  chat:{prompt:'请只回答 17 乘以 23 的计算结果。不需要读取文件。',answer:/391/},
  files:{files:{'record.txt':'Synthetic acceptance record: '+nonce+'\n'},prompt:'这是一次简单本机验收。用 local_read 读取 record.txt，再用 local_save_report 保存一份 Markdown，准确记下记录编号并注明来源。无需整理、移动或压缩文件。',text:[nonce,'record.txt'],tools:['local_read','local_save_report']},
@@ -50,8 +53,11 @@ const cases={
  ppt:{files:{'material.txt':'Controlled synthetic study: 46 percent efficiency. Evidence '+nonce+'.\n'},prompt:'这是现有模板的局部修订验收，不是从零设计。先用 local_ppt_read_material 读取 template.pptx 第1页和 material.txt，获取当前 shape_id 和 text_sha256。再用 local_ppt_edit_template 将标题框 Acceptance placeholder 改成 Native 46 percent，保留副标题 PRESERVE THIS SUBTITLE 和母版，生成副本并交付 PPTX/PDF。不要改写原模板，也不要新建 PPT Master 工程。',tools:['local_ppt_read_material','local_ppt_edit_template']},
  video:{prompt:'简单本机 Remotion 验收：用 local_video_render 渲染 1 秒视频。plan 为 JSON 对象字符串，包含 source 和 assets:[]。source 是可独立执行的 React/Remotion TSX，import React、Composition、AbsoluteFill、registerRoot，注册 id="Main"、宽640、高360、fps=30、durationInFrames=30，纯深蓝背景、白字 NATIVE VIDEO。只用本机 Remotion，不用 hybrid_video_render，不需下载素材。',tools:['local_video_render']},
 };
+const selected=(process.env.GENELOOP_TEST_SCENES?.trim()?process.env.GENELOOP_TEST_SCENES.split(','):Object.keys(cases));
+assert.ok(selected.length&&new Set(selected).size===selected.length&&selected.every(s=>Object.hasOwn(cases,s)),'复验仅允许显式指定的内置场景');
 function events(home){const root=join(home,'dsh');if(!existsSync(root))return [];return readdirSync(root,{recursive:true}).filter(p=>p.endsWith('.jsonl')).flatMap(p=>readFileSync(join(root,p),'utf8').split('\n').filter(Boolean).map(s=>{const r=JSON.parse(s);return r.event??r;}));}
 for(const [scene,test]of Object.entries(cases)){
+ if(!selected.includes(scene))continue;
  const directory=join(out,scene),home=join(out,scene+'-agent');mkdirSync(directory);const inputs={};
  for(const [name,value]of Object.entries(test.files??{})){writeFileSync(join(directory,name),value);inputs[name]=sha(readFileSync(join(directory,name)));}
  if(scene==='ppt'){
@@ -92,4 +98,4 @@ for(const [scene,test]of Object.entries(cases)){
  }catch(error){record.failure=error instanceof Error?error.message:'验收失败';}
  finally{record.seconds=(Date.now()-started)/1000;summary();console.log(JSON.stringify(record));}
 }
-assert.ok(records.every(r=>r.passed),'六场景真实任务验收尚未全部通过；保留失败证据，不改写为成功');
+assert.ok(records.length===selected.length&&records.every(r=>r.passed),'所选场景真实验收尚未全部通过；保留失败证据，不改写为成功');
