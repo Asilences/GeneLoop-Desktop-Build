@@ -1,4 +1,4 @@
-"""Fetch only locked scripts for a small cross-platform CLI regression."""
+"""Fetch the locked official Skill for a small CLI-only regression."""
 import hashlib
 import io
 import json
@@ -21,7 +21,7 @@ lock = json.loads((repo / 'scenarios/ppt_master/skill-lock.json').read_text())
 prefix = 'ppt-master-' + commit + '/skills/ppt-master/'
 with tarfile.open(archive) as tar:
     for member in tar:
-        if not member.isfile() or not member.name.startswith(prefix + 'scripts/'):
+        if not member.isfile() or not member.name.startswith(prefix):
             continue
         relative = member.name[len(prefix):]
         if relative not in lock['files'] or '..' in Path(relative).parts:
