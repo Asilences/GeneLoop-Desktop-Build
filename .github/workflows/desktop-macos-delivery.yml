@@ -10,6 +10,10 @@ on:
         description: Successful small DMG run ID, required only for real acceptance
         type: string
         default: ''
+      realTarget:
+        type: choice
+        options: [all, windows, macos]
+        default: all
 permissions:
   contents: read
 concurrency:
@@ -121,7 +125,7 @@ jobs:
           compression-level: 0
           if-no-files-found: error
   real_windows:
-    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real'
+    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real' && inputs.realTarget != 'macos'
     runs-on: windows-latest
     timeout-minutes: 60
     permissions:
@@ -178,7 +182,7 @@ jobs:
           retention-days: 1
           if-no-files-found: warn
   real:
-    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real'
+    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real' && inputs.realTarget != 'windows'
     permissions:
       contents: read
       actions: read
