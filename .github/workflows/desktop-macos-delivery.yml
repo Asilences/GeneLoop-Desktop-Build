@@ -4,7 +4,7 @@ on:
     inputs:
       phase:
         type: choice
-        options: [build, real]
+        options: [build, repack, real]
         default: build
       deliveryRun:
         description: Successful small DMG run ID, required only for real acceptance
@@ -21,6 +21,7 @@ jobs:
     if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase != 'real'
     permissions:
       contents: write
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -47,16 +48,25 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Prepare complete native tools
+        if: inputs.phase != 'repack'
         run: node scripts/prepare-macos-tools.mjs
       - name: Build all seven tool archives with a fixed download address
+        if: inputs.phase != 'repack'
         run: |
           VERSION=$(node -p 'require("./package.json").version')
           TAG="desktop-tools-darwin-${{ matrix.arch }}-${VERSION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           export GENELOOP_TOOL_PACK_BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/"
           npm run tools:packs
+      - name: Reuse verified published tools for a runtime-only correction
+        if: inputs.phase == 'repack'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DELIVERY_RUN: ${{ inputs.deliveryRun }}
+        run: node scripts/reuse-macos-tool-delivery.mjs
       - name: Package small desktop app
         run: npm run pack
       - name: Publish only the seven tool archives
+        if: inputs.phase != 'repack'
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/publish-tool-packs.mjs
@@ -75,6 +85,7 @@ jobs:
           }
           JS
       - name: Verify actual packaged public download and native extraction
+        if: inputs.phase != 'repack'
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
@@ -109,6 +120,63 @@ jobs:
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
+  real_windows:
+    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/desktop
+    env:
+      GENELOOP_DESKTOP_TOOL_PACKS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - name: Reuse the published Windows tool catalog and pinned decoder
+        run: |
+          @'
+          import fs from 'node:fs';
+          import {resolve,join} from 'node:path';
+          import {prepareInstallerCodec} from './scripts/prepare-installer-codec.mjs';
+          const out=resolve('.local/tool-pack-build');fs.mkdirSync(out,{recursive:true});
+          fs.copyFileSync('../../.github/desktop-tool-inputs/windows-x64-tool-packs.json',join(out,'tool-packs.json'));
+          fs.copyFileSync('../../.github/desktop-tool-inputs/windows-x64-preservation.json',join(out,'preservation.json'));
+          await prepareInstallerCodec(resolve('.'),join(out,'installer-tools'));
+          '@ | node --input-type=module
+      - name: Package the corrected Windows runtime without publishing an installer
+        run: npm run pack -- -c.directories.output=.local/windows-real-package
+      - name: Download and verify all seven native tool packs
+        run: |
+          $env:ELECTRON_RUN_AS_NODE='1'
+          $app=Join-Path $PWD '.local/windows-real-package/win-unpacked'
+          $p=Start-Process -FilePath (Join-Path $app 'GeneLoop Desktop.exe') -ArgumentList @('scripts/check-packaged-tool-download.mjs',(Join-Path $app 'resources'),'.local/windows-real-tools') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput '.local/windows-tool-download.stdout' -RedirectStandardError '.local/windows-tool-download.stderr'
+          if($p.ExitCode -ne 0){throw 'Windows 工具下载校验未通过'}
+      - name: Simple real six-scene acceptance using Kouri
+        env:
+          GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+          GENELOOP_TEST_PROVIDER: kouri
+        run: |
+          $env:ELECTRON_RUN_AS_NODE='1'
+          $app=Join-Path $PWD '.local/windows-real-package/win-unpacked'
+          $tools=(Get-Content .local/windows-real-tools/download-receipt.json -Raw | ConvertFrom-Json).tools
+          $p=Start-Process -FilePath (Join-Path $app 'GeneLoop Desktop.exe') -ArgumentList @('scripts/check-real-six-scenes.mjs',(Join-Path $app 'resources'),$tools,'.local/windows-real-six-scenes') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput '.local/windows-real.stdout' -RedirectStandardError '.local/windows-real.stderr'
+          if($p.ExitCode -ne 0){throw 'Windows 真实任务简验未全部通过，保留状态摘要'}
+      - name: Preserve only synthetic acceptance and download summaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-real-win32-x64-${{ github.run_id }}
+          path: |
+            apps/desktop/.local/windows-real-six-scenes/summary.json
+            apps/desktop/.local/windows-real-six-scenes/preflight-status.json
+            apps/desktop/.local/windows-real-tools/download-receipt.json
+          retention-days: 1
+          if-no-files-found: warn
   real:
     if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real'
     permissions:
@@ -134,8 +202,8 @@ jobs:
           node-version: '24'
       - name: Verify free standard runner and temporary test credential availability
         env:
-          GENELOOP_TEST_DEEPSEEK_API_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
-        run: node -e "if(process.platform!=='darwin'||process.arch!=='${{ matrix.arch }}'||!process.env.GENELOOP_TEST_DEEPSEEK_API_KEY)throw Error('缺少目标原生环境或临时真实测试凭据；不得用模拟结果代替')"
+          GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+        run: node -e "if(process.platform!=='darwin'||process.arch!=='${{ matrix.arch }}'||!process.env.GENELOOP_TEST_MODEL_KEY)throw Error('缺少目标原生环境或临时真实测试凭据；不得用模拟结果代替')"
       - name: Retrieve only the authorized temporary delivery artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -156,7 +224,8 @@ jobs:
           ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-packaged-tool-download.mjs "$APP/Contents/Resources" .local/real-tool-download
       - name: Real local Agent and all six scenes, cloud model only
         env:
-          GENELOOP_TEST_DEEPSEEK_API_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+          GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+          GENELOOP_TEST_PROVIDER: kouri
         run: |
           APP="$PWD/.local/real-mounted/GeneLoop Desktop.app"
           TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/real-tool-download/download-receipt.json")).tools)')
@@ -168,6 +237,7 @@ jobs:
           name: desktop-real-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             apps/desktop/.local/real-six-scenes/summary.json
+            apps/desktop/.local/real-six-scenes/preflight-status.json
             apps/desktop/.local/real-tool-download/download-receipt.json
           retention-days: 1
           if-no-files-found: warn
