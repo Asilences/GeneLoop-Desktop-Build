@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureBrowser } from '@remotion/renderer';
@@ -33,12 +33,28 @@ async function download(url,path,expected) {
   assert.equal(hash,expected,'下载包校验和不匹配');
 }
 const pythonArchive=join(root,'python.tar.gz');
+const reusePython=process.env.GENELOOP_REUSE_VERIFIED_PYTHON==='1';
+if(reusePython){
+  // Reuse only the earlier published, per-file verified Python for this exact
+  // platform. The current dependency profile below still checks every pin.
+  const {prepareInstallerCodec}=await import('./prepare-installer-codec.mjs');
+  const {ToolPackStore}=await import('../dist/tool-pack-store.js');
+  const catalog=JSON.parse(readFileSync(join(repo,'.github/desktop-tool-inputs/darwin-'+process.arch+'-tool-packs.json'),'utf8'));
+  assert.equal(catalog.platform,process.platform);assert.equal(catalog.arch,process.arch);
+  const codecRoot=join(root,'python-input-codec');await prepareInstallerCodec(app,codecRoot);
+  const store=new ToolPackStore(catalog,{home:join(root,'verified-python-input'),codecDirectory:codecRoot,change(){}});
+  await store.prepare(['python']);
+  cpSync(join(store.tools,'python'),join(root,'python'),{recursive:true,verbatimSymlinks:true});
+  writeFileSync(join(root,'python-input-receipt.json'),JSON.stringify({toolsetId:catalog.toolsetId,
+    python:catalog.packages.find(p=>p.id==='python').sha256,filesVerified:true,source:catalog.baseUrl}));
+}else{
 await download('https://github.com/astral-sh/python-build-standalone/releases/download/20261026/'+
   'cpython-3.12.16%2B20261026-'+target.cpu+'-apple-darwin-install_only_stripped.tar.gz',pythonArchive,target.sha);
 if(!existsSync(join(root,'python')))run('python3',['-c',
   "import tarfile,sys;tarfile.open(sys.argv[1]).extractall(sys.argv[2],filter='data')",pythonArchive,root]);
+}
 const python=join(root,'python/bin/python3');
-installNativePythonDeps(python,app);
+if(!reusePython)installNativePythonDeps(python,app);
 
 const skill=join(root,'ppt-master');
 if(!existsSync(skill)) {

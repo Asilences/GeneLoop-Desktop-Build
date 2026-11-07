@@ -26,6 +26,14 @@ modules = ['pathops','uharfbuzz','mammoth','markdownify','ebooklib','nbconvert',
 for name in modules:
     importlib.import_module(name)
 checks.append('optional_python_imports_' + str(len(modules)))
+import numpy as np
+import pandas as pd
+from scipy import stats
+import statsmodels.api as sm
+frame=pd.DataFrame({'x':[1.,2.,3.,4.],'y':[2.,4.,6.,8.]})
+fit=sm.OLS(frame.y,sm.add_constant(frame.x)).fit()
+assert np.isclose(fit.params['x'],2.) and np.isclose(stats.t.cdf(0.,5),0.5)
+checks.append('actual_numerical_imports_and_regression')
 import config
 import project_management.paths as project_paths
 assert config.PROJECTS_DIR == work / 'projects' and project_paths.PROJECTS_ROOT == work / 'projects'

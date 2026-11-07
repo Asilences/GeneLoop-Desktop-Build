@@ -45,6 +45,11 @@ if(profiled.status!==0)throw Error('Python 工具依赖未完整准备：'+profi
 const pythonProfile=JSON.parse(profiled.stdout),excludedPython=new Set([...pythonProfile.excluded_files,...pythonProfile.excluded_directories]);
 cpSync(python, join(destination, 'python'), { recursive: true, verbatimSymlinks:true,filter:path=>{
   const parts=relative(python,path).split(/[\\/]/);
+  // NumPy 2 uses this small helper from numpy.testing during SciPy's normal
+  // import. Its directory name does not make it optional runtime test data.
+  const numpy=parts.indexOf('numpy');
+  if(numpy>=0&&parts[numpy+1]==='_core'&&parts[numpy+2]==='tests')
+    return parts.length===numpy+3||parts.length===numpy+4&&['__init__.py','_natype.py'].includes(parts.at(-1));
   // Retain the numerical, PDF/OCR and document libraries. Exclude only stale
   // voice dependencies, generated caches/test data and Playwright's duplicate
   // Node executable; the installed desktop supplies its trusted Node host.
@@ -147,7 +152,7 @@ if (process.platform === 'win32') {
 writeFileSync(join(destination,'manifest.json'),JSON.stringify({schema_version:1,
   platform:process.platform,arch:process.arch,browser:'chromium/'+browserRelative.split('\\').join('/'),
   profile:{scope:'six-scenes-ppt-authoring',removedVoiceDistributions:pythonProfile.removed_voice_distributions,
-    sharedPlaywrightNode:'trusted-desktop-host',excludedBuildData:['__pycache__','*.pyc','tests','test']},
+    sharedPlaywrightNode:'trusted-desktop-host',excludedBuildData:['__pycache__','*.pyc','tests except NumPy runtime helpers','test']},
   office:officeEngine==='kit'?{engine:'libreoffice-kit',version:'0.2.3',native:true}:{engine:'libreoffice'},
   browser_sha256:createHash('sha256').update(readFileSync(browser)).digest('hex'),
   ppt_master:JSON.parse(readFileSync(join(repo,'scenarios/ppt_master/skill-lock.json'),'utf8')).package_sha256,
