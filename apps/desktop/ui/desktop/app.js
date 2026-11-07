@@ -301,6 +301,15 @@ async function refreshLocalWorkspaces(){
   renderSidebar();
   if(localWorkspaceId)renderConversation();
 }
+// Returning from tool preparation must unlock the scenes without reloading the
+// conversation or losing its draft. Only redraw when availability changed.
+window.addEventListener('focus',()=>{
+  if(!localBridge)return;
+  localBridge.scenes().then(next=>{
+    if(JSON.stringify(next)===JSON.stringify(localUnavailable))return;
+    localUnavailable=next;if(localWorkspaceId)renderConversation();
+  }).catch(fail);
+});
 function openLocalWorkspace(id,options={}){
   const row=localWorkspaces.find(item=>item.id===id);
   if(row)openWorkspace(row.binding?.workspaceId??null,{...options,localId:id});

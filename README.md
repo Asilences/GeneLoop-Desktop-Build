@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+桌面 `0.3.0-preview.18` 候选保留六场景工具，新增小安装包和安装后统一工具准备，支持续传、校验与本机导入；安装界面采用 GeneLoop 原生研究节点图。Windows 全部 61,681 个工具文件恢复校验、恢复后 10 组离线工具检查及 ASAR Agent 读写／取消通过。本地预览尚未发布在线工具源；Mac 新分包流程未原生验收，原完整离线构建保留。配置及边界见[分发记录](docs/debug/desktop-preview18-distribution-20261107.md)。安装包不上传。
+
 桌面 `0.3.0-preview.17` 候选补齐 Skill 可选依赖、完整媒体组件、离线字幕对齐及宿主私有 MCP 注册。Windows 工具目录与两种 Mac 实际包内统一诊断通过；后补 CLI 修复的版本边界、外部服务条件和实际任务限制见[本轮记录](docs/experiments/desktop-preview17-optional-tools-20261107.md)及[工具说明](docs/product/desktop/native-optional-tools.md)。安装包不上传。
 
 桌面 `0.3.0-preview.16` 工具对齐候选复用原场景 MCP 和官方 DSH 公共工具，通用 PPT 采用完整 PPT Master 工作流。Windows x64、Mac ARM64/Intel实际包内工程检查通过，Windows EXE保存在本地；Mac本轮未重新取回DMG。正式网关v4部署、真实模型效果和Mac人工验收仍另计，详见[本轮记录](docs/experiments/desktop-preview16-tool-parity-20261107.md)。安装包未上传。

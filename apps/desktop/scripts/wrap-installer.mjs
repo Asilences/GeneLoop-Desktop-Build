@@ -35,6 +35,7 @@ execFileSync(compiler,[
   '/resource:'+join(release,prefix+'-Engine.exe')+',GeneLoop.InstallEngine',
   '/resource:'+join(app,'assets/icon.png')+',GeneLoop.Brand',
   join(app,'setup/Installer.cs'),
+  join(app,'setup/InstallerView.cs'),
   join(app,'setup/InstallTransaction.cs'),
   versionSource,
 ],{cwd:app,stdio:'inherit',windowsHide:true});

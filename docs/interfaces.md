@@ -1,5 +1,9 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## Desktop 安装后工具准备（preview.18 候选）
+
+小包模式的 `tool-packs.json` 是随应用固定的平台／架构工具清单，含包与逐文件 SHA-256；只允许该清单列出的工具包进入解码器。`ToolPackStore` 在应用数据目录按 toolset ID 保存下载、验证和完成标记；来源为固定 HTTPS 根地址或用户选择的本机工具包目录。独立隔离准备页仅向其自身主 frame 暴露 state/start/cancel/import/close，不能更改清单、凭证、下载源或启动任意进程。原本机 Agent、场景 MCP、模型认证不变。旧完整离线构建仍可使用；本轮未发布在线工具源，参见[分发记录](debug/desktop-preview18-distribution-20261107.md)。
+
 ## Desktop 可选依赖与私有工具（preview.17 候选）
 
 原 Gateway 新增 `private_providers()` 读取接缝，注册校验、权限和回执协议不变。桌面 `NativeGateway` 只从宿主私有 IPC 的内存注册读取扩展；凭证引用保持为引用，秘密值不写入回执。Skill 原文件保持逐文件锁定，桌面绑定私有项目根和原生 Office 转换。构建、平台差异和外部条件见[工具说明](product/desktop/native-optional-tools.md)。

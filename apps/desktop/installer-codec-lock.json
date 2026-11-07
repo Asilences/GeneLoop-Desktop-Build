@@ -1,0 +1,16 @@
+{
+  "version": "26.02",
+  "source": "https://github.com/ip7z/7zip/tree/26.02",
+  "windows": {
+    "url": "https://github.com/ip7z/7zip/releases/download/26.02/7z2602-extra.7z",
+    "sha256": "081df9e9311dfd9c9e0e98c1c80180b99bb51e4cb24156b5f3057fe3c259d70a",
+    "executable": "x64/7za.exe",
+    "executableSha256": "35d4d69d7cd6cb44558f208c3b1334268013f9daf82d2dda848893a1c30c59c2"
+  },
+  "macos": {
+    "url": "https://github.com/ip7z/7zip/releases/download/26.02/7z2602-mac.tar.xz",
+    "sha256": "1cf6760579502f87e591ff5c73a005ec50b3e4d6f507e8b038382d563c3175b9",
+    "executable": "7zz",
+    "executableSha256": "9c56cf3379a0d8544e9244958b96fdc7c17f9ce70f5a160eb2b41f5f3df96d8c"
+  }
+}

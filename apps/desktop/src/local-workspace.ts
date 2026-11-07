@@ -6,6 +6,7 @@ import { basename, dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startLocalWorker } from './local-runtime.ts';
 import { loadNativeToolProviders } from './native-tool-providers.ts';
+import {localToolDirectory,localToolsPrepared} from './tool-location.ts';
 import type { LocalMediaTools, LocalPptTools, LocalScene, LocalTaskUpdate, VideoApproval, FilePlanApproval } from './local-runtime.ts';
 import { reopenDirectory } from './local-workspaces.ts';
 import type { LocalWorkspace } from './local-workspaces.ts';
@@ -23,7 +24,7 @@ type SavedTask = {
 const reportName = /^GeneLoop-[a-f0-9-]{36}\.(?:md|pptx|pdf|mp4|json|tsx|csv|zip|txt|docx|xlsx|png)$/;
 const supportedScenes: readonly LocalScene[] = ['chat', 'files', 'data', 'paper', 'ppt', 'video'];
 const localRuntime = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-runtime.asar') : join(here, '../runtime-bundle');
-const bundledTools = () => app.isPackaged ? join(process.resourcesPath, 'geneloop-tools') : join(here, '../desktop-tools-bundle');
+const bundledTools = localToolDirectory;
 
 function pptTools(): LocalPptTools | undefined {
   const bundle = bundledTools();
@@ -75,6 +76,7 @@ function mediaTools(): LocalMediaTools | undefined {
 }
 
 export function localSceneStatus(): Partial<Record<LocalScene, string>> {
+  if(!localToolsPrepared())return Object.fromEntries(supportedScenes.map(scene=>[scene,'请先在「文件 → 本机工具」完成工具准备。']));
   const runtime = localRuntime();
   if (!['win32', 'darwin'].includes(process.platform) || !existsSync(join(runtime, 'local-worker.mjs'))) {
     return Object.fromEntries(supportedScenes.map(scene => [scene, '需要带本机运行时的 Windows 或 Mac 版本。']));

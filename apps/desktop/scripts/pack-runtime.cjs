@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { accessSync } = require('node:fs');
+const { accessSync,existsSync } = require('node:fs');
 const { join, normalize } = require('node:path');
 const asar = require('@electron/asar');
 
@@ -8,7 +8,7 @@ module.exports = async ({ appOutDir, electronPlatformName }) => {
   const source = join(__dirname, '../runtime-bundle');
   const resources = electronPlatformName === 'darwin'
     ? join(appOutDir,'GeneLoop Desktop.app','Contents','Resources') : join(appOutDir,'resources');
-  if (electronPlatformName === 'win32') require('./prune-windows-tools.cjs')(resources);
+  if (electronPlatformName === 'win32'&&existsSync(join(resources,'geneloop-tools'))) require('./prune-windows-tools.cjs')(resources);
   const archive = join(resources, 'geneloop-runtime.asar');
   await asar.createPackageWithOptions(source, archive, { unpack: '*.{node,dll,exe,dylib,so}',
     unpackDir:'{node_modules/@remotion/compositor-*,node_modules/@esbuild/*,node_modules/esbuild,node_modules/@vscode/ripgrep*}' });

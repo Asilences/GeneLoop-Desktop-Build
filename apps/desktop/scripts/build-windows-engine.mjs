@@ -12,13 +12,13 @@ export async function buildWindowsEngine(app,release,compiler,extraArgs) {
   const require=createRequire(join(app,'package.json')),cli=require.resolve('electron-builder/cli.js');
   const options=[...extraArgs],at=options.indexOf('--prepackaged');
   const packed=at>=0?resolve(app,options.splice(at,2)[1]):join(release,'win-unpacked');
-  if(at<0) execFileSync(process.execPath,[cli,'--win','--dir','--x64','--publish','never','-c.directories.output='+release,...options],{cwd:app,stdio:'inherit',windowsHide:true});
+  if(at<0) execFileSync(process.execPath,[cli,'--config',join(app,'electron-builder.config.cjs'),'--win','--dir','--x64','--publish','never','-c.directories.output='+release,...options],{cwd:app,stdio:'inherit',windowsHide:true});
   let bytes=0,files=0;
   function count(directory){for(const item of fs.readdirSync(directory,{withFileTypes:true})){const file=join(directory,item.name);assert.ok(!item.isSymbolicLink(),'载荷不接受链接');if(item.isDirectory())count(file);else{files++;bytes+=fs.statSync(file).size;}}}count(packed);
   const payload=process.env.GENELOOP_REUSE_WINDOWS_PAYLOAD?resolve(process.env.GENELOOP_REUSE_WINDOWS_PAYLOAD):join(release,'windows-payload.zip');
   if(!process.env.GENELOOP_REUSE_WINDOWS_PAYLOAD){
     const {archive}=require('app-builder-lib/out/targets/archive.js');
-    const previous=process.env.ELECTRON_BUILDER_COMPRESSION_LEVEL;process.env.ELECTRON_BUILDER_COMPRESSION_LEVEL=previous??'1';
+    const previous=process.env.ELECTRON_BUILDER_COMPRESSION_LEVEL;process.env.ELECTRON_BUILDER_COMPRESSION_LEVEL=previous??'7';
     try{await archive('zip',payload,packed,{withoutDir:true,compression:'normal'});}finally{if(previous===undefined)delete process.env.ELECTRON_BUILDER_COMPRESSION_LEVEL;else process.env.ELECTRON_BUILDER_COMPRESSION_LEVEL=previous;}
   }
   const hash=createHash('sha256');for await(const chunk of fs.createReadStream(payload))hash.update(chunk);const sha256=hash.digest('hex');
@@ -74,7 +74,7 @@ export async function buildWindowsEngine(app,release,compiler,extraArgs) {
   Delete "$INSTDIR\\.geneloop-bootstrap"
 !macroend
 `);
-  execFileSync(process.execPath,[cli,'--win','nsis','--x64','--publish','never','--prepackaged',bootstrap,'-c.directories.output='+release,'-c.nsis.include='+include,'-c.nsis.packElevateHelper=false','-c.nsis.differentialPackage=false',...options],{cwd:app,stdio:'inherit',windowsHide:true});
+  execFileSync(process.execPath,[cli,'--config',join(app,'electron-builder.config.cjs'),'--win','nsis','--x64','--publish','never','--prepackaged',bootstrap,'-c.directories.output='+release,'-c.nsis.include='+include,'-c.nsis.packElevateHelper=false','-c.nsis.differentialPackage=false',...options],{cwd:app,stdio:'inherit',windowsHide:true});
   fs.writeFileSync(join(release,'direct-payload.json'),JSON.stringify({schema:1,files,bytes,sha256,payload,extractor,packed,reuseParts,reuseManifest,method:'NSIS lifecycle + verified .NET ZIP direct extraction and unchanged tool reuse'},null,2)+'\n');
   return bytes;
 }
