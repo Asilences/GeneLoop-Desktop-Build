@@ -32,7 +32,7 @@ const ctx=new Context();new LocalSubprocessRuntime(ctx);new SystemPrompt(ctx,{})
 const registryScope=createScope(ctx,{}),registered=new Set();
 const reader=openWorkspaceReader(workspace),writer=openReportWriter(workspace);
 const tools={sourceRoot:join(bundle,'source'),python:join(bundle,process.platform==='win32'?'python/python.exe':'python/bin/geneloop-python'),
-  soffice:join(bundle,process.platform==='win32'?'libreoffice/program/soffice.exe':'libreoffice/Contents/MacOS/soffice'),skill:join(bundle,'ppt-master')};
+  soffice:join(bundle,process.platform==='win32'?'libreoffice/program/soffice.com':'libreoffice/Contents/MacOS/soffice'),skill:join(bundle,'ppt-master')};
 process.chdir(root);const signal=AbortSignal.timeout(240000),flows=[];
 const controller=scene=>{const flow=createNativeWorkflows(ctx,reader,writer,tools,scene,signal,undefined,(kind,id,catalog)=>{
   for(const tool of catalog) {
@@ -100,6 +100,7 @@ try {
   await assert.rejects(fileFlow.call(f.workflow_id,'authorize_plan',JSON.stringify({plan_id:preview.plan_id}),async()=>false),/用户尚未确认/);
   const auth=(await fileFlow.call(f.workflow_id,'authorize_plan',JSON.stringify({plan_id:preview.plan_id}),async()=>true)).result;
   const receipt=await fileFlow.call(f.workflow_id,'execute_plan',JSON.stringify({plan_id:preview.plan_id,authorization_id:auth.authorization_id}));
+  assert.equal(receipt.isError,undefined,JSON.stringify(receipt));
   assert.equal(receipt.result.status,'executed_verified');assert.equal(receipt.artifacts.length,1);
   assert.equal(readFileSync(join(workspace,'notes.txt'),'utf8'),'Synthetic local evidence.');
   const ppt=controller('ppt'),p=await ppt.open(sources(['source.pptx']),'合成诊断：制作一页材料摘要，不做科研效果主张。','{"workflow":"ppt","slides":1}');

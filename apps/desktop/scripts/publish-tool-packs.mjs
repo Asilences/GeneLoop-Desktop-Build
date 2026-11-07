@@ -10,7 +10,7 @@ assert.equal(process.env.RUNNER_OS,'macOS');
 const root=resolve(process.argv[2]||'.local/tool-pack-build');
 const catalog=JSON.parse(readFileSync(join(root,'tool-packs.json'),'utf8'));
 assert.equal(catalog.platform,'darwin');assert.equal(catalog.arch,process.arch);
-assert.deepEqual(catalog.packages.map(p=>p.id),['workspace','python','office','browser','media','converters','speech']);
+assert.ok([JSON.stringify(['workspace','python','office','browser','media','converters']),JSON.stringify(['workspace','python','office','browser','media','converters','speech'])].includes(JSON.stringify(catalog.packages.map(p=>p.id))));
 const base=new URL(catalog.baseUrl);
 assert.equal(base.origin,'https://github.com');assert.ok(!base.username&&!base.password);
 const tag=base.pathname.match(/^\/Asilences\/GeneLoop-Desktop-Build\/releases\/download\/(desktop-tools-darwin-(?:arm64|x64)-[a-zA-Z0-9.-]+)\/$/)?.[1];
@@ -28,7 +28,7 @@ for(const p of catalog.packages){
   assert.equal(h.digest('hex'),p.sha256);
 }
 const notes=['GeneLoop Desktop macOS '+process.arch+' 完整工具集','',
-  '仅发布七个工具分包；不含 DMG、应用压缩包、凭据或私人资料。安装后由桌面应用统一下载，逐包及逐文件校验。',
+  '仅发布'+catalog.packages.length+'个工具分包；不含 DMG、应用压缩包、凭据或私人资料。安装后由桌面应用统一下载，逐包及逐文件校验。',
   '工具集：`'+catalog.toolsetId+'`','',
   '| 工具包 | 字节 | SHA-256 |','|---|---:|---|',
   ...catalog.packages.map(p=>'| '+p.filename+' | '+p.bytes+' | `'+p.sha256+'` |'),
@@ -47,7 +47,7 @@ for(const p of catalog.packages){
   console.log(JSON.stringify({uploaded:p.id,bytes:p.bytes}));
 }
 release=JSON.parse(gh(['api','repos/'+repo+'/releases/tags/'+tag]));
-assert.equal(release.assets.length,7);
+assert.equal(release.assets.length,catalog.packages.length);
 for(const a of release.assets){const p=allowed.get(a.name);assert.ok(p);assert.equal(a.state,'uploaded');assert.equal(a.size,p.bytes);assert.equal(a.digest,'sha256:'+p.sha256);}
 if(release.draft)gh(['api','--method','PATCH','repos/'+repo+'/releases/'+release.id,'--input','-'],{input:JSON.stringify({draft:false,prerelease:true,make_latest:'false'})});
 const receipt={schema:1,repo,releaseId:release.id,tag,baseUrl:catalog.baseUrl,toolsetId:catalog.toolsetId,platform:catalog.platform,arch:catalog.arch,sourceCommit:process.env.GITHUB_SHA,installerUploaded:false,assets:release.assets.map(a=>({name:a.name,bytes:a.size,digest:a.digest,url:a.browser_download_url}))};

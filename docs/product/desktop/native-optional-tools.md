@@ -1,5 +1,9 @@
 # 本机完整工具适配（preview.17 候选）
 
+2026-11-08范围修订：桌面PPT仅制作、编辑与核验，不再默认准备语音包或edge-tts，也不提供旁白／演示视频／字幕扩展；下文preview.17为历史适配记录，新构建以[最新范围](../../debug/desktop-ppt-authoring-scope-20261108.md)为准。独立视频剪辑与Remotion保留。
+
+六场景已按当前main、相关PR、实际server／工具函数、桌面接线和构建依赖[交叉核对](../../debug/desktop-scene-scope-review-20261108.md)。Paper不新增LaTeX编译环境；Video保留现有音轨和字幕编辑，不新增ASR；Data保留当前报告实际使用的统计／绘图库；Chat／Files及共享PDF保留明确要求的OCR和公共工具。早期窄能力、单题限制、未验证状态不作为削减当前功能的依据。
+
 此轮在 preview.16 的原 MCP、DSH 公共工具和六场景接线上补齐 Skill 可选依赖。场景仍复用上游 Agent；不改锁定版 PPT Master 的文件，不重新认证 Motif。工具能运行、模型能选对工具和实际交付合格分别验收。
 
 | 范围 | Windows / Apple Silicon / Intel Mac 的处理 |

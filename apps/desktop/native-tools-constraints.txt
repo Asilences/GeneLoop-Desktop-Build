@@ -21,7 +21,6 @@ cycler==0.12.1
 defusedxml==0.7.1
 distro==1.9.0
 EbookLib==0.21
-edge-tts==7.3.1
 et_xmlfile==2.0.0
 fastjsonschema==2.22.3
 Flask==3.1.3

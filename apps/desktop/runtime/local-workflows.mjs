@@ -131,11 +131,11 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
         const toolRoot=dirname(tools.sourceRoot);
         const env={PATH:[dirname(tools.python),dirname(tools.soffice),join(toolRoot,'ffmpeg'),join(toolRoot,'extras','pandoc')].join(process.platform==='win32'?';':':'),
           HOME:root,USERPROFILE:root,APPDATA:root,LOCALAPPDATA:root,TEMP:root,TMP:root,TMPDIR:root,PYTHONUTF8:'1',
-          SSS_PPT_NODE_EXECUTABLE:process.execPath,
+          SSS_PPT_NODE_EXECUTABLE:process.execPath,GENELOOP_OFFICE_NODE:process.execPath,
           ELECTRON_RUN_AS_NODE:'1',NODE_OPTIONS:undefined,NODE_PATH:undefined,FM_NATIVE_PDF:'1',GENELOOP_PPT_MASTER_ROOT:tools.skill,
           GENELOOP_PDF_OCR_ROOT:join(dirname(tools.sourceRoot),'ocr'),GENELOOP_DESKTOP_OCR_LOCK:'1',
           GENELOOP_NATIVE_SKILL_RUNTIME:'1',GENELOOP_NATIVE_WORKSPACE:work,GENELOOP_NATIVE_SOFFICE:tools.soffice,
-          GENELOOP_NATIVE_SPEECH_ROOT:join(toolRoot,'speech'),PLAYWRIGHT_BROWSERS_PATH:join(toolRoot,'chromium'),
+          PLAYWRIGHT_BROWSERS_PATH:join(toolRoot,'chromium'),
           TIKTOKEN_CACHE_DIR:join(toolRoot,'python-data','tiktoken'),RL_renderPMBackend:'_renderPM',PYTHONDONTWRITEBYTECODE:'1'};
         Object.assign(env,nativeFontEnvironment(tools,root));
         const {fileURLToPath}=await import('node:url');
@@ -152,6 +152,12 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
           save('native-providers.json',{format:'sss-general-tools-v1',providers});
           if(tools.nativeProviders)env.GENELOOP_NATIVE_PROVIDER_CONFIG=Buffer.from(JSON.stringify(tools.nativeProviders)).toString('base64');
         }
+        // Management relocates the public source so its journal stays private.
+        // Embedded Python's sitecustomize would otherwise import src/scenarios
+        // from the installed bundle before bootstrap selects that private copy.
+        // The manager needs no PPT import hook; nested providers keep their own
+        // environment above, including the normal Skill binding when required.
+        if(kind==='management')env.GENELOOP_NATIVE_SKILL_RUNTIME='0';
         // The top-level PPT proxy is the same typed delivery/recovery adapter as Web.
         if(kind==='ppt') {
           const runtime=dirname(fileURLToPath(import.meta.url));env.SSS_PPT_NODE_ROOT=runtime;

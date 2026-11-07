@@ -2,6 +2,12 @@
 
 桌面 `0.3.0-preview.19` 已取回 Windows x64、Apple Silicon／Intel 小安装器，七包工具下载及三种原生环境各六条简单真实任务通过。安装包只留本地；公开发布的仅为工具包。真实模型使用临时 Kouri 凭据，Mac 未 Apple 公证／真人安装验收，正式账号网关另计。源码、失败和边界见[本轮记录](docs/debug/desktop-preview19-macos-delivery-20261107.md)。
 
+后续桌面构建默认采用固定版本的官方 native Office Kit，复用桌面宿主，取消重复 WASM／Node；仅需准备 Office 时在 `apps/desktop` 运行 `npm run tools:office -- <新工具目录>`。Windows 已验证，Mac 新引擎原生回归待做，preview.19 已交付文件未变；格式范围、兼容边界与完整 Office 构建回退见[精简 Kit 记录](docs/debug/desktop-office-kit-20261108.md)。
+
+桌面 PPT 最新范围仅制作／编辑演示文稿及 PDF／逐页预览；使用 GeneLoop 自有 Skill 入口，不提供上游配音、演示视频或字幕扩展。后续构建取消语音依赖与speech分包，保留其他场景，尚未制作新安装器。DSH逐项参考、同伴服务器证据边界、Windows检查和新工具集要求见[范围记录](docs/debug/desktop-ppt-authoring-scope-20261108.md)。
+
+其余场景已按当前注册、实际实现与桌面依赖[交叉核对](docs/debug/desktop-scene-scope-review-20261108.md)：不额外适配论文LaTeX编译或视频ASR，保留现有统计、PDF/OCR与媒体编辑；不能按早期窄范围裁掉后来已接通的工具。
+
 桌面 `0.3.0-preview.18` 候选保留六场景工具，新增小安装包和安装后统一工具准备，支持续传、校验与本机导入；安装界面采用 GeneLoop 原生研究节点图。[Windows 七个工具包](https://github.com/Asilences/GeneLoop-Desktop-Build/releases/tag/desktop-tools-win32-x64-21e5190b5076c9c28586e197)已获授权公开发布，固定下载源已接通。61,681 个工具文件恢复校验、恢复后 10 组离线工具检查及 ASAR Agent 读写／取消通过；真实桌面匿名下载、暂停续传和逐文件校验也通过。Mac 新分包流程未原生验收，原完整离线构建保留。配置及边界见[分发记录](docs/debug/desktop-preview18-distribution-20261107.md)。安装包仍只保存在本机。
 
 桌面 `0.3.0-preview.17` 候选补齐 Skill 可选依赖、完整媒体组件、离线字幕对齐及宿主私有 MCP 注册。Windows 工具目录与两种 Mac 实际包内统一诊断通过；后补 CLI 修复的版本边界、外部服务条件和实际任务限制见[本轮记录](docs/experiments/desktop-preview17-optional-tools-20261107.md)及[工具说明](docs/product/desktop/native-optional-tools.md)。安装包不上传。

@@ -1,4 +1,4 @@
-// Preserve every tool file. Distribution changes only; no tool pruning here.
+// Preserve the local tool set within the requested PPT-authoring scope.
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
@@ -15,16 +15,19 @@ const original=JSON.parse(readFileSync(join(source,'manifest.json'),'utf8'));
 assert.equal(original.platform,process.platform);assert.equal(original.arch,process.arch);
 const codec=await prepareInstallerCodec(app,join(output,'installer-tools'));
 const definitions=[
-  ['workspace','场景与材料工具',true,['source','ppt-master','ocr','fonts','python-data','manifest.json','.geneloop-tools']],
+  ['workspace','场景与材料工具',true,['source','ppt-master','skills','ocr','fonts','python-data','manifest.json','.geneloop-tools']],
   ['python','数据与文档运行库',true,['python']],['office','Office 与演示文稿',true,['libreoffice']],
   ['browser','页面预览',true,['chromium']],['media','音视频工具',true,['ffmpeg']],
-  ['converters','材料格式转换',true,['extras']],['speech','离线语音与字幕对齐',false,['speech']],
+  ['converters','材料格式转换',true,['extras']],
 ];
 const sha=async path=>{const h=createHash('sha256');for await(const chunk of createReadStream(path))h.update(chunk);return h.digest('hex');};
 const entries=[];
 async function walk(directory){
   for(const item of readdirSync(directory,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){
     const path=join(directory,item.name),name=relative(source,path).split('\\').join('/'),s=lstatSync(path);
+    // Keep an old build's speech tree untouched, but never distribute it in
+    // the new client. PPT authoring does not use this optional upstream extension.
+    if(name==='speech')continue;
     if(s.isSymbolicLink()){
       const target=readlinkSync(path),dest=resolve(directory,target),rel=relative(source,dest);
       assert.ok(!isAbsolute(target)&&rel!=='..'&&!rel.startsWith('..\\')&&!rel.startsWith('../'),'工具链接必须位于发行目录内');
@@ -73,4 +76,4 @@ const baseUrl=process.env.GENELOOP_TOOL_PACK_BASE_URL??(published?.toolsetId===t
 if(baseUrl){const url=new URL(baseUrl);assert.equal(url.protocol,'https:');assert.ok(!url.username&&!url.password);}
 const catalog={schema:1,toolsetId,platform:process.platform,arch:process.arch,baseUrl,codec:{filename:codec.filename,sha256:codec.sha256,version:codec.version},packages};
 writeFileSync(join(output,'tool-packs.json'),JSON.stringify(catalog)+'\n');
-writeFileSync(join(output,'preservation.json'),JSON.stringify({filesBefore:entries.length,filesInPacks:selected.size,allToolsRetained:true,unpackedBytes:entries.reduce((n,f)=>n+f.bytes,0),downloadBytes:packages.reduce((n,p)=>n+p.bytes,0),toolsetId},null,2));
+writeFileSync(join(output,'preservation.json'),JSON.stringify({scope:'desktop-ppt-authoring',filesBefore:entries.length,filesInPacks:selected.size,allToolsRetained:true,excludedExtensions:['ppt-narration','presentation-video','subtitle-alignment'],excludedPaths:['speech/**'],unpackedBytes:entries.reduce((n,f)=>n+f.bytes,0),downloadBytes:packages.reduce((n,p)=>n+p.bytes,0),toolsetId},null,2));

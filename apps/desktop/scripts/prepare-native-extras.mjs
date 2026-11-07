@@ -49,7 +49,8 @@ export function prepareNativeExtras(python,bundle){
   }
   // One browser shared by Playwright and Remotion; never duplicate Chromium.
   const browserCache=join(cache,'playwright');mkdirSync(browserCache,{recursive:true});
-  const env={...process.env,PLAYWRIGHT_BROWSERS_PATH:browserCache,PYTHONDONTWRITEBYTECODE:'1'};
+  const env={...process.env,PLAYWRIGHT_BROWSERS_PATH:browserCache,PYTHONDONTWRITEBYTECODE:'1',
+    PLAYWRIGHT_NODEJS_PATH:process.execPath,ELECTRON_RUN_AS_NODE:'1'};
   run(python,['-B','-m','playwright','install','chromium','--only-shell'],env);
   const shell=readdirSync(browserCache).find(n=>n.startsWith('chromium_headless_shell-'));assert.ok(shell);
   const folder=join(browserCache,shell),list=readdirSync(folder,{recursive:true});

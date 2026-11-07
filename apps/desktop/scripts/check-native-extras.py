@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 bundle = Path(sys.argv[1]).resolve(strict=True)
 work = Path(tempfile.mkdtemp(prefix='geneloop-complete-tools-')).resolve()
@@ -20,7 +21,7 @@ os.environ.update(GENELOOP_NATIVE_SKILL_RUNTIME='1', GENELOOP_PPT_MASTER_ROOT=st
 from src.adapters.desktop_skill_runtime import install
 install()
 checks = []
-modules = ['pathops','uharfbuzz','edge_tts','mammoth','markdownify','ebooklib','nbconvert','nbformat',
+modules = ['pathops','uharfbuzz','mammoth','markdownify','ebooklib','nbconvert','nbformat',
            'openpyxl','requests','bs4','curl_cffi','google.genai','flask','playwright','tiktoken','svglib','_rl_renderPM']
 for name in modules:
     importlib.import_module(name)
@@ -30,11 +31,33 @@ import project_management.paths as project_paths
 assert config.PROJECTS_DIR == work / 'projects' and project_paths.PROJECTS_ROOT == work / 'projects'
 checks.append('skill_output_roots_private')
 import doc_to_md
-source = work / 'source.rtf'
-source.write_text(r'{\rtf1\ansi GeneLoop native source conversion.}', encoding='ascii')
-text = doc_to_md._convert_with_pandoc(source, work / 'source.md', '.rtf')
+source = work / 'source.odt'
+with zipfile.ZipFile(source, 'w') as archive:
+    archive.writestr('mimetype', 'application/vnd.oasis.opendocument.text')
+    archive.writestr('META-INF/manifest.xml', '<?xml version="1.0"?><manifest:manifest '
+                     'xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.2">'
+                     '<manifest:file-entry manifest:full-path="/" manifest:media-type="application/vnd.oasis.opendocument.text"/>'
+                     '<manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>'
+                     '</manifest:manifest>')
+    archive.writestr('content.xml', '<?xml version="1.0"?><office:document-content '
+                     'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+                     'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" office:version="1.2">'
+                     '<office:body><office:text><text:p>GeneLoop native source conversion.</text:p>'
+                     '</office:text></office:body></office:document-content>')
+text = doc_to_md._convert_with_pandoc(source, work / 'source.md', '.odt')
 assert 'GeneLoop' in text
 checks.append('office_legacy_document_conversion')
+office = Path(os.environ['GENELOOP_NATIVE_SOFFICE'])
+kit_root = office.parents[1] if sys.platform == 'win32' else office.parents[2]
+if (kit_root / 'office-kit.json').is_file():
+    rtf = work / 'source.rtf'
+    rtf.write_text(r'{\rtf1\ansi GeneLoop unsupported input.}', encoding='ascii')
+    try:
+        doc_to_md._convert_with_pandoc(rtf, work / 'rtf.md', '.rtf')
+        raise AssertionError('Kit must explicitly reject standalone RTF')
+    except RuntimeError as error:
+        assert 'RTF' in str(error)
+    checks.append('office_standalone_rtf_rejected')
 pandoc = bundle / ('extras/pandoc/pandoc.exe' if sys.platform == 'win32' else 'extras/pandoc/pandoc')
 result = subprocess.run([str(pandoc), '-f', 'rst', '-t', 'html'], input=b'GeneLoop\n========\n\nNative source.', stdout=subprocess.PIPE, check=True)
 assert b'Native source' in result.stdout
@@ -47,6 +70,9 @@ assert renderPM.drawToString(drawing, fmt='PNG').startswith(b'\x89PNG')
 checks.append('svg_native_raster_fallback')
 from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
+    assert os.environ.get('PLAYWRIGHT_NODEJS_PATH'), 'Desktop must bind its shared Node host'
+    assert not (Path(importlib.import_module('playwright').__file__).parent / 'driver' /
+                ('node.exe' if sys.platform == 'win32' else 'node')).exists(), 'Duplicate Playwright Node must not ship'
     browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
     page = browser.new_page()
     page.set_content('<h1>GeneLoop</h1>')
@@ -61,16 +87,8 @@ result = subprocess.run([str(ffmpeg), '-v', 'error', '-f', 'lavfi', '-i', 'sine=
                          '-af', 'loudnorm,afade=t=out:st=0.1:d=0.1', '-y', str(work / 'audio.wav')], check=True)
 assert (work / 'audio.wav').stat().st_size > 1000
 checks.append('ffmpeg_audio_filters')
-# The isolated profile deliberately pins NumPy 1.26 for Intel Torch. Never
-# import it into the main data-analysis interpreter (NumPy 2.2).
-speech = bundle / 'speech'
-assert (speech / 'provenance.json').is_file()
-subprocess.run([sys.executable, '-B', '-c',
-    'import sys;sys.path.insert(0,sys.argv[1]);import stable_whisper;'
-    'model=stable_whisper.load_model("base",device="cpu",download_root=sys.argv[2]);'
-    'assert model.is_multilingual;print("offline_cpu_alignment_model_loaded")',
-    str(speech / 'site'), str(speech / 'cache/whisper')], check=True, timeout=120)
-checks.append('offline_whisper_base_cpu')
+# PPT authoring does not require speech. Its native tools never download weights.
+checks.append('ppt_authoring_without_speech')
 from src.adapters.desktop_native_providers import NativeGateway
 private = work / '.local/turn/work'
 private.mkdir(parents=True)

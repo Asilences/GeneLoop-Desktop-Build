@@ -25,8 +25,8 @@ writeFileSync(join(root,'workspace','source.txt'),'Synthetic native desktop evid
 const reader=openWorkspaceReader(join(root,'workspace')),writer=openReportWriter(join(root,'workspace'));
 const ctx=new Context();new LocalSubprocessRuntime(ctx);
 const tools={python:join(toolRoot,process.platform==='win32'?'python/python.exe':'python/bin/geneloop-python'),
-  soffice:join(toolRoot,process.platform==='win32'?'libreoffice/program/soffice.com':'libreoffice/Contents/MacOS/soffice'),
-  skill:join(toolRoot,'ppt-master'),sourceRoot:join(toolRoot,'source'),nativeContext:ctx};
+  soffice:resolve(process.env.GENELOOP_NATIVE_SOFFICE??join(toolRoot,process.platform==='win32'?'libreoffice/program/soffice.com':'libreoffice/Contents/MacOS/soffice')),
+  skill:join(toolRoot,'ppt-master'),sourceRoot:resolve(process.env.GENELOOP_NATIVE_SOURCE_ROOT??join(toolRoot,'source')),nativeContext:ctx};
 try {
   process.chdir(root);
   const signal=AbortSignal.timeout(450_000);let receipt;

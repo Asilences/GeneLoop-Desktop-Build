@@ -10,7 +10,7 @@ const tag=u.pathname.match(/^\/Asilences\/GeneLoop-Desktop-Build\/releases\/down
 const until=Date.now()+30*60*1000;let release;
 while(Date.now()<until){
  const r=spawnSync('gh',['api','repos/'+repo+'/releases/tags/'+tag],{encoding:'utf8'});
- if(r.status===0){const v=JSON.parse(r.stdout);if(!v.draft&&v.assets.length===7){release=v;break;}}
+ if(r.status===0){const v=JSON.parse(r.stdout);if(!v.draft&&v.assets.length===catalog.packages.length){release=v;break;}}
  console.log(JSON.stringify({waitingForOwnerToolPublication:tag}));await new Promise(r=>setTimeout(r,15000));
 }
 assert.ok(release,'工具尚未由维护者发布，停止而不使用错误下载源');

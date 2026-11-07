@@ -24,7 +24,7 @@ export function readPptMasterGuide(tools, section) {
   }
   const bytes = readFileSync(path);
   if (createHash('sha256').update(bytes).digest('hex') !== lock.files[name]) throw Error('ppt-master 指南与锁定版本不符。');
-  return bytes.toString('utf8');
+  return '# GeneLoop PPT 制作范围\n仅制作、编辑和核验PPTX及PDF/逐页预览。上游文档的旁白、配音、演示视频和字幕扩展不属于本场景，不执行相关脚本或安装语音依赖。以下仅参考材料、设计、模板、页面和演示文稿导出规范。\n\n'+bytes.toString('utf8');
 }
 
 function sourcesFor(reader, sources = []) {
@@ -46,7 +46,8 @@ export async function pptPython(tools, scratch, signal, module, args) {
       : await run(tools.python, argv, {
       cwd:tools.sourceRoot, signal, timeout:450_000, windowsHide:true, maxBuffer:2 * 1024 * 1024,
       env:{SystemRoot:process.env.SystemRoot, PATH:dirname(tools.python), TEMP:scratch, TMP:scratch,
-        TMPDIR:scratch, HOME:scratch, USERPROFILE:scratch, APPDATA:scratch, LOCALAPPDATA:scratch},
+        TMPDIR:scratch, HOME:scratch, USERPROFILE:scratch, APPDATA:scratch, LOCALAPPDATA:scratch,
+        GENELOOP_OFFICE_NODE:process.execPath,ELECTRON_RUN_AS_NODE:'1'},
     });
     return JSON.parse(stdout);
   } catch (error) {

@@ -191,7 +191,8 @@ def render_project(stage, snapshot, pages, skill, renderer):
 
 
 def desktop_environment(stage, renderer):
-    env = {name: os.environ[name] for name in ('SystemRoot', 'SystemDrive', 'WINDIR', 'LANG', 'LC_ALL') if name in os.environ}
+    env = {name: os.environ[name] for name in ('SystemRoot', 'SystemDrive', 'WINDIR', 'LANG', 'LC_ALL', 'GENELOOP_OFFICE_NODE') if name in os.environ}
+    env['ELECTRON_RUN_AS_NODE'] = '1'
     env.update(TEMP=str(stage), TMP=str(stage), TMPDIR=str(stage), HOME=str(stage),
                USERPROFILE=str(stage), APPDATA=str(stage), LOCALAPPDATA=str(stage),
                PATH=str(renderer.parent), PATHEXT='.COM', NoDefaultCurrentDirectoryInExePath='1')

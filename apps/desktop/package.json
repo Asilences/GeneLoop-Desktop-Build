@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.19",
+  "version": "0.3.0-preview.20",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -8,7 +8,7 @@
   "type": "module",
   "main": "dist/main.js",
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.19"
   },
   "scripts": {
     "build": "tsc && node scripts/build-motif-evidence.mjs && node scripts/prepare-assets.mjs",
@@ -29,11 +29,13 @@
     "smoke:local-workspace": "npm run build && npm run runtime:stage && node scripts/check-local-workspace.mjs",
     "runtime:stage": "node scripts/stage-local-runtime.mjs",
     "tools:stage": "node scripts/stage-desktop-tools.mjs",
+    "tools:office": "node scripts/stage-office-kit.mjs",
     "tools:complete": "node scripts/prepare-complete-tools.mjs",
     "tools:packs": "node scripts/build-tool-packs.mjs",
     "smoke:native": "node scripts/check-native-platform.mjs",
     "smoke:remotion": "node scripts/check-native-remotion.mjs",
-    "smoke:ppt": "node scripts/check-native-ppt.mjs"
+    "smoke:ppt": "node scripts/check-native-ppt.mjs",
+    "smoke:ppt-scope": "node scripts/check-ppt-authoring-scope.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",

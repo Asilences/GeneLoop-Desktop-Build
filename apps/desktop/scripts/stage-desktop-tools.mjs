@@ -1,15 +1,17 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync,lstatSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { dirname, isAbsolute, join, relative, basename } from 'node:path';
+import { dirname, isAbsolute, join, relative, basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {stageWorkflowSource} from './stage-workflow-source.mjs';
 import {stageOcrData} from './stage-ocr-data.mjs';
 import {stageCjkFont} from './stage-cjk-font.mjs';
+import {stageOfficeKit} from './stage-office-kit.mjs';
+import {stagePptProfile} from './stage-ppt-profile.mjs';
 
 const app = fileURLToPath(new URL('../', import.meta.url));
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
-const destination = join(app, 'desktop-tools-bundle');
+const destination = resolve(process.env.GENELOOP_DESKTOP_TOOLS_STAGE??join(app, 'desktop-tools-bundle'));
 const marker = join(destination, '.geneloop-tools');
 const source = variable => {
   if (!process.env[variable]) throw Error('构建工具目录缺少 ' + variable);
@@ -17,14 +19,19 @@ const source = variable => {
 };
 const python = source('GENELOOP_DESKTOP_PYTHON_ROOT');
 const skill = source('GENELOOP_PPT_MASTER_ROOT');
-const office = source('GENELOOP_DESKTOP_LIBREOFFICE_ROOT');
+const officeEngine=process.env.GENELOOP_DESKTOP_OFFICE_ENGINE??'kit';
+if(!['kit','libreoffice'].includes(officeEngine))throw Error('未知 Office 引擎');
+const office = officeEngine==='libreoffice'?source('GENELOOP_DESKTOP_LIBREOFFICE_ROOT'):null;
 const media = source('GENELOOP_FFMPEG_DIRECTORY');
 const browser = source('GENELOOP_DESKTOP_BROWSER');
+const browserRoot=process.env.GENELOOP_DESKTOP_BROWSER_ROOT?source('GENELOOP_DESKTOP_BROWSER_ROOT'):dirname(browser);
+const browserRelative=relative(browserRoot,browser);
+if(browserRelative.startsWith('..')||isAbsolute(browserRelative))throw Error('浏览器必须位于指定的构建输入目录内。');
 if (!['win32','darwin'].includes(process.platform)) throw Error('请在 Windows 或 macOS 机器原生准备工具。');
 if (existsSync(destination) && (!existsSync(marker) ||
     realpathSync(destination).toLowerCase() !== destination.toLowerCase())) throw Error('无法覆盖未识别的工具目录。');
 if (existsSync(destination)) {
-  if ([python, skill, office, media, dirname(browser)].some(dir => {
+  if ([python, skill, office, media, browserRoot].filter(Boolean).some(dir => {
     const path = relative(destination, dir);
     return path === '' || (!path.startsWith('..') && !isAbsolute(path));
   })) throw Error('工具输入必须位于生成目录之外。');
@@ -32,7 +39,20 @@ if (existsSync(destination)) {
 }
 mkdirSync(destination, { recursive: true });
 writeFileSync(marker, 'staging');
-cpSync(python, join(destination, 'python'), { recursive: true, verbatimSymlinks:true });
+const pythonExe=join(python,process.platform==='win32'?'python.exe':'bin/python3');
+const profiled=spawnSync(pythonExe,['-B',join(app,'scripts/python-tool-profile.py'),python,join(app,'native-tools-requirements.txt')],{encoding:'utf8',windowsHide:true,maxBuffer:8*1024**2});
+if(profiled.status!==0)throw Error('Python 工具依赖未完整准备：'+profiled.stderr);
+const pythonProfile=JSON.parse(profiled.stdout),excludedPython=new Set([...pythonProfile.excluded_files,...pythonProfile.excluded_directories]);
+cpSync(python, join(destination, 'python'), { recursive: true, verbatimSymlinks:true,filter:path=>{
+  const parts=relative(python,path).split(/[\\/]/);
+  // Retain the numerical, PDF/OCR and document libraries. Exclude only stale
+  // voice dependencies, generated caches/test data and Playwright's duplicate
+  // Node executable; the installed desktop supplies its trusted Node host.
+  if(parts.some(part=>['edge_tts','__pycache__','tests','test'].includes(part)||part.startsWith('edge_tts-')))return false;
+  if(excludedPython.has(parts.join('/')))return false;
+  if(/\.py[co]$/.test(parts.at(-1)))return false;
+  return !['playwright/driver/node','playwright/driver/node.exe'].includes(parts.slice(-3).join('/'));
+} });
 const skillLock=JSON.parse(readFileSync(join(repo,'scenarios/ppt_master/skill-lock.json'),'utf8'));
 const skillDirectories=new Set();for(const file of Object.keys(skillLock.files)){const parts=file.split('/');parts.pop();while(parts.length){skillDirectories.add(parts.join('/'));parts.pop();}}
 cpSync(skill, join(destination, 'ppt-master'), { recursive: true,filter:path=>{
@@ -45,7 +65,9 @@ cpSync(skill, join(destination, 'ppt-master'), { recursive: true,filter:path=>{
   // Ignore private additions and generated caches; retain required directories.
   return skillDirectories.has(name);
 }});
-cpSync(office, join(destination, 'libreoffice'), { recursive: true, verbatimSymlinks:true, filter: path => {
+stagePptProfile(app,destination);
+if(officeEngine==='kit')stageOfficeKit(destination);
+else cpSync(office, join(destination, 'libreoffice'), { recursive: true, verbatimSymlinks:true, filter: path => {
   const [top, folder, item] = relative(office, path).toLowerCase().split(/[\\/]/);
   if (top.endsWith('.msi')) return false;
   if (top === 'help') return !folder || ['idxcaption.xsl', 'idxcontent.xsl'].includes(folder);
@@ -91,7 +113,7 @@ if (process.platform === 'darwin') {
     if(changed)run('/usr/bin/codesign',['--force','--sign','-',file]);
   }
 }
-cpSync(dirname(browser),join(destination,'chromium'),{recursive:true,verbatimSymlinks:true});
+cpSync(browserRoot,join(destination,'chromium'),{recursive:true,verbatimSymlinks:true});
 for (const name of ['LICENSE', 'LICENSE.txt', 'README.txt']) {
   const path = join(media, '..', name);
   if (existsSync(path)) cpSync(path, join(destination, 'ffmpeg', name));
@@ -123,7 +145,10 @@ if (process.platform === 'win32') {
   cpSync(realpathSync(join(python,'bin/python3')),join(destination,'python/bin/geneloop-python'));
 }
 writeFileSync(join(destination,'manifest.json'),JSON.stringify({schema_version:1,
-  platform:process.platform,arch:process.arch,browser:'chromium/'+basename(browser),
+  platform:process.platform,arch:process.arch,browser:'chromium/'+browserRelative.split('\\').join('/'),
+  profile:{scope:'six-scenes-ppt-authoring',removedVoiceDistributions:pythonProfile.removed_voice_distributions,
+    sharedPlaywrightNode:'trusted-desktop-host',excludedBuildData:['__pycache__','*.pyc','tests','test']},
+  office:officeEngine==='kit'?{engine:'libreoffice-kit',version:'0.2.3',native:true}:{engine:'libreoffice'},
   browser_sha256:createHash('sha256').update(readFileSync(browser)).digest('hex'),
   ppt_master:JSON.parse(readFileSync(join(repo,'scenarios/ppt_master/skill-lock.json'),'utf8')).package_sha256,
 },null,2)+'\n');

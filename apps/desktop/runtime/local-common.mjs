@@ -16,7 +16,9 @@ export async function openCommonCapabilities(ctx,{reader,writer,tools,media,sess
   mkdirSync(root,{recursive:true});const work=realpathSync(root);
   for(const name of ['inputs','outputs','projects','bin'])mkdirSync(join(work,name),{recursive:true});
   const sourceManifest=join(work,'approved-inputs.json');if(!existsSync(sourceManifest))writeFileSync(sourceManifest,'{"files":{}}');
-  const allowedRead=[work,realpathSync(tools.skill)];
+  const pptProfile=join(dirname(tools.sourceRoot),'skills','geneloop-ppt');
+  if(!existsSync(join(pptProfile,'SKILL.md')))throw Error('PPT 制作材料包需要更新，未加载上游的配音或视频扩展。');
+  const allowedRead=[work,realpathSync(tools.skill),realpathSync(dirname(pptProfile))];
   // Older persisted sessions keep their original cwd. Preserve the official
   // session/history and map only that exact default cwd to the task copy.
   const taskCwd=cwd=>!cwd||sourceDirectory&&resolve(cwd)===resolve(sourceDirectory)?work:cwd;
@@ -78,11 +80,10 @@ export async function openCommonCapabilities(ctx,{reader,writer,tools,media,sess
     const paths=[join(work,'bin'),dirname(tools.python),dirname(tools.soffice),join(toolRoot,'extras','pandoc'),...(media?[dirname(media.ffmpeg)]:[]),process.env.SystemRoot?join(process.env.SystemRoot,'System32'):'/usr/bin','/bin'];
     spec.env={HOME:work,USERPROFILE:work,APPDATA:work,LOCALAPPDATA:work,TEMP:work,TMP:work,TMPDIR:work,
       PATH:paths.join(windows?';':':'),...(windows?{SystemRoot:process.env.SystemRoot,ComSpec:join(process.env.SystemRoot,'System32/cmd.exe'),PATHEXT:'.COM;.EXE;.BAT;.CMD'}:{}),
-      ELECTRON_RUN_AS_NODE:'1',GENELOOP_PPT_MASTER_ROOT:tools.skill,PYTHONUTF8:'1',PYTHONDONTWRITEBYTECODE:'1',
+      ELECTRON_RUN_AS_NODE:'1',GENELOOP_OFFICE_NODE:process.execPath,GENELOOP_PPT_MASTER_ROOT:tools.skill,PYTHONUTF8:'1',PYTHONDONTWRITEBYTECODE:'1',
       NODE_PATH:join(dirname(fileURLToPath(import.meta.url)),'node_modules'),PYTHONPATH:tools.sourceRoot,
       PLAYWRIGHT_BROWSERS_PATH:join(toolRoot,'chromium'),TIKTOKEN_CACHE_DIR:join(toolRoot,'python-data','tiktoken'),RL_renderPMBackend:'_renderPM',
-      GENELOOP_NATIVE_SKILL_RUNTIME:'1',GENELOOP_NATIVE_WORKSPACE:work,GENELOOP_NATIVE_SOFFICE:tools.soffice,
-      GENELOOP_NATIVE_SPEECH_ROOT:join(toolRoot,'speech')};
+      GENELOOP_NATIVE_SKILL_RUNTIME:'1',GENELOOP_NATIVE_WORKSPACE:work,GENELOOP_NATIVE_SOFFICE:tools.soffice};
     spec.sandboxPolicy={mode:'workspace-write',workspaceRoot:work};return spec;
   };
   await load('dsh-shell-env');await load(process.platform==='win32'?'dsh-tool-pwsh':'dsh-tool-bash',{enableRunInBackground:true});await load('dsh-tool-jobs');
@@ -91,7 +92,7 @@ export async function openCommonCapabilities(ctx,{reader,writer,tools,media,sess
     if(!askUser)return next();return askUser(request);
   });
   await load('dsh-tool-todo',{allowParallelInProgress:true});await load('dsh-skill');
-  await load('dsh-skill-filesystem',{includeDefaultRoots:false,customSkillDirs:[dirname(tools.skill)],watch:false});await load('dsh-tool-skill');
+  await load('dsh-skill-filesystem',{includeDefaultRoots:false,customSkillDirs:[dirname(pptProfile)],watch:false});await load('dsh-tool-skill');
   await load('dsh-web',{searchProvider:'bing-rss',fetchProvider:'http'});await load('dsh-web-fetch-http');
   const web=ctx.get('web');
   // Public search uses no account model credential. Retrieval is the upstream

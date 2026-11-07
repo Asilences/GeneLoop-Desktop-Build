@@ -18,21 +18,18 @@ def main():
     if not source.is_relative_to(skill):
         os.execv(sys.executable, [sys.executable, *args])
     relative = source.relative_to(skill).as_posix()
+    if relative in {'scripts/narration_sync.py', 'scripts/notes_to_audio.py', 'scripts/powerpoint_video.py',
+                    'scripts/video_motion_plan.py', 'scripts/video_sound_mix.py', 'scripts/video_subtitles.py'}:
+        from src.adapters.desktop_skill_runtime import verify_source
+        verify_source(skill, source)
+        raise RuntimeError('GeneLoop PPT 仅制作和编辑演示文稿，不提供旁白、配音、演示视频或字幕流程。请使用 PPTX/PDF/逐页预览交付。')
     names = {'scripts/source_to_md/doc_to_md.py': 'doc_to_md',
-             'scripts/source_to_md.py': 'source_to_md',
-             'scripts/video_subtitles.py': 'video_subtitles'}
+             'scripts/source_to_md.py': 'source_to_md'}
     name = names.get(relative)
     if not name:
         os.execv(sys.executable, [sys.executable, *args])
     from src.adapters.desktop_skill_runtime import install, verify_source
     verify_source(skill, source)
-    if name == 'video_subtitles':
-        speech = Path(os.environ['GENELOOP_NATIVE_SPEECH_ROOT'])
-        if not (speech / 'provenance.json').is_file():
-            raise RuntimeError('随包字幕对齐组件缺失，请修复桌面安装。')
-        sys.path.insert(0, str(speech / 'site'))
-        os.environ['XDG_CACHE_HOME'] = str(speech / 'cache')
-        os.environ['NUMBA_CACHE_DIR'] = str(Path(os.environ['GENELOOP_NATIVE_WORKSPACE']) / '.cache/numba')
     install()
     sys.path.insert(0, str(skill / 'scripts'))
     sys.path.insert(0, str(skill / 'scripts/source_to_md'))

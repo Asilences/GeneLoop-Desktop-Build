@@ -17,7 +17,7 @@ if(existsSync(pinned)){
  const catalog=JSON.parse(readFileSync(pinned));
  const proof=JSON.parse(readFileSync(pinned.replace('tool-packs.json','preservation.json')));
  assert.equal(catalog.platform,process.platform);assert.equal(catalog.arch,process.arch);
- assert.equal(catalog.packages.length,7);assert.equal(proof.toolsetId,catalog.toolsetId);assert.equal(proof.allToolsRetained,true);
+ assert.ok([6,7].includes(catalog.packages.length));assert.equal(proof.toolsetId,catalog.toolsetId);assert.equal(proof.allToolsRetained,true);
  assert.equal(proof.filesBefore,catalog.packages.reduce((n,p)=>n+p.files.length,0));
  assert.equal(catalog.baseUrl,'https://github.com/'+repo+'/releases/download/desktop-tools-darwin-'+process.arch+'-0.3.0-preview.19-'+runId+'-1/');
  const output=resolve('.local/tool-pack-build');mkdirSync(output,{recursive:true});

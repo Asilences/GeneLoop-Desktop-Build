@@ -7,7 +7,7 @@ export async function runNativeProcess(ctx, argv, cwd, signal, {confine = false,
   const abort = AbortSignal.any([signal, timeout]);
   const env = {
     HOME:cwd, USERPROFILE:cwd, APPDATA:cwd, LOCALAPPDATA:cwd,
-    TEMP:cwd, TMP:cwd, TMPDIR:cwd, ELECTRON_RUN_AS_NODE:'1',
+    TEMP:cwd, TMP:cwd, TMPDIR:cwd, ELECTRON_RUN_AS_NODE:'1', GENELOOP_OFFICE_NODE:process.execPath,
     NODE_OPTIONS:undefined, NODE_PATH:undefined,
   };
   const child = ctx.subprocess.spawn({argv:local.argv, cwd, env, signal:abort, graceMs:1000,

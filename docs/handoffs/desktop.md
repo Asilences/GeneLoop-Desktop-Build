@@ -1,5 +1,27 @@
 # GeneLoop Desktop 当前交接
 
+## 2026-11-08 六场景范围交叉核对
+
+- 重新fetch的main仍为`1d1e16f4`。逐场景核对当前注册、prompt、实际server／工具函数、桌面绑定、依赖和相关PR，不仅看交接；[完整依据](../debug/desktop-scene-scope-review-20261108.md)。PPT按用户要求仅制作编辑；Paper不新增TeX编译；Video不为现有字幕／音轨流程增加ASR；保留Data实际统计库、PDF/OCR和DSH公共能力。没有发现其余场景还需裁掉的大组件。
+- 修复本机Management启动：父进程不提前导入安装目录的PPT绑定，临时源码／journal根恢复一致；按需子Provider继续保留正常Skill环境。同伴原场景和权限守卫不改。
+- 已验证：130行映射／遗漏0；实际10组MCP＋Video目录129项一致；Windows核心工具检查含Management确认／执行／恢复、Files副本、来源／硬链接拒绝、Paper审校PDF、Data、隔离代码通过；桌面编译及14项通过。模型请求0、Actions0。
+- 全仓检查在Anaconda Pillow DLL收集错误处停止，随后命令未退出而结束本次会话；Node全仓未跑。短临时根的诊断不代表任意Windows长路径通过；Mac本轮未原生重验。
+- 仅本地候选源码与文档；不推送、不制作或上传安装包，不改旧preview.19文件、公开工具包、正式站、Motif／隐私核心或本机账号数据。接手仍先验证新Mac Kit和新六包，再按原授权制作三平台本地候选。
+
+## 2026-11-08 PPT 仅制作／编辑范围候选
+
+- 用户最新明确：PPT不要旁白、配音、演示视频、录屏与字幕；撤回本轮语音服务器接线，不新增该服务。3.68GB语音目录来自桌面可选依赖全量打包，不是同伴服务器的部署要求。
+- 源码：GeneLoop自有PPT Skill作为默认入口；上游六个附加CLI拦截；默认依赖去掉语音组件；Windows／Mac构建不再准备speech，六包分发保留其他工具与独立视频剪辑／Remotion。旧speech缓存和preview.19产物不删除。
+- 验证：Windows核心PPT模板／导出、DSH公共工具及取消、六脚本拦截、真实六包7z小夹具、桌面14项通过；模型请求0。整仓回归前4%出现多项失败后停止，未逐项归因，不报告全仓通过。新Mac和新安装包未验证／未制作，安装包未上传。
+- 最新main `1d1e16f4`没有受查语音依赖／部署记录；不能把用户V100当作同伴服务器。DSH官方逐项参考、静态库体积审计和后续操作见[范围记录](../debug/desktop-ppt-authoring-scope-20261108.md)。
+- 接手：新工具集必须包含 `skills/geneloop-ppt`，不能仅复用旧七包后发布新运行时；新Mac Kit／范围回归后再制作三平台本地交付。正式站、Motif／隐私核心、本机账号数据均未改。
+
+## 2026-11-08 精简 Office Kit 构建候选
+
+- 范围：官方 `@deepseek-ai/libreoffice-kit@0.2.3` 替代完整 Office 的构建源码已接入，保留现有 Agent、六场景和 PPT Master；独立 RTF 不再由 Office 导入，模板内嵌 EMF／WMF 仍由 native 引擎渲染。独立图片格式不新增入口。
+- 已验证：Windows DOCX／PPTX／XLSX→PDF、中文与图片、公式结果、模板修改／PPT Master 完整交付及真实 Electron 宿主通过。Office 目录 830,503,188→215,374,417 字节；同参数 7z 204,583,750→49,859,846 字节。桌面 14 项通过；整仓测试被 Anaconda Pillow DLL 收集错误阻断，不报告全仓通过。
+- 分发边界：preview.19 原三份安装器、公开工具包、正式服务器未改；无新安装器或发布。Mac ARM64／Intel 的新 Kit 原生验证待做，不能用 Windows 结果替代。源码改动与回退入口、私有证据见[本轮记录](../debug/desktop-office-kit-20261108.md)。本轮模型请求0、Actions0。
+
 ## 2026-11-07 preview.19 三平台分包与真实任务（本地交付）
 
 - 范围：保留六场景、Agent、现有界面及工具；Windows EXE、Apple Silicon／Intel DMG 已取回 `.local/desktop-releases/0.3.0-preview.19/`，安装包没有 Release。七个工具包按平台公开发布并绑定完整摘要。

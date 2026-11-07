@@ -27,6 +27,8 @@ try{
  common=await openCommonCapabilities(ctx,{reader,writer,tools:config.tools,sessionId:randomUUID(),signal,sourceDirectory:config.workspace,askUser:async request=>({answers:request.questions.map(q=>({id:q.id,selected:[],custom:'人工诊断回答'}))})});
  handle=await ctx.agents.create({sessionId:randomUUID(),meta:{cwd:config.workspace},agentOptions:{provider:'deepseek-official',model:'deepseek-flash'}});
  const agent=handle.agent;const call=async(name,args)=>{const r=await ctx.tools.execute({callId:randomUUID(),name,arguments:args,agent,signal});assert.equal(r.isError,false,JSON.stringify(r));return r;};
+ const skills=await ctx.get('skills').list();assert.deepEqual(skills.map(row=>row.name),['geneloop-ppt']);
+ await call('skill',{name:'geneloop-ppt'});
  common.importFiles([{path:'sample.txt',sha256:createHash('sha256').update('unchanged').digest('hex')}]);
  await call('read',{file_path:'inputs/sample.txt'});
  await call('write',{file_path:'outputs/result.txt',content:'first'});
@@ -46,7 +48,7 @@ try{
  assert.equal(readFileSync(join(config.workspace,'sample.txt'),'utf8'),'unchanged');
  const delivery=common.publish(['outputs/result.txt']);assert.equal(delivery.length,1);
  const missing=common.names.filter(name=>!ctx.tools.get(name,agent));assert.deepEqual(missing,[]);
- writeFileSync(join(config.root,'result.json'),JSON.stringify({diagnostic:true,model_requests:0,platform:process.platform,tools:common.names,read_write_edit:true,search:true,python:true,jobs_cancel:true,network:network??'not-run',old_session_cwd_mapped:true,questions:true,delivery:true,original_unchanged:true,traversal_denied:true}));
+ writeFileSync(join(config.root,'result.json'),JSON.stringify({diagnostic:true,model_requests:0,platform:process.platform,tools:common.names,pptAuthoringSkillOnly:true,read_write_edit:true,search:true,python:true,jobs_cancel:true,network:network??'not-run',old_session_cwd_mapped:true,questions:true,delivery:true,original_unchanged:true,traversal_denied:true}));
 }catch(error){writeFileSync(join(config.root,'result.json'),JSON.stringify({error:error.message,stack:error.stack}));}
 finally{await handle?.dispose();await common?.close();reader.close();writer.close();process.exit(0);}
 })();}

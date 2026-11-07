@@ -18,10 +18,9 @@ PyYAML==6.0.3
 XlsxWriter==3.3.1
 typing_extensions==4.16.0
 
-# Complete pinned PPT Master optional modules (installed at build time).
+# PPT authoring libraries. Narration/video/subtitle extensions are not shipped.
 skia-pathops==0.9.2
 uharfbuzz==0.57.0
-edge-tts==7.3.1
 mammoth==1.13.0
 markdownify==1.2.3
 ebooklib==0.21

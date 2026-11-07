@@ -1612,6 +1612,10 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使用自身渲染沙箱。macOS 使用平台原生目录句柄与 DSH Seatbelt；preview.11 已完成 macOS 15 ARM64/Intel 原生及包内无模型检查，不能据此宣称全面文件读取/网络隔离。构建用 Python、Office、FFmpeg、Chromium 在构建阶段获取并随工具资源打包，任务阶段不自动安装依赖。构建入口见 `apps/desktop/scripts/build-installer.mjs`，Mac 流程见 `.github/workflows/desktop-native.yml`；均不自动发布安装包。
 
+后续 Office 构建候选使用 `@deepseek-ai/libreoffice-kit@0.2.3` native；保留既有 `soffice.com`／`soffice` 路径与单文件转换契约，通过 `GENELOOP_OFFICE_NODE` 绑定可信桌面宿主。独立 RTF 明确拒绝；锁定 Skill 提取的内嵌 EMF／WMF 使用内部 `--geneloop-embedded-preview`，不作为独立输入入口。构建可显式选择 `GENELOOP_DESKTOP_OFFICE_ENGINE=libreoffice` 回退完整引擎。Kit 不替代完整 Office CLI／宏；Windows 原生回归已通过，Mac 新引擎和新交付尚待验证，见[接入记录](debug/desktop-office-kit-20261108.md)。
+
+桌面PPT最新范围仅制作／编辑和核验。`skills/geneloop-ppt/SKILL.md`作为默认Skill；上游旁白、配音、演示视频、字幕CLI明确拒绝，不新增语音服务器接口。新工具集仅六包，不分发speech；其余场景原接口保持。旧七包／安装器保留回退，新运行时要求配套新的PPT制作材料。范围与验证见[记录](debug/desktop-ppt-authoring-scope-20261108.md)。
+
 ## 桌面跨平台工具补齐（preview.12）
 
 所有六场景共用 `local_document_pin(path)` / `local_document_read(source_id,page)`，凭证绑定当前会话和来源 SHA-256。新增 `local_data_inspect` / `local_data_analyze`、`local_files_export`、`local_paper_audit_sources`、`local_ppt_edit_template`。工具目录见 [桌面说明](desktop.md#preview12-跨平台场景工具)。表格只使用显式单元格，不执行工作簿公式；CSV 副本对公式样文字加前导单引号，并在回执记录数量，统计仍使用原值。文件整理仅创建 ZIP 副本；原件不移动或删除。

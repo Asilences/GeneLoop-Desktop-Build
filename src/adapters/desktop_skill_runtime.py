@@ -24,6 +24,12 @@ def verify_source(skill, origin):
 def install():
     if os.environ.get('GENELOOP_NATIVE_SKILL_RUNTIME') != '1':
         return
+    # The desktop already supplies Node. Playwright's bundled executable is a
+    # duplicate (over 100 MB on Windows); keep its JS driver and license files.
+    node = os.environ.get('GENELOOP_OFFICE_NODE') or os.environ.get('SSS_PPT_NODE_EXECUTABLE')
+    if node and Path(node).is_absolute() and Path(node).is_file():
+        os.environ['PLAYWRIGHT_NODEJS_PATH'] = node
+        os.environ['ELECTRON_RUN_AS_NODE'] = '1'
     if any(isinstance(f, NativeSkillFinder) for f in sys.meta_path):
         return
     skill = Path(os.environ['GENELOOP_PPT_MASTER_ROOT']).resolve(strict=True)
@@ -103,7 +109,11 @@ class NativeSkillLoader(importlib.abc.Loader):
 def _office(source, folder, extension):
     executable = os.environ['GENELOOP_NATIVE_SOFFICE']
     profile = (Path(folder) / 'office-profile').as_uri()
-    result = subprocess.run([executable, '-env:UserInstallation=' + profile, '--headless',
+    kit = (Path(executable).parents[1] / 'office-kit.json').is_file() if sys.platform == 'win32' else (Path(executable).parents[2] / 'office-kit.json').is_file()
+    if kit and Path(source).suffix.lower() == '.rtf':
+        raise RuntimeError('RTF 不再作为独立输入格式，请另存为 DOCX 或 TXT 后使用。')
+    embedded = ['--geneloop-embedded-preview'] if kit and extension == 'png' and Path(source).suffix.lower() in ('.emf', '.wmf') else []
+    result = subprocess.run([executable, *embedded, '-env:UserInstallation=' + profile, '--headless',
                              '--convert-to', extension, '--outdir', str(folder), str(source)],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120,
                             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0)
