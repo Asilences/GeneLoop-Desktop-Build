@@ -1,15 +1,24 @@
 name: Desktop macOS small DMG and tool delivery
 on:
   workflow_dispatch:
+    inputs:
+      phase:
+        type: choice
+        options: [build, real]
+        default: build
+      deliveryRun:
+        description: Successful small DMG run ID, required only for real acceptance
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
-  group: desktop-macos-delivery
+  group: desktop-macos-delivery-${{ inputs.phase }}
   cancel-in-progress: false
 jobs:
   macos:
     # Public standard runners only. Never consume paid private/larger runners.
-    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private
+    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase != 'real'
     permissions:
       contents: write
     strategy:
@@ -100,3 +109,65 @@ jobs:
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
+  real:
+    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real'
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify free standard runner and temporary test credential availability
+        env:
+          GENELOOP_TEST_DEEPSEEK_API_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+        run: node -e "if(process.platform!=='darwin'||process.arch!=='${{ matrix.arch }}'||!process.env.GENELOOP_TEST_DEEPSEEK_API_KEY)throw Error('缺少目标原生环境或临时真实测试凭据；不得用模拟结果代替')"
+      - name: Retrieve only the authorized temporary delivery artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DELIVERY_RUN: ${{ inputs.deliveryRun }}
+        run: |
+          [[ "$DELIVERY_RUN" =~ ^[0-9]+$ ]]
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$DELIVERY_RUN" --jq .conclusion)" = success
+          gh run download "$DELIVERY_RUN" --repo "$GITHUB_REPOSITORY" --name "desktop-macos-${{ matrix.arch }}-$DELIVERY_RUN" --dir .local/real-delivery
+          cd .local/real-delivery
+          shasum -a 256 --check SHA256SUMS.txt
+      - name: Mount the delivered DMG and prepare its tools from the public source
+        run: |
+          DMG=$(find .local/real-delivery -maxdepth 1 -name '*macOS-${{ matrix.arch }}.dmg' -type f -print -quit)
+          test -n "$DMG"
+          mkdir -p .local/real-mounted
+          hdiutil attach -readonly -nobrowse -mountpoint "$PWD/.local/real-mounted" "$DMG"
+          APP="$PWD/.local/real-mounted/GeneLoop Desktop.app"
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-packaged-tool-download.mjs "$APP/Contents/Resources" .local/real-tool-download
+      - name: Real local Agent and all six scenes, cloud model only
+        env:
+          GENELOOP_TEST_DEEPSEEK_API_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+        run: |
+          APP="$PWD/.local/real-mounted/GeneLoop Desktop.app"
+          TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/real-tool-download/download-receipt.json")).tools)')
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-real-six-scenes.mjs "$APP/Contents/Resources" "$TOOLS" .local/real-six-scenes
+      - name: Preserve only the synthetic acceptance summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-real-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            apps/desktop/.local/real-six-scenes/summary.json
+            apps/desktop/.local/real-tool-download/download-receipt.json
+          retention-days: 1
+          if-no-files-found: warn
