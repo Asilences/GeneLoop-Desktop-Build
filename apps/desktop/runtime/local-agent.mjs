@@ -22,7 +22,7 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
         if(common)scope.systemPrompt.section({name:'geneloop:native-common',order:10240,text:
           '当前公共工具来自官方DSH，本机命令使用'+(process.platform==='win32'?'PowerShell（pwsh），不能写Linux Bash语法':'Bash')+'。本轮可写目录：'+common.directory+
           '。用户原件通过local_list/local_read/local_document_pin读取，用local_import_sources将实际SHA256固定的资料复制到inputs/，不要猜测路径。技能只读入口：'+ppt.skill+
-          '。任务代码和中间文件留在本轮目录，交付文件放outputs/后调用present；present会复制到工作区GeneLoop输出。node/python/python3、Office和媒体工具已在命令PATH中。禁止写用户原件、安装系统软件或提权。联网搜索使用公开检索，不共享模型密钥；不可用时如实报告。'});
+          '。任务代码和中间文件留在本轮目录。local_save_report、local_files_export、local_ppt_create、local_ppt_fill_template、local_ppt_edit_template、local_video_render返回的GeneLoop输出产物已经交付给用户，应直接结束，不要再present、重新查找或读取这些已交付文件。只有你在本轮可写目录outputs/自行制作的文件才调用present，它会复制到工作区GeneLoop输出。node/python/python3、Office和媒体工具已在命令PATH中。禁止写用户原件、安装系统软件或提权。联网搜索使用公开检索，不共享模型密钥；不可用时如实报告。'});
         if(fullWorkflows&&scene!=='video')scope.systemPrompt.section({name:'geneloop:desktop-full-workflows',order:10230,
           text:'完整场景任务优先使用 local_workflow_open 返回的实际MCP目录，再直接调用加入当前Agent的mcp__native_*工具，不用基础工具冒充完整流程。数据报告的统计设计、选图、正文仍由你基于实际证据判断；论文保留引用与外部元数据核验、审校草稿与PDF；PPT保留原图、模板、局部修订、真实PDF核验和交付。PPT官方技能和PDF转换还可用workflow=skill。文件整理先预览副本的具体动作、请求用户确认，再执行和交付整理包，不声称已修改原文件。每个工作流只操作其明确固定的材料快照；材料变化时重新打开。'});
         if(legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-compatibility',order:10200,
