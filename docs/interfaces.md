@@ -1692,10 +1692,11 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 - 前端在已登录且页面可见时每10秒读取，退出清空。展示认证不授权执行；单项费用/完整耗时为null时保持未知，缺少配对质量与成本时不计算节省。公开样例不绑定账号或工作区。
 - 当前仅覆盖Coding v1，不推测缺失的组合、学习/发布事件或历史版本；来源执行位置不改变任务路由。正式服务及本机Runtime活证据桥未由本轮部署。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
 - 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。
-# Desktop 工具兼容补充（preview.16）
+
+## Desktop 工具兼容补充（preview.16）
 
 `toolsetVersion:4` 在v3基础上启用官方DSH公共工具与原场景扩展。清单见 [desktop-tool-parity.json](desktop-tool-parity.json)，由 `node apps/desktop/scripts/audit-web-tool-parity.mjs --check` 核对。旧v2/v3网关保持原工具，不强行发送v4函数。
 
-桌面模型转发沿用 `/api/harless/desktop-model` 账号/任务凭证与计量；`user.content` 支持官方DSH的 `text` 和内联 `image_url` 数组（PNG/JPEG/WebP/GIF），拒绝远程URL、外来file_id和未知块。`structured_output` 仅供原生子智能体驱动注册的输出工具。主Agent仍通过原DSH循环执行，网关不执行本地工具。
+桌面模型转发沿用 `/api/harless/desktop-model` 账号/任务凭证与计量；`user.content` 支持官方DSH的 `text` 和内联 `image_url` 数组（PNG/JPEG/WebP/GIF），拒绝远程URL、外来file_id和未知块。`structured_output` 仅供原生子智能体驱动注册的输出工具。子智能体共享原任务计量，允许最多8条同时在途请求，撤销任务一并关闭；不限制累计模型次数。主Agent仍通过原DSH循环执行，网关不执行本地工具。
 
 PPT宿主 `prepare_ppt` / `finalize_ppt` 使用任务私有工程，读取锁定Skill并输出字体校准、PPTX/PDF和逐页图片；管理审批与补充资料沿用桌面宿主确认/问题事件，取消同时清理对应问题卡片。正式部署、Mac人工验收和Motif重新认证另计，见[验证记录](experiments/desktop-preview16-tool-parity-20261107.md)。

@@ -1,10 +1,12 @@
 # GeneLoop Desktop 当前交接
 
-## 2026-11-07 preview.16 工具对齐候选（验证中）
+## 2026-11-07 preview.16 工具对齐候选（包内工程检查通过）
 
 - 基线 `b5701bdc` 保留安装提速修订2；本轮只完成工具差异、DSH原生公共能力、PPT Master/视频契约与平台打包适配，未部署正式服务。六场景清单基于main `1d1e16f4`，130条映射不是130项真实效果验收。
-- Windows开发布局的公共工具、联网检索、原MCP、管理审批/执行/恢复、完整PPT校准/图片/备注/Office交付已通过；图片模型消息与子智能体结构输出放行已补齐。旧工具版本保留。整仓、实际包内及Mac验证在进行。
-- Mac仅标准免费公开runner，`app`模式不上传产物；真实模型、人工UAT、公证及私有Motif认证边界保留。没有覆盖用户安装、没有上传安装包。完整状态与下一步见[本轮记录](../experiments/desktop-preview16-tool-parity-20261107.md)。
+- Windows实际包内公共工具、原MCP、管理审批/执行/恢复、完整PPT校准/图片/备注/Office交付、Remotion渲染/抽帧/解码/剪辑和DSH Agent读写/取消通过；开发布局另验证真实公开联网检索。图片模型消息、子智能体结构输出/并行与全部请求取消已补齐，旧工具版本保留。Python定向59通过/2跳过；整仓Python2795通过/218失败/294跳过/30错误，Node1610通过/39失败/89跳过，Web用例进程曾长期不退出并被结束，不宣称全量通过。
+- Mac ARM64和Intel的实际包内同类检查均通过，源码 `3bdf4090`，run `42357983180`；两种标准免费公开runner，零上传产物，收尾关闭Actions。原失败证据保留：搜索ASAR实体路径、诊断误走旧契约、精简FFmpeg缺少rawvideo muxer，均已修复。
+- Windows本地preview.16 EXE在 `.local/desktop-preview16-verified/`，995,896,832字节，SHA256 `42d23678f8ac209fb0c95fc840e9b5bf3c82b9ef831c4aceca24fe11bf53b64d`。沿用冻结安装提速源码，未覆盖用户安装或复测安装耗时。Mac这轮为`.app`验证，未重新取回preview.16 DMG；旧preview.14 DMG不含新工具。
+- 当前真实模型新增0；完整效果、Mac人工UAT、签名公证及私有Motif认证仍待验收。没有改正式站、没有上传安装包。源码保存在本地独立桌面分支，并同步到用户构建镜像 `codex/desktop-tools-parity`，本轮未推送正式origin桌面分支或新开PR。维护者需部署兼容网关v4才能通过正式账号启用全部新公共工具；旧网关继续使用旧能力。下一步优先真实账号联调，再按需生成/取回新Mac DMG；不由桌面任务重做Motif/隐私核心。完整证据见[本轮记录](../experiments/desktop-preview16-tool-parity-20261107.md)。
 
 ## 2026-11-07 preview.15 Windows安装提速修订2（本地交付）
 
