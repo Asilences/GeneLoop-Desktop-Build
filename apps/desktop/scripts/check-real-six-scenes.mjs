@@ -8,15 +8,22 @@ import {createRequire} from 'node:module';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const resources=resolve(process.argv[2]),toolRoot=resolve(process.argv[3]),destination=resolve(process.argv[4]);
+mkdirSync(destination,{recursive:true});
+const preflightStatus=(phase,fields={})=>writeFileSync(join(destination,'preflight-status.json'),JSON.stringify({phase,platform:process.platform,arch:process.arch,at:new Date().toISOString(),...fields}));
+preflightStatus('started');
 const runtime=join(resources,'geneloop-runtime.asar');
 assert.ok(existsSync(runtime)&&existsSync(join(resources,'app.asar')));
 const token=process.env.GENELOOP_TEST_DEEPSEEK_API_KEY?.trim();
 delete process.env.GENELOOP_TEST_DEEPSEEK_API_KEY;
 assert.ok(token,'需要仅用于本轮真实验收的临时模型凭据');
 const endpoint='https://api.deepseek.com',model='deepseek-flash';
-const preflight=await fetch(endpoint+'/models',{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(30000)});
+let preflight;
+try{preflight=await fetch(endpoint+'/models',{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(30000)});}
+catch(error){preflightStatus('network-failed',{errorKind:error?.name,networkCode:typeof error?.cause?.code==='string'?error.cause.code:undefined});throw Error('测试模型连接检查失败，详见固定字段状态');}
+preflightStatus('http-response',{httpStatus:preflight.status});
 assert.equal(preflight.status,200,'临时模型凭据检查未通过');
 assert.ok((await preflight.json()).data.some(m=>m.id===model),'测试模型不可用，不能用其他模型冒充');
+preflightStatus('model-available',{httpStatus:preflight.status,model});
 const {startLocalWorker}=await import(pathToFileURL(join(resources,'app.asar/dist/local-runtime.js')).href);
 const requireRuntime=createRequire(join(runtime,'package.json'));
 const PptxGenJS=requireRuntime('pptxgenjs');
