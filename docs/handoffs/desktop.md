@@ -1,10 +1,12 @@
 # GeneLoop Desktop 当前交接
 
-## 2026-11-07 preview.17 可选依赖补齐（验证前候选）
+## 2026-11-07 preview.17 可选依赖补齐（统一诊断通过）
 
 - 已补代码：Skill 文档/字体/浏览器/媒体/语音依赖、锁定脚本的原生路径绑定、私有 MCP 宿主注册接缝；保留 preview.16 Agent/MCP 和安装提速修订2，不改 Motif/隐私核心。
-- 当前先完成适配再统一离线检查。尚未把此候选标记为三平台验证通过；需要账号、网络或 Microsoft PowerPoint 的能力分别记录外部条件。
+- 先完成适配后统一检查：Windows 工具目录、Mac ARM64/Intel 实际 `.app` 均 10 组通过，模型 API 0；Mac run `42362449444` 对应源码 `e137ec97`。后补统一材料 CLI 修复 `de2434bc` 的 Windows RTF 回归通过；Mac 仅补入口回归，run `42364161908`、源码 `15ba23ae`，两种架构通过。两轮均零产物上传，收尾已关闭 Actions。完整复杂任务、外部账号和人工效果未验收，不写成所有工具实际调用通过。
 - 入口、构建和准确边界见[工具说明](../product/desktop/native-optional-tools.md)。安装包不上传，Mac 仅公开标准免费 runner；正式服务未改。
+- 本地记录与复现结果见[本轮诊断](../experiments/desktop-preview17-optional-tools-20261107.md)。Windows 候选另存 `.local/desktop-preview17-complete/`，不覆盖正在使用的旧实例；Mac 本轮未生成／取回新 DMG。源码目前同步构建镜像，不代表已更新正式 origin PR。
+- Windows EXE 已生成：2,047,067,136 字节，SHA256 `55540bfac2a6803698fcec86ace467a22626f6520d5d05c400d39308754974c2`；ASAR／原生绑定一致、裁剪后的依赖导入通过。新版本的完整安装耗时未实测。需要真实服务或用户素材的下一轮测试另行记录，不重复本轮基础检查。
 
 ## 2026-11-07 preview.16 工具对齐候选（包内工程检查通过）
 

@@ -1,6 +1,6 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-桌面 `0.3.0-preview.17` 候选继续补齐 Skill 可选依赖、完整媒体组件、离线字幕对齐及宿主私有 MCP 注册，先完成适配再做统一离线检查；外部服务、Microsoft PowerPoint 条件和构建入口见[完整工具说明](docs/product/desktop/native-optional-tools.md)。此候选尚未替代下面已验证的 preview.16 基线，安装包不上传。
+桌面 `0.3.0-preview.17` 候选补齐 Skill 可选依赖、完整媒体组件、离线字幕对齐及宿主私有 MCP 注册。Windows 工具目录与两种 Mac 实际包内统一诊断通过；后补 CLI 修复的版本边界、外部服务条件和实际任务限制见[本轮记录](docs/experiments/desktop-preview17-optional-tools-20261107.md)及[工具说明](docs/product/desktop/native-optional-tools.md)。安装包不上传。
 
 桌面 `0.3.0-preview.16` 工具对齐候选复用原场景 MCP 和官方 DSH 公共工具，通用 PPT 采用完整 PPT Master 工作流。Windows x64、Mac ARM64/Intel实际包内工程检查通过，Windows EXE保存在本地；Mac本轮未重新取回DMG。正式网关v4部署、真实模型效果和Mac人工验收仍另计，详见[本轮记录](docs/experiments/desktop-preview16-tool-parity-20261107.md)。安装包未上传。
 

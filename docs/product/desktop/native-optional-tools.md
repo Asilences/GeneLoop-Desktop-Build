@@ -21,9 +21,11 @@
 
 ## 构建和统一检查
 
-目标平台先 `npm run tools:stage`，再 `npm run tools:complete`（目录 `apps/desktop`）。Mac `prepare-macos-tools.mjs` 已串联准备过程。Windows 嵌入式 Python 无 pip 时，构建者设置 `GENELOOP_BUILD_PYTHON` 和 `GENELOOP_BUILD_PIP_PATH` 指向构建机工具；不构成用户安装要求。下载仅发生在构建机，安装后不下载 Whisper base、Chromium 或分词数据。
+构建输入的 Python 3.12 须预装 `native-tools-requirements.txt` 与 `native-tools-constraints.txt` 中的依赖，再 `npm run tools:stage`、`npm run tools:complete`（目录 `apps/desktop`）。Mac `prepare-macos-tools.mjs` 已自动串联依赖安装和准备。Windows 嵌入式 Python 无 pip 时，构建者设置 `GENELOOP_BUILD_PYTHON` 和 `GENELOOP_BUILD_PIP_PATH` 指向构建机工具，以构建语音 wheel；不构成用户安装要求。下载仅发生在构建机，默认使用不再下载 Whisper base、Chromium 或分词数据。
 
 `check-native-extras.py <工具目录>` 是一次离线诊断：导入、实际文档转换、SVG 位图、浏览器截图、音频滤镜、语音权重加载、私有注册与凭证分离。不调用聊天模型，不替代六场景真实效果验收。Mac `complete-tools` 工作流使用两种标准公开免费 runner，不上传安装包或 Actions 产物。
+
+追加 CLI 接缝可用 `cli-only` 仅检查真实 DOCX 转换，不重新构建整套工具。其临时夹具也保留完整锁定发行与上游署名保护。当前结果见[诊断记录](../../experiments/desktop-preview17-optional-tools-20261107.md)。
 
 ## 私有 MCP 配置
 
