@@ -1,11 +1,12 @@
 # GeneLoop Desktop 当前交接
 
-## 2026-11-07 preview.19 双架构 Mac 分包交付（准备中）
+## 2026-11-07 preview.19 三平台分包与真实任务（本地交付）
 
-- 范围：Apple Silicon／Intel 最新小 DMG、七包工具下载，以及三平台各六个简单真实任务；保留六场景工具和现有界面，不改 Motif／隐私核心／正式服务。安装包不公开发布；Mac 临时 Actions 中转取回后删除。
-- 已实现单文件两阶段手动工作流、严格工具资产发布、实际包内下载校验和真实模型六场景入口；源码已推构建仓库独立分支 `codex/desktop-macos-delivery-20261107`。Windows preview.19 小安装器已在 `.local/desktop-preview19-online/` 生成，269,434,368 字节，SHA `57fb23c489e4eeb65e05fb60862452aa41a691ef95fd0cd5df11c20c4b7f81d8`；14 项专项、实际包内导入和128文件完整载荷解压核对通过，没有执行系统安装或真实模型调用。
-- 未完成：Mac Actions 当前关闭，启用／登记流程的自动审批被拒，等待用户明确最小授权；真实验收还缺安全提供的临时测试凭据。Mac 构建与真实模型调用均未启动，本轮新增费用0；原预算账本不重置。不能将脚本和语法检查当作 Mac DMG 或真实任务通过。
-- 可核对入口、失败边界与接续步骤见[本轮记录](../debug/desktop-preview19-macos-delivery-20261107.md)。前一已验证 Windows preview.18 及完整 preview.17 均保留。
+- 范围：保留六场景、Agent、现有界面及工具；Windows EXE、Apple Silicon／Intel DMG 已取回 `.local/desktop-releases/0.3.0-preview.19/`，安装包没有 Release。七个工具包按平台公开发布并绑定完整摘要。
+- 已验证：三种原生环境各六个简单真实任务通过；实际包内公开下载、解压、权限／链接和逐文件 SHA 通过；PPT 实际模板修改／PDF、Remotion 实际渲染／解码。Windows 最终 Files 修订复验通过；最终 EXE 完整载荷核对通过，未实测最终完整系统安装耗时。
+- 修复：本机产物已交付后重复 present；Mac 框架链接解压兼容。失败证据与逐平台 source／run／SHA／用量见[本轮记录](../debug/desktop-preview19-macos-delivery-20261107.md)，不把源码推送当正式部署。
+- 清理与预算：临时模型 Secret、Actions 安装包／摘要均已删除并核对；Actions 恢复原关闭，默认分支和安全允许列表不变。公开标准计算免费，原15美元额度账本保留；Kouri 实付未知。
+- 限制／接手：Mac 未 Apple 公证、未人工安装 UAT；本轮未部署或验收正式账号的本机模型授权，线上状态须由维护者核对。复杂科研质量和全部工具选项不在简单任务结论内。用户先试用本地三份安装器，发现具体问题按平台修复。
 
 ## 2026-11-07 preview.18 分发与安装界面候选
 

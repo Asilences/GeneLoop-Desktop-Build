@@ -1,6 +1,6 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-桌面 `0.3.0-preview.19` 正准备补齐 Apple Silicon／Intel 小 DMG、完整工具分包下载和三平台六场景简单真实任务验收；已准备源码与手动构建流程，Mac 构建和真实模型验收尚未启动，不能视为已交付。当前状态、授权依赖与接续见[本轮记录](docs/debug/desktop-preview19-macos-delivery-20261107.md)。安装包仍只留本地，Mac 计算限免费标准 runner。
+桌面 `0.3.0-preview.19` 已取回 Windows x64、Apple Silicon／Intel 小安装器，七包工具下载及三种原生环境各六条简单真实任务通过。安装包只留本地；公开发布的仅为工具包。真实模型使用临时 Kouri 凭据，Mac 未 Apple 公证／真人安装验收，正式账号网关另计。源码、失败和边界见[本轮记录](docs/debug/desktop-preview19-macos-delivery-20261107.md)。
 
 桌面 `0.3.0-preview.18` 候选保留六场景工具，新增小安装包和安装后统一工具准备，支持续传、校验与本机导入；安装界面采用 GeneLoop 原生研究节点图。[Windows 七个工具包](https://github.com/Asilences/GeneLoop-Desktop-Build/releases/tag/desktop-tools-win32-x64-21e5190b5076c9c28586e197)已获授权公开发布，固定下载源已接通。61,681 个工具文件恢复校验、恢复后 10 组离线工具检查及 ASAR Agent 读写／取消通过；真实桌面匿名下载、暂停续传和逐文件校验也通过。Mac 新分包流程未原生验收，原完整离线构建保留。配置及边界见[分发记录](docs/debug/desktop-preview18-distribution-20261107.md)。安装包仍只保存在本机。
 

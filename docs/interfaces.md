@@ -1,8 +1,8 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
-## Desktop 安装后工具准备（preview.18 候选）
+## Desktop 安装后工具准备（preview.19 候选）
 
-小包模式的 `tool-packs.json` 是随应用固定的平台／架构工具清单，含包与逐文件 SHA-256；只允许该清单列出的工具包进入解码器。`ToolPackStore` 在应用数据目录按 toolset ID 保存下载、验证和完成标记；来源为固定 HTTPS 根地址或用户选择的本机工具包目录。独立隔离准备页仅向其自身主 frame 暴露 state/start/cancel/import/close，不能更改清单、凭证、下载源或启动任意进程。`tool-releases.json` 固定已发布的 Windows 工具集与下载根；构建时仅工具集完整摘要相符才自动绑定，不把旧版地址套给新工具或 Mac。原本机 Agent、场景 MCP、模型认证不变。旧完整离线构建仍可使用；用户已授权仅发布七个 Windows 工具包，安装包不上传，参见[分发记录](debug/desktop-preview18-distribution-20261107.md)。
+小包模式的 `tool-packs.json` 是随应用固定的平台／架构工具清单，含包与逐文件 SHA-256；只允许该清单列出的工具包进入解码器。`ToolPackStore` 在应用数据目录按 toolset ID 保存下载、验证和完成标记；来源为固定 HTTPS 根地址或用户选择的本机工具包目录。独立隔离准备页仅向其自身主 frame 暴露 state/start/cancel/import/close，不能更改清单、凭证、下载源或启动任意进程。`tool-releases.json` 分别固定 Windows x64、Mac ARM64／Intel 的工具集和下载根；构建时仅完整摘要相符才自动绑定，不跨版本或平台套用地址。Mac 框架链接在解码阶段排除，再按固定清单恢复内部相对链接，拒绝链接目录下的成员；仍逐文件校验，不放宽解码器安全等级。原本机 Agent、场景 MCP、模型认证不变。旧完整离线构建保留；用户仅授权公开各平台七个工具包，安装包只留本地，Mac 按授权临时中转后删除。当前原生验收及边界见[本轮记录](debug/desktop-preview19-macos-delivery-20261107.md)。
 
 ## Desktop 可选依赖与私有工具（preview.17 候选）
 
