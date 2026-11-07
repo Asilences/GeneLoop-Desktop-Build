@@ -4,7 +4,7 @@ on:
     inputs:
       phase:
         type: choice
-        options: [build, repack, real]
+        options: [build, repack, real, measure]
         default: build
       deliveryRun:
         description: Successful small DMG run ID, required only for real acceptance
@@ -58,13 +58,15 @@ jobs:
       - name: Prepare complete native tools
         if: inputs.phase != 'repack'
         run: node scripts/prepare-macos-tools.mjs
-      - name: Build all seven tool archives with a fixed download address
+      - name: Build native tool archives with a fixed download address
         id: tool_archives
         if: inputs.phase != 'repack'
         run: |
           VERSION=$(node -p 'require("./package.json").version')
           TAG="desktop-tools-darwin-${{ matrix.arch }}-${VERSION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          export GENELOOP_TOOL_PACK_BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/"
+          if [ '${{ inputs.phase }}' != 'measure' ]; then
+            export GENELOOP_TOOL_PACK_BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/"
+          fi
           npm run tools:packs
           node -e "const p=require('./.local/tool-pack-build/preservation.json');if(p.downloadBytes>900000000)throw Error('工具中转超过本轮免费存储预留，保留全部工具并停止')"
       - name: Save only tool archives before any publication can fail
@@ -88,6 +90,19 @@ jobs:
         run: node scripts/reuse-macos-tool-delivery.mjs
       - name: Package small desktop app
         run: npm run pack
+      - name: Verify scoped tools with the actual desktop host without model calls
+        if: inputs.phase == 'measure'
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          export GENELOOP_OFFICE_NODE="$PWD/$APP/Contents/MacOS/GeneLoop Desktop"
+          export ELECTRON_RUN_AS_NODE=1
+          export GENELOOP_NATIVE_RUNTIME="$PWD/runtime-bundle"
+          export GENELOOP_NATIVE_TOOLS="$PWD/desktop-tools-bundle"
+          export GENELOOP_NATIVE_SOURCE_ROOT="$GENELOOP_NATIVE_TOOLS/source"
+          export GENELOOP_NATIVE_SOFFICE="$GENELOOP_NATIVE_TOOLS/libreoffice/Contents/MacOS/soffice"
+          "$GENELOOP_NATIVE_TOOLS/python/bin/geneloop-python" -B scripts/check-native-extras.py "$GENELOOP_NATIVE_TOOLS" > .local/scoped-tools-check.json
+          "$GENELOOP_OFFICE_NODE" scripts/check-native-ppt.mjs > .local/scoped-ppt-check.json
       - name: Reclaim only this job's reproducible tool staging
         run: |
           node --input-type=module <<'JS'
@@ -102,11 +117,13 @@ jobs:
             if(existsSync(p))rmSync(p,{recursive:true,force:true});
           }
           JS
-      - name: Verify owner publication of the seven tool archives
+      - name: Verify owner publication of the expected tool archives
+        if: inputs.phase != 'measure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/await-tool-publication.mjs
       - name: Verify actual packaged public download and native extraction
+        if: inputs.phase != 'measure'
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
@@ -129,8 +146,13 @@ jobs:
           cmp "$MOUNT/GeneLoop Desktop.app/Contents/Resources/app.asar" "$APP/Contents/Resources/app.asar"
           hdiutil detach "$MOUNT"
           cp "$DMG" .local/macos-delivery/
-          cp .local/tool-pack-build/{tool-packs.json,preservation.json,publication-receipt.json} .local/macos-delivery/
-          cp .local/public-tool-restore/download-receipt.json .local/macos-delivery/
+          cp .local/tool-pack-build/{tool-packs.json,preservation.json} .local/macos-delivery/
+          if [ '${{ inputs.phase }}' = 'measure' ]; then
+            cp .local/scoped-{tools,ppt}-check.json .local/macos-delivery/
+          else
+            cp .local/tool-pack-build/publication-receipt.json .local/macos-delivery/
+            cp .local/public-tool-restore/download-receipt.json .local/macos-delivery/
+          fi
           cd .local/macos-delivery
           shasum -a 256 *.dmg > SHA256SUMS.txt
       - name: Keep temporary delivery inside the included artifact storage
@@ -146,6 +168,7 @@ jobs:
           compression-level: 0
           if-no-files-found: error
       - name: Real six-scene acceptance using the actual DMG and downloaded tools
+        if: inputs.phase != 'measure'
         env:
           GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
           GENELOOP_TEST_PROVIDER: kouri
@@ -157,7 +180,7 @@ jobs:
           TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/public-tool-restore/download-receipt.json")).tools)')
           ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-real-six-scenes.mjs "$APP/Contents/Resources" "$TOOLS" .local/real-six-scenes
       - name: Preserve only the synthetic real acceptance summary
-        if: always()
+        if: always() && inputs.phase != 'measure'
         uses: actions/upload-artifact@v4
         with:
           name: desktop-real-${{ matrix.arch }}-${{ github.run_id }}
@@ -196,7 +219,7 @@ jobs:
           '@ | node --input-type=module
       - name: Package the corrected Windows runtime without publishing an installer
         run: npm run pack
-      - name: Download and verify all seven native tool packs
+      - name: Download and verify the native tool catalog
         run: |
           $env:ELECTRON_RUN_AS_NODE='1'
           $app=Join-Path $PWD 'release/win-unpacked'
