@@ -1,5 +1,5 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {createReadStream,createWriteStream,existsSync,lstatSync,mkdirSync,readFileSync,readdirSync,readlinkSync,realpathSync,renameSync,rmSync,writeFileSync} from 'node:fs';
+import {createReadStream,createWriteStream,existsSync,lstatSync,mkdirSync,readFileSync,readdirSync,readlinkSync,realpathSync,renameSync,rmSync,symlinkSync,writeFileSync} from 'node:fs';
 import {chmod} from 'node:fs/promises';
 import {dirname,isAbsolute,join,relative,resolve,sep} from 'node:path';
 import {spawn} from 'node:child_process';
@@ -36,7 +36,10 @@ export function validateToolCatalog(value:unknown):ToolCatalog{
       }else if(f.kind!==undefined)throw Error('工具文件类型无效');
     }
     if(bytes!==p.unpackedBytes)throw Error('工具包大小记录无效');
-  }return c;
+  }
+  const links=new Set(c.packages.flatMap(p=>p.files.filter(f=>f.kind==='symlink').map(f=>f.path.toLowerCase())));
+  for(const p of c.packages)for(const f of p.files){const parts=f.path.toLowerCase().split('/');for(let i=1;i<parts.length;i++)if(links.has(parts.slice(0,i).join('/')))throw Error('工具文件不能位于链接目录内');}
+  return c;
 }
 async function digest(path:string){const h=createHash('sha256');for await(const chunk of createReadStream(path))h.update(chunk);return h.digest('hex');}
 function plainDirectory(path:string){mkdirSync(path,{recursive:true,mode:0o700});if(lstatSync(path).isSymbolicLink()||realpathSync(path).toLowerCase()!==resolve(path).toLowerCase())throw Error('工具目录不能是链接');}
@@ -100,12 +103,16 @@ export class ToolPackStore{
     try{
       this.update(pack.id,{phase:'extracting',received:pack.bytes});
       // Only an archive whose complete digest matches this app's pinned catalog
-      // reaches the native decoder. No user-supplied archive paths are exposed.
+      // reaches the native decoder. Restore catalogued internal links ourselves:
+      // framework links can chain through Versions/Current, which native 7-Zip
+      // refuses. Do not weaken the decoder's symlink security level.
+      const links=pack.files.filter(f=>f.kind==='symlink');
       await new Promise<void>((done,reject)=>{
-        const child=spawn(this.codec,['x','-y','-bd','-bso0','-bse2',archive,'-o'+staging],{cwd:staging,windowsHide:true,stdio:'ignore'});
+        const child=spawn(this.codec,['x','-y','-bd','-bso0','-bse2','-spd',...links.map(f=>'-x!'+f.path),archive,'-o'+staging],{cwd:staging,windowsHide:true,stdio:'ignore'});
         const abort=()=>child.kill();signal.addEventListener('abort',abort,{once:true});
         child.once('error',reject);child.once('close',code=>{signal.removeEventListener('abort',abort);if(signal.aborted)reject(Error('已暂停工具准备'));else if(code!==0)reject(Error('工具解压失败，请重试'));else done();});
       });
+      for(const f of links){signal.throwIfAborted();const path=toolMember(staging,f.path);if(existsSync(path))throw Error('工具链接位置已被占用');mkdirSync(dirname(path),{recursive:true});symlinkSync(f.target!,path);}
       signal.throwIfAborted();this.update(pack.id,{phase:'checking'});
       const expected=new Set(pack.files.map(f=>f.path));let count=0;
       const inspect=(folder:string)=>{for(const item of readdirSync(folder,{withFileTypes:true})){const p=join(folder,item.name);if(item.isDirectory()&&!item.isSymbolicLink())inspect(p);else{if(!expected.has(relative(staging,p).split(sep).join('/')))throw Error('工具包包含未登记文件');count++;}}};inspect(staging);

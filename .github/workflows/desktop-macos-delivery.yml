@@ -10,6 +10,10 @@ on:
         description: Successful small DMG run ID, required only for real acceptance
         type: string
         default: ''
+      buildTarget:
+        type: choice
+        options: [all, arm64, x64]
+        default: all
       realTarget:
         type: choice
         options: [all, windows, macos]
@@ -33,11 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-15
-            arch: arm64
-          - os: macos-15-intel
-            arch: x64
+        include: ${{ fromJSON(inputs.buildTarget == 'arm64' && '[{"os":"macos-15","arch":"arm64"}]' || inputs.buildTarget == 'x64' && '[{"os":"macos-15-intel","arch":"x64"}]' || '[{"os":"macos-15","arch":"arm64"},{"os":"macos-15-intel","arch":"x64"}]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     defaults:
@@ -103,7 +103,6 @@ jobs:
           }
           JS
       - name: Verify owner publication of the seven tool archives
-        if: inputs.phase != 'repack'
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/await-tool-publication.mjs

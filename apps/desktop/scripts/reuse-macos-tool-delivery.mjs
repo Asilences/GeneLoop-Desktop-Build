@@ -1,13 +1,32 @@
 // Runtime-only fixes reuse the already published and fully checked tool set.
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {cpSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {cpSync,existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
+import {prepareInstallerCodec} from './prepare-installer-codec.mjs';
 const runId=process.env.DELIVERY_RUN;assert.match(runId??'',/^\d+$/);
 assert.equal(process.env.GITHUB_REPOSITORY,'Asilences/GeneLoop-Desktop-Build');
 assert.equal(process.platform,'darwin');
 function run(bin,args,cwd=process.cwd()){const r=spawnSync(bin,args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe']});assert.equal(r.status,0,bin+' 复用步骤失败');return r.stdout;}
 const repo=process.env.GITHUB_REPOSITORY;
+// Tool checkpoints are retained even when app verification fails. Reuse their
+// pinned public catalog without requiring a previous successful DMG or rebuilding
+// native tools. The later publication/download stages still verify every byte.
+const pinned=resolve('../../.github/desktop-tool-inputs/darwin-'+process.arch+'-tool-packs.json');
+if(existsSync(pinned)){
+ const catalog=JSON.parse(readFileSync(pinned));
+ const proof=JSON.parse(readFileSync(pinned.replace('tool-packs.json','preservation.json')));
+ assert.equal(catalog.platform,process.platform);assert.equal(catalog.arch,process.arch);
+ assert.equal(catalog.packages.length,7);assert.equal(proof.toolsetId,catalog.toolsetId);assert.equal(proof.allToolsRetained,true);
+ assert.equal(proof.filesBefore,catalog.packages.reduce((n,p)=>n+p.files.length,0));
+ assert.equal(catalog.baseUrl,'https://github.com/'+repo+'/releases/download/desktop-tools-darwin-'+process.arch+'-0.3.0-preview.19-'+runId+'-1/');
+ const output=resolve('.local/tool-pack-build');mkdirSync(output,{recursive:true});
+ cpSync(pinned,join(output,'tool-packs.json'));cpSync(pinned.replace('tool-packs.json','preservation.json'),join(output,'preservation.json'));
+ const codec=await prepareInstallerCodec(process.cwd(),join(output,'installer-tools'));assert.equal(codec.sha256,catalog.codec.sha256);
+ writeFileSync(join(output,'reused-delivery.json'),JSON.stringify({producerRun:Number(runId),toolsetId:catalog.toolsetId,runtimeOnly:true,repeatToolPublication:false}));
+ console.log(JSON.stringify({reusedToolset:catalog.toolsetId,arch:process.arch,producerRun:Number(runId)}));
+ process.exit(0);
+}
 assert.equal(JSON.parse(run('gh',['api','repos/'+repo+'/actions/runs/'+runId])).conclusion,'success');
 const input=resolve('.local/repack-input');mkdirSync(input,{recursive:true});
 run('gh',['run','download',runId,'--repo',repo,'--name','desktop-macos-'+process.arch+'-'+runId,'--dir',input]);
