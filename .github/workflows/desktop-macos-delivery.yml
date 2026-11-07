@@ -57,6 +57,8 @@ jobs:
       - run: npm run build
       - name: Prepare complete native tools
         if: inputs.phase != 'repack'
+        env:
+          GENELOOP_REUSE_VERIFIED_PYTHON: ${{ inputs.phase == 'measure' && '1' || '0' }}
         run: node scripts/prepare-macos-tools.mjs
       - name: Build native tool archives with a fixed download address
         id: tool_archives
