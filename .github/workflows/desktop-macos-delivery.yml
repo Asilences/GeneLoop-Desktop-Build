@@ -1,0 +1,102 @@
+name: Desktop macOS small DMG and tool delivery
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: desktop-macos-delivery
+  cancel-in-progress: false
+jobs:
+  macos:
+    # Public standard runners only. Never consume paid private/larger runners.
+    if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/desktop
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      GENELOOP_DESKTOP_TOOL_PACKS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify free runner architecture
+        run: node -e "if(process.platform!=='darwin'||process.arch!=='${{ matrix.arch }}')process.exit(1)"
+      - run: npm ci
+      - run: npm run build
+      - name: Prepare complete native tools
+        run: node scripts/prepare-macos-tools.mjs
+      - name: Build all seven tool archives with a fixed download address
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          TAG="desktop-tools-darwin-${{ matrix.arch }}-${VERSION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          export GENELOOP_TOOL_PACK_BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/"
+          npm run tools:packs
+      - name: Package small desktop app
+        run: npm run pack
+      - name: Publish only the seven tool archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-tool-packs.mjs
+      - name: Reclaim only this job's reproducible tool staging
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {existsSync,readFileSync,rmSync} from 'node:fs';
+          import {resolve,join,dirname} from 'node:path';
+          const root=resolve('.');
+          const proof=JSON.parse(readFileSync('.local/tool-pack-build/preservation.json'));
+          assert.equal(proof.allToolsRetained,true);
+          for(const rel of ['desktop-tools-bundle','.local/macos-tools-'+process.arch]){
+            const p=resolve(root,rel);assert.ok(p.startsWith(root+'/')&&p!==root);
+            if(existsSync(p))rmSync(p,{recursive:true,force:true});
+          }
+          JS
+      - name: Verify actual packaged public download and native extraction
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-packaged-tool-download.mjs "$APP/Contents/Resources" .local/public-tool-restore
+      - name: Create DMG
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          npx electron-builder --config electron-builder.config.cjs --mac dmg --${{ matrix.arch }} --prepackaged "$APP" --config.dmg.format=ULFO --publish never
+      - name: Verify DMG and collect strictly allowed temporary delivery files
+        run: |
+          mkdir -p .local/macos-delivery
+          DMG=$(find release -maxdepth 1 -name '*macOS-${{ matrix.arch }}.dmg' -type f -print -quit)
+          test -n "$DMG"
+          hdiutil verify "$DMG"
+          MOUNT="$PWD/.local/dmg-verify"
+          mkdir -p "$MOUNT"
+          hdiutil attach -readonly -nobrowse -mountpoint "$MOUNT" "$DMG"
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -L "$MOUNT/Applications"
+          cmp "$MOUNT/GeneLoop Desktop.app/Contents/Resources/app.asar" "$APP/Contents/Resources/app.asar"
+          hdiutil detach "$MOUNT"
+          cp "$DMG" .local/macos-delivery/
+          cp .local/tool-pack-build/{tool-packs.json,preservation.json,publication-receipt.json} .local/macos-delivery/
+          cp .local/public-tool-restore/download-receipt.json .local/macos-delivery/
+          cd .local/macos-delivery
+          shasum -a 256 *.dmg > SHA256SUMS.txt
+      - name: Authorized temporary DMG transit; retrieve and delete
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-${{ matrix.arch }}-${{ github.run_id }}
+          path: apps/desktop/.local/macos-delivery/*
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
