@@ -28,7 +28,7 @@ jobs:
     # Public standard runners only. Never consume paid private/larger runners.
     if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase != 'real'
     permissions:
-      contents: write
+      contents: read
       actions: read
     strategy:
       fail-fast: false
@@ -39,7 +39,7 @@ jobs:
           - os: macos-15-intel
             arch: x64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: apps/desktop
@@ -59,12 +59,27 @@ jobs:
         if: inputs.phase != 'repack'
         run: node scripts/prepare-macos-tools.mjs
       - name: Build all seven tool archives with a fixed download address
+        id: tool_archives
         if: inputs.phase != 'repack'
         run: |
           VERSION=$(node -p 'require("./package.json").version')
           TAG="desktop-tools-darwin-${{ matrix.arch }}-${VERSION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           export GENELOOP_TOOL_PACK_BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/"
           npm run tools:packs
+          node -e "const p=require('./.local/tool-pack-build/preservation.json');if(p.downloadBytes>900000000)throw Error('工具中转超过本轮免费存储预留，保留全部工具并停止')"
+      - name: Save only tool archives before any publication can fail
+        if: inputs.phase != 'repack'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-tool-transit-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            apps/desktop/.local/tool-pack-build/*.7z
+            apps/desktop/.local/tool-pack-build/tool-packs.json
+            apps/desktop/.local/tool-pack-build/preservation.json
+            apps/desktop/.local/tool-pack-build/installer-tools/*
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
       - name: Reuse verified published tools for a runtime-only correction
         if: inputs.phase == 'repack'
         env:
@@ -73,11 +88,6 @@ jobs:
         run: node scripts/reuse-macos-tool-delivery.mjs
       - name: Package small desktop app
         run: npm run pack
-      - name: Publish only the seven tool archives
-        if: inputs.phase != 'repack'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/publish-tool-packs.mjs
       - name: Reclaim only this job's reproducible tool staging
         run: |
           node --input-type=module <<'JS'
@@ -92,8 +102,12 @@ jobs:
             if(existsSync(p))rmSync(p,{recursive:true,force:true});
           }
           JS
-      - name: Verify actual packaged public download and native extraction
+      - name: Verify owner publication of the seven tool archives
         if: inputs.phase != 'repack'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/await-tool-publication.mjs
+      - name: Verify actual packaged public download and native extraction
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
@@ -120,6 +134,10 @@ jobs:
           cp .local/public-tool-restore/download-receipt.json .local/macos-delivery/
           cd .local/macos-delivery
           shasum -a 256 *.dmg > SHA256SUMS.txt
+      - name: Keep temporary delivery inside the included artifact storage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/wait-artifact-space.mjs
       - name: Authorized temporary DMG transit; retrieve and delete
         uses: actions/upload-artifact@v4
         with:
@@ -128,6 +146,27 @@ jobs:
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
+      - name: Real six-scene acceptance using the actual DMG and downloaded tools
+        env:
+          GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+          GENELOOP_TEST_PROVIDER: kouri
+        run: |
+          DMG=$(find .local/macos-delivery -maxdepth 1 -name '*macOS-${{ matrix.arch }}.dmg' -type f -print -quit)
+          mkdir -p .local/build-real-mounted
+          hdiutil attach -readonly -nobrowse -mountpoint "$PWD/.local/build-real-mounted" "$DMG"
+          APP="$PWD/.local/build-real-mounted/GeneLoop Desktop.app"
+          TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/public-tool-restore/download-receipt.json")).tools)')
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-real-six-scenes.mjs "$APP/Contents/Resources" "$TOOLS" .local/real-six-scenes
+      - name: Preserve only the synthetic real acceptance summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-real-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            apps/desktop/.local/real-six-scenes/summary.json
+            apps/desktop/.local/real-six-scenes/preflight-status.json
+          retention-days: 1
+          if-no-files-found: warn
   real_windows:
     if: github.repository == 'Asilences/GeneLoop-Desktop-Build' && !github.event.repository.private && inputs.phase == 'real' && inputs.realTarget != 'macos'
     runs-on: windows-latest
