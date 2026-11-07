@@ -50,13 +50,9 @@ for(const [id,label,required,prefixes]of definitions){
     const saved=JSON.parse(readFileSync(receipt,'utf8'));
     reusable=saved.content===content&&saved.sha256===await sha(archive);
   }
-  // Older builds have no completion receipt. Check their complete archive once;
-  // a cancelled compression must never be published as a reusable tool pack.
-  if(existsSync(archive)&&!reusable){
-    const checked=spawnSync(codec.path,['t',archive,'-bd','-bso0','-bse2'],{windowsHide:true});
-    reusable=checked.status===0;
-    if(!reusable)rmSync(archive);
-  }
+  // Even a cancelled compressor can leave a structurally valid partial archive.
+  // Reuse therefore requires our successful-build receipt, not just a CRC test.
+  if(existsSync(archive)&&!reusable)rmSync(archive);
   if(!reusable){
     if(existsSync(pending))rmSync(pending);
     const result=spawnSync(codec.path,['a','-t7z',pending,'@'+list,'-spd','-scsUTF-8','-sccUTF-8','-mx=7','-m0=LZMA2:d=64m','-ms=256m','-mmt=4','-mqs=on','-snl','-bd','-bb0'],{cwd:source,stdio:'inherit',windowsHide:true});
