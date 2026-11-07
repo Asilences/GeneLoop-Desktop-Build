@@ -1,5 +1,13 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## Windows 安装事务与工具复用（preview.15 安装提速修订2）
+
+`wrap-installer.mjs` 编译 `InstallTransaction.cs`。在同一磁盘的受限临时目录整体保留旧应用，原NSIS继续处理进程检查、卸载登记、快捷方式和安装注册。私有用户数据不在事务目录内；成功验证安装版本后清理备份，失败时恢复目录、相关注册表和快捷方式。多个不同路径的用户级／全机安装并存时沿用原NSIS处理。崩溃或恢复失败的备份保留恢复记录，不宣称断电自动恢复。
+
+解压器支持 `archive target [trace [previous reuseJournal]]`（2、3或5个参数）。宿主设置并在结束后恢复 `GENELOOP_INSTALL_TRACE`、`GENELOOP_INSTALL_PREVIOUS`、`GENELOOP_INSTALL_REUSE_JOURNAL`，调用方无需设置。构建时生成的 `payload-reuse.tsv` 仅含相对路径、长度和SHA-256并嵌入解压器；文件集及每个实际文件完全匹配后才整目录移动。变更／增删文件、链接、不同磁盘不走复用，继续从已校验的完整ZIP解压。移动前写入恢复意图；失败恢复先把复用目录归还备份，再还原旧应用。没有安装后下载。
+
+Windows诊断入口：`npm run check:installer-payload`、`npm run check:installer-transaction`（`apps/desktop`），均仅操作隔离夹具、不写应用注册表、模型请求0。完整覆盖计时与本地交付见[记录](debug/desktop-preview15-install-20261106.md#2026-11-07-完整覆盖实测与修订2)。
+
 ## Desktop 原场景工具接线（preview.13）
 
 桌面模型 lease `toolsetVersion:3` 与宿主共用 `apps/desktop/runtime/native-workflow-catalog.mjs` 白名单。版本 2 和未声明版本保持原工具集合。`local_workflow_open` 固定授权资料快照并发现原场景 MCP Schema，以 `mcp__native_*` 直接注册到现有 DSH scope；不新增 Agent 循环，不自动转云端。提供通用 4、报告 17、论文 20、文件 13、PPT 21、官方源材料 5 项入口，另有 11 项原生视频入口。`local_workflow_close` 释放本轮工具状态，已交付文件保留。

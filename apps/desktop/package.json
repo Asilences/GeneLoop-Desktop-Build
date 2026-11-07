@@ -20,6 +20,7 @@
     "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
     "check:installer-payload": "node scripts/check-installer-payload.mjs",
+    "check:installer-transaction": "node scripts/check-installer-transaction.mjs",
     "pack": "npm run build && npm run runtime:stage && electron-builder --dir --publish never",
     "dist": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs",
     "check:motif": "node scripts/build-motif-evidence.mjs && node --test ../../tests/test_desktop_motif_library.mjs",

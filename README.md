@@ -8,7 +8,7 @@
 
 GeneLoop Desktop `0.3.0-preview.14` 提供 Windows x64 EXE、macOS ARM64 DMG 和 Intel DMG 本机执行预览。在 preview.13 基础上接入 Draft PR161 的 Motif 库／工作区展示和 Draft PR162 的数据隐私接口，保留独立桌面界面、本机工作区及统一输入框。六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[交接](docs/handoffs/desktop.md)。正式服务器未随安装包部署，不发布 Release。
 
-Windows 安装提速候选 `0.3.0-preview.15` 已本地交付：裁剪无关测试及旧缓存，由NSIS管理安装并通过Unicode解压器直接写入，保留完整离线工具。隔离写盘129.68秒，完整覆盖安装耗时尚待用户试用；Mac继续使用preview.14。失败与验证边界见[安装记录](docs/debug/desktop-preview15-install-20261106.md)。
+Windows `0.3.0-preview.15` 安装提速修订2已本地交付：整目录备份旧版，逐文件SHA-256校验后复用未变化的工具目录，变更部分仍从完整离线载荷解压，失败恢复旧版。同机同载荷完整覆盖82.62秒（含权限确认及启动等待），安装器记录的实际阶段66.18秒；这是单次覆盖结果，不能外推首次安装。保留原应用内容和账号数据，未上传；Mac继续使用preview.14。失败、旧基线和边界见[安装记录](docs/debug/desktop-preview15-install-20261106.md)。
 
 桌面 Motif 展示候选在工作区首页融入运行、能力组合、评估、演化和版本，并提供全局库入口。它复用同伴的脱敏证据协议，通过账号隔离的只读接口展示，不授予执行权或虚构节省。接入配置、构建和验证边界见[工作区 Motif 说明](docs/product/desktop/motif-workspace.md)与[模块交接](docs/handoffs/motif-visualization.md)；尚未部署正式服务。
 

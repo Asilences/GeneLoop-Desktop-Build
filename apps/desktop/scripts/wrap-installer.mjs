@@ -21,7 +21,9 @@ function directoryBytes(directory){
     return bytes+(entry.isDirectory()?directoryBytes(path):statSync(path).size);
   },0);
 }
-const payloadBytes=directoryBytes(join(release,'win-unpacked'));
+const payloadReceipt=JSON.parse(readFileSync(join(release,'direct-payload.json'),'utf8'));
+const payloadBytes=payloadReceipt.bytes;
+if(!Number.isSafeInteger(payloadBytes)||payloadBytes<1)throw Error('安装载荷大小记录无效');
 writeFileSync(versionSource,'[assembly: System.Reflection.AssemblyInformationalVersion('+JSON.stringify(version)+')]\n'+
   'internal static class SetupBuild { public const long PayloadBytes = '+payloadBytes+'L; }\n');
 execFileSync(compiler,[
@@ -33,6 +35,7 @@ execFileSync(compiler,[
   '/resource:'+join(release,prefix+'-Engine.exe')+',GeneLoop.InstallEngine',
   '/resource:'+join(app,'assets/icon.png')+',GeneLoop.Brand',
   join(app,'setup/Installer.cs'),
+  join(app,'setup/InstallTransaction.cs'),
   versionSource,
 ],{cwd:app,stdio:'inherit',windowsHide:true});
 console.log('Built '+prefix+'-Setup.exe');

@@ -1,6 +1,16 @@
 # GeneLoop Desktop 当前交接
 
-## 2026-11-07 preview.15 Windows安装提速（本地交付）
+## 2026-11-07 preview.15 Windows安装提速修订2（本地交付）
+
+- 当前范围：用户报告原preview.15完整安装仍需8–12分钟，本轮优先修复覆盖安装；六场景工具逐项补齐另有未提交工作，未混入本次应用载荷，不在此标记完成。分支`codex/desktop-local-runtime`，从`6efb62be`跟进；正式服务、Mac包、隐私／Motif核心未改。
+- 修复：`InstallTransaction.cs`同盘整目录备份／失败恢复，避免旧NSIS逐文件搬运；`ExtractPayload.cs`采用4KiB ZIP读取和共享解压缓冲，使用嵌入SHA清单校验后保留未变化的工具目录。改动部分仍完整解压。保留原NSIS注册生命周期、账号和AppData；有恢复异常则保留备份与私有记录。不是通用断电自动恢复器。
+- 同机同载荷完整覆盖：原包344.98秒；同盘临时目录修订225.58秒；整目录事务198.31秒；最终工具复用82.62秒。均含各自的权限确认／启动等待且等待时间不同，不据此计算精确加速倍数。后三轮安装器实际阶段分别203.52、148.26、66.18秒。最终30,687文件／1,903,256,750字节经SHA核验后直接保留，解压器阶段44.66秒（含工具校验），旧目录清理0.075秒。单次同版本覆盖，不外推首次安装或任意机器。
+- 验证：微型中文路径／越界／错误SHA／链接拒绝，未变化工具复用、变化和额外文件不复用、复用后的失败恢复、更换路径恢复、重叠／根路径拒绝通过；全程模型请求0。实际覆盖退出0、版本一致，安装后EXE与两份ASAR摘要匹配冻结载荷，NumPy/Pandas/SciPy/MCP/PPTX导入通过。没有为安装器改动重跑整仓或六场景模型验收。
+- 新本地包：`.local/deliveries/GeneLoop-Desktop-0.3.0-preview.15-installfix2/Windows/GeneLoop-Desktop-0.3.0-preview.15-installfix2-x64-Setup.exe`，981,932,544字节，SHA256 `942fd2f36a9d416c87ea2846be179988b806e3ec6498f7c982fc6e585aeebb85`。原应用载荷SHA仍为`3a7fea00f414b96ad7e4bb0db7ba6bbddae7fcbcde1c857b05ebaa044a55d2fb`；旧包原样保留。已用同一包覆盖用户原安装，未上传安装包、未推送这轮源码。
+- 私有证据：`.local/install-verification-preview15-{full-20261107-attempt2,fixed-20261107,directoryfix-20261107,toolreuse-20261107}/`；最终目录含完整结果、阶段、进程采样和安装完整性回执。新增费用0，Mac Actions未启动。
+- 下一步：保留修订2作为后续Windows包的安装入口；继续完成工具差异的未提交工作再交付新应用版本。新候选的首次完整安装尚未实测，无需用户现在卸载。详情见[安装记录](../debug/desktop-preview15-install-20261106.md)。
+
+### 原preview.15首轮记录（冻结）
 
 - 范围：用户报告preview.14安装／写入约11分钟后成功。仅修改Windows分发；保留原界面、本机Agent、PR161/162整合及Mac preview.14包，不部署正式服务。
 - 修改：生成的Windows工具副本裁剪测试与不匹配缓存，保留NumPy运行辅助模块和408个匹配Python缓存。文件数40,321→30,763，减少9,558个。NSIS生命周期继续复用；`build-windows-engine.mjs`通过公开`customFiles_x64`调用`ExtractPayload.cs`，完整SHA校验后由.NET直接解压Unicode载荷，避免整套临时解压后复制。原进程、权限、卸载、快捷方式和注册逻辑保留。

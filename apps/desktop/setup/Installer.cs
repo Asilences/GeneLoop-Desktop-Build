@@ -274,6 +274,7 @@ internal sealed class InstallTarget
 {
     private const string RegistryKey = @"Software\df43dd29-397e-5d1c-b2f3-fe84b0ec1dc1";
     public string Path;
+    public string OriginalPath;
     public bool Machine;
 
     private static string ExistingPath(RegistryHive hive)
@@ -289,9 +290,9 @@ internal sealed class InstallTarget
     public static InstallTarget Detect(bool machineOnly = false)
     {
         var user = machineOnly ? null : ExistingPath(RegistryHive.CurrentUser);
-        if (!String.IsNullOrWhiteSpace(user)) return new InstallTarget { Path = user };
+        if (!String.IsNullOrWhiteSpace(user)) return new InstallTarget { Path = user, OriginalPath = user };
         var machine = ExistingPath(RegistryHive.LocalMachine);
-        if (!String.IsNullOrWhiteSpace(machine)) return new InstallTarget { Machine = true, Path = machine };
+        if (!String.IsNullOrWhiteSpace(machine)) return new InstallTarget { Machine = true, Path = machine, OriginalPath = machine };
         if (machineOnly) throw new InvalidOperationException("找不到原有的所有用户安装。");
         return new InstallTarget { Path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "GeneLoop Desktop") };
     }
@@ -325,29 +326,108 @@ internal static class InstallEngine
 
     public static int Run(InstallTarget target, string arguments, IProgress<string> phases = null)
     {
-        string directory = Path.Combine(Path.GetTempPath(), "GeneLoop-Setup-" + Guid.NewGuid().ToString("N"));
+        string flags = arguments ?? ("/S " + (target.Machine ? "/allusers" : "/currentuser") + " /D=" + target.Path);
+        bool elevate = flags.IndexOf("/allusers", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            (target.Machine && flags.IndexOf("/currentuser", StringComparison.OrdinalIgnoreCase) < 0);
+        if (elevate && !IsElevated())
+        {
+            using (var elevated = Process.Start(new ProcessStartInfo(Assembly.GetExecutingAssembly().Location, flags) { UseShellExecute = true, Verb = "runas" }))
+            { elevated.WaitForExit(); return elevated.ExitCode; }
+        }
+        // Both the UI and silent entry points share the same update lock.
+        using (var installLock = new System.Threading.Mutex(false, @"Local\GeneLoop-Desktop-Install-df43dd29"))
+        {
+            bool acquired = false;
+            try
+            {
+                try { acquired = installLock.WaitOne(0); }
+                catch (System.Threading.AbandonedMutexException) { acquired = true; }
+                if (!acquired) throw new IOException("另一个 GeneLoop 安装器正在运行。");
+                return RunLocked(target, flags, phases);
+            }
+            finally { if (acquired) installLock.ReleaseMutex(); }
+        }
+    }
+
+    private static int RunLocked(InstallTarget target, string arguments, IProgress<string> phases)
+    {
+        string flags = arguments ?? ("/S " + (target.Machine ? "/allusers" : "/currentuser") + " /D=" + target.Path);
+        bool elevate = flags.IndexOf("/allusers", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            (target.Machine && flags.IndexOf("/currentuser", StringComparison.OrdinalIgnoreCase) < 0);
+        int destination = flags.IndexOf("/D=", StringComparison.OrdinalIgnoreCase);
+        if (destination >= 0) target.Path = Path.GetFullPath(flags.Substring(destination + 3).Trim().Trim('"'));
+        string stageName = ".GeneLoop-Setup-" + Guid.NewGuid().ToString("N");
+        string stageParent = Path.GetDirectoryName(Path.GetFullPath(String.IsNullOrWhiteSpace(target.OriginalPath) ? target.Path : target.OriginalPath));
+        // NSIS un.atomicRMDir moves old files into its own PLUGINSDIR for
+        // rollback. Putting TEMP on C: when the old install is on D: turns
+        // every Rename into a cross-volume copy followed by deletion.
+        string directory = Path.Combine(stageParent, stageName);
         Directory.CreateDirectory(directory);
+        InstallTransaction.SecureStage(directory);
+        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) throw new IOException("安装临时目录包含链接");
+        string stageMarker = Path.Combine(directory, ".geneloop-install-stage");
+        using (var marker = new FileStream(stageMarker, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
         string engine = Path.Combine(directory, "GeneLoop-Engine.exe");
+        string trace = Path.Combine(Path.GetTempPath(), "GeneLoop-install-" + Guid.NewGuid().ToString("N") + ".jsonl");
+        string previousTrace = Environment.GetEnvironmentVariable("GENELOOP_INSTALL_TRACE");
+        string previousReuse = Environment.GetEnvironmentVariable("GENELOOP_INSTALL_PREVIOUS"), previousJournal = Environment.GetEnvironmentVariable("GENELOOP_INSTALL_REUSE_JOURNAL");
+        string previousTemp = Environment.GetEnvironmentVariable("TEMP"), previousTmp = Environment.GetEnvironmentVariable("TMP");
+        var timing = Stopwatch.StartNew();
+        Action<string> record = phase => { try { File.AppendAllText(trace, "{\"phase\":\"" + phase + "\",\"parent_elapsed_ms\":" + timing.ElapsedMilliseconds + "}\n"); } catch { } };
+        InstallTransaction transaction = null;
         try
         {
+            record("installer_start");
+            Environment.SetEnvironmentVariable("TEMP", directory);
+            Environment.SetEnvironmentVariable("TMP", directory);
+            record("same_volume_staging");
             using (var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream("GeneLoop.InstallEngine"))
             using (var output = new FileStream(engine, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 embedded.CopyTo(output);
-            string flags = arguments ?? ("/S " + (target.Machine ? "/allusers" : "/currentuser") + " /D=" + target.Path);
-            bool elevate = arguments == null ? target.Machine :
-                flags.IndexOf("/allusers", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                (target.Machine && flags.IndexOf("/currentuser", StringComparison.OrdinalIgnoreCase) < 0);
+            record("engine_released");
+            Environment.SetEnvironmentVariable("GENELOOP_INSTALL_TRACE", trace);
+            Environment.SetEnvironmentVariable("GENELOOP_INSTALL_PREVIOUS", null);
+            Environment.SetEnvironmentVariable("GENELOOP_INSTALL_REUSE_JOURNAL", null);
+            if (!String.IsNullOrWhiteSpace(target.OriginalPath))
+            {
+                transaction = new InstallTransaction(target.OriginalPath, target.Path, directory, record);
+                transaction.Prepare(true, elevate);
+                Environment.SetEnvironmentVariable("GENELOOP_INSTALL_PREVIOUS", transaction.PreviousDirectory);
+                Environment.SetEnvironmentVariable("GENELOOP_INSTALL_REUSE_JOURNAL", transaction.ReuseJournal);
+            }
             using (var lockFile = new FileStream(engine, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var process = Process.Start(new ProcessStartInfo(engine, flags) { UseShellExecute = true, Verb = elevate && !IsElevated() ? "runas" : "" }))
             {
                 if (phases != null) phases.Report("正在解压并写入安装目录");
                 process.WaitForExit();
+                record("engine_finished");
+                if (process.ExitCode == 0)
+                {
+                    var expected = (AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(AssemblyInformationalVersionAttribute));
+                    var installed = Path.Combine(target.Path, "GeneLoop Desktop.exe");
+                    if (!File.Exists(installed) || FileVersionInfo.GetVersionInfo(installed).FileVersion != expected.InformationalVersion)
+                        throw new IOException("新版本完整性确认失败，正在恢复旧版本。");
+                    if (transaction != null) transaction.Commit();
+                }
                 return process.ExitCode;
             }
         }
         finally
         {
-            try { File.Delete(engine); Directory.Delete(directory); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            Environment.SetEnvironmentVariable("GENELOOP_INSTALL_TRACE", previousTrace);
+            Environment.SetEnvironmentVariable("GENELOOP_INSTALL_PREVIOUS", previousReuse);
+            Environment.SetEnvironmentVariable("GENELOOP_INSTALL_REUSE_JOURNAL", previousJournal);
+            Environment.SetEnvironmentVariable("TEMP", previousTemp);
+            Environment.SetEnvironmentVariable("TMP", previousTmp);
+            try { if (transaction != null) transaction.Dispose(); }
+            catch { record("rollback_requires_recovery"); }
+            try {
+                if (Path.GetDirectoryName(Path.GetFullPath(directory)) == stageParent && Path.GetFileName(directory) == stageName &&
+                    File.Exists(stageMarker) && (File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0 &&
+                    (transaction == null || !transaction.RecoveryRequired))
+                    Directory.Delete(directory, true);
+            } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            record("installer_cleanup_complete");
         }
     }
 
