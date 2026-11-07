@@ -29,6 +29,8 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
           text:'当前网关尚未声明新版场景工具协议，本轮只提供旧版本工具。若任务需要Excel、多文件静态核验或普通PPT模板编辑，请说明需要更新GeneLoop网关；不要声称已使用这些未提供的工具。现有本机工具仍可使用，不转为云端执行。'});
         if(ppt&&!legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-documents',order:10200,
           text:'Office/PDF等材料先用 local_document_pin 固定版本，再用 local_document_read 分页核对。所有资料与工具在本机处理，模型通过网络调用。数据用 local_data_inspect/analyze 读取显式表格；文件整理用 local_files_export 交付副本。论文可用 local_paper_audit_sources 复用静态检查。只使用当前场景实际提供的工具，不把文本抽取称为视觉检查或把静态核验称为真实编译。'});
+        if (common) scope.systemPrompt.section({name:'geneloop:desktop-native-cli',order:10212,
+          text:'执行Skill脚本使用本机已配置的python或python3命令；它们绑定当前任务私有目录和转换器，不改用系统Python或临时下载依赖。字幕对齐默认使用随包base/CPU；其他模型、第三方服务和Microsoft PowerPoint要先核对实际配置，不声称未配置的能力已就绪。'});
         if (scene === 'video' && media?.remotion) scope.systemPrompt.section({
           name:'geneloop:desktop-video',order:10210,
           text:'视频使用 local_video_render 在本机执行。复杂合成的 plan 为 {source,assets}，source 是 Remotion TSX，assets 为授权素材路径数组；简单剪辑的 plan 为时间线数组。用户未明确要求服务器执行时，不调用 hybrid_video_render。不引用外部网络素材。',

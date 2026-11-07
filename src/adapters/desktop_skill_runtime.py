@@ -33,7 +33,7 @@ def install():
 
 
 class NativeSkillFinder(importlib.abc.MetaPathFinder):
-    modules = {'config', 'project_management.paths', 'source_to_md.doc_to_md',
+    modules = {'config', 'project_management.paths', 'source_to_md', 'source_to_md.doc_to_md',
                'doc_to_md', 'pptx_to_svg.pic_to_svg'}
 
     def __init__(self, skill, work, files):
@@ -81,6 +81,13 @@ class NativeSkillLoader(importlib.abc.Loader):
                     _office(source, folder, 'docx')
                     return module._convert_docx(folder / (Path(source).stem + '.docx'), output)
             module._convert_with_pandoc = convert
+        elif module.__name__ == 'source_to_md':
+            original = module.run_backend
+            def run_backend(command, script_name):
+                if len(command) > 1 and Path(command[1]).resolve() == self.binding.skill / 'scripts/source_to_md/doc_to_md.py':
+                    command = [command[0], str(Path(__file__).with_name('desktop_python_entry.py')), *command[1:]]
+                return original(command, script_name)
+            module.run_backend = run_backend
         elif module.__name__ == 'pptx_to_svg.pic_to_svg':
             def vector_preview(filename, data):
                 with tempfile.TemporaryDirectory(prefix='office-vector-', dir=work) as tmp:

@@ -18,7 +18,8 @@ def main():
     if not source.is_relative_to(skill):
         os.execv(sys.executable, [sys.executable, *args])
     relative = source.relative_to(skill).as_posix()
-    names = {'scripts/source_to_md/doc_to_md.py': 'source_to_md.doc_to_md',
+    names = {'scripts/source_to_md/doc_to_md.py': 'doc_to_md',
+             'scripts/source_to_md.py': 'source_to_md',
              'scripts/video_subtitles.py': 'video_subtitles'}
     name = names.get(relative)
     if not name:
@@ -34,6 +35,7 @@ def main():
         os.environ['NUMBA_CACHE_DIR'] = str(Path(os.environ['GENELOOP_NATIVE_WORKSPACE']) / '.cache/numba')
     install()
     sys.path.insert(0, str(skill / 'scripts'))
+    sys.path.insert(0, str(skill / 'scripts/source_to_md'))
     sys.path.insert(0, str(source.parent))
     module = __import__(name, fromlist=['main'])
     sys.argv = args

@@ -27,7 +27,7 @@ export async function buildWindowsEngine(app,release,compiler,extraArgs) {
   // Keep unchanged tool directories without rewriting tens of thousands of
   // files. Every reused file is checked against this build's SHA-256 roster.
   const reuseManifest=join(release,'payload-reuse.tsv'),reuseRows=['GeneLoopPayloadReuse1'];
-  const reuseParts=['chromium','ffmpeg','libreoffice','ocr','ppt-master','python','source'].map(name=>'resources/geneloop-tools/'+name);
+  const reuseParts=['chromium','ffmpeg','libreoffice','ocr','ppt-master','python','source','extras','speech','python-data'].map(name=>'resources/geneloop-tools/'+name);
   reuseParts.push('resources/geneloop-runtime.asar.unpacked');
   const base64=value=>Buffer.from(value,'utf8').toString('base64');
   for(const part of reuseParts){
