@@ -134,8 +134,8 @@ jobs:
           node-version: '24'
       - name: Verify free standard runner and temporary test credential availability
         env:
-          GENELOOP_TEST_DEEPSEEK_API_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
-        run: node -e "if(process.platform!=='darwin'||process.arch!=='${{ matrix.arch }}'||!process.env.GENELOOP_TEST_DEEPSEEK_API_KEY)throw Error('缺少目标原生环境或临时真实测试凭据；不得用模拟结果代替')"
+          GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+        run: node -e "if(process.platform!=='darwin'||process.arch!=='${{ matrix.arch }}'||!process.env.GENELOOP_TEST_MODEL_KEY)throw Error('缺少目标原生环境或临时真实测试凭据；不得用模拟结果代替')"
       - name: Retrieve only the authorized temporary delivery artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -156,7 +156,8 @@ jobs:
           ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-packaged-tool-download.mjs "$APP/Contents/Resources" .local/real-tool-download
       - name: Real local Agent and all six scenes, cloud model only
         env:
-          GENELOOP_TEST_DEEPSEEK_API_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+          GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
+          GENELOOP_TEST_PROVIDER: kouri
         run: |
           APP="$PWD/.local/real-mounted/GeneLoop Desktop.app"
           TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/real-tool-download/download-receipt.json")).tools)')
@@ -168,6 +169,7 @@ jobs:
           name: desktop-real-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             apps/desktop/.local/real-six-scenes/summary.json
+            apps/desktop/.local/real-six-scenes/preflight-status.json
             apps/desktop/.local/real-tool-download/download-receipt.json
           retention-days: 1
           if-no-files-found: warn

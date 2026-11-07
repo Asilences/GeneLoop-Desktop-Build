@@ -13,10 +13,14 @@ const preflightStatus=(phase,fields={})=>writeFileSync(join(destination,'preflig
 preflightStatus('started');
 const runtime=join(resources,'geneloop-runtime.asar');
 assert.ok(existsSync(runtime)&&existsSync(join(resources,'app.asar')));
-const token=process.env.GENELOOP_TEST_DEEPSEEK_API_KEY?.trim();
+const token=(process.env.GENELOOP_TEST_MODEL_KEY??process.env.GENELOOP_TEST_DEEPSEEK_API_KEY)?.trim();
+delete process.env.GENELOOP_TEST_MODEL_KEY;
 delete process.env.GENELOOP_TEST_DEEPSEEK_API_KEY;
 assert.ok(token,'需要仅用于本轮真实验收的临时模型凭据');
-const endpoint='https://api.deepseek.com',model='deepseek-flash';
+const provider=process.env.GENELOOP_TEST_PROVIDER??'kouri';
+assert.ok(['kouri','deepseek-official'].includes(provider),'测试提供商须显式固定');
+const endpoint=provider==='kouri'?'https://api.kourichat.com/v1':'https://api.deepseek.com';
+const model=provider==='kouri'?'deepseek-v4.1-flash':'deepseek-flash';
 let preflight;
 try{preflight=await fetch(endpoint+'/models',{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(30000)});}
 catch(error){preflightStatus('network-failed',{errorKind:error?.name,networkCode:typeof error?.cause?.code==='string'?error.cause.code:undefined});throw Error('测试模型连接检查失败，详见固定字段状态');}
@@ -37,7 +41,7 @@ mkdirSync(destination,{recursive:true});const out=realpathSync(destination);
 assert.ok(!existsSync(join(out,'summary.json')),'为本轮验收创建新目录，不覆盖旧结果');
 const nonce='GL-'+randomUUID().slice(0,8),records=[];
 const sha=value=>createHash('sha256').update(value).digest('hex');
-const summary=()=>writeFileSync(join(out,'summary.json'),JSON.stringify({schema:1,platform:process.platform,arch:process.arch,version:JSON.parse(readFileSync(join(resources,'app.asar/package.json'),'utf8')).version,provider:'DeepSeek official',model,reasoning:'off',modelLocation:'cloud',agentAndToolsLocation:'local',syntheticInputs:true,fullWorkflows:true,commonCapabilities:true,cases:records},null,2)+'\n');
+const summary=()=>writeFileSync(join(out,'summary.json'),JSON.stringify({schema:1,platform:process.platform,arch:process.arch,version:JSON.parse(readFileSync(join(resources,'app.asar/package.json'),'utf8')).version,provider,endpoint,model,logicalModel:'deepseek-flash',reasoning:'off',modelLocation:'cloud',agentAndToolsLocation:'local',syntheticInputs:true,fullWorkflows:true,commonCapabilities:true,cases:records},null,2)+'\n');
 const cases={
  chat:{prompt:'请只回答 17 乘以 23 的计算结果。不需要读取文件。',answer:/391/},
  files:{files:{'record.txt':'Synthetic acceptance record: '+nonce+'\n'},prompt:'这是一次简单本机验收。用 local_read 读取 record.txt，再用 local_save_report 保存一份 Markdown，准确记下记录编号并注明来源。无需整理、移动或压缩文件。',text:[nonce,'record.txt'],tools:['local_read','local_save_report']},
