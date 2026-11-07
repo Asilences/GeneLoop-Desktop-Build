@@ -1,6 +1,8 @@
 """Native desktop delivery for a prepared, self-contained ppt-master project."""
 from pathlib import Path
 import argparse
+import base64
+import io
 import hashlib
 import json
 import os
@@ -13,20 +15,21 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 from scenarios.ppt_master.package import verify_installation
-from scenarios.research_ppt.validation import MAX_SLIDES, validate_delivery
+from scenarios.research_ppt.validation import validate_delivery
 from scenarios.research_ppt.web_scope import configure_web_scope
 from src.adapters.ppt_delivery_runner import fixed_file
 from src.adapters.ppt_design_preflight import inspect_svg
 
-MAX_PAGE_BYTES = 512 * 1024
+MAX_PAGE_BYTES = 30 * 1024 * 1024
+MAX_SLIDES = 200  # Match the PPT Master Generate manifest, not structured-plan limits.
 MAX_NOTES_BYTES = 64 * 1024
-MAX_DECK_BYTES = 16 * 1024 * 1024
+MAX_DECK_BYTES = 200 * 1024 * 1024
 PAGE_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,79}\.svg')
 SVG = '{http://www.w3.org/2000/svg}'
 FRAGMENT_URL = re.compile(r'url\(\s*#[A-Za-z_][\w.-]*\s*\)', re.ASCII)
 STATIC_ELEMENTS = frozenset(
     'svg g defs rect circle ellipse line polyline polygon path text tspan title desc '
-    'linearGradient radialGradient stop clipPath'.split()
+    'linearGradient radialGradient stop clipPath image use symbol mask pattern'.split()
 )
 
 def attach_render_job():
@@ -112,6 +115,23 @@ def validate_static_svg(raw):
         for name, value in element.attrib.items():
             if name == '{http://www.w3.org/XML/1998/namespace}space' and value in ('default', 'preserve'):
                 continue
+            if name in ('href', '{http://www.w3.org/1999/xlink}href'):
+                if element.tag == SVG + 'use' and re.fullmatch(r'#[A-Za-z_][\w.-]*', value):
+                    continue
+                if element.tag == SVG + 'image':
+                    match = re.fullmatch(r'data:image/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/=\r\n]+)', value)
+                    if not match:
+                        raise ValueError('图片必须为自包含PNG/JPEG/WebP/GIF；不读取外部路径或URL。')
+                    raw_image = base64.b64decode(match[2], validate=True)
+                    if len(raw_image) > 20 * 1024 * 1024:
+                        raise ValueError('单张图片超过20MiB。')
+                    from PIL import Image
+                    with Image.open(io.BytesIO(raw_image)) as image:
+                        if image.format.lower() != match[1] or image.width * image.height > 64 * 1024 * 1024:
+                            raise ValueError('图片声明、格式或尺寸无效。')
+                        image.verify()
+                    continue
+                raise ValueError('不接受外部SVG引用。')
             if ('{' in name or name.lower().startswith('on') or name.lower() in ('href', 'src') or
                     re.search(r'[\\@]|/\*', value) or
                     re.search(r'url\s*\(', FRAGMENT_URL.sub('', value), re.I)):
@@ -167,7 +187,7 @@ def render_project(stage, snapshot, pages, skill, renderer):
             detail = (result.stderr or result.stdout).decode('utf-8', errors='replace')[-1600:]
             return {'passed': False, 'errors': [{'rule': label, 'detail': detail}], 'artifacts': []}
 
-    return validate_windows_deck(stage, pptx, texts, renderer, env)
+    return validate_windows_deck(stage, pptx, texts, renderer, env, max_slides=MAX_SLIDES)
 
 
 def desktop_environment(stage, renderer):
@@ -187,7 +207,7 @@ def desktop_environment(stage, renderer):
     return env
 
 
-def validate_windows_deck(stage, pptx, texts, renderer, env=None, *, require_notes=True):
+def validate_windows_deck(stage, pptx, texts, renderer, env=None, *, require_notes=True, max_slides=30):
     job = stage / 'job.json'
     job.write_text('{"kind":"desktop-ppt-export"}', encoding='utf-8')
     configure_web_scope(job, stage)
@@ -201,7 +221,7 @@ def validate_windows_deck(stage, pptx, texts, renderer, env=None, *, require_not
         if not discovered or Path(discovered).resolve(strict=True) != renderer:
             raise ValueError('无法从显式 LibreOffice 目录定位渲染器。')
         report = validate_delivery(pptx, len(texts), expected_texts=texts,
-                                   validation_root=stage / 'validation', require_notes=require_notes)
+                                   validation_root=stage / 'validation', require_notes=require_notes,max_slides=max_slides)
     finally:
         os.environ.clear()
         os.environ.update(original)

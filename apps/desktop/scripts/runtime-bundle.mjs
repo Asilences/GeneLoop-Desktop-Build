@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { cpSync, existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { join, posix } from 'node:path';
+import {buildSync} from 'esbuild';
+import {fileURLToPath} from 'node:url';
+import {nativeCommonPackages} from '../runtime/common-tool-catalog.mjs';
 
 export const pptRendererFiles = readdirSync(new URL('../../../scenarios/research_ppt/ts/',import.meta.url))
   .filter(name=>name.endsWith('.ts')).map(name=>new URL('../../../scenarios/research_ppt/ts/'+name,import.meta.url));
@@ -42,6 +45,8 @@ export function stageRuntime(app, destination, dependencies = app) {
     assert.ok(optional, '缺少锁定依赖：' + name + '（' + requester + '）');
   }
   stage('@deepseek-ai/dsh');
+  for(const name of nativeCommonPackages)stage(name);
+  stage('@xmldom/xmldom');
   stage('csv-parse');
   stage('pdfjs-dist');
   stage('pptxgenjs');
@@ -58,5 +63,13 @@ export function stageRuntime(app, destination, dependencies = app) {
     writeFileSync(join(directory,'package.json'),'{"type":"module"}\n');
   }
   cpSync(join(app, 'runtime'), destination, { recursive: true });
+  // Reuse the published revision implementation, only binding its installation root.
+  const revision=new URL('../../../scenarios/paper_proofreading/revision_session.ts',import.meta.url);
+  const original=readFileSync(revision,'utf8');
+  const rootLine="const ROOT=resolve(fileURLToPath(new URL('../../',import.meta.url)));";
+  assert.ok(original.includes(rootLine),'论文修订安装接缝已变化，须重新核对');
+  const native=original.replace(rootLine,"const ROOT=resolve(process.env.GENELOOP_NATIVE_SOURCE_ROOT);");
+  buildSync({stdin:{contents:native,resolveDir:fileURLToPath(new URL('../../../scenarios/paper_proofreading/',import.meta.url)),sourcefile:'revision_session.ts',loader:'ts'},
+    outfile:join(destination,'paper-revision.mjs'),bundle:true,platform:'node',format:'esm',packages:'external',target:'node22'});
   return staged.size;
 }

@@ -19,6 +19,7 @@ fingerprint.update(readFileSync(new URL('./stage-local-runtime.mjs', import.meta
 if (process.platform === 'win32') fingerprint.update(readFileSync(join(app,'native/RemotionBrowser.cs')));
 for (const file of readdirSync(join(app, 'runtime')).sort()) fingerprint.update(readFileSync(join(app, 'runtime', file)));
 for (const source of pptRendererFiles) fingerprint.update(readFileSync(source));
+for(const name of ['scenarios/paper_proofreading/revision_session.ts','src/adapters/trace_rsi_program.ts','src/adapters/report_patch_protocol.ts','src/adapters/paper_rsi_program.ts'])fingerprint.update(readFileSync(join(app,'../..',name)));
 const digest = fingerprint.digest('hex');
 if (existsSync(destination)) {
   assert.equal(realpathSync(destination).toLowerCase(), destination.toLowerCase(), '运行时目录不得是链接');

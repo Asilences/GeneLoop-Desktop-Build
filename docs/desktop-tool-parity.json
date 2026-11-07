@@ -1,0 +1,1061 @@
+{
+  "schema_version": 1,
+  "main": "1d1e16f4bde7f980127a53ead305e0e5d8b08b86",
+  "scope": "Tool mapping and implementation inventory, not a claim of full real-model or macOS acceptance",
+  "boundaries": [
+    "Native PowerShell replaces Bash on Windows; commands are not silently rewritten.",
+    "Native tools operate on explicit copies and publish outputs; user-original mutations require a separate preview/confirmation.",
+    "Model image capability is required for visual acceptance.",
+    "Account Motif programs and their Linux certification are not re-certified by this inventory.",
+    "Private production registries may add tools and must be compared separately; no production deployment is claimed."
+  ],
+  "external_integrations": [
+    {
+      "web": "create_ppt_page / account-local learned programs",
+      "owner": "Motif integration",
+      "status": "requires the account library and target-platform certification; not replaced with a fabricated native program"
+    }
+  ],
+  "rows": [
+    {
+      "scene": "ppt",
+      "web": "mcp__ppt_master__read_skill_entry",
+      "native": "mcp__native_skill__read_skill_entry",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/ppt_master/scenario.json"
+    },
+    {
+      "scene": "ppt",
+      "web": "mcp__ppt_master__pin_source",
+      "native": "mcp__native_skill__pin_source",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/ppt_master/scenario.json"
+    },
+    {
+      "scene": "ppt",
+      "web": "mcp__ppt_master__read_source_page",
+      "native": "mcp__native_skill__read_source_page",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/ppt_master/scenario.json"
+    },
+    {
+      "scene": "ppt",
+      "web": "mcp__ppt_master__convert_source",
+      "native": "mcp__native_skill__convert_source",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/ppt_master/scenario.json"
+    },
+    {
+      "scene": "ppt",
+      "web": "mcp__ppt_master__read_converted_source",
+      "native": "mcp__native_skill__read_converted_source",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/ppt_master/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__list_inputs",
+      "native": "mcp__native_paper__list_inputs",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__pin_document",
+      "native": "mcp__native_paper__pin_document",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__read_pinned_document",
+      "native": "mcp__native_paper__read_pinned_document",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__pin_paper_sources",
+      "native": "mcp__native_paper__pin_paper_sources",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__read_pinned_paper_sources",
+      "native": "mcp__native_paper__read_pinned_paper_sources",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__export_review_report",
+      "native": "mcp__native_paper__export_review_report",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_trace_rsi__read_task_state",
+      "native": "mcp__native_revision__read_task_state",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_trace_rsi__apply_revision_plan",
+      "native": "mcp__native_revision__apply_revision_plan",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_trace_rsi__triage_revision_audit",
+      "native": "mcp__native_revision__triage_revision_audit",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_trace_rsi__export_revision_report",
+      "native": "mcp__native_revision__export_revision_report",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__pin_paper_citations",
+      "native": "mcp__native_paper__pin_paper_citations",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__read_pinned_paper_citations",
+      "native": "mcp__native_paper__read_pinned_paper_citations",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__read_pinned_citation_records",
+      "native": "mcp__native_paper__read_pinned_citation_records",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__read_pinned_bibliography_page",
+      "native": "mcp__native_paper__read_pinned_bibliography_page",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__read_pinned_bibliography_first_page",
+      "native": "mcp__native_paper__read_pinned_bibliography_first_page",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__collect_current_local_citation_evidence",
+      "native": "mcp__native_paper__collect_current_local_citation_evidence",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__fetch_pinned_cited_preprint_metadata",
+      "native": "mcp__native_paper__fetch_pinned_cited_preprint_metadata",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__fetch_pinned_formal_reference_metadata",
+      "native": "mcp__native_paper__fetch_pinned_formal_reference_metadata",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__recover_pinned_formal_reference_queries",
+      "native": "mcp__native_paper__recover_pinned_formal_reference_queries",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__read_current_audit",
+      "native": "mcp__native_paper__read_current_audit",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__stage_current_audit",
+      "native": "mcp__native_paper__stage_current_audit",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__stage_current_bibliography_assessments",
+      "native": "mcp__native_paper__stage_current_bibliography_assessments",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__finalize_current_audit",
+      "native": "mcp__native_paper__finalize_current_audit",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "paper-proofreading",
+      "web": "mcp__paper_checks__export_current_audit_pdf",
+      "native": "mcp__native_paper__export_current_audit_pdf",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/paper_proofreading/scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__inspect_study",
+      "native": "mcp__native_report__inspect_study",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__approve_analysis",
+      "native": "mcp__native_report__approve_analysis",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__run_analysis",
+      "native": "mcp__native_report__run_analysis",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__verify_analysis",
+      "native": "mcp__native_report__verify_analysis",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__build_evidence",
+      "native": "mcp__native_report__build_evidence",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__approve_presentation",
+      "native": "mcp__native_report__approve_presentation",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__render_figures",
+      "native": "mcp__native_report__render_figures",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__verify_figures",
+      "native": "mcp__native_report__verify_figures",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__submit_report_text",
+      "native": "mcp__native_report__submit_report_text",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__compose_report",
+      "native": "mcp__native_report__compose_report",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__layout_report",
+      "native": "mcp__native_report__layout_report",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__audit_layout",
+      "native": "mcp__native_report__audit_layout",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__verify_report",
+      "native": "mcp__native_report__verify_report",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__deliver_report",
+      "native": "mcp__native_report__deliver_report",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__export_input_review",
+      "native": "mcp__native_report__export_input_review",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__record_image_table",
+      "native": "mcp__native_report__record_image_table",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "research-data-analysis",
+      "web": "mcp__research_report__read_image_table",
+      "native": "mcp__native_report__read_image_table",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/data_analysis/report-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__read_task",
+      "native": "mcp__native_files__read_task",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__list_files",
+      "native": "mcp__native_files__list_files",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__pin_file",
+      "native": "mcp__native_files__pin_file",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__read_file",
+      "native": "mcp__native_files__read_file",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__hash_files",
+      "native": "mcp__native_files__hash_files",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__build_index",
+      "native": "mcp__native_files__build_index",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__search_index",
+      "native": "mcp__native_files__search_index",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__compare_snapshot",
+      "native": "mcp__native_files__compare_snapshot",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__preview_actions",
+      "native": "mcp__native_files__preview_actions",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__authorize_plan",
+      "native": "mcp__native_files__authorize_plan",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__execute_plan",
+      "native": "mcp__native_files__execute_plan",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__restore_plan",
+      "native": "mcp__native_files__restore_plan",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__submit_report",
+      "native": "mcp__native_files__submit_report",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/file-management/web-scenario.json"
+    },
+    {
+      "scene": "new-scene",
+      "web": "mcp__workspace__list_files",
+      "native": "mcp__native_workspace__list_files",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/general/scenario.json"
+    },
+    {
+      "scene": "new-scene",
+      "web": "mcp__workspace__read_file",
+      "native": "mcp__native_workspace__read_file",
+      "implementation": "original MCP via apps/desktop/runtime/local-workflows.mjs",
+      "activation": "default",
+      "source": "scenarios/general/scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__list_assets",
+      "native": "mcp__native_video__list_assets",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__pin_asset",
+      "native": "mcp__native_video__pin_asset",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__probe_media",
+      "native": "mcp__native_video__probe_media",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__probe_asset",
+      "native": "mcp__native_video__probe_asset",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__read_source",
+      "native": "mcp__native_video__read_source",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__inspect_render",
+      "native": "mcp__native_video__inspect_render",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__write_source",
+      "native": "mcp__native_video__write_source",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__render_composition",
+      "native": "mcp__native_video__render_composition",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__write_notes",
+      "native": "mcp__native_video__write_notes",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__render_source",
+      "native": "mcp__native_video__render_source",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "video-editing",
+      "web": "mcp__remotion__run_command",
+      "native": "mcp__native_video__run_command",
+      "implementation": "apps/desktop/runtime/local-video-workflow.mjs",
+      "activation": "default",
+      "source": "scenarios/remotion_edit/web-scenario.json"
+    },
+    {
+      "scene": "all",
+      "web": "web_search",
+      "native": "web_search",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "web_fetch",
+      "native": "web_fetch",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "bash",
+      "native": "Windows: pwsh / macOS: bash",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "job_list",
+      "native": "job_list",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "job_output",
+      "native": "job_output",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "job_kill",
+      "native": "job_kill",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "read",
+      "native": "read",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "read_image",
+      "native": "read_image",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "write",
+      "native": "write",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "edit",
+      "native": "edit",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "glob",
+      "native": "glob",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "grep",
+      "native": "grep",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "ask_user_question",
+      "native": "ask_user_question",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "todo_write",
+      "native": "todo_write",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "skill",
+      "native": "skill",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "present",
+      "native": "present",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "subagent",
+      "native": "subagent",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "exit_plan_mode",
+      "native": "exit_plan_mode",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "get_goal",
+      "native": "get_goal",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "all",
+      "web": "update_goal",
+      "native": "update_goal",
+      "implementation": "official @deepseek-ai/dsh-* via local-common.mjs",
+      "activation": "default; toolsetVersion=4",
+      "source": "config/geneloop-capabilities.json"
+    },
+    {
+      "scene": "ppt",
+      "web": "prepare_ppt",
+      "native": "prepare_ppt",
+      "implementation": "desktop_ppt_pipeline.py + locked PPT Master + actual Office",
+      "activation": "ppt_master host pipeline",
+      "source": "src/adapters/ppt_delivery_pipeline.ts"
+    },
+    {
+      "scene": "ppt",
+      "web": "finalize_ppt",
+      "native": "finalize_ppt",
+      "implementation": "desktop_ppt_pipeline.py + locked PPT Master + actual Office",
+      "activation": "ppt_master host pipeline",
+      "source": "src/adapters/ppt_delivery_pipeline.ts"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__read_task",
+      "native": "mcp__native_management__read_task",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__list_files",
+      "native": "mcp__native_management__list_files",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__select_files",
+      "native": "mcp__native_management__select_files",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__pin_file",
+      "native": "mcp__native_management__pin_file",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__read_file",
+      "native": "mcp__native_management__read_file",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__collect_reads",
+      "native": "mcp__native_management__collect_reads",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__hash_files",
+      "native": "mcp__native_management__hash_files",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__build_index",
+      "native": "mcp__native_management__build_index",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__search_index",
+      "native": "mcp__native_management__search_index",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__compare_snapshot",
+      "native": "mcp__native_management__compare_snapshot",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__preview_actions",
+      "native": "mcp__native_management__preview_actions",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__execute_plan",
+      "native": "mcp__native_management__execute_plan",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__inspect_plan_result",
+      "native": "mcp__native_management__inspect_plan_result",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__restore_plan",
+      "native": "mcp__native_management__restore_plan",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__submit_report",
+      "native": "mcp__native_management__submit_report",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__pin_files",
+      "native": "mcp__native_management__pin_files",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__read_files",
+      "native": "mcp__native_management__read_files",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__open_document",
+      "native": "mcp__native_management__open_document",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__read_document_chunk",
+      "native": "mcp__native_management__read_document_chunk",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__document_coverage",
+      "native": "mcp__native_management__document_coverage",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__view_document_page",
+      "native": "mcp__native_management__view_document_page",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__search_document",
+      "native": "mcp__native_management__search_document",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__discover_tools",
+      "native": "mcp__native_management__discover_tools",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__describe_tool",
+      "native": "mcp__native_management__describe_tool",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__prepare_tool_call",
+      "native": "mcp__native_management__prepare_tool_call",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__execute_tool_call",
+      "native": "mcp__native_management__execute_tool_call",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "files",
+      "web": "mcp__file_management__inspect_tool_result",
+      "native": "mcp__native_management__inspect_tool_result",
+      "implementation": "unchanged ManagementScene over private task copies",
+      "activation": "conditional: management_graph_v3",
+      "source": "scenarios/file-management/management_tools.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "runtime_capabilities",
+      "native": "mcp__native_general__runtime_capabilities",
+      "implementation": "original general runtime; code uses native QuickJS WASM instead of Docker",
+      "activation": "dynamic workspace-runtime provider",
+      "source": "scenarios/general/runtime.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "edit_text",
+      "native": "mcp__native_general__edit_text",
+      "implementation": "original general runtime; code uses native QuickJS WASM instead of Docker",
+      "activation": "dynamic workspace-runtime provider",
+      "source": "scenarios/general/runtime.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "create_text",
+      "native": "mcp__native_general__create_text",
+      "implementation": "original general runtime; code uses native QuickJS WASM instead of Docker",
+      "activation": "dynamic workspace-runtime provider",
+      "source": "scenarios/general/runtime.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "execute_code",
+      "native": "mcp__native_general__execute_code",
+      "implementation": "original general runtime; code uses native QuickJS WASM instead of Docker",
+      "activation": "dynamic workspace-runtime provider",
+      "source": "scenarios/general/runtime.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "discover_tools",
+      "native": "mcp__native_gateway__discover_tools",
+      "implementation": "original general_tools.Gateway with host-owned native provider registry",
+      "activation": "dynamic discovery",
+      "source": "src/adapters/general_tools.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "describe_tool",
+      "native": "mcp__native_gateway__describe_tool",
+      "implementation": "original general_tools.Gateway with host-owned native provider registry",
+      "activation": "dynamic discovery",
+      "source": "src/adapters/general_tools.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "prepare_tool_call",
+      "native": "mcp__native_gateway__prepare_tool_call",
+      "implementation": "original general_tools.Gateway with host-owned native provider registry",
+      "activation": "dynamic discovery",
+      "source": "src/adapters/general_tools.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "execute_tool_call",
+      "native": "mcp__native_gateway__execute_tool_call",
+      "implementation": "original general_tools.Gateway with host-owned native provider registry",
+      "activation": "dynamic discovery",
+      "source": "src/adapters/general_tools.py"
+    },
+    {
+      "scene": "general-provider",
+      "web": "inspect_tool_result",
+      "native": "mcp__native_gateway__inspect_tool_result",
+      "implementation": "original general_tools.Gateway with host-owned native provider registry",
+      "activation": "dynamic discovery",
+      "source": "src/adapters/general_tools.py"
+    }
+  ]
+}

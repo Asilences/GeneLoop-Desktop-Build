@@ -17,9 +17,11 @@ const jsonOutput = {
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
 };
 
-export function registerLocalFileTools(scope, reader, writer, onReport, scene = 'files', signal, media, approveVideo, ppt, onVideoPhase, nativeContext, legacyTools = false, fullWorkflows = false, approveFilePlan) {
-  const names = localSceneTools(scene,legacyTools,fullWorkflows);
+export function registerLocalFileTools(scope, reader, writer, onReport, scene = 'files', signal, media, approveVideo, ppt, onVideoPhase, nativeContext, legacyTools = false, fullWorkflows = false, approveFilePlan,common) {
+  const names = localSceneTools(scene,legacyTools,fullWorkflows,!!common);
   if (!names) throw Error('不支持该本机场景。');
+  if(common)names.push(...common.names,'local_import_sources');
+  if(common&&scene==='ppt')names.push('prepare_ppt','finalize_ppt');
   const tools = [
     defineTool({
       name: 'local_list',
@@ -54,7 +56,14 @@ export function registerLocalFileTools(scope, reader, writer, onReport, scene = 
       },
     }),
   ];
-  if(fullWorkflows&&!legacyTools&&scene==='video'&&nativeContext&&media)tools.push(...nativeVideoTools(nativeContext,reader,writer,media,signal,onReport));
+  if(common)tools.push(defineTool({name:'local_import_sources',description:'将已读取且核对SHA256的授权材料复制到本轮inputs/。sources为[{path,sha256}]；返回本轮命令工作目录，不改原件。',
+    parameters:{sources:{type:'array',required:true,items:{type:'object',properties:{path:string,sha256:string},additionalProperties:false}}},output:jsonOutput,
+    async execute({sources}){return common.importFiles(sources);}}));
+  if(common&&scene==='ppt')for(const [name,operation]of [['prepare_ppt','prepare'],['finalize_ppt','finalize']])tools.push(defineTool({name,
+    description:name==='prepare_ppt'?'用实际本机字体和锁定版PPT Master校准projects内的工程，读取spec_lock.md和design_spec.md，返回normal/bold测量表。':'对projects内已完成的PPT Master工程执行官方检查和可编辑PPTX导出，实际Office渲染PDF/逐页PNG并交付。svg_output和notes按页面文件名对应。',
+    parameters:{project:string,...(name==='finalize_ppt'?{manifest:{type:'string'},profile:{type:'string'}}:{})},output:jsonOutput,
+    async execute(args){return common.ppt(operation,args);}}));
+  if(fullWorkflows&&!legacyTools&&scene==='video'&&nativeContext&&media)tools.push(...nativeVideoTools(nativeContext,reader,writer,media,signal,onReport,common));
   let workflows;const workflowRegistrations=new Map();
   if(fullWorkflows&&!legacyTools&&ppt&&scene!=='video') {
     workflows=createNativeWorkflows(nativeContext,reader,writer,ppt,scene,signal,onReport,(kind,id,catalog)=>{
@@ -66,9 +75,9 @@ export function registerLocalFileTools(scope, reader, writer, onReport, scene = 
           ...workflowOutput(nativeContext,async args=>workflows.call(id,tool.name,JSON.stringify(args),approveFilePlan)),
         }));
       }catch(error){for(const dispose of disposers)dispose();throw error;}
-    });
+    },!!common);
     tools.push(defineTool({name:'local_workflow_open',
-      description:'在本机打开完整原场景MCP工具并将mcp__native_*工具直接加入当前Agent。sources为[{path,sha256}] JSON数组，只取实际阅读并固定的工作区材料；request为本轮实际任务。settings为JSON对象：data使用workflow=report，paper/ppt/files与场景同名；chat可选general/report/paper/ppt。PPT还可设slides(1至30)、template(academic/lab)、operation(generate/restyle)。优先直接调用返回的public_name工具，保留原生工具轨迹。文件整理作用于本轮副本，须预览、用户确认，并保留恢复工具。',
+      description:'在本机打开原场景MCP并直接注册mcp__native_*工具。sources为[{path,sha256}] JSON数组，request为真实任务，settings为JSON对象。data默认report，paper默认paper；新版PPT默认skill（官方PPT Master来源流程，生成用prepare_ppt/finalize_ppt），科研固定版式可显式workflow=ppt并设slides/template/operation。files可选files/management/gateway，paper可选revision，chat可选general/workspace/gateway/report/paper/ppt/skill；新增入口仅在网关新版工具集启用。整理只操作私有副本，执行前用户确认，并保留恢复工具。',
       parameters:{sources:string,request:string,settings:string},output:jsonOutput,
       async execute({sources,request,settings}){return workflows.open(sources,request,settings);}
     }),defineTool({name:'local_workflow_close',description:'关闭一个本轮工作流并释放其工具与临时快照，已交付到工作区的文件保留。',
@@ -222,8 +231,9 @@ export function registerLocalFileTools(scope, reader, writer, onReport, scene = 
   }));
   const allowed = new Set(names);
   // Hide every global tool. Scoped registrations below are unaffected by this mask.
-  scope.tools.restrict({ allow: [] });
-  scope.tools.guard(call => allowed.has(call.name) ? undefined : '工具不在当前本机场景的权限内。');
+  scope.tools.restrict({ allow: common?.names??[] });
+  // Official restriction applies to inherited tools, while child-owned
+  // structured-output tools remain usable by official subagents.
   for (const tool of tools) if(allowed.has(tool.name))scope.tools.register(tool);
   return {async close(){for(const list of workflowRegistrations.values())for(const dispose of list)dispose();await workflows?.close();}};
 }

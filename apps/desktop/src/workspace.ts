@@ -174,8 +174,8 @@ export class DesktopWorkspace {
       if (typeof input.source === 'string') this.folderTickets.delete(input.source);
       return saved;
     }
-    if (command === 'history' || command === 'start' || command === 'cancel' || command === 'report') {
-      const input = (value ?? {}) as { workspaceId?: unknown; accountId?: unknown; threadId?: unknown; name?: unknown };
+    if (command === 'history' || command === 'start' || command === 'cancel' || command === 'report' || command==='answer') {
+      const input = (value ?? {}) as { workspaceId?: unknown; accountId?: unknown; threadId?: unknown; name?: unknown; id?:unknown; answers?:unknown };
       if (typeof input.workspaceId !== 'string' || !this.currentSession) throw Error('无效的本机工作区。');
       const row = this.localWorkspaces.list(this.stateValue.server, input.accountId).find(item => item.id === input.workspaceId);
       if (!row?.directory) throw Error('找不到已绑定的本机工作区。');
@@ -207,6 +207,7 @@ export class DesktopWorkspace {
       if (command === 'report') return runner.reveal(row, input.name);
       if (typeof input.threadId !== 'string') throw Error('无效的本机会话。');
       if (command === 'cancel') return runner.cancel(row.id, input.threadId);
+      if (command === 'answer') return runner.answer(row.id,input.threadId,input.id,input.answers);
       const view = this.workspace?.webContents;
       return runner.start(row, input, update => {
         if (view && view === this.workspace?.webContents && !view.isDestroyed()) {

@@ -123,7 +123,7 @@ export class LocalWorkspaceConversation {
     const unavailable = localSceneStatus()[localScene];
     if (unavailable) throw Error(unavailable);
     const runtime = localRuntime();
-    const media = localScene === 'video' ? mediaTools() : undefined;
+    const media = mediaTools();
     const ppt = pptTools();
     if (localScene === 'video' && !media) throw Error('本机媒体工具不可用。');
     const { history, directory, home } = location(workspace);
@@ -138,7 +138,7 @@ export class LocalWorkspaceConversation {
     this.pending = { workspaceId: workspace.id, threadId, abort };
     const task: SavedTask = { prompt, scene: localScene, threadId, at: Date.now(), updates: [] };
     await this.run({ runtime, directory: approved, prompt, scene: localScene, media, ppt, home, sessionId, resume: Boolean(previous) }, abort, update => {
-      if (update.kind !== 'ready' && update.kind !== 'progress') task.updates.push(update);
+      if (update.kind === 'answer' || update.kind === 'report' || update.kind === 'done') task.updates.push(update);
       if (update.kind !== 'done') { emit(update); return; }
       if (update.status === 'completed') task.sessionId = sessionId;
       tasks.unshift(task);
@@ -159,6 +159,10 @@ export class LocalWorkspaceConversation {
     if (this.pending?.workspaceId !== workspaceId || this.pending.threadId !== threadId) return;
     this.pending.abort.abort();
     this.controller?.cancel();
+  }
+  answer(workspaceId:string,threadId:string,id:unknown,answers:unknown):void {
+    if(this.pending?.workspaceId!==workspaceId||this.pending.threadId!==threadId||typeof id!=='string'||!Array.isArray(answers))throw Error('本机问题已失效');
+    this.controller?.answerQuestion(id,answers);
   }
 
   reveal(workspace: LocalWorkspace, name: unknown): void {
@@ -187,7 +191,7 @@ export class LocalWorkspaceConversation {
       token = lease.token;
       abort.signal.throwIfAborted();
       this.controller = startLocalWorker({
-        ...task, legacyTools:![2,3].includes(lease.toolsetVersion),fullWorkflows:lease.toolsetVersion===3,executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
+        ...task, legacyTools:![2,3,4].includes(lease.toolsetVersion),fullWorkflows:[3,4].includes(lease.toolsetVersion),commonCapabilities:lease.toolsetVersion===4,executable: process.execPath, endpoint: new URL('/api/harless/desktop-model/v1', this.options.server).href,
         token: lease.token, model: lease.model,
         approveVideo: task.scene === 'video' && lease.videoRendering === true ? this.options.approveVideo : undefined,
         approveFilePlan:this.options.approveFilePlan,

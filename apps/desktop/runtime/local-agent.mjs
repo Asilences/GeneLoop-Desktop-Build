@@ -3,20 +3,26 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
 import {ensureNativeFonts} from './local-fonts.mjs';
+import {openCommonCapabilities} from './local-common.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
-export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false, fullWorkflows = false, approveFilePlan }) {
+export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false, fullWorkflows = false, commonCapabilities = false, approveFilePlan, askUser }) {
   if (ppt) ppt = {...ppt,nativeContext:ctx};
   const reader = openWorkspaceReader(directory);
-  let writer, handle, sceneTools;
+  let writer, handle, sceneTools, common;
   try {
     writer = openReportWriter(directory);
     await ensureNativeFonts(ctx,ppt,directory,signal);
+    if(commonCapabilities&&ppt)common=await openCommonCapabilities(ctx,{reader,writer,tools:ppt,media,sessionId,signal,onReport,askUser,sourceDirectory:directory});
     const options = {
       agentOptions: model,
       signal,
       setup(scope) {
-        sceneTools=registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx,legacyTools,fullWorkflows,approveFilePlan);
+        sceneTools=registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx,legacyTools,fullWorkflows,approveFilePlan,common);
+        if(common)scope.systemPrompt.section({name:'geneloop:native-common',order:10240,text:
+          '当前公共工具来自官方DSH，本机命令使用'+(process.platform==='win32'?'PowerShell（pwsh），不能写Linux Bash语法':'Bash')+'。本轮可写目录：'+common.directory+
+          '。用户原件通过local_list/local_read/local_document_pin读取，用local_import_sources将实际SHA256固定的资料复制到inputs/，不要猜测路径。技能只读入口：'+ppt.skill+
+          '。任务代码和中间文件留在本轮目录，交付文件放outputs/后调用present；present会复制到工作区GeneLoop输出。node/python/python3、Office和媒体工具已在命令PATH中。禁止写用户原件、安装系统软件或提权。联网搜索使用公开检索，不共享模型密钥；不可用时如实报告。'});
         if(fullWorkflows&&scene!=='video')scope.systemPrompt.section({name:'geneloop:desktop-full-workflows',order:10230,
           text:'完整场景任务优先使用 local_workflow_open 返回的实际MCP目录，再直接调用加入当前Agent的mcp__native_*工具，不用基础工具冒充完整流程。数据报告的统计设计、选图、正文仍由你基于实际证据判断；论文保留引用与外部元数据核验、审校草稿与PDF；PPT保留原图、模板、局部修订、真实PDF核验和交付。PPT官方技能和PDF转换还可用workflow=skill。文件整理先预览副本的具体动作、请求用户确认，再执行和交付整理包，不声称已修改原文件。每个工作流只操作其明确固定的材料快照；材料变化时重新打开。'});
         if(legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-compatibility',order:10200,
@@ -32,7 +38,11 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
           text: '你是 GeneLoop。直接回复一般问题，只在任务确实需要文件时调用已授权的本机工具。'
             + '只引用实际读取的来源，不编造文件内容，也不将用户原文件写入或移动到其他位置。',
         });
-        if (scene === 'ppt' && ppt) scope.systemPrompt.section({
+        if (scene === 'ppt' && common) scope.systemPrompt.section({
+          name:'geneloop:desktop-ppt-master',order:10210,
+          text:'PPT默认沿用网页版的锁定PPT Master工作流。先读local_ppt_master_guide或local_workflow_open的workflow=skill入口，核对真实源材料、用户目标、模板与设计规格。工程放当前任务projects内；写好spec_lock.md与design_spec.md后调用prepare_ppt，使用返回的实际normal/bold字体测量结果制作。使用官方模板、品牌素材和脚本，保留可编辑文字、来源与逐页备注；完成后调用finalize_ppt得到真实PPTX/PDF/逐页PNG，用read_image核对实际页面后present交付。已有PPTX用local_ppt_read_material和local_ppt_edit_template修改副本。不要把研究报告固定版式当作通用PPT主流程；确有需要时可显式打开workflow=ppt。当前平台是Windows时命令写PowerShell；不把Linux脚本路径直接当作本机命令。',
+        });
+        if (scene === 'ppt' && ppt && !common) scope.systemPrompt.section({
           name: 'geneloop:desktop-ppt-master', order: 10210,
           text: '使用 local_ppt_master_guide 读取锁定版技能入口和 Generate 工作流。'
             + '用户给出来源时先用 local_ppt_read_material 核对实际内容和版本，将所用材料摘要放进交付计划。'
@@ -46,9 +56,10 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
     };
     handle = resume
       ? await ctx.agents.resume({ ...options, resumeSessionId: sessionId })
-      : await ctx.agents.create({ ...options, sessionId, meta: { cwd: directory } });
+      : await ctx.agents.create({ ...options, sessionId, meta: { cwd: common?.directory??directory } });
   } catch (error) {
     await sceneTools?.close();
+    await common?.close();
     writer?.close();
     reader.close();
     throw error;
@@ -72,7 +83,7 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
       if (!closing) {
         writer?.close();
         reader.close();
-        closing = Promise.resolve().then(async () => {await sceneTools?.close();await handle.dispose();});
+        closing = Promise.resolve().then(async () => {await sceneTools?.close();await handle.dispose();await common?.close();});
       }
       return closing;
     },

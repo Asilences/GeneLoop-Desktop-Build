@@ -68,15 +68,17 @@ class ProviderConnection:
         await self.task
 
 class Gateway:
-    def __init__(self,workspace,scope,*,config=None,guard=None):
+    def __init__(self,workspace,scope,*,config=None,guard=None,private_root=None,public_registry=None):
         self.workspace=Path(workspace).resolve();self.scope=copy.deepcopy(scope);self.guard=guard or (lambda:None)
-        if not self.workspace.is_relative_to(ROOT/'.local') or self.workspace.is_symlink():raise ValueError('private task tool workspace required')
+        private_root=Path(private_root).resolve(strict=True) if private_root is not None else ROOT/'.local'
+        if not private_root.is_absolute() or '.local' not in private_root.parts or not self.workspace.is_relative_to(private_root) or self.workspace.is_symlink():raise ValueError('private task tool workspace required')
+        self.public_registry=Path(public_registry) if public_registry is not None else ROOT/'scenarios/file-management/general-tools.json'
         self.home=self.workspace/'tool-access';self.home.mkdir(parents=True,exist_ok=True,mode=0o700)
         self.config=Path(config or os.environ.get('SSS_TOOL_PROVIDERS',Path(os.environ.get('HARLESS_MANAGEMENT_PRIVATE_ROOT', ROOT/'.local'))/'general-tools/providers.json'))
         self.clients={};self.locks={};self.generation=uuid4().hex
 
     def providers(self):
-        public=json.loads((ROOT/'scenarios/file-management/general-tools.json').read_text(encoding='utf-8'))
+        public=json.loads(self.public_registry.read_text(encoding='utf-8'))
         custom=json.loads(self.config.read_text(encoding='utf-8')) if self.config.exists() else {'format':FORMAT,'providers':[]}
         if custom.get('format')!=FORMAT:raise ToolError('unsupported host tool registry version')
         entries={}

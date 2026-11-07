@@ -67,13 +67,13 @@ jobs:
           node scripts/check-native-code.mjs
           desktop-tools-bundle/python/bin/geneloop-python scripts/check-native-ocr.py desktop-tools-bundle
       - name: Native Remotion render and full video decode (no model)
-        if: ${{ inputs.packageMode != 'tools' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ inputs.packageMode != 'app' && inputs.packageMode != 'tools' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: npm run runtime:stage && npm run smoke:remotion
       - name: Native PPT template and LibreOffice PDF export (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: npm run smoke:ppt
       - name: Native document, table, paper and archive tools (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: node scripts/check-native-scenes.mjs
       - name: Credential scrubbing and cancellation of descendants
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
@@ -104,6 +104,8 @@ jobs:
           elif [ '${{ inputs.packageMode }}' = 'delivery' ]; then
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-workflows.mjs
           else
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-workflows.mjs
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-common.mjs
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-scenes.mjs
           fi

@@ -11,7 +11,7 @@ module.exports = async ({ appOutDir, electronPlatformName }) => {
   if (electronPlatformName === 'win32') require('./prune-windows-tools.cjs')(resources);
   const archive = join(resources, 'geneloop-runtime.asar');
   await asar.createPackageWithOptions(source, archive, { unpack: '*.{node,dll,exe,dylib,so}',
-    unpackDir:'{node_modules/@remotion/compositor-*,node_modules/@esbuild/*,node_modules/esbuild}' });
+    unpackDir:'{node_modules/@remotion/compositor-*,node_modules/@esbuild/*,node_modules/esbuild,node_modules/@vscode/ripgrep}' });
   for (const file of ['local-worker.mjs', 'node_modules/@deepseek-ai/dsh/lib/bin.js', 'node_modules/koffi/package.json']) {
     assert.equal(Boolean(asar.statFile(archive, normalize(file)).unpacked), false, '运行时入口必须封进 ASAR：' + file);
   }

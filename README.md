@@ -1,5 +1,7 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
+桌面 `0.3.0-preview.16` 工具对齐候选复用原场景 MCP 和官方 DSH 公共工具，通用 PPT 采用完整 PPT Master 工作流；Windows/Mac 包内验证与限制见[本轮记录](docs/experiments/desktop-preview16-tool-parity-20261107.md)。工具清单通过不等于全部真实模型验收，安装包尚未交付或上传。
+
 [公共脱敏模块](docs/rsi-data-privacy.md)覆盖各场景的 Web、SDK、离线导入和学习模型边界，使用本地 Presidio 和 Gitleaks，保留脱敏后的任务语义。学习准入需要安装 `requirements-rsi-privacy.txt` 并配置已核验的 Gitleaks；依赖不可用时拒绝学习样本，原任务继续正常执行。
 
 轨迹、源码共享和可选遥测默认关闭。桌面设置中的[数据与隐私](docs/rsi-data-privacy.md#默认私有与可选共享)提供工具流程预览、逐次授权、保存本地副本与取消；接收端由部署方在私有配置中指定。

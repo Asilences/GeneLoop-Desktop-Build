@@ -6,13 +6,27 @@ export const DESKTOP_MODEL_PATH = '/api/harless/desktop-model';
 const leaseMs = 10 * 60_000;
 const requestFields = new Set(['model', 'messages', 'stream', 'stream_options', 'thinking', 'tools', 'temperature', 'max_tokens', 'stop']);
 const roles = new Set(['system', 'user', 'assistant', 'tool']);
+// DSH sends tool-result images as a user message after the textual tool result.
+// Keep images inline: this relay does not grant remote URL fetching or file IDs.
+function validContent(message) {
+  if (typeof message.content === 'string') return true;
+  return message.role === 'user' && Array.isArray(message.content) && message.content.length > 0 &&
+    message.content.every(part => {
+      if (part?.type === 'text') return typeof part.text === 'string' && Object.keys(part).every(key => ['type','text'].includes(key));
+      if (part?.type !== 'image_url' || Object.keys(part).some(key => !['type','image_url'].includes(key))) return false;
+      const image = part.image_url;
+      if (!image || Object.keys(image).some(key => key !== 'url') || typeof image.url !== 'string') return false;
+      const match = /^data:image\/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/]+={0,2})$/.exec(image.url);
+      return !!match && match[2].length % 4 === 0 && Buffer.from(match[2], 'base64').toString('base64') === match[2];
+    });
+}
 const validPayload = (value, model, tools) => {
   const localFunction = entry => entry?.type === 'function' && tools.has(entry.function?.name);
   return value?.model === model && value.stream === true &&
   Object.keys(value).every(key => requestFields.has(key)) &&
   (value.thinking === undefined || value.thinking?.type === 'disabled') &&
   Array.isArray(value.messages) && value.messages.every(message =>
-    roles.has(message?.role) && typeof message.content === 'string' &&
+    roles.has(message?.role) && validContent(message) &&
     (message.tool_calls === undefined || (Array.isArray(message.tool_calls) && message.tool_calls.every(localFunction)))) &&
   (value.tools === undefined || (Array.isArray(value.tools) && value.tools.every(localFunction)));
 };
@@ -103,7 +117,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       }
       byToken.set(lease.tokenHash, lease);
       lease.timer = setTimeout(() => void close(lease), lease.expiresAt - Date.now()).unref();
-      return json(res, 200, { token, model, expiresAt: lease.expiresAt, toolsetVersion:3,
+      return json(res, 200, { token, model, expiresAt: lease.expiresAt, toolsetVersion:4,
         ...(video && tools.has('hybrid_video_render') ? { videoRendering: true } : {}),
       });
     } catch {
@@ -120,7 +134,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
         let input;
         try { input = JSON.parse(body.toString('utf8')); } catch { return json(res, 400, { error: '无效的本机任务授权请求。' }); }
         const tools = input && !Array.isArray(input) && typeof input === 'object' &&
-          Object.keys(input).every(key => key === 'scene') && localSceneTools(Object.hasOwn(input, 'scene') ? input.scene : 'files');
+          Object.keys(input).every(key => key === 'scene') && localSceneTools(Object.hasOwn(input, 'scene') ? input.scene : 'files',false,true,true);
         if (!tools) return json(res, 400, { error: '无效的本机场景授权请求。' });
         return issue(req, res, user, new Set(tools));
       }

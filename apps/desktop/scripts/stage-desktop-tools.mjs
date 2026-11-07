@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync,lstatSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { dirname, isAbsolute, join, relative, basename } from 'node:path';
@@ -33,8 +33,17 @@ if (existsSync(destination)) {
 mkdirSync(destination, { recursive: true });
 writeFileSync(marker, 'staging');
 cpSync(python, join(destination, 'python'), { recursive: true, verbatimSymlinks:true });
+const skillLock=JSON.parse(readFileSync(join(repo,'scenarios/ppt_master/skill-lock.json'),'utf8'));
+const skillDirectories=new Set();for(const file of Object.keys(skillLock.files)){const parts=file.split('/');parts.pop();while(parts.length){skillDirectories.add(parts.join('/'));parts.pop();}}
 cpSync(skill, join(destination, 'ppt-master'), { recursive: true,filter:path=>{
-  const name=basename(path);return name!=='.env'&&!name.startsWith('.env.')&&name!=='.git'&&name!=='.local';
+  const name=relative(skill,path).split('\\').join('/');
+  if(!name)return true;
+  if(lstatSync(path).isSymbolicLink())throw Error('PPT Master不能包含链接：'+name);
+  const entry=Object.hasOwn(skillLock.files,name);
+  if(entry){if(createHash('sha256').update(readFileSync(path)).digest('hex')!==skillLock.files[name])throw Error('PPT Master文件版本变化：'+name);return true;}
+  // Copy only the published roster, including its non-secret .env.example.
+  // Ignore private additions and generated caches; retain required directories.
+  return skillDirectories.has(name);
 }});
 cpSync(office, join(destination, 'libreoffice'), { recursive: true, verbatimSymlinks:true, filter: path => {
   const [top, folder, item] = relative(office, path).toLowerCase().split(/[\\/]/);

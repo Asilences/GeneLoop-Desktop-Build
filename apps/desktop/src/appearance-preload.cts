@@ -36,6 +36,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 contextBridge.exposeInMainWorld('desktopWorkspaces', Object.freeze({
+  answer: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces','answer',value),
   available: ['win32', 'darwin'].includes(process.platform),
   scenes: () => ipcRenderer.invoke('geneloop:local-workspaces', 'scenes'),
   list: (accountId: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'list', accountId),

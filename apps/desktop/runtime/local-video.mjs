@@ -53,14 +53,15 @@ export async function probeLocalVideo(reader, tools, path, signal) {
   });
 }
 
-export async function renderNativeRemotion(ctx, reader, writer, tools, source, assetList, signal, onReport, {assetBytes=16*1024*1024}={}) {
+export async function renderNativeRemotion(ctx, reader, writer, tools, source, assetList, signal, onReport, {assetBytes=16*1024*1024,assetNames,onRenderedVideo}={}) {
   if (!tools.remotion || typeof source !== 'string' || !source.trim() || Buffer.byteLength(source) > 128*1024 ||
       typeof assetList !== 'string' || assetList.length > 16_384) throw Error('本机 Remotion 未安装或工程超出限制。');
   const paths = JSON.parse(assetList);
   if (!Array.isArray(paths) || paths.length > 8 || new Set(paths).size !== paths.length ||
-      paths.some(path=>typeof path !== 'string' || !/\.(mp4|mov|png|jpg|jpeg|mp3|wav)$/i.test(path))) {
+      paths.some(path=>typeof path !== 'string' || !/\.(mp4|mov|webm|mkv|png|jpg|jpeg|webp|gif|svg|mp3|wav|m4a|aac|ogg)$/i.test(path))) {
     throw Error('请输入不重复的工作区素材相对路径。');
   }
+  if(assetNames&&(assetNames.length!==paths.length||new Set(assetNames).size!==paths.length||assetNames.some(name=>typeof name!=='string'||name.startsWith('/')||/[\\:\x00-\x1f]/.test(name)||name.split('/').some(p=>!p||p==='.'||p==='..'))))throw Error('素材公开名称无效');
   return inSceneScratch(async directory => {
     const {mkdirSync} = await import('node:fs');
     mkdirSync(join(directory,'public'));
@@ -69,7 +70,8 @@ export async function renderNativeRemotion(ctx, reader, writer, tools, source, a
       const bytes = reader.readBytes(path,remaining);
       if (!bytes.length) throw Error('渲染素材为空。');
       remaining -= bytes.length;
-      const name = 'asset-'+(index+1)+path.slice(path.lastIndexOf('.')).toLowerCase();
+      const name = assetNames?.[index]??'asset-'+(index+1)+path.slice(path.lastIndexOf('.')).toLowerCase();
+      mkdirSync(join(directory,'public',...name.split('/').slice(0,-1)),{recursive:true});
       writeFileSync(join(directory,'public',name),bytes,{flag:'wx'});
       return {path,name,sha256:sha(bytes)};
     });
@@ -92,6 +94,7 @@ export async function renderNativeRemotion(ctx, reader, writer, tools, source, a
     const output = join(directory,'video.mp4');
     if (statSync(output).size > maxSourceBytes) throw Error('本机渲染产物过大。');
     const bytes = readFileSync(output);
+    onRenderedVideo?.(bytes);
     const receipt = {schema_version:1,execution:process.platform+'-local-remotion',
       sandboxEnforcement:browser?.enforcement ?? executed.enforcement,
       sandboxScope:browser?'browser-renderer':'renderer-process',source_sha256:sha(Buffer.from(source)),assets,

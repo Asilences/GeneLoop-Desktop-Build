@@ -10,9 +10,11 @@ const extra = {
 
 const addedInPreview12 = new Set(['local_document_pin','local_document_read','local_files_export',
   'local_data_inspect','local_data_analyze','local_paper_audit_sources','local_ppt_edit_template']);
-export function localSceneTools(scene, legacy = false, fullWorkflows = true) {
+export function localSceneTools(scene, legacy = false, fullWorkflows = true, commonCapabilities = false) {
   if(typeof scene !== 'string'||!Object.hasOwn(extra,scene))return null;
-  return [...common,...extra[scene],...(!legacy&&fullWorkflows?[...(scene!=='video'?['local_workflow_open','local_workflow_close']:[]),...workflowSceneNames(scene)]:[])]
+  return [...common,...extra[scene],...(!legacy&&fullWorkflows?[...(scene!=='video'?['local_workflow_open','local_workflow_close']:[]),...workflowSceneNames(scene,commonCapabilities)]:[]),
+    ...(!legacy&&commonCapabilities?[...commonToolNames,...childToolNames,'local_import_sources',...(scene==='ppt'?['prepare_ppt','finalize_ppt']:[])]:[])]
     .filter(name=>!legacy||!addedInPreview12.has(name));
 }
 import {workflowSceneNames} from './native-workflow-catalog.mjs';
+import {commonToolNames,childToolNames} from './common-tool-catalog.mjs';

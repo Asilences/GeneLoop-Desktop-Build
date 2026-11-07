@@ -723,6 +723,8 @@ function renderLocalConversation(row){
   const cloud=state.workspaces.find(group=>group.workspaceId===row.binding?.workspaceId);
   const workspaceName=cloud?.title||row.name;
   const running=localActive?.workspaceId===row.id&&localActive.threadId===localThread?.id?localActive:null;
+  if(running?.question)showLocalQuestion(running.workspaceId,running.threadId,running.question);
+  else renderQuestions([]);
   $('session-title').textContent=entry?.title||(localThread?'新会话 · 草稿':workspaceName);
   $('session-status').textContent=running?.phase==='remote-render'?'服务器正在渲染 Remotion':running?'本机 Agent 正在执行':'本机执行';
   $('chat-tab').parentElement.hidden=true;
@@ -789,10 +791,25 @@ async function sendLocal(){
     renderSidebar();renderConversation();
   }
 }
+function showLocalQuestion(workspaceId,threadId,update){
+  renderQuestions([update],async(row,answers)=>{
+    await localBridge.answer({...localScope(workspaceId,threadId),id:row.id,answers});
+    if(localActive?.threadId===threadId)localActive.question=null;
+    renderQuestions([]);
+  });
+}
 localBridge?.onUpdate(({workspaceId,threadId,update})=>{
   if(localActive?.workspaceId!==workspaceId||localActive.threadId!==threadId)return;
   if(update.kind==='progress')localActive.phase=update.phase;
-  else if(update.kind!=='ready')localActive.updates.push(update);
+  else if(update.kind==='question'){
+    localActive.question=update;
+    if(localWorkspaceId===workspaceId&&localThread?.id===threadId)showLocalQuestion(workspaceId,threadId,update);
+  }else if(update.kind==='question-cleared'){
+    if(localActive.question?.id===update.id){localActive.question=null;if(localWorkspaceId===workspaceId&&localThread?.id===threadId)renderQuestions([]);}
+  }else if(update.kind!=='ready'){
+    localActive.updates.push(update);
+    if(update.kind==='done')renderQuestions([]);
+  }
   if(localWorkspaceId===workspaceId&&localThread?.id===threadId)scheduleRender();
 });
 $('prompt').addEventListener('input',()=>{if(localWorkspaceId)renderSendButton();});
@@ -984,7 +1001,7 @@ async function send(event){event?.preventDefault();if(localWorkspaceId)return se
     await selectionChange;
     const sessionId=await ensureSession();const content=promptContent(text,state.attachments,state.composerScene,state.settings.scenes);const signature=JSON.stringify(content);let pending=state.pending.get(sessionId);if(pending&&pending.signature!==signature)throw Error('上一条发送状态尚未确认，请先重新连接查看记录。');if(!pending){pending={signature,requestId:crypto.randomUUID()};state.pending.set(sessionId,pending);}await rpc('session/prompt',{sessionId,requestId:pending.requestId,mode:'queue',content,clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone});state.pending.delete(sessionId);promoteWorkspaceDraft(sessionId);const sentRow=state.sessions.find(row=>row.sessionId===sessionId);if(sentRow)sentRow.blank=false;renderSidebar();if(state.session===sessionId&&$('prompt').value===text){$('prompt').value='';state.attachments=[];renderAttachments();state.drafts.delete(sessionId);resetComposerScene();renderScenes();}state.conversation.running=true;scheduleRender();
   }catch(error){if(error.status>=400&&error.status<500)state.pending.delete(state.session);fail(error);}finally{state.submitting=false;renderSendButton();}}
-async function refreshTaskPanels(){const session=state.session;if(!session)return;const generation=state.generation;const [tasks,questions]=await Promise.allSettled([request('/api/harless/tasks'),request('/api/harless/questions?session_id='+encodeURIComponent(session))]);if(generation!==state.generation)return;
+async function refreshTaskPanels(){const session=state.session;if(!session||localWorkspaceId)return;const generation=state.generation;const [tasks,questions]=await Promise.allSettled([request('/api/harless/tasks'),request('/api/harless/questions?session_id='+encodeURIComponent(session))]);if(generation!==state.generation||localWorkspaceId)return;
   if(questions.status==='fulfilled')renderQuestions(questions.value.questions||[]);
   const views=[];for(const event of state.conversation.events.values())if(event.type==='user/message'&&event.data.harless_comparison){const reference=event.data.harless_comparison;views.push({id:reference.id});if(reference.value&&!state.comparisons.has(reference.id))state.comparisons.set(reference.id,reference.value);}
   if(tasks.status==='fulfilled')for(const task of tasks.value.tasks||[])if(task.session_id===session&&task.task_id)views.push({id:'native-'+task.task_id,session_id:session,native:true});
@@ -1011,7 +1028,7 @@ async function refreshTaskPanels(){const session=state.session;if(!session)retur
 }
 function renderDeliveries(){const target=$('delivery-list');target.replaceChildren();for(const file of state.deliveries||[])target.append(node('div',{class:'file-row'},button([icon('document'),node('span',{},file.name)],()=>preview(file)),node('a',{href:file.href,download:file.name,title:'下载','aria-label':'下载 '+file.name},icon('download'))));if(!target.children.length)target.append(node('p',{class:'empty'},'本对话的已验证交付文件会显示在这里。'));}
 async function preview(file){try{const response=await fetch(file.href,{credentials:'same-origin'});if(!response.ok)throw Error('文件暂时不可用');const blob=await response.blob();if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(blob);const target=$('preview');target.replaceChildren(node('h3',{},file.name));const extension=file.name.split('.').pop().toLowerCase();if(['png','jpg','jpeg','gif','webp'].includes(extension))target.append(node('img',{src:previewUrl,alt:file.name}));else if(['mp4','webm'].includes(extension))target.append(node('video',{src:previewUrl,controls:true}));else if(extension==='pdf')target.append(node('iframe',{src:previewUrl,sandbox:'',title:file.name}));else if(['md','txt','json','csv','tsv','py','js','ts','tex','bib','log'].includes(extension)&&blob.size<2_000_000)target.append(node('pre',{},await blob.text()));else target.append(node('p',{},'此格式请下载后用本机应用打开。'));}catch(error){fail(error);}}
-function renderQuestions(rows){
+function renderQuestions(rows,submitLocal){
   const signature=JSON.stringify([state.session,rows]);
   if(signature===state.questionsSignature)return;
   state.questionsSignature=signature;
@@ -1027,6 +1044,7 @@ function renderQuestions(rows){
       const field=node('fieldset',{},
         node('legend',{},node('span',{class:'question-number','aria-hidden':true},index+1),question.question),
       );
+      if(question.detail)field.append(markdown(question.detail));
       const options=node('div',{class:'question-options'});
       for(const option of question.options||[]){
         const value=typeof option==='string'?option:option.label;
@@ -1038,7 +1056,7 @@ function renderQuestions(rows){
             else selected.delete(value);
           },
         });
-        options.append(node('label',{class:'question-option'},input,node('span',{},value)));
+        options.append(node('label',{class:'question-option'},input,node('span',{},value,option.description?node('small',{},option.description):null)));
       }
       if(options.childElementCount)field.append(options);
       field.append(custom);
@@ -1058,8 +1076,11 @@ function renderQuestions(rows){
       event.preventDefault();
       submit.disabled=true;
       try{
-        await post('/api/harless/questions',{session_id:state.session,id:row.id,answers:answers.map(read=>read())});
-        await refreshTaskPanels();
+        if(submitLocal)await submitLocal(row,answers.map(read=>read()));
+        else{
+          await post('/api/harless/questions',{session_id:state.session,id:row.id,answers:answers.map(read=>read())});
+          await refreshTaskPanels();
+        }
       }catch(error){fail(error);submit.disabled=false;}
     };
     target.append(form);

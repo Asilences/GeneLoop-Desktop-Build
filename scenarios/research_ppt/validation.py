@@ -617,7 +617,7 @@ def _check_embedded_workbook(raw: bytes):
 
 
 def _read_package(path: Path, report: dict, *, include_chart_data=False,
-                  include_table_data=False, expected_images=None) -> tuple[list[list[str]], list[str]]:
+                  include_table_data=False, expected_images=None, max_slides=MAX_SLIDES) -> tuple[list[list[str]], list[str]]:
     """不展开 ZIP，读取文字、备注、图片及明确的页面边界问题。"""
     with safe_zip(path) as archive:
         names = archive.namelist()
@@ -667,8 +667,8 @@ def _read_package(path: Path, report: dict, *, include_chart_data=False,
                         raise ValueError('验收不打开宏、活动控件或嵌入执行对象')
 
         slide_names = pptx_slide_paths(archive)
-        if not 1 <= len(slide_names) <= MAX_SLIDES:
-            raise ValueError(f'验收仅支持 1–{MAX_SLIDES} 页')
+        if not 1 <= len(slide_names) <= max_slides:
+            raise ValueError(f'验收仅支持 1–{max_slides} 页')
         presentation = ET.fromstring(archive.read('ppt/presentation.xml'))
         size = presentation.find('p:sldSz', NS)
         if size is None:
@@ -813,7 +813,7 @@ def validate_delivery(pptx_path: str | Path, expected_slides: int,
                       expected_notes=None,
                       timeout_seconds: int = 120,
                       validation_root: Path | None = None,
-                      require_notes: bool = True) -> dict:
+                      require_notes: bool = True, max_slides: int = MAX_SLIDES) -> dict:
     """返回可 JSON 序列化报告，保留真实 PDF/PNG 和失败证据。
 
     ``expected_texts`` / ``expected_sources`` 为逐页字符串列表。前者检查
@@ -825,8 +825,10 @@ def validate_delivery(pptx_path: str | Path, expected_slides: int,
     source = _private(Path(pptx_path))
     if source.suffix.lower() != '.pptx':
         raise ValueError('验收输入必须为 PPTX')
-    if type(expected_slides) is not int or not 1 <= expected_slides <= MAX_SLIDES:
-        raise ValueError(f'expected_slides 必须为 1–{MAX_SLIDES} 的整数')
+    if type(max_slides) is not int or not 1 <= max_slides <= 200:
+        raise ValueError('max_slides 必须为1至200的整数')
+    if type(expected_slides) is not int or not 1 <= expected_slides <= max_slides:
+        raise ValueError(f'expected_slides 必须为 1–{max_slides} 的整数')
     if type(timeout_seconds) is not int or not 10 <= timeout_seconds <= 300:
         raise ValueError('渲染超时须为 10–300 秒的整数')
     expected_texts = _expected(expected_texts, expected_slides, 'expected_texts')
@@ -850,7 +852,7 @@ def validate_delivery(pptx_path: str | Path, expected_slides: int,
     try:
         report['pptx_sha256'] = file_hash(source)
         texts, notes = _read_package(source, report, include_chart_data=expected_charts is not None,
-                                     include_table_data=expected_tables is not None, expected_images=expected_images)
+                                     include_table_data=expected_tables is not None, expected_images=expected_images,max_slides=max_slides)
         structure = report['structure']
         if structure['slide_count'] != expected_slides:
             _issue(report, 'slide_count_mismatch', 'PPTX 页数不符合提交计划')
@@ -937,7 +939,7 @@ def validate_delivery(pptx_path: str | Path, expected_slides: int,
             report['pdf_page_count'] = document.page_count
             if document.page_count != expected_slides:
                 _issue(report, 'pdf_page_count_mismatch', '实际渲染 PDF 页数不符合提交计划')
-            if not 1 <= document.page_count <= MAX_SLIDES:
+            if not 1 <= document.page_count <= max_slides:
                 raise ValueError('实际渲染页数超出安全范围')
             for index, page in enumerate(document):
                 if page.rect.width > 2160 or page.rect.height > 2160:

@@ -46,8 +46,50 @@ def create(kind, work):
     work = Path(work).resolve(strict=True)
     if work.name != 'work' or '.local' not in work.parts or work.is_symlink():
         raise ValueError('native_private_work_required')
-    settings = json.loads((work / 'native-settings.json').read_text(encoding='utf-8'))
+    settings = json.loads((work / 'native-settings.json').read_text(encoding='utf-8')) if (work / 'native-settings.json').exists() else {}
     inputs = work / 'inputs'
+    if kind == 'gateway':
+        from mcp.server import MCPServer
+        from mcp.types import ToolAnnotations
+        from src.adapters.general_tools import Gateway, NAMES
+        gateway = Gateway(work, {'native_task': True}, private_root=work.parent,
+                          public_registry=work / 'native-providers.json', config=work / 'no-private-providers.json')
+        server = MCPServer('GeneLoop native general tool gateway')
+        for name in NAMES:
+            server.add_tool(getattr(gateway, name), name=name,
+                            annotations=ToolAnnotations(readOnlyHint=name in ('discover_tools', 'describe_tool', 'inspect_tool_result')))
+        return server
+    if kind == 'workspace':
+        from scenarios.general.server import create_server
+        return create_server(inputs)
+    if kind == 'management':
+        from mcp.server import MCPServer
+        from mcp.types import ToolAnnotations
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scenarios/file-management'))
+        from management_tools import ManagementScene, TOOLS
+        class NativeManagementScene(ManagementScene):
+            def gateway(self):
+                result = super().gateway()
+                result.public_registry = work / 'native-providers.json'
+                return result
+        scene = NativeManagementScene(settings['management_task'], work / 'management-results')
+        server = MCPServer('GeneLoop native complete management')
+        for name in TOOLS:
+            server.add_tool(getattr(scene, name), name=name, annotations=ToolAnnotations(readOnlyHint=name not in ('execute_plan','restore_plan','submit_report','build_index','execute_tool_call')))
+        def authorize_native_plan(plan_id: str, approval_event_id: str, session_id: str, direction: str):
+            # Host-only: omitted from the model's tool catalog. The native host
+            # calls it only after the actual user has confirmed this plan.
+            proof = {'outcome': 'allowed-once', 'task_sha256': scene.input_digest,
+                     'approval_event_id': approval_event_id, 'session_id': session_id}
+            if direction == 'restore':
+                scene.approve_restore(plan_id, scene.restore_sha(plan_id), proof)
+            elif direction == 'execute':
+                scene.approve(plan_id, scene.plans[plan_id]['plan_sha256'], proof)
+            else:
+                raise ValueError('unknown native confirmation direction')
+            return {'approved': True}
+        server.add_tool(authorize_native_plan, name='_native_authorize_plan')
+        return server
     if kind == 'paper':
         from scenarios.paper_proofreading.server import create_server
         return create_server(inputs, native_renderer=native_audit_pdf)
