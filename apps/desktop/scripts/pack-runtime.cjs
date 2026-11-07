@@ -11,7 +11,7 @@ module.exports = async ({ appOutDir, electronPlatformName }) => {
   if (electronPlatformName === 'win32') require('./prune-windows-tools.cjs')(resources);
   const archive = join(resources, 'geneloop-runtime.asar');
   await asar.createPackageWithOptions(source, archive, { unpack: '*.{node,dll,exe,dylib,so}',
-    unpackDir:'{node_modules/@remotion/compositor-*,node_modules/@esbuild/*,node_modules/esbuild,node_modules/@vscode/ripgrep}' });
+    unpackDir:'{node_modules/@remotion/compositor-*,node_modules/@esbuild/*,node_modules/esbuild,node_modules/@vscode/ripgrep*}' });
   for (const file of ['local-worker.mjs', 'node_modules/@deepseek-ai/dsh/lib/bin.js', 'node_modules/koffi/package.json']) {
     assert.equal(Boolean(asar.statFile(archive, normalize(file)).unpacked), false, '运行时入口必须封进 ASAR：' + file);
   }
@@ -19,4 +19,7 @@ module.exports = async ({ appOutDir, electronPlatformName }) => {
   const native = 'node_modules/@koromix/koffi-'+platform+'/koffi.node';
   assert.equal(asar.statFile(archive, normalize(native)).unpacked, true, '本机文件权限工具需要实体文件');
   accessSync(join(archive + '.unpacked', native));
+  const rg = `node_modules/@vscode/ripgrep-${electronPlatformName}-${process.arch}/bin/rg${electronPlatformName === 'win32' ? '.exe' : ''}`;
+  assert.equal(asar.statFile(archive, normalize(rg)).unpacked, true, '搜索工具需要实体可执行文件');
+  accessSync(join(archive + '.unpacked', rg));
 };

@@ -23,7 +23,18 @@ export async function openCommonCapabilities(ctx,{reader,writer,tools,media,sess
   const subprocess=ctx.get('subprocess'),spawn=subprocess.spawn;
   // Ripgrep uses the official subprocess service directly instead of fs.resolve.
   // Keep the same cwd migration at that public seam; execution stays upstream.
-  subprocess.spawn=function(spec){return spawn.call(this,{...spec,cwd:taskCwd(spec.cwd)});};
+  subprocess.spawn=function(spec){
+    let argv=spec.argv;
+    // Native executables cannot be spawned from a virtual ASAR path. Keep the
+    // official ripgrep argv/parser and use its app-owned unpacked binary.
+    const command=argv?.[0];
+    if(typeof command==='string'&&/\.asar[\\/]node_modules[\\/]@vscode[\\/]ripgrep(?:-[^\\/]+)?[\\/]/.test(command)){
+      const native=command.replace(/\.asar([\\/])/ ,'.asar.unpacked$1');
+      if(!existsSync(native))throw Error('包内搜索工具缺失');
+      argv=[native,...argv.slice(1)];
+    }
+    return spawn.call(this,{...spec,argv,cwd:taskCwd(spec.cwd)});
+  };
   function checked(path){
     const full=resolve(path);if(!allowedRead.some(base=>under(base,full)))throw Error('路径不在本轮工作目录或已发布技能内');
     for(let at=full;;at=dirname(at)){

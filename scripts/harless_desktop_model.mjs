@@ -66,7 +66,8 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
     if (lease.settlement) return lease.settlement;
     clearTimeout(lease.timer);
     byToken.delete(lease.tokenHash);
-    lease.abort?.();
+    for (const abort of lease.streams) abort();
+    lease.streams.clear();
     lease.render?.abort();
     lease.settlement = (async () => {
       await lease.admission.catch(() => {});
@@ -94,7 +95,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
     const token = randomBytes(32).toString('base64url');
     const task = hash(user.id).slice(0, 8) + randomBytes(12).toString('hex');
     const lease = {
-      tokenHash: hash(token), task, session, userId: user.id, tools, expiresAt: Date.now() + leaseMs,
+      tokenHash: hash(token), task, session, userId: user.id, tools, expiresAt: Date.now() + leaseMs, streams: new Set(),
       binding: { session_id: 'session-' + randomUUID(), budget_session_id: 'turn-' + task },
     };
     byAccount.set(user.id, lease);
@@ -180,7 +181,9 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       }
       const body = await readBounded(req, undefined, true);
       if (!valid(lease)) return json(res, 401, { error: '本机任务授权已结束。' });
-      if (lease.abort) return json(res, 409, { error: '该任务已有模型请求。' });
+      // Child agents share this task's original budget binding. Allow their
+      // parallel turns while retaining a bound on simultaneous HTTP streams.
+      if (lease.streams.size >= 8) return json(res, 429, { error: '该任务的并行模型请求繁忙，请稍后重试。' });
       let payload;
       try { payload = JSON.parse(body.toString('utf8')); } catch { return json(res, 400, { error: '模型请求格式无效。' }); }
       if (!validPayload(payload, model, lease.tools)) return json(res, 400, { error: '模型请求超出本机场景授权。' });
@@ -188,9 +191,10 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
         'content-type': 'application/json', authorization: 'Bearer ' + config.apiKey,
         'x-api-key': config.apiKey, 'x-deepseek-harness-session-id': lease.binding.session_id,
       }, body, res);
-      lease.abort = () => { upstream.destroy(); res.destroy(); };
+      const abort = () => { upstream.destroy(); res.destroy(); };
+      lease.streams.add(abort);
       upstream.once('timeout', () => upstream.destroy(Error('Desktop model relay timed out')));
-      res.once('close', () => { lease.abort = undefined; });
+      res.once('close', () => { lease.streams.delete(abort); });
     },
     revokeSession(session) {
       for (const lease of byAccount.values()) if (lease.session === session) void close(lease);

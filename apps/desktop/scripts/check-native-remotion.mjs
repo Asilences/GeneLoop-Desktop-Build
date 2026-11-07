@@ -40,12 +40,16 @@ try {
   wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
   for(let i=0;i<samples;i++)wav.writeInt16LE(Math.round(16384*Math.sin(2*Math.PI*440*i/16000)),44+i*2);
   writeFileSync(join(root,'workspace/tone.wav'),wav);
-  const videoTools=nativeVideoTools(ctx,reader,writer,tools,AbortSignal.timeout(180000));
+  // This check exercises v4 media contracts. Official shell composition is
+  // exercised by check-native-common; this fixture grants only project paths.
+  const common={resolvePath:path=>join(root,'video-project',path)};
+  const videoTools=nativeVideoTools(ctx,reader,writer,tools,AbortSignal.timeout(180000),undefined,common);
   const invoke=(name,args)=>videoTools.find(t=>t.name==='mcp__native_video__'+name).execute(args);
   const asset=await invoke('pin_asset',{name:'tone.wav'});
   const audio=await invoke('probe_media',{source_id:asset.source_id});
   assert.ok(audio.streams.some(stream=>stream.codec_type==='audio'&&Number(stream.sample_rate)===16000));
-  await assert.rejects(invoke('run_command',{command:'powershell Get-ChildItem'}));
+  const legacy=nativeVideoTools(ctx,reader,writer,tools,AbortSignal.timeout(180000));
+  await assert.rejects(legacy.find(t=>t.name==='mcp__native_video__run_command').execute({command:'powershell Get-ChildItem'}));
   // A generated entry must never become a Node-side webpack inline loader.
   const marker=join(root,'forbidden-loader-marker');
   // A mislabeled image is still untrusted input and must not execute in Node.
