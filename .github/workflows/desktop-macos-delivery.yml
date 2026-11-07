@@ -25,7 +25,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: desktop-macos-delivery-${{ inputs.phase }}
+  group: desktop-macos-delivery-${{ inputs.phase }}-${{ inputs.buildTarget }}
   cancel-in-progress: false
 jobs:
   macos:
