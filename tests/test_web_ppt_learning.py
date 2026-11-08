@@ -97,6 +97,35 @@ def seed(owned):
     worker.advance(owned[2]);assert worker.read(owned[1]/'status.json')['status']=='probation'
 
 
+def test_shared_quality_record_separates_verified_layout_from_incorrect_facts(owned):
+    directory = task(owned, 1)
+    turn = pair(owned, 1, directory, review=False)
+    info = worker.task_info(owned[0], directory.name, worker.read(owned[2]), baseline=True)
+    proof = worker.delivery(owned[0], turn, 'baseline', {}, store=owned[1], info=info,
+        review={'quality': {'scientific': False, 'visual': True, 'usable': True},
+                'allow_learning': True, 'human_minutes': 0})
+    assert proof['status'] == 'failed'
+    assert proof['mechanical_status'] == 'passed'
+    assert proof['layout_status'] == 'passed'
+
+
+def test_plain_language_task_has_immutable_source_identity_without_an_attachment(owned):
+    directory = task(owned, 1, question='Prepare a fifteen-page employee onboarding presentation')
+    for name in ('task-state.json', 'effective-config.json', 'task.json'):
+        value = worker.read(directory / name)
+        value['scene_inputs'] = []
+        save(directory / name, value)
+    info = worker.task_info(owned[0], directory.name, worker.read(owned[2]), baseline=True)
+    assert info['source_kind'] == 'immutable_user_request'
+    assert info['source_signature']
+    assert 'tasks/' + directory.name + '/task.json' in info['locks']
+    state = worker.read(directory / 'task-state.json')
+    state['scene_inputs'] = [{'version_sha256': ''}]
+    save(directory / 'task-state.json', state)
+    with pytest.raises(ValueError, match='missing frozen source versions'):
+        worker.task_info(owned[0], directory.name, worker.read(owned[2]), baseline=True)
+
+
 def test_completed_task_ui_refresh_does_not_retire_certified_evidence(owned):
     seed(owned);out,store,req=owned;entry=store/'round-0001/release/entry.json';version=worker.sha(entry)
     for path in (out/'tasks').glob('*/task-state.json'):

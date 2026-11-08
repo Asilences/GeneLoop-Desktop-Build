@@ -77,6 +77,7 @@ def test_native_harness_loop_executes_only_demo_mcp_through_budget_proxy():
             assert state.request_count == 3
             if os.environ.get('SSS_RSI_GITLEAKS'):
                 # Actual pinned SDK notifications, not hand-built trace rows.
+                assert harness.wait_for_privacy(timeout=120)
                 assert len(harness.privacy_views) == 1
                 view = json.loads((harness.privacy_views[0]/'privacy-learning.json').read_text())
                 assert view['format'] == 'geneloop.rsi-learning-trace/v4'

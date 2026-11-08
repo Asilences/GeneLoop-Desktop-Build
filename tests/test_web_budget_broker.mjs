@@ -17,7 +17,7 @@ test('budget broker rejects unconfirmed and conflicting routes and streams a con
   const broker = startBroker({ port: 0, target: `http://127.0.0.1:${target.address().port}/v1`, controlToken: token });
   await once(broker, 'listening');
   const root = `http://127.0.0.1:${broker.address().port}`;
-  const session = 'session-11111111-1111-4111-8111-111111111111';
+  let session = 'session-11111111-1111-4111-8111-111111111111';
   const route = 'turn-' + 'a'.repeat(32);
   const model = () => fetch(root + '/v1/chat/completions', { method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-DeepSeek-Harness-Session-Id': session },
@@ -50,6 +50,16 @@ test('budget broker rejects unconfirmed and conflicting routes and streams a con
     assert.equal((await fetch(root+'/v1/vision/'+session+'/chat/completions',{method:'POST',body:'{}'})).status,403);
     assert.equal((await fetch(root+'/v1/search/'+session+'/messages',{method:'POST',body:'{}'})).status,403);
     assert.equal((await fetch(root + '/v1/models')).status, 404);
+    session='sss-'+'c'.repeat(32);
+    assert.equal((await model()).status,403);
+    assert.equal((await control('/bind',route,'wrong')).status,401);
+    assert.equal((await control('/bind',route)).status,200);
+    const legacy=await model();assert.equal(legacy.status,200);await legacy.text();
+    assert.equal(received.at(-1).session,route);
+    const legacyVision=await fetch(root+'/v1/vision/'+session+'/chat/completions',{method:'POST',body:'{}'});
+    assert.equal(legacyVision.status,200);await legacyVision.text();
+    assert.equal((await control('/unbind',route)).status,200);assert.equal((await model()).status,403);
+    session='sss-invalid';assert.equal((await control('/bind',route)).status,400);
   } finally {
     broker.closeAllConnections(); target.closeAllConnections();
     await Promise.all([new Promise(resolve => broker.close(resolve)), new Promise(resolve => target.close(resolve))]);

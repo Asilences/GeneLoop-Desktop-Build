@@ -33,6 +33,8 @@ test('独立桌面只提供自己的页面和资源，不获取网页HTML、模�
     assert.equal((await get('/api/harless/motif-library?workspaceId=owned')).status,200);
     assert.equal((await get('/api/harless/motif-library-unknown')).status,403);
     assert.equal(host.egress.task,2);
+    assert.equal((await get('/api/harless/motif-catalog')).status,200);
+    assert.equal((await get('/api/harless/motif-catalog-unknown')).status,403);
     const headers=(await get('/')).headers;assert.match(headers.get('content-security-policy'),/default-src 'none'/);assert.match(headers.get('content-security-policy'),/form-action 'none'/);
   }finally{assert.equal(directory.startsWith(join(tmpdir(),'geneloop-ui-')),true);rmSync(directory,{recursive:true,force:true});}
 });

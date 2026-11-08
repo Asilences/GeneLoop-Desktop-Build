@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "implementation_files": [
+    "src/adapters/ppt_execution.ts",
+    "src/adapters/ppt_workflow_runtime.ts",
+    "src/adapters/ppt_workflow_learning.py",
+    "src/adapters/ppt_write_learning.py",
+    "src/adapters/ppt_write_runtime.ts",
+    "src/adapters/ppt_write_tool.ts",
+    "src/adapters/ppt_workflow_host.ts",
+    "src/adapters/ppt_delivery_pipeline.ts",
+    "src/adapters/ppt_component_tool.ts",
+    "src/adapters/ppt_component_schema.ts",
+    "src/adapters/ppt_component_render.py",
+    "src/adapters/ppt_design.ts",
+    "src/adapters/ppt_page_renderer.py",
+    "src/adapters/ppt_program_broker.ts",
+    "src/adapters/artifact_motif_transport.ts",
+    "src/adapters/ppt_program_learning.ts",
+    "scenarios/ppt_master/workflow-contracts.json",
+    "package-lock.json",
+    "src/adapters/ppt_workflow_certification.py",
+    "scripts/certify-ppt-workflow.mjs"
+  ],
+  "tools": {
+    "finalize_ppt": {
+      "read_only": false,
+      "resource_argument": "project",
+      "observed_completion": {
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "allowed_finding_severities": [
+          "review"
+        ],
+        "collection": [
+          "review_pages"
+        ]
+      }
+    },
+    "read_image": {
+      "read_only": true,
+      "image_output_required": true
+    },
+    "create_ppt_page": {
+      "read_only": false,
+      "page_write": {
+        "resource_argument": "project",
+        "identity_argument": "page",
+        "revision_argument": "expected_page_sha256",
+        "version_output": [
+          "installed_page_sha256"
+        ],
+        "required_payload_arguments": [
+          "id",
+          "notes"
+        ],
+        "payload_choice_arguments": [
+          "parameters",
+          "parameters_file"
+        ]
+      }
+    },
+    "compose_ppt_page": {
+      "read_only": false,
+      "page_write": {
+        "resource_argument": "project",
+        "identity_argument": "page",
+        "revision_argument": "expected_page_sha256",
+        "version_output": [
+          "sha256"
+        ]
+      }
+    }
+  }
+}

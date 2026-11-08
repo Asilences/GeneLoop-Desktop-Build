@@ -27,6 +27,7 @@ def test_native_host_scopes_verified_skill_in_member_namespace(tmp_path):
     fixture=tmp_path.resolve();project=fixture/'public-project';project.mkdir()
     (project/'scenarios/ppt_master').mkdir(parents=True)
     shutil.copyfile(ROOT/'scenarios/ppt_master/runtime-policy.md', project/'scenarios/ppt_master/runtime-policy.md')
+    shutil.copyfile(ROOT/'scenarios/ppt_master/SKILL.md', project/'scenarios/ppt_master/SKILL.md')
     skill=fixture/'public-skill';skill.mkdir()
     raw=b'---\nname: ppt-master\ndescription: Public namespace diagnostic skill.\n---\nRead public diagnostic resources.\n'
     (skill/'SKILL.md').write_bytes(raw)
@@ -150,7 +151,10 @@ export function apply(ctx){ctx.connection.fetch.register({path:'/api/diagnostic/
             assert actual['chat_skills']==[] and actual['host_skills_during_ppt']==[],actual
             assert actual['released_ppt_skills']==[],actual
             assert actual['ppt_loaded']['resourceBase']=={'kind':'directory','path':'/opt/geneloop/ppt-master'},actual
-            assert 'Read public diagnostic resources.' in actual['ppt_loaded']['content'],actual
+            adapted=(ROOT/'scenarios/ppt_master/SKILL.md').read_text(encoding='utf-8')
+            expected=re.match(r'^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)([\s\S]*)$',adapted).group(1).strip()
+            assert actual['ppt_loaded']['content']==expected,actual
+            assert 'Read public diagnostic resources.' not in actual['ppt_loaded']['content'],actual
             assert actual['filesystem']=='GeneLoopFileSystem',actual
             assert actual['subprocess']=='GeneLoopSubprocessRuntime',actual
             assert actual['resources']==deployment['resources'],actual

@@ -1,10 +1,5 @@
-import {execFile} from 'node:child_process';
-import {fileURLToPath} from 'node:url';
 import {randomUUID,createHash} from 'node:crypto';
-
-const root = fileURLToPath(new URL('../../', import.meta.url));
-const privateEnv = () => Object.fromEntries(['PATH','SYSTEMROOT','WINDIR','TMP','TEMP','TMPDIR','SSS_RSI_GITLEAKS']
-  .filter(key => process.env[key] !== undefined).map(key => [key,process.env[key]]));
+import {runPrivacyWorker} from './privacy_worker_pool.ts';
 
 /** Opaque handles preserve private reader lookups across redacted tool replies.
  * This table is scoped to one learning host and is never written or exported.
@@ -54,29 +49,16 @@ export async function safeLearningError(error:unknown):Promise<Error> {
 }
 
 /** All online learning readers use the same local Presidio/Gitleaks worker. */
-export async function privacyLearningView(value: unknown, options: {python?: string; publication?: boolean} = {}): Promise<any> {
+export async function privacyLearningView(value: unknown, options: {python?: string; publication?: boolean;signal?:AbortSignal} = {}): Promise<any> {
   const python = options.python ?? process.env.SSS_PYTHON;
   if (!python) throw Error('geneloop_privacy_rejected');
-  const body = JSON.stringify(value);
+  let body:string|undefined;
+  try{body=JSON.stringify(value);}catch{throw Error('geneloop_privacy_rejected');}
   if (typeof body !== 'string' || Buffer.byteLength(body) > 32*1024*1024) throw Error('geneloop_privacy_rejected');
-  return new Promise((resolve,reject) => {
-    const child = execFile(python,['-m','src.adapters.geneloop_privacy',...(options.publication?['--publication']:[])],
-      {cwd:root,env:{...privateEnv(),PYTHONUTF8:'1'},timeout:120000,maxBuffer:32*1024*1024},
-      (error,stdout) => {
-        if (error) return reject(Error('geneloop_privacy_rejected'));
-        try {resolve(JSON.parse(stdout));} catch {reject(Error('geneloop_privacy_rejected'));}
-      });
-    child.stdin?.on('error',()=>{});
-    child.stdin?.end(body);
-  });
+  return runPrivacyWorker(python,options.publication?'publication':'learning',JSON.parse(body),options.signal);
 }
 
 export async function projectPlatformLearningTrace(python: string,input: string,scene: string,
   status: string,start: number,catalog: string,share = false,signal?:AbortSignal): Promise<string> {
-  return new Promise((resolve,reject) => {
-    execFile(python,['-m','src.adapters.geneloop_learning_trace','--authorized','--input',input,
-      '--scene',scene,'--status',status,'--start',String(start),'--catalog',catalog,...(share?['--share-object']:[])],
-      {cwd:root,env:{...privateEnv(),PYTHONUTF8:'1'},timeout:120000,maxBuffer:32*1024*1024,signal},
-      (error,stdout) => error?reject(Error('geneloop_privacy_rejected')):resolve(stdout));
-  });
+  return JSON.stringify(await runPrivacyWorker(python,'project',{input,scene,status,start,catalog,share},signal));
 }

@@ -23,6 +23,7 @@ function evidence(output:string,name:string,version:unknown,message:string){
 export function createPptLearning(config:{output:string;user:string;scope:string;python?:string;resources?:any;taskIds:()=>string[]}){
   const output=realpathSync(config.output),store=join(output,'learning','ppt-'+hash(config.user+'\0'+config.scope));
   let running:Promise<void>|undefined,again=false;
+  let reviewTimer:ReturnType<typeof setTimeout>|undefined;
   const enabled=Boolean(config.python);
   function ensure(){mkdirSync(store,{recursive:true,mode:0o700});if(realpathSync(store)!==store)throw Error('ppt_learning_store_redirected');}
   function status(value:any){try{ensure();write(join(store,'status.json'),value);}catch{}}
@@ -32,17 +33,46 @@ export function createPptLearning(config:{output:string;user:string;scope:string
       const env:any={PATH:process.env.PATH,SSS_PYTHON:config.python,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8'};
       for(const name of ['SYSTEMROOT','WINDIR','TMP','TEMP','TMPDIR','GENELOOP_COMMAND_SOCKET','GENELOOP_PPT_CAPABILITY_PLAN'])if(process.env[name])env[name]=process.env[name];
       const learningPolicy=process.env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY??process.env.SSS_WEB_POLICY;
+      const reviewPolicy=process.env.GENELOOP_PPT_REVIEW_POLICY??process.env.SSS_WEB_POLICY;
       if(learningPolicy){
         env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY=learningPolicy;
         if(process.env.DEEPSEEK_API_KEY)env.DEEPSEEK_API_KEY=process.env.DEEPSEEK_API_KEY;
       }
+      if(reviewPolicy){
+        env.GENELOOP_PPT_REVIEW_POLICY=reviewPolicy;
+        if(process.env.DEEPSEEK_API_KEY)env.DEEPSEEK_API_KEY=process.env.DEEPSEEK_API_KEY;
+      }
       const child=spawn(config.python!,[join(root,'scripts/learn-web-ppt-tasks.py'),'--request',join(store,'request.json')],{cwd:root,env,stdio:['ignore','pipe','pipe']});
       let log='';child.stdout.on('data',b=>{if(log.length<128000)log+=String(b);});child.stderr.on('data',b=>{if(log.length<128000)log+=String(b);});
-      const timer=setTimeout(()=>child.kill(),env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY?900000:120000);child.on('error',error=>{clearTimeout(timer);fail(error);});
+      const timer=setTimeout(()=>child.kill(),env.GENELOOP_PPT_COMPONENT_LEARNING_POLICY||env.GENELOOP_PPT_REVIEW_POLICY?900000:120000);child.on('error',error=>{clearTimeout(timer);fail(error);});
       child.on('close',code=>{clearTimeout(timer);try{write(join(store,'worker-log.json'),{code,log});code===0?done():fail(Error('ppt_learning_compiler_failed'));}catch(error){fail(error);}});
     });
+    const queuePath=join(store,'background-review-queue.json');
+    if(existsSync(queuePath)){
+      const queue=read(checked(store,queuePath));
+      if(queue.pending_count>0&&Number.isFinite(queue.next_at)){
+        const delay=Math.max(0,queue.next_at*1000-Date.now());
+        if(delay===0)again=true;
+        else{clearTimeout(reviewTimer);reviewTimer=setTimeout(()=>manager.schedule(),delay);reviewTimer.unref();}
+      }
+    }
   }
   const manager={
+    workflow(){
+      const folder=join(store,'workflows'),path=join(folder,'selected.json');
+      if(!enabled||!existsSync(path)||existsSync(join(folder,'suspended.json'))||existsSync(join(store,'suspended.json')))return null;
+      try{
+        const pointer=read(checked(store,path));
+        if(pointer.user!==config.user||pointer.scope!==config.scope||!['probation','active'].includes(pointer.phase)||
+          (pointer.feedback_version??null)!==(existsSync(join(store,'feedback-version.json'))?hash(readFileSync(checked(store,join(store,'feedback-version.json')))):null)||
+          typeof pointer.library!=='string'||!(/^[a-f0-9]{64}\.json$/).test(pointer.library)||
+          !Object.keys(pointer.evidence_locks??{}).length)return null;
+        for(const [name,version] of Object.entries(pointer.evidence_locks))evidence(output,name,version,'ppt_workflow_evidence_changed');
+        const library=checked(store,join(folder,pointer.library));
+        if(hash(readFileSync(library))!==pointer.sha256)return null;
+        return read(library);
+      }catch{return null;}
+    },
     captureSingle(task:any,artifacts:any[]){
       if(!enabled||task.scene?.id!=='ppt'||task.scene.ppt_execution_strategy!=='ppt_master'||task.status!=='completed')return;
       const id=task.request.task_id,session=task.request.session_id,mode=task.request.mode;
@@ -125,7 +155,7 @@ export function createPptLearning(config:{output:string;user:string;scope:string
         });
       }catch{return [];}
     },
-    schedule(){if(!enabled)return;again=true;if(running)return;running=(async()=>{while(again){again=false;try{await run();}catch(error){
+    schedule(){if(!enabled)return;clearTimeout(reviewTimer);again=true;if(running)return;running=(async()=>{while(again){again=false;try{await run();}catch(error){
       status({status:'failed',reason:(error as Error).message});
       try{ensure();write(join(store,'suspended.json'),{reason:'worker_failed'});}catch{/* A missing store already fails closed. */}
     }}})().finally(()=>{running=undefined;});},

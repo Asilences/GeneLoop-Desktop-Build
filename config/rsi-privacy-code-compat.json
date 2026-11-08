@@ -25,11 +25,11 @@
   },
   "scripts/learn-web-ppt-tasks.py": {
     "certified": "43796d1faa5d56ff679a0a90677b012215791275ae24912279208e2533851954",
-    "current": "79f1743f6d7efa2b6c59a494e177aa6a6ed18ef21700fef89870dd63ba17abe5"
+    "current": "9b03b87f7e557f855430ed59a5636e0815576ae24ebe2ec4e9a4fa1b740ee4d6"
   },
   "src/adapters/dsh_web_tasks.ts": {
     "certified": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284",
-    "current": "06d651d54c8150a90f200a92244ef11942067c67bb9047faa461fb672b4980d2"
+    "current": "8f6f8ddcc9a28234890a3dbf6cea0d975ff7c80c3d6dd8224d76be457db714f1"
   },
   "src/adapters/harless_rsi_bundle.py": {
     "certified": "06af97b2a465a439dd4323a37f764c492cd3927bb1bed232afeef8f389f5fe91",
@@ -44,8 +44,8 @@
     "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
   },
   "scripts/harless_gateway.mjs": {
-    "certified": "0d55ab7993311aac55e4b0ccb4d22ae557454dc00de69957724362859f5b980a",
-    "current": "36af5951840a475792bc6cfd1412779c0e087a5dd8885d3947cdac030f56ae07"
+    "certified": "d0905b88d5e489f6d83e410eb44d32b7cbff518461aa6c89a99754d48a5ca2c4",
+    "current": "b654822faa5de0041afd76b50df732bc9af62f0cfc273c1a7669ec7d726a035f"
   },
   "scripts/prepare-native-host.mjs": {
     "certified": "c4f9b1bf04712d361e6364600dcf2bd75a20d5410a09aaa92a028ea9ee94658f",
@@ -57,7 +57,7 @@
   },
   "src/adapters/capability_proposal.py": {
     "certified": "26b9fe45909001bd8f0a36352be20d8406b49a7d5a2fed11028d710ea2b44a59",
-    "current": "7d68a430b9d45119f3551cc0fc0e74fd7e17e65f84b15f3fd4843998ab0d8427"
+    "current": "3a5b38403779607ebb25f583bf35693b928335c91d15ba66096009b065e78c0e"
   },
   "src/adapters/deepseek_cost_gate.py": {
     "certified": "b42ea0cdcf2f2ebc4ddf7efb42761270a98a7d204868caea35b6550523875675",
@@ -66,6 +66,10 @@
   "src/adapters/harless_reasoning.ts": {
     "certified": "7e734662ea4169ac8a94154a65ea226f3f6d933675a0557c59cd445601bb4967",
     "current": "e02a83bea475ff7e5e2e62d4eedf718ef2f69730971ef70ce321ff9034a53461"
+  },
+  "src/adapters/motif_evidence_projection.ts": {
+    "certified": "9c222005ba50b6ffc2c1df9d8add70af911fcc8403386f70a1508977e934ce2c",
+    "current": "138ac034ef44bfccc0d0b2d81cb52b2cb78903e305617891b427a3b1cead68d9"
   },
   "src/adapters/capability_construction_history.py": {
     "certified": "7a00cdc0de3cc2c818df566e11883bfec98664072f0f2bd045be515fe35385b2",

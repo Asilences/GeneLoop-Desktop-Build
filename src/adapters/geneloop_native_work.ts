@@ -21,10 +21,22 @@ export function registerApprovedSkill(ctx:any,resources:{pptMasterRoot?:string;p
   if(!matched)throw Error('approved skill metadata missing');
   const meta=parse(matched[1]);
   if(meta?.name!=='ppt-master'||typeof meta.description!=='string'||!meta.description.trim())throw Error('approved skill metadata invalid');
-  const profile=readFileSync(new URL('../../scenarios/ppt_master/runtime-policy.md',import.meta.url),'utf8');
-  return ctx.skills.register({name:'ppt-master',description:meta.description.trim(),source:'runtime',provider:'geneloop-approved',
-    resourceBase:{kind:'directory',path:installation.target},content:profile+'\n\n## 官方参考正文\n\n'+matched[2].trim(),
+  const adapted=readFileSync(new URL('../../scenarios/ppt_master/SKILL.md',import.meta.url),'utf8');
+  const entry=/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/.exec(adapted);
+  if(!entry)throw Error('GeneLoop presentation entry metadata missing');
+  const own=parse(entry[1]);
+  return ctx.skills.register({name:'ppt-master',description:own.description,source:'runtime',provider:'geneloop-approved',
+    resourceBase:{kind:'directory',path:installation.target},content:entry[2].trim(),
     invocation:{modelInvocable:true,userInvocable:true}});
+}
+
+/** Agent contexts do not inherit the Web plugin's service injections. */
+export function bindApprovedSkill(ctx:any,resources:{pptMasterRoot?:string;projectRoot?:string}={}) {
+  let unregister:(()=>void)|undefined,disposed=false;
+  const binding=ctx.inject(['skills'],(scoped:any)=>{
+    if(!disposed)unregister=registerApprovedSkill(scoped,resources);
+  });
+  return ()=>{disposed=true;unregister?.();return binding.dispose();};
 }
 
 export type NativeTodo={content:string;status:'pending'|'in_progress'|'completed'};

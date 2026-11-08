@@ -1,6 +1,6 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-桌面`0.3.0-preview.22`客户端适配[PR #161](https://github.com/jingyio/GeneLoop/pull/161)的场景库目录和v2只读证据，保留工作区v1、现有风格、本机执行与紧凑安装器。协议/界面检查通过，新增只读地址登记已获明确授权，安装包待重打。后台接口仍由该PR部署，服务端准入不等于本机已认证。[适配范围与证据](docs/debug/desktop-pr161-sync-20261108.md)。
+桌面`0.3.0-preview.22`客户端适配[PR #161](https://github.com/jingyio/GeneLoop/pull/161)的场景库目录和v2只读证据，保留工作区v1、现有风格、本机执行与紧凑安装器。协议/界面检查通过，Windows EXE与Apple Silicon、Intel完整离线DMG已本地交付，工具摘要一致；安装包未发布Release，Mac授权临时产物已取回删除。后台接口仍由该PR部署，服务端准入不等于本机已认证。[适配范围与证据](docs/debug/desktop-pr161-sync-20261108.md)。
 
 桌面从 `0.3.0-preview.21` 恢复默认完整离线分发：`apps/desktop` 中的 `npm run dist` 显式选择 `--complete`，将当前六场景工具随应用一次安装；完整包使用应用资源目录中的工具，不触发首次全量工具准备。`npm run dist:lite`／`--lightweight` 仅供主动选择轻量分包方式的构建，低层 CI 的显式环境入口保持兼容。两种方式保留同一套六场景能力，PPT 仍仅制作／编辑，不恢复语音扩展。构建可通过 `GENELOOP_DESKTOP_TOOLS_STAGE` 指向已核对的当前平台工具目录；Apple Silicon 和 Intel 的完整离线 DMG 已分别在原生构建机生成，并通过实际镜像复制副本的核心工具、PPT/PDF、Remotion 与统计/转换依赖检查；无需安装后再准备全套工具。[Mac交付与边界](docs/debug/desktop-preview21-macos-complete-20261108.md)。安装包仍只本地交付。
 
@@ -22,7 +22,21 @@
 
 [公共脱敏模块](docs/rsi-data-privacy.md)覆盖各场景的 Web、SDK、离线导入和学习模型边界，使用本地 Presidio 和 Gitleaks，保留脱敏后的任务语义。学习准入需要安装 `requirements-rsi-privacy.txt` 并配置已核验的 Gitleaks；依赖不可用时拒绝学习样本，原任务继续正常执行。
 
+公共入口将 JSON 包及解码原文一并交给 Gitleaks，并拒绝歧义 JSON，防止包装隐藏凭证；Unicode 识别通过固定 `regex` 映射回原文，保留未遮盖的公式和代码。[R1 基线](docs/experiments/privacy-benchmark-20261107-r1.md) 与 [R2 修复后复测](docs/experiments/privacy-benchmark-20261107-r2.md) 分别保留；有限回归不代表完全匿名化或真实 RSI 质量不变。
+
+R4 修正投影器的首次解析：数字形式的 `text` 仍按文字识别，事件、参数和工具目录的重复 JSON 键直接拒绝。`config/geneloop-privacy-policy-v1.json` 是公共类别/字段策略，`config/rsi-privacy-tools.json` 锁定依赖、扫描器官方资产及实际二进制摘要；每次扫描重新核验字节。TypeScript 复用有界本地子进程，排队计入原有120秒限时；SDK、离线导入CLI和派生文件采集使用同一120秒单次子进程边界，通过后才输出或原子写入学习副本。正常任务和认证继续读取原件。冻结成绩、候选未采用原因和实施后审计见[R4记录](docs/experiments/privacy-benchmark-20261108-r4.md)，隐私质量仍未验收。
+
+[R3 归因与现成识别器对照](docs/experiments/privacy-diagnosis-20261108-r3.md) 补原文姓名识别，保留已有命中；GLiNER/OpenMed 尚为独立研究候选，未加入产品默认依赖。隐私子进程只透传白名单环境，保留 `HOME`/`USERPROFILE` 的缓存隔离和显式 `OMP_NUM_THREADS`、`OPENBLAS_NUM_THREADS`、`MKL_NUM_THREADS` 配置；不延长120秒准入限时，不透传其他环境和凭证变量。
+
+PPT制作与交付候选新增内置主题/页型、参数预检、版本保护修订和统一Office导出；原生Skill使用GeneLoop精简适配入口。两来源正常轨迹已产生单页修订→交付→预览程序，通过第三来源独立原生执行认证，并在后继任务中由宿主实际调用。该真实任务随后交付失败；本轮补上能力范围、临时输出、失败回执与溢出准入修复，没有合格降本对照，不宣称稳定降费或完整多页制作编译。学习/评审分账、回归及负例见[当前记录](docs/experiments/ppt-write-native-replay-20261107.md)和[前轮记录](docs/experiments/ppt-write-workflow-20261106-results.md)。更新目标为PR163，未正式部署；Windows/Mac完整本机写页宿主仍待设备验收。
+
+Paper/PPT 的 [RSI 任务语义脱敏](docs/rsi-data-privacy.md#v3-任务语义诊断)可在隔离 Web 和离线导入中显式启用，使用本地 Presidio 和 Gitleaks。普通运行只需原有依赖。
+
 轨迹、源码共享和可选遥测默认关闭。桌面设置中的[数据与隐私](docs/rsi-data-privacy.md#默认私有与可选共享)提供工具流程预览、逐次授权、保存本地副本与取消；接收端由部署方在私有配置中指定。
+
+R5新增默认关闭的[官方 Privacy Filter / CredSweeper 候选接入](docs/research/rsi/privacy-official-tools-r5.md)。宿主以 `SSS_RSI_PRIVACY_CANDIDATE_CONFIG` 和配置字节的 `SSS_RSI_PRIVACY_CANDIDATE_SHA256` 成对选择本地后端，Web、SDK、离线和公开导出继续使用公共入口。额外依赖、模型及软件包摘要独立核验；当前原始 Presidio/Gitleaks 配置仍是默认。候选姓名/地址召回改善不代表误删或产品验收已通过，不自动启用新模型，不改变正常任务读取原件。
+
+R5测试复现了spaCy3.8.7异常退出内存区间后污染下一条中文处理的问题，修复采用[官方上游修复](https://github.com/explosion/spaCy/pull/13932)所在的spaCy3.8.18及匹配依赖，继续严格核验版本。请按`requirements-rsi-privacy.txt`同步安装完整组合；两个中英文模型仍为3.8.0。仅升到3.8.12与旧Confection组合的实测失败保留，未采用。当前默认继续使用Presidio/Gitleaks规则，额外模型保持关闭；修复版完整基准和工程回归完成前仍不宣称验收通过。
 
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
@@ -31,6 +45,8 @@ GeneLoop Desktop `0.3.0-preview.14` 提供 Windows x64 EXE、macOS ARM64 DMG 和
 Windows `0.3.0-preview.15` 安装提速修订2已本地交付：整目录备份旧版，逐文件SHA-256校验后复用未变化的工具目录，变更部分仍从完整离线载荷解压，失败恢复旧版。同机同载荷完整覆盖82.62秒（含权限确认及启动等待），安装器记录的实际阶段66.18秒；这是单次覆盖结果，不能外推首次安装。保留原应用内容和账号数据，未上传；Mac继续使用preview.14。失败、旧基线和边界见[安装记录](docs/debug/desktop-preview15-install-20261106.md)。
 
 桌面 Motif 展示候选在工作区首页融入运行、能力组合、评估、演化和版本，并提供全局库入口。它复用同伴的脱敏证据协议，通过账号隔离的只读接口展示，不授予执行权或虚构节省。接入配置、构建和验证边界见[工作区 Motif 说明](docs/product/desktop/motif-workspace.md)与[模块交接](docs/handoffs/motif-visualization.md)；尚未部署正式服务。
+
+Motif 目录现直接读取宿主已经准入的 Paper/PPT/Data 场景库，账号学习版本沿用原解析器；不需要把这些库手工转成 Coding 样例。Coding 快照接口继续保留。前端提供来源切换、真实工具流与兼容版本记录，任务及对照用量沿用原 API；未提供的层级、自动演化和同质量收益不作推断。
 
 模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。SkillFlow baseline 首请求的 Kouri Chat/工具调用冒烟已返回 HTTP 200，见[记录](docs/debug/kouri-env-models-20261106.md)；文件、搜索、思考能力、容量和实际费率仍待真实兼容性验收。当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。
 

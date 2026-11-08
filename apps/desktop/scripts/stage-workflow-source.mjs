@@ -10,7 +10,7 @@ export function stageWorkflowSource(repo,destination) {
     'scenarios/paper-submission','scenarios/ppt_master','scenarios/research_ppt',
     'scenarios/file-management','scenarios/general','benchmarks/research_report_agent_v1','benchmarks/research_report_agent_v2','benchmarks/research_report_agent_v3'];
   const files=execFileSync('git',['ls-files','--',...areas],{cwd:repo,encoding:'utf8',windowsHide:true}).trim().split(/\r?\n/)
-    .filter(path=>/\.(?:py|json|ts|md)$/.test(path)&&!/(?:^|\/)(?:tests?|cases|fixtures)(?:\/|\.)/.test(path));
+    .filter(path=>/\.(?:py|json|ts|mjs|md|txt)$/.test(path)&&!/(?:^|\/)(?:tests?|cases|fixtures)(?:\/|\.)/.test(path));
   for(const extra of ['src/motif_core/LICENSE','src/motif_core/PROVENANCE.md','src/adapters/desktop_workflow_server.py','src/adapters/desktop_general.py','src/adapters/desktop_ppt_pipeline.py','src/adapters/desktop_skill_runtime.py','src/adapters/desktop_python_entry.py','src/adapters/desktop_native_providers.py'])if(!files.includes(extra))files.push(extra);
   for(const path of files) {
     const target=join(destination,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(repo,path),target);
@@ -26,7 +26,20 @@ export function stageWorkflowSource(repo,destination) {
     if(name!==basename(name))throw Error('论文修订发布文件名无效');
     cpSync(join(paperRoot,name),join(target,name));
   }
-  for(const name of ['config/geneloop-capabilities.json','config/general-tools.json','config/harless-scenes.json']){
+  const scenes=JSON.parse(readFileSync(join(repo,'config/harless-scenes.json'),'utf8')).scenes;
+  for(const scene of scenes){
+    const selected=scene.rsi?.runtime_bundle;if(!selected)continue;
+    if(!/^motif-libraries\/[a-zA-Z0-9_-]+$/.test(selected))throw Error('Invalid registered library path');
+    const release=join(repo,selected),registered=JSON.parse(readFileSync(join(release,'entry.json'),'utf8'));
+    for(const name of ['entry.json',...Object.keys(registered.files)]){
+      if(name!==basename(name))throw Error('Invalid registered library member');
+      const to=join(destination,selected,name);mkdirSync(dirname(to),{recursive:true});cpSync(join(release,name),to);
+    }
+  }
+  for(const name of ['config/geneloop-capabilities.json','config/general-tools.json','config/harless-scenes.json',
+    'config/geneloop-privacy-policy-v1.json','config/rsi-privacy-tools.json','config/rsi-privacy-candidate-tools.json',
+    'config/rsi-privacy-code-compat.json','config/motif-evidence-v1.schema.json','config/motif-evidence-v2.schema.json',
+    'schemas/geneloop-privacy-policy.schema.json','requirements-rsi-privacy.txt']){
     const target=join(destination,name);mkdirSync(dirname(target),{recursive:true});cpSync(join(repo,name),target);
   }
   cpSync(join(repo,'src/adapters/desktop_sitecustomize.py'),join(destination,'sitecustomize.py'));

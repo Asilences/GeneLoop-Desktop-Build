@@ -24,6 +24,16 @@ export function preparePptProgramJob(options:any,value:any){
   const st=lstatSync(path);if(!st.isFile()||st.isSymbolicLink()||st.nlink!==1||st.size>4_000_000)throw Error('program job is not a bounded private file');
   return JSON.parse(readFileSync(path,'utf8'));
  };
+ if(value?.operation==='workflow-certify'){
+  if(Object.keys(value).sort().join(',')!=='file,operation')throw Error('invalid workflow certification request');
+  const path=map(value.file),rel=relative(output,path).split('\\').join('/');
+  if(!/^learning\/ppt-[a-f0-9]{64}\/workflows\/certification\/[a-f0-9]{64}\/plan\.json$/.test(rel))throw Error('workflow certification outside owning learner');
+  const plan=json(path),request=json(map(join(dirname(dirname(dirname(dirname(path)))),'request.json')));
+  if(plan.kind!=='ppt_native_workflow_certification'||plan.user!==request.user||plan.scope!==request.scope||
+    'ppt-'+hash(Buffer.from(plan.user+'\0'+plan.scope))!==rel.split('/')[1])throw Error('workflow certification owner changed');
+  return {argv:[options.node,'--experimental-strip-types',join(root,'scripts/certify-ppt-workflow.mjs'),path],
+   env:{SSS_PYTHON:options.python,GENELOOP_ARTIFACT_RESOURCES:JSON.stringify(options.resources??{})}};
+ }
  if(value?.operation==='capability'){
   if(Object.keys(value).sort().join(',')!=='file,operation')throw Error('invalid public validation request');
   const task=publicPptValidationTask(output,value.file,options.python);

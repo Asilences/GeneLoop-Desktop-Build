@@ -22,12 +22,51 @@ def test_component_proposal_requires_explicit_current_json_and_complete_schema()
         validate_proposal({**proposal, 'default_parameters': {}})
     assert proposal_request({'source': '<svg/>'})['max_tokens'] == 393216
     request = proposal_request({'source': '<svg/>'})
-    assert set(request['tools'][0]['function']['parameters']['required']) == set(proposal)
+    assert request['response_format'] == {'type': 'json_object'}
+    assert 'tools' not in request and 'tool_choice' not in request
+    assert 'exactly description, source, parameters_schema, default_parameters.' in request['messages'][0]['content']
     answer = {'choices': [{'finish_reason': 'tool_calls', 'message': {'tool_calls': [
         {'function': {'name': 'propose_ppt_component', 'arguments': json.dumps(proposal)}}]}}]}
     assert decode_component_proposal(answer) == proposal
     with pytest.raises(ValueError, match='complete_typed'):
         decode_component_proposal({'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(proposal)}}]})
+
+
+def test_json_mode_component_requires_complete_independent_parameters():
+    proposal = {'description': 'Current title page', 'source': 'import sys,json\nprint(json.load(open(sys.argv[1])))',
+                'parameters_schema': {'type': 'object', 'properties': {'title': {'type': 'string'}}, 'required': ['title'], 'additionalProperties': False},
+                'default_parameters': {'title': 'Training'}, 'heldout_parameters': {'title': 'Independent'}}
+    request = proposal_request({'source': '<svg/>'}, independent={'source': '<svg/>'})
+    assert 'default_parameters, heldout_parameters.' in request['messages'][0]['content']
+    assert 'PATH of a UTF-8 JSON file, not JSON text' in request['messages'][0]['content']
+    assert 'Use ONLY training.source' in request['messages'][0]['content']
+    answer = {'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(proposal)}}]}
+    assert decode_component_proposal(answer, independent=True, allow_json_object=True) == proposal
+    for text in (json.dumps(proposal)[:-1], json.dumps({key: value for key, value in proposal.items() if key != 'heldout_parameters'})):
+        answer['choices'][0]['message']['content'] = text
+        with pytest.raises((ValueError, KeyError)):
+            decode_component_proposal(answer, independent=True, allow_json_object=True)
+    answer['choices'][0]['message']['content'] = json.dumps({**proposal, 'heldout_parameters': {}})
+    with pytest.raises(Exception):
+        decode_component_proposal(answer, independent=True, allow_json_object=True)
+    answer['choices'][0]['finish_reason'] = 'length'
+    with pytest.raises(ValueError, match='complete_typed'):
+        decode_component_proposal(answer, independent=True, allow_json_object=True)
+
+
+@pytest.mark.parametrize('schema,parameters', [
+    ({'type': 'object', 'properties': {'y': {'type': 'number'}}}, {'y': 0}),
+    ({'type': 'object', 'properties': {'lines': {'type': 'array', 'items': {'type': 'object', 'properties': {'y': {'type': 'integer'}}}}}}, {'lines': [{'y': 0}]}),
+])
+def test_new_content_only_page_contract_rejects_geometry_parameters_without_changing_legacy_decoder(schema, parameters):
+    proposal = {'description': 'Diagnostic layout', 'source': 'import sys,json\nprint(json.load(open(sys.argv[1])))',
+                'parameters_schema': schema, 'default_parameters': parameters}
+    answer = {'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(proposal)}}]}
+    assert decode_component_proposal(answer, allow_json_object=True) == proposal
+    with pytest.raises(ValueError, match='requires_constant_geometry'):
+        decode_component_proposal(answer, allow_json_object=True, text_content_only=True)
+    request = proposal_request({'parameter_policy': 'text_content_only_v1'})
+    assert 'Never ask callers to supply x, y' in request['messages'][0]['content']
 
 
 def test_component_renderer_creates_actual_png_and_requires_fresh_destination(tmp_path):

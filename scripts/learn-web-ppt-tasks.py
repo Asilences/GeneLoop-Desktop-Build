@@ -136,11 +136,16 @@ def task_info(output,identity,request,*,baseline=False):
     locks[binding.relative_to(output).as_posix()]=sha(binding)
     schemas=compiler.accounting.native_schemas(effective['tools'])
     sources=sorted(row.get('version_sha256','') for row in state.get('scene_inputs',[]))
-    if not sources or any(not SHA.fullmatch(v) for v in sources):raise ValueError('missing frozen source versions')
     question=' '.join(' '.join(p['text'] for p in req['content'] if p.get('type')=='text').casefold().split())
+    if any(not SHA.fullmatch(v) for v in sources):raise ValueError('missing frozen source versions')
+    source_kind='uploaded_materials'
+    if not sources:
+        if not question:raise ValueError('missing frozen task content')
+        sources=[digest({'user_content':req['content']})]
+        source_kind='immutable_user_request'
     decision=decision_root(output,identity,request,req,state)
     return {'task_id':identity,'task_dir':str(task),'state':state,'effective':effective,'request':req,'schemas':schemas,'totals':totals,'locks':locks,
-        'decision_id':decision,'source_signature':digest(sources),'question_sha256':digest(question),
+        'decision_id':decision,'source_signature':digest(sources),'source_kind':source_kind,'question_sha256':digest(question),
         'compatibility':digest({'tools':schemas,'model':effective.get('model'),'provider':effective.get('provider'),
             'reasoning':effective.get('reasoning_effort'),'skill':effective.get('skill_package_sha256'),
             'instructions':effective.get('instructions_sha256'),'compression':effective.get('compression')})}
@@ -292,6 +297,13 @@ def advance(request_path):
                 if single is not None:turns[single['id']]=single
             except (ValueError,KeyError,OSError,TypeError) as error:excluded.append({'task_id':identity,'reason':str(error)[:160]})
         reviewed=reviews(output,store,request,turns)
+        from src.adapters.ppt_background_review import advance_reviews
+        advance_reviews(output,store,infos,turns,delivery=delivery)
+        from src.adapters.ppt_workflow_learning import advance_workflow_learning
+        try:advance_workflow_learning(output,store,request,infos,turns,delivery=delivery)
+        except (ValueError,KeyError,OSError,TypeError) as error:
+            (store/'workflows').mkdir(exist_ok=True,mode=0o700)
+            save(store/'workflows/status.json',{'status':'rejected','reason':str(error)[:200],'new_model_requests':0})
         try:advance_programs(output,store,request,infos,turns,reviewed,delivery=delivery,positive=positive,costs=comparison_costs)
         except (ValueError,KeyError,OSError,TypeError,subprocess.SubprocessError) as error:
             save(store/'program-status.json',{'status':'failed','reason':str(error)[:200],'extra_provider_requests':0})

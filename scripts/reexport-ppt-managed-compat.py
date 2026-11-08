@@ -69,8 +69,118 @@ def compatibility_record(candidate, validation_record):
 
 
 compat.compatibility_record = compatibility_record
+
+PPT_AGENT_LOCKS = {'scenarios/ppt_master/page-layouts.json', 'scenarios/ppt_master/third_party/SlideSpeak-LICENSE.txt', 'src/adapters/ppt_workflow_learning.py', 'scenarios/ppt_master/themes.json', 'scenarios/ppt_master/third_party/Presenton-NOTICE.txt', 'scenarios/ppt_master/workflow-contracts.json', 'scenarios/ppt_master/third_party/Presenton-LICENSE.txt', 'src/adapters/ppt_design.ts', 'src/adapters/ppt_execution.ts', 'scenarios/ppt_master/third_party/Codex-Presentations-methods.json', 'src/adapters/ppt_page_renderer.py', 'src/adapters/ppt_workflow_host.ts', 'scenarios/ppt_master/design-conventions.md', 'src/adapters/ppt_write_learning.py', 'scenarios/ppt_master/third_party/slide-maker-LICENSE.txt', 'src/adapters/ppt_program_evaluation.py', 'src/adapters/ppt_write_tool.ts', 'src/adapters/ppt_background_review.py', 'src/adapters/ppt_workflow_runtime.ts', 'src/adapters/ppt_write_runtime.ts', 'scenarios/ppt_master/SKILL.md'}
+# Explicit source review: main PR159/160 plus this PPT delta; unknown changes still fail.
+REVIEWED_PPT_AGENT_MAIN_DELTA = {'paper': {'scenarios/ppt_master/design-profiles.json',
+           'scenarios/ppt_master/runtime-policy.md',
+           'scripts/compile-witnessed-read-chains.py',
+           'scripts/harless_gateway.mjs',
+           'scripts/harness-web.py',
+           'scripts/learn-web-paper-document-motif.py',
+           'scripts/learn-web-paper-tasks.py',
+           'scripts/learn-web-ppt-tasks.py',
+           'scripts/prepare-native-host.mjs',
+           'scripts/reexport-ppt-managed-compat.py',
+           'scripts/serve-web-budget.py',
+           'scripts/web_budget_broker.mjs',
+           'src/adapters/artifact_motif_runtime.ts',
+           'src/adapters/capability_proposal.py',
+           'src/adapters/deepseek_cost_gate.py',
+           'src/adapters/dsh_web_tasks.ts',
+           'src/adapters/geneloop_native_work.ts',
+           'src/adapters/harless_ppt_learning.ts',
+           'src/adapters/harless_reasoning.ts',
+           'src/adapters/harless_rsi_bundle.py',
+           'src/adapters/ppt_component_learning.py',
+           'src/adapters/ppt_component_tool.ts',
+           'src/adapters/ppt_delivery_pipeline.ts',
+           'src/adapters/ppt_delivery_quality.py',
+           'src/adapters/ppt_delivery_runner.py',
+           'src/adapters/ppt_delivery_state.ts',
+           'src/adapters/ppt_page_learning.py',
+           'src/adapters/ppt_program_learning.py',
+           'src/adapters/ppt_program_learning.ts',
+           'src/adapters/task_identity.py',
+           'src/adapters/web_task_request.ts',
+           'src/motif_core/offline/edge_compiler.py'},
+ 'ppt': {'scenarios/ppt_master/design-profiles.json',
+         'scenarios/ppt_master/prompt.md',
+         'scenarios/ppt_master/runtime-policy.md',
+         'scenarios/ppt_master/server.py',
+         'scenarios/research_ppt/motif_v6.py',
+         'scripts/harless_gateway.mjs',
+         'scripts/harness-web.py',
+         'scripts/learn-ppt-master-motif.py',
+         'scripts/learn-web-ppt-tasks.py',
+         'scripts/prepare-native-host.mjs',
+         'scripts/reexport-ppt-managed-compat.py',
+         'scripts/serve-web-budget.py',
+         'scripts/web_budget_broker.mjs',
+         'src/adapters/artifact_motif_runtime.ts',
+         'src/adapters/capability_proposal.py',
+         'src/adapters/deepseek_cost_gate.py',
+         'src/adapters/dsh_web_tasks.ts',
+         'src/adapters/geneloop_native_work.ts',
+         'src/adapters/harless_ppt_learning.ts',
+         'src/adapters/harless_reasoning.ts',
+         'src/adapters/harless_rsi_bundle.py',
+         'src/adapters/ppt_component_learning.py',
+         'src/adapters/ppt_component_tool.ts',
+         'src/adapters/ppt_delivery_pipeline.ts',
+         'src/adapters/ppt_delivery_quality.py',
+         'src/adapters/ppt_delivery_runner.py',
+         'src/adapters/ppt_delivery_state.ts',
+         'src/adapters/ppt_page_learning.py',
+         'src/adapters/ppt_program_learning.py',
+         'src/adapters/ppt_program_learning.ts',
+         'src/adapters/web_task_request.ts'}}
+
 if __name__ == '__main__':
-    if '--evolution-execution-compat' in sys.argv:
+    if '--ppt-native-write-replay' in sys.argv:
+        sys.argv.remove('--ppt-native-write-replay')
+        reviewed = {'paper-web-v110': {'scenarios/ppt_master/workflow-contracts.json',
+                            'scripts/reexport-ppt-managed-compat.py',
+                            'src/adapters/harless_ppt_learning.ts',
+                            'src/adapters/ppt_component_tool.ts',
+                            'src/adapters/ppt_program_broker.ts',
+                            'src/adapters/ppt_program_learning.py',
+                            'src/adapters/ppt_workflow_learning.py',
+                            'src/adapters/ppt_workflow_runtime.ts',
+                            'src/adapters/ppt_write_learning.py',
+                            'src/adapters/ppt_write_runtime.ts',
+                            'src/adapters/ppt_write_tool.ts'},
+         'ppt-master-v108': {'scenarios/ppt_master/workflow-contracts.json',
+                             'scripts/reexport-ppt-managed-compat.py',
+                             'src/adapters/harless_ppt_learning.ts',
+                             'src/adapters/ppt_component_tool.ts',
+                             'src/adapters/ppt_program_broker.ts',
+                             'src/adapters/ppt_program_learning.py',
+                             'src/adapters/ppt_workflow_learning.py',
+                             'src/adapters/ppt_workflow_runtime.ts',
+                             'src/adapters/ppt_write_learning.py',
+                             'src/adapters/ppt_write_runtime.ts',
+                             'src/adapters/ppt_write_tool.ts'}}
+        for paths in reviewed.values():
+            paths.update({'src/adapters/dsh_web_tasks.ts', 'src/adapters/geneloop_native_work.ts',
+                          'src/adapters/ppt_program_learning.ts', 'src/adapters/ppt_component_render.py',
+                          'src/adapters/ppt_design_preflight.py'})
+        compat.RELEASES = [
+            ('ppt-master-v108', 'ppt-master-v109', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed['ppt-master-v108']),
+            ('paper-web-v110', 'paper-web-v111', 'paper-proofreading', 'scenarios/paper_proofreading/document-read-contracts.json', reviewed['paper-web-v110']),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= PPT_AGENT_LOCKS | {'src/adapters/ppt_workflow_certification.py', 'scripts/certify-ppt-workflow.mjs'}
+    elif '--ppt-agent-delivery-learning' in sys.argv:
+        sys.argv.remove('--ppt-agent-delivery-learning')
+        reviewed = REVIEWED_PPT_AGENT_MAIN_DELTA
+        compat.RELEASES = [
+            ('ppt-master-v82', 'ppt-master-v108', 'ppt', 'scenarios/ppt_master/contracts.json', reviewed['ppt']),
+            ('paper-web-v84', 'paper-web-v110', 'paper-proofreading', 'scenarios/paper_proofreading/document-read-contracts.json', reviewed['paper']),
+        ]
+        compat.REGISTRY_SELECTED = {old: old for old, *_ in compat.RELEASES}
+        compat.ADDITIONAL_LOCKS |= PPT_AGENT_LOCKS
+    elif '--evolution-execution-compat' in sys.argv:
         sys.argv.remove('--evolution-execution-compat')
         reviewed = {'src/adapters/capability_evolution_agent.py',
                     'src/adapters/rsi_quality.py',

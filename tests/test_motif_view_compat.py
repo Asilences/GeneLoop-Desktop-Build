@@ -38,3 +38,28 @@ def test_read_only_display_compatibility_preserves_program_and_exact_code_guards
     # Old bytes remain archived; the new gateway must still invalidate them.
     with pytest.raises(ValueError, match='certified runtime code changed'):
         load_product_bundle(ROOT, old, scene)
+
+
+@pytest.mark.parametrize('previous,release,scene', [
+    ('paper-web-v85','paper-web-v86','paper-proofreading'),
+    ('ppt-master-v83','ppt-master-v84','ppt'),
+])
+def test_runtime_catalog_preserves_original_program_and_locks_its_new_dependencies(previous,release,scene,monkeypatch):
+    from src.adapters import harless_rsi_bundle as loader
+    old,new=(ROOT/'motif-libraries'/name for name in (previous,release))
+    for name in ('library.json','online-manifest.json','task.json','tool-schemas.json','source-evidence.json'):
+        assert (new/name).read_bytes()==(old/name).read_bytes(),name
+    cert=read(new/'certification.json')
+    assert {'src/adapters/harless_motif_catalog.ts','config/motif-evidence-v2.schema.json',
+            'scripts/reexport-motif-catalog-compat.py'} <= set(cert['code_locks'])
+    assert loader.load_product_bundle(ROOT,new,scene)['runtime_mode']=='execute'
+    record=read(new/'learning-report.json')['runtime_catalog_compatibility']
+    assert record['same_online_program'] and record['same_library_and_evidence']
+    assert record['model_requests']==record['new_training_tasks']==0
+    assert not record['quality_cost_promoted']
+    real=loader.sha
+    for changed in ('harless_motif_catalog.ts','motif-evidence-v2.schema.json'):
+        monkeypatch.setattr(loader,'sha',lambda path: '0'*64 if path.name==changed else real(path))
+        with pytest.raises(ValueError,match='certified runtime code changed'):
+            loader.load_product_bundle(ROOT,new,scene)
+    monkeypatch.setattr(loader,'sha',real)

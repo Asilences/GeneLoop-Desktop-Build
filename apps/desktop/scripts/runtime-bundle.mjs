@@ -5,6 +5,7 @@ import { join, posix } from 'node:path';
 import {buildSync} from 'esbuild';
 import {fileURLToPath} from 'node:url';
 import {nativeCommonPackages} from '../runtime/common-tool-catalog.mjs';
+import {stagePptWorkflow} from './stage-ppt-workflow.mjs';
 
 export const pptRendererFiles = readdirSync(new URL('../../../scenarios/research_ppt/ts/',import.meta.url))
   .filter(name=>name.endsWith('.ts')).map(name=>new URL('../../../scenarios/research_ppt/ts/'+name,import.meta.url));
@@ -71,5 +72,6 @@ export function stageRuntime(app, destination, dependencies = app) {
   const native=original.replace(rootLine,"const ROOT=resolve(process.env.GENELOOP_NATIVE_SOURCE_ROOT);");
   buildSync({stdin:{contents:native,resolveDir:fileURLToPath(new URL('../../../scenarios/paper_proofreading/',import.meta.url)),sourcefile:'revision_session.ts',loader:'ts'},
     outfile:join(destination,'paper-revision.mjs'),bundle:true,platform:'node',format:'esm',packages:'external',target:'node22'});
+  stagePptWorkflow(join(app,'../..'),destination);
   return staged.size;
 }

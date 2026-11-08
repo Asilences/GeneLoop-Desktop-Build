@@ -3,6 +3,11 @@ import { createServer, request as httpRequest } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
+// Existing official Web sessions used the sss- prefix before per-turn routes.
+// Both are server-minted identities; the authenticated bind still owns a turn.
+const sessionId = '(?:session-[a-f0-9-]{36}|sss-[a-f0-9]{32})';
+const validSessionId = new RegExp('^' + sessionId + '$');
+
 export function startBroker({ port, target, controlToken }) {
   const destination = new URL(target);
   if (destination.protocol !== 'http:' || destination.hostname !== '127.0.0.1' ||
@@ -31,7 +36,7 @@ export function startBroker({ port, target, controlToken }) {
         }
         const payload = JSON.parse(raw);
         if (Object.keys(payload).sort().join(',') !== 'budget_session_id,session_id' ||
-            typeof payload.session_id !== 'string' || !/^session-[a-f0-9-]{36}$/.test(payload.session_id) ||
+            typeof payload.session_id !== 'string' || !validSessionId.test(payload.session_id) ||
             typeof payload.budget_session_id !== 'string' || !/^turn-[a-f0-9]{32}$/.test(payload.budget_session_id))
           throw Error('Invalid budget route');
         const current = routes.get(payload.session_id);
@@ -46,8 +51,8 @@ export function startBroker({ port, target, controlToken }) {
       } catch { reply(res, 400, { error: 'Invalid budget broker control request' }); }
       return;
     }
-    const searchSession = /^\/v1\/search\/(session-[a-f0-9-]{36})\/messages$/.exec(req.url ?? '')?.[1];
-    const visionSession = /^\/v1\/vision\/(session-[a-f0-9-]{36})\/chat\/completions$/.exec(req.url ?? '')?.[1];
+    const searchSession = new RegExp('^/v1/search/(' + sessionId + ')/messages$').exec(req.url ?? '')?.[1];
+    const visionSession = new RegExp('^/v1/vision/(' + sessionId + ')/chat/completions$').exec(req.url ?? '')?.[1];
     if (req.method !== 'POST' || (req.url !== '/v1/chat/completions' && !searchSession && !visionSession)) {
       reply(res, 404, { error: 'Unknown model route' }); return;
     }

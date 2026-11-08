@@ -8,6 +8,7 @@ import {commandArgv,commandLayout} from './geneloop_shell.ts';
 import {officeEvidenceVersion} from './geneloop_presentation.ts';
 import {digest} from '../motif_core/online_skill_runtime.mjs';
 import {deliveryProgress} from './ppt_delivery_state.ts';
+import {pptDesignTool,pptStartTool,pptPageTool} from './ppt_design.ts';
 
 const sha=(bytes:any)=>createHash('sha256').update(bytes).digest('hex');
 const source=(name:string)=>readFileSync(new URL(name,import.meta.url),'utf8');
@@ -21,7 +22,7 @@ export const pptDeliveryTool={name:'finalize_ppt',
 
 const exporterCommand=/(?:^|[;&|\n(])\s*(?:[^\s;&|]*\/)?python(?:3(?:\.\d+)?)?\s+(?:-(?:I|B|u)\s+)*["']?(?:\/opt\/geneloop\/ppt-master|\$\{?[a-zA-Z_][a-zA-Z0-9_]*\}?)\/scripts\/svg_to_pptx\.py["']?\s+(?:"([^"]+)"|'([^']+)'|([^\s;&|]+))/;
 export function managedDefaultExport(command:unknown){
- if(typeof command!=='string'||/--(?:roundtrip|quick-generate)|\s--help(?:\s|$)/.test(command))return false;
+ if(typeof command!=='string'||/--roundtrip|\s--help(?:\s|$)/.test(command))return false;
  if(/(?:^|\s)(?:-s|--source)(?:\s|=)/.test(command)){
   const source=/(?:^|\s)(?:-s|--source)(?:\s+|=)["']?([^\s"';&|]+)/.exec(command)?.[1];
   if(!['output','svg_output'].includes(source??''))return false;
@@ -35,13 +36,20 @@ export function managedExportProject(command:unknown){
  return project?.startsWith('/work/projects/')?project:null;
 }
 
+/** Only a complete, literal Generate command can be continued without a shell. */
+export function directManagedProject(command:unknown){
+ if(typeof command!=='string')return null;
+ const match=/^\s*(?:python|python3)\s+["']?\/opt\/geneloop\/ppt-master\/scripts\/svg_to_pptx\.py["']?\s+(?:"(\/work\/projects\/[\w\/-]+)"|'(\/work\/projects\/[\w\/-]+)'|(\/work\/projects\/[\w\/-]+))(?:\s+--(?:with-notes|no-animations))*\s*$/.exec(command);
+ return match?.[1]??match?.[2]??match?.[3]??null;
+}
+
 export function pptDeliveryScene(scene:any,enabled:boolean){
  if(!enabled||scene.id!=='ppt'||scene.ppt_execution_strategy!=='ppt_master')return scene;
- return {...scene,allowed_tools:[...new Set([...scene.allowed_tools,pptPreparationTool.name,pptDeliveryTool.name])]};
+ return {...scene,allowed_tools:[...new Set([...scene.allowed_tools,pptPreparationTool.name,pptDeliveryTool.name,pptDesignTool.name,pptStartTool.name,pptPageTool.name])]};
 }
 
 export function pptDeliveryGraphTools(scene:any,tools:any[]){
- const names=[pptDeliveryTool,pptPreparationTool];
+ const names=[pptDeliveryTool,pptPreparationTool,pptDesignTool,pptStartTool,pptPageTool];
  const rows=tools.filter(row=>names.some(tool=>tool.name===row.name));
  if(!rows.length)return tools;
  for(const row of rows){
@@ -78,6 +86,7 @@ export function deliveryDependencies(workspace:string,project:string,manifest:st
  if(!manifest.startsWith(project+'/')||!lstatSync(manifestPath).isFile())throw Error('delivery_manifest_outside_project');
  const files:any[]=[];
  const notesFromTotal=JSON.parse(readFileSync(manifestPath,'utf8')).notes_source==='total';
+ const manifestRelative=relative(directory,manifestPath).split('\\').join('/');
  let bytes=0;
  const visit=(path:string)=>{
   for(const leaf of readdirSync(path).sort()){
@@ -89,37 +98,92 @@ export function deliveryDependencies(workspace:string,project:string,manifest:st
    // Source/spec/notes and other validation files remain version dependencies.
    if(['validation/workflow.log','validation/svg_quality_report.json','validation/presentation.report.json'].includes(logicalPath))continue;
    if(notesFromTotal&&logicalPath.startsWith('notes/')&&file.endsWith('.md')&&leaf!=='total.md')continue;
+   const relevant=logicalPath===manifestRelative||['spec_lock.md','design_spec.md','geneloop-project.json'].includes(logicalPath)||
+    logicalPath.startsWith('svg_output/')&&logicalPath.endsWith('.svg')||
+    logicalPath.startsWith('notes/')&&logicalPath.endsWith('.md')||
+    logicalPath.startsWith('validation/')&&/\.(json|md)$/.test(logicalPath);
+   if(!relevant)continue;
    if(!stat.isFile()||stat.nlink!==1||files.length>=4096||(bytes+=stat.size)>200_000_000)throw Error('delivery_dependency_protocol_bound');
    files.push({path:logicalPath,sha256:sha(readFileSync(file))});
   }
  };
  visit(directory);
- for(const row of [...files]){
+ for(let index=0;index<files.length;index++){
+  const row=files[index];
   if(!row.path.endsWith('.svg'))continue;
-  const text=readFileSync(join(directory,row.path),'utf8');
+  const rowLogical=row.path.startsWith('@asset:')?row.path.slice(7):project+'/'+row.path;
+  const text=readFileSync(workspacePath(workspace,rowLogical),'utf8');
   for(const match of text.matchAll(/(?:xlink:)?href\s*=\s*["']([^"']+)["']/g)){
    const reference=match[1];
    if(reference.startsWith('#')||reference.startsWith('data:'))continue;
    if(/^[a-z]+:/i.test(reference)||reference.includes('&'))throw Error('delivery_asset_reference_unsupported');
-   const logical=posix.resolve(posix.dirname(project+'/'+row.path),reference);
-   if(logical.startsWith(project+'/'))continue;
-   if(!/\.(png|jpe?g|gif|webp)$/i.test(logical))throw Error('delivery_external_asset_unsupported');
+   const logical=posix.resolve(posix.dirname(rowLogical),reference);
+   const key=logical.startsWith(project+'/')?logical.slice(project.length+1):'@asset:'+logical;
+   if(files.some(file=>file.path===key))continue;
+   if(!/\.(png|jpe?g|gif|webp|svg)$/i.test(logical))throw Error('delivery_external_asset_unsupported');
    const asset=workspacePath(workspace,logical),stat=lstatSync(asset);
    if(!stat.isFile()||stat.nlink!==1||stat.size>30_000_000)throw Error('delivery_asset_changed');
-   files.push({path:'@asset:'+logical,sha256:sha(readFileSync(asset))});
+   if(files.length>=4096||(bytes+=stat.size)>200_000_000)throw Error('delivery_dependency_protocol_bound');
+   files.push({path:key,sha256:sha(readFileSync(asset))});
   }
  }
  const profileBytes=readFileSync(new URL('../../scenarios/ppt_master/design-profiles.json',import.meta.url));
  return {files,environment:officeEvidenceVersion(resources),profile_sha256:sha(profileBytes),
   runner_sha256:sha(source('./ppt_delivery_runner.py')),preflight_sha256:sha(source('./ppt_design_preflight.py')),
   annotation_repair_sha256:sha(source('./ppt_annotation_repair.py')),
+  pipeline_sha256:sha(source('./ppt_delivery_pipeline.ts')),
   preparation_sha256:sha(source('./ppt_preparation_runner.py')),
   runtime_policy_sha256:sha(readFileSync(new URL('../../scenarios/ppt_master/runtime-policy.md',import.meta.url))),
   state_sha256:sha(source('./ppt_delivery_state.ts'))};
 }
 
-async function runInSession(task:any,request:any,resources:any,signal?:AbortSignal){
+export function pptPreparationView(value:any){
+ return {status:value.status,reused_calibration:value.reused_calibration,normal:value.normal,bold:value.bold,
+  glyph_review:value.glyph_review,next_action:value.next_action,evidence_id:value.key};
+}
+export function pptDeliveryView(value:any){
+ return {delivery_id:value.delivery_id,project:value.project,mechanical_status:value.mechanical_status,
+  review_status:value.review_status,reused_checks:value.reused_checks,convergence_status:value.convergence_status,
+  next_action:value.next_action,retryable:value.retryable,findings:value.findings,artifacts:value.artifacts,review_pages:value.review_pages,
+  pages:(value.page_receipts??[]).map((row:any)=>({page:row.page,source:row.source,source_sha256:row.source_sha256})),
+  stage_logs:(value.commands??[]).map((row:any)=>({stage:row.stage,exit_code:row.exit_code,log:row.log}))};
+}
+
+export function pptReviewPages(task:any,receipt:any){
+ const journal=join(task.output,'ppt-visual-observations.jsonl');
+ const seen=new Set<string>();
+ if(existsSync(journal))for(const line of readFileSync(journal,'utf8').split('\n')){
+  try{
+   const row=JSON.parse(line);
+   if(row.scope==='tool_returned_bound_image_quality_unknown'&&/^[a-f0-9]{64}$/.test(row.sha256))seen.add(row.sha256);
+  }catch{/* An interrupted journal append supplies no observation evidence. */}
+ }
+ return (receipt.artifacts??[]).filter((row:any)=>row.path.endsWith('.png')&&!seen.has(row.sha256))
+  .map((row:any)=>({path:row.path,sha256:row.sha256}));
+}
+
+export async function recordPptVisualObservation(task:any,execution:any,result:any,attachments?:any){
+ const image=result?.content?.find((row:any)=>row.type==='image');
+ if(execution.name!=='read_image'||result?.isError||!image)return;
+ const logical=execution.arguments?.file_path??execution.arguments?.path;
+ try{
+  if(typeof logical!=='string'||!logical.startsWith('/work/outputs/')||!logical.endsWith('.png'))return;
+  const path=workspacePath(task.workspace,logical);
+  const raw=readFileSync(path),version=sha(raw),reference=image.attachment??result.value?.image;
+  if(!/^sha256:[a-f0-9]{64}$/.test(reference?.attachmentId??''))return;
+  if(reference.attachmentId!=='sha256:'+version){
+   if(!attachments?.saveImage)return;
+   const normalized=await attachments.saveImage({data:raw,mediaType:'image/png',name:posix.basename(logical)});
+   if(normalized.attachmentId!==reference.attachmentId)return;
+  }
+  appendFileSync(join(task.output,'ppt-visual-observations.jsonl'),JSON.stringify({call_id:execution.callId,path:logical,
+   sha256:version,attachment_id:reference.attachmentId,scope:'tool_returned_bound_image_quality_unknown'})+'\n',{mode:0o600});
+ }catch{/* An invalid image path supplies no observation evidence. */}
+}
+
+export async function runPptInSession(task:any,request:any,resources:any,signal?:AbortSignal){
  const code=source('./ppt_design_preflight.py')+'\n'+(request.operation==='prepare'?source('./ppt_preparation_runner.py'):
+  request.operation==='compose'?source('./ppt_page_renderer.py'):
   source('./ppt_annotation_repair.py')+'\n'+source('./ppt_delivery_runner.py'));
  const script=Buffer.from(code).toString('base64');
  const encoded=Buffer.from(JSON.stringify(request)).toString('base64');
@@ -161,7 +225,37 @@ function verifiedArtifacts(task:any,receipt:any){
  });
 }
 
+export function cachedPptDelivery(task:any,receipt:any,key:string){
+ if(receipt.key!==key)return null;
+ if(receipt.mechanical_status==='failed'&&receipt.retryable!==true)
+  return {...receipt,reused_checks:true,convergence_status:'unchanged',next_action:'repair_specific_findings_before_rechecking'};
+ if(receipt.mechanical_status!=='passed'||!verifiedArtifacts(task,receipt))return null;
+ const review_pages=pptReviewPages(task,receipt);
+ return {...receipt,reused_checks:true,review_pages,next_action:review_pages.length?'read_image_for_review_pages':'present_current_delivery'};
+}
+
 export function registerPptDeliveryTool(ctx:any,current:(session:string)=>any,resources:any={}){
+ ctx.on?.('tools/execute',async(execution:any,next:any)=>{
+  const project=execution.name==='bash'?directManagedProject(execution.arguments?.command):null;
+  const task=current(execution.agent?.session?.id)?.task;
+  if(!project||typeof ctx.tools.execute!=='function'||task?.status!=='running'||task.scene?.id!=='ppt'||
+     task.scene?.ppt_execution_strategy!=='ppt_master'||task.scene_options?.allow_output!==true)return next();
+  workspacePath(task.workspace,project);
+  const callId=execution.callId+':managed-delivery';
+  appendFileSync(join(task.output,'ppt-delivery-audit.jsonl'),JSON.stringify({kind:'ppt_export_continued',
+   call_id:execution.callId,arguments_sha256:digest(execution.arguments),child_call_id:callId,project})+'\n',{mode:0o600});
+  const result=await ctx.tools.execute({name:'finalize_ppt',arguments:{project},callId,rootCallId:execution.rootCallId,
+   parent:execution.token,agent:execution.agent,signal:execution.signal});
+  if(result.isError)return result;
+  const view=pptDeliveryView(result.value);
+  return {isError:false,value:{kind:'foreground',exitCode:result.value.mechanical_status==='passed'?0:1,
+   signal:null,timedOut:false,aborted:false,timeoutMs:900000,
+   stdout:{text:JSON.stringify({continued_by:'finalize_ppt',...view}),truncated:false},stderr:{text:'',truncated:false}}};
+ },{global:true});
+ ctx.on?.('tools/result',async(execution:any,result:any)=>{
+  const task=current(execution.agent?.session?.id)?.task;
+  if(task?.status==='running'&&task.scene?.id==='ppt')await recordPptVisualObservation(task,execution,result,ctx.get?.('attachments'));
+ },{global:true});
  ctx.tools.guard?.((execution:any)=>{
   const session=execution.agent?.session?.id,task=current(session)?.task;
   if(task?.status!=='running'||task.scene?.id!=='ppt'||task.scene?.ppt_execution_strategy!=='ppt_master')return;
@@ -177,18 +271,19 @@ export function registerPptDeliveryTool(ctx:any,current:(session:string)=>any,re
   if(typeof command==='string'&&/python(?:3(?:\.\d+)?)?\s+[^;&|\n]*svg_quality_checker\.py/.test(command)&&
      !/\s--help\b/.test(command)&&hasGenerateProject(task))
    return 'Generate的官方检查由finalize_ppt统一执行。请先完成页面与讲者备注，然后调用finalize_ppt。宿主处理明确错误并保留原始报告，warning按当前画面与任务要求评估，避免逐条猜测式微调。';
-  if(typeof command==='string'&&/(?:\bfc-(?:match|list|query)\b|text_measure\.py(?:["']?\s)|fontTools|pdffonts\b)/.test(command)&&!/(?:\s--help\b)/.test(command))
+  if(typeof command==='string'&&/(?:\bfc-(?:match|list|query)\b|\btext_measure\b|fontTools|pdffonts\b)/.test(command)&&!/(?:\s--help\b)/.test(command))
    return '字体解析与角色测量由prepare_ppt完成。使用该工具当前回执中的字体与normal/bold表制作；实际输出检查使用finalize_ppt。需要管理员处理的环境故障请保留具体错误。';
   if(typeof command==='string'&&command.includes('/work/outputs/')&&
      /(?:get_text\s*\(\s*["'](?:rawdict|dict|words)["']|get_bboxlog\s*\(|get_texttrace\s*\()/.test(command))
    return '成品的字符框、span和字体度量诊断由共同交付检查处理。使用finalize_ppt的具体finding与read_image画面定位问题；字符框相交不单独触发修订。原始资料的文字抽取仍可按来源路径进行。';
   if(!managedDefaultExport(command))return;
+  if(directManagedProject(command)&&typeof ctx.tools.execute==='function'&&task.scene_options?.allow_output===true)return;
   const project=managedExportProject(command);
   appendFileSync(join(task.output,'ppt-delivery-audit.jsonl'),JSON.stringify({kind:'ppt_export_redirected',
    task_id:task.request?.task_id,command_sha256:sha(command)})+'\n',{mode:0o600});
   return '此Generate导出通过finalize_ppt执行。传入完整project路径'+(project?' '+project:'，将当前命令中的项目变量换成其真实/work/projects路径')+'。宿主生成清单并运行官方检查、PPTX导出及PDF/PNG渲染。';
  });
- ctx.tools.register({...pptPreparationTool,output:{schema:{type:'object'},render:(_args:any,value:any)=>[{type:'text',text:JSON.stringify(value)}]},
+ ctx.tools.register({...pptPreparationTool,output:{schema:{type:'object'},render:(_args:any,value:any)=>[{type:'text',text:JSON.stringify(pptPreparationView(value))}]},
   async execute(args:any,execution:any){
    const task=current(execution?.agent?.session?.id)?.task;
    if(task?.status!=='running'||task.scene?.id!=='ppt'||task.scene.ppt_execution_strategy!=='ppt_master'||task.scene_options?.allow_output!==true)
@@ -197,11 +292,11 @@ export function registerPptDeliveryTool(ctx:any,current:(session:string)=>any,re
    if(locks.has(task.workspace))throw Error('delivery_already_running');
    locks.add(task.workspace);
    try{
-    return await runInSession(task,{operation:'prepare',project:args.project,environment:officeEvidenceVersion(resources),
+    return await runPptInSession(task,{operation:'prepare',project:args.project,environment:officeEvidenceVersion(resources),
      implementation_sha256:sha(source('./ppt_preparation_runner.py')+source('./ppt_design_preflight.py'))},resources,execution.signal);
    }finally{locks.delete(task.workspace);}
   }});
- ctx.tools.register({...pptDeliveryTool,output:{schema:{type:'object'},render:(_args:any,value:any)=>[{type:'text',text:JSON.stringify(value)}]},
+ ctx.tools.register({...pptDeliveryTool,output:{schema:{type:'object'},render:(_args:any,value:any)=>[{type:'text',text:JSON.stringify(pptDeliveryView(value))}]},
   async execute(args:any,execution:any){
    const invocationArguments={...args};
    const session=execution?.agent?.session?.id;
@@ -234,10 +329,10 @@ export function registerPptDeliveryTool(ctx:any,current:(session:string)=>any,re
      manifestValue.notes_source='total';
      writeFileSync(manifestFile,JSON.stringify(manifestValue),{mode:0o600});
     }
-    const profile=args.profile??'academic-readable-v1';
+    const profile=args.profile??'general-readable-v1';
     const profiles=JSON.parse(readFileSync(new URL('../../scenarios/ppt_master/design-profiles.json',import.meta.url),'utf8'));
     if(!Object.hasOwn(profiles.profiles,profile))throw Error('delivery_profile_unknown');
-    await runInSession(task,{operation:'prepare',project:args.project,environment:officeEvidenceVersion(resources),
+    await runPptInSession(task,{operation:'prepare',project:args.project,environment:officeEvidenceVersion(resources),
      implementation_sha256:sha(source('./ppt_preparation_runner.py')+source('./ppt_design_preflight.py'))},resources,execution.signal);
     const dependencies=deliveryDependencies(task.workspace,args.project,args.manifest,resources);
     const fontRules=(context.fontRules??[]).filter((rule:any)=>rule.environment===dependencies.environment&&rule.training_task!==task.request.task_id);
@@ -248,12 +343,12 @@ export function registerPptDeliveryTool(ctx:any,current:(session:string)=>any,re
     const path=join(folder,key+'.json');
     if(existsSync(path)){
      const old=JSON.parse(readFileSync(path,'utf8'));
-     if(old.key===key&&verifiedArtifacts(task,old))return {...old,reused_checks:true,next_action:'read_image'};
-     if(old.key===key&&old.mechanical_status==='failed'&&old.retryable!==true)
-      return {...old,reused_checks:true,convergence_status:'unchanged',next_action:'repair_specific_findings_before_rechecking'};
+     const cached=cachedPptDelivery(task,old,key);
+     if(cached)return cached;
     }
     const output='/work/outputs/ppt-delivery-'+randomUUID();
-    const result=await runInSession(task,{...args,profile,output,font_rules:fontRules},resources,execution.signal);
+    const integrated=existsSync(join(workspacePath(task.workspace,args.project),'geneloop-project.json'));
+    const result=await runPptInSession(task,{...args,profile,output,font_rules:fontRules,integrated_generate:integrated},resources,execution.signal);
     const after=deliveryDependencies(task.workspace,args.project,args.manifest,resources);
     const afterVersions=new Map(after.files.map(row=>[row.path,row.sha256]));
     for(const file of dependencies.files){
@@ -273,6 +368,10 @@ export function registerPptDeliveryTool(ctx:any,current:(session:string)=>any,re
     const progress=deliveryProgress(previous,result);
     const receipt={...result,key:afterKey,delivery_id:randomUUID(),dependencies:after,project:args.project,manifest:args.manifest,profile,reused_checks:false,
      convergence_status:progress.status,next_action:progress.next_action};
+    if(result.mechanical_status==='passed'){
+     receipt.review_pages=pptReviewPages(task,receipt);
+     receipt.next_action=receipt.review_pages.length?'read_image_for_review_pages':'present_current_delivery';
+    }
     if(result.mechanical_status==='passed'&&!verifiedArtifacts(task,receipt))throw Error('delivery_artifacts_changed');
     if(result.mechanical_status==='passed')for(const page of result.page_receipts??[]){
      appendFileSync(join(task.output,'ppt-native-pages.jsonl'),JSON.stringify({call_id:execution.callId,

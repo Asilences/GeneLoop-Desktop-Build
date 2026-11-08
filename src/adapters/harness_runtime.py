@@ -4,6 +4,8 @@ import os
 import shutil
 import functools
 import json
+import threading
+import time
 from uuid import uuid4
 
 
@@ -29,6 +31,7 @@ def create_harness(*, root: Path, patches: tuple[str, ...], env=None, **kwargs):
     original = harness.run
     original_close = harness.close
     harness.privacy_views = []
+    privacy_jobs = []
     pending, pending_bytes = [], 0
     try:
         privacy_root = Path(kwargs.get('runtime_cwd') or kwargs.get('cwd') or child_env['DSH_HOME']).resolve()/'.local/privacy-runs'
@@ -66,14 +69,7 @@ def create_harness(*, root: Path, patches: tuple[str, ...], env=None, **kwargs):
             pending.append((sid,status,events,rejected))
             if not rejected:pending_bytes += size
 
-    @functools.wraps(original_close)
-    def close():
-        nonlocal pending, pending_bytes
-        # Stop the SDK first. A completion/cancellation observer may deliberately
-        # raise to prevent another model request: privacy work cannot delay it.
-        result = original_close()
-        batch, pending = pending, []
-        pending_bytes = 0
+    def admit_batch(batch):
         for sid,status,events,rejected in batch:
             try:
                 if privacy_root is None or privacy_root.resolve()!=privacy_root.absolute():
@@ -89,7 +85,31 @@ def create_harness(*, root: Path, patches: tuple[str, ...], env=None, **kwargs):
             except Exception:
                 # Privacy admission must not replace the original task result.
                 pass
+
+    def wait_for_privacy(timeout=None):
+        deadline = None if timeout is None else time.monotonic() + max(0, timeout)
+        for job in privacy_jobs:
+            job.join(None if deadline is None else max(0, deadline-time.monotonic()))
+        return all(not job.is_alive() for job in privacy_jobs)
+
+    @functools.wraps(original_close)
+    def close():
+        nonlocal pending, pending_bytes
+        # Release the SDK before admission, and let task/cancellation callers
+        # return without waiting for NLP. A non-daemon worker finishes its bounded
+        # in-memory batch at interpreter shutdown; no raw queue is written.
+        result = original_close()
+        batch, pending = pending, []
+        pending_bytes = 0
+        if batch:
+            try:
+                job = threading.Thread(target=admit_batch, args=(batch,), name='rsi-privacy-admission', daemon=False)
+                job.start()
+                privacy_jobs.append(job)
+            except Exception:
+                pass
         return result
     harness.run = run
     harness.close = close
+    harness.wait_for_privacy = wait_for_privacy
     return harness

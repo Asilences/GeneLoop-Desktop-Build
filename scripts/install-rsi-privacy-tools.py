@@ -5,18 +5,16 @@ import io
 import json
 import os
 from pathlib import Path
-import platform
 import subprocess
+import sys
 import tarfile
 import urllib.request
 import zipfile
 
-VERSION='8.30.0'
-# Official GitHub Release API asset digests, checked on 2026-11-06.
-ASSETS={
-    'Linux':('linux_x64.tar.gz','79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e','gitleaks'),
-    'Windows':('windows_x64.zip','54fe94f644b832dd08e8c3a5915efb3bfa862386d59fb27ca0792cb687a83573','gitleaks.exe'),
-}
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from src.adapters.rsi_privacy_tools import TOOLS, gitleaks_asset
+
+VERSION=TOOLS['gitleaks']['version']
 
 
 def main():
@@ -24,9 +22,11 @@ def main():
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--archive',type=Path,help='offline copy of the same official asset')
     args=parser.parse_args()
-    if platform.machine().lower() not in ('x86_64','amd64') or platform.system() not in ASSETS:
+    try:
+        specification=gitleaks_asset()
+    except ValueError:
         parser.error('this installer supports the verified Linux/Windows x64 assets only')
-    asset,expected,binary=ASSETS[platform.system()]
+    asset,expected,binary=(specification[name] for name in ('asset','archive_sha256','binary'))
     url=f'https://github.com/gitleaks/gitleaks/releases/download/v{VERSION}/gitleaks_{VERSION}_{asset}'
     if args.archive:
         with args.archive.open('rb') as stream:raw=stream.read(64*1024*1024+1)
@@ -42,7 +42,8 @@ def main():
             member=archive.getmember(binary)
             if not member.isfile():parser.error('upstream binary must be a regular file')
             data=archive.extractfile(member).read(64*1024*1024+1)
-    if not data or len(data)>64*1024*1024:parser.error('invalid upstream binary')
+    if not data or len(data)>64*1024*1024 or hashlib.sha256(data).hexdigest()!=specification['binary_sha256']:
+        parser.error('upstream binary checksum mismatch')
     root=args.root.absolute()
     if root.is_symlink() or root.resolve()!=root or '\n' in str(root) or '\r' in str(root):
         parser.error('an ordinary private installation directory is required')

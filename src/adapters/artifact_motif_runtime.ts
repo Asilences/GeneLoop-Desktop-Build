@@ -19,6 +19,8 @@ artifactLocks.push('src/adapters/ppt_program_learning.ts','src/adapters/ppt_prog
 artifactLocks.push('src/adapters/ppt_component_learning.py','src/adapters/ppt_component_render.py','src/adapters/ppt_component_literals.py',
  'src/adapters/ppt_component_cache.ts','scripts/learn-ppt-components.py');
 artifactLocks.push('src/adapters/ppt_component_schema.ts');
+artifactLocks.push('src/adapters/ppt_execution.ts','src/adapters/ppt_workflow_runtime.ts',
+ 'src/adapters/ppt_workflow_host.ts','src/adapters/ppt_workflow_learning.py','scenarios/ppt_master/workflow-contracts.json');
 artifactLocks.push('src/adapters/ppt_component_equivalence.py');
 artifactLocks.push('src/adapters/paper_rsi_program.ts');
 artifactLocks.push('src/adapters/source_program_compiler.py');

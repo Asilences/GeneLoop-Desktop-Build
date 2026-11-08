@@ -15,4 +15,28 @@
 
 ## 交付状态
 
-preview.22客户端已适配并完成上述检查。用户已明确授权仅在桌面网络用途清单追加`/api/harless/motif-catalog`这一条只读地址，原提案已恢复；脱敏、采集、共享同意及后台核心/配置没有改动。源码提交后重打本地安装包；安装包不发布，Mac仅允许公开标准免费构建机，授权临时产物取回校验后删除。既有preview.21安装包和用户安装保留。
+preview.22客户端已适配并完成上述检查。用户已明确授权仅在桌面网络用途清单追加`/api/harless/motif-catalog`这一条只读地址；脱敏、采集、共享同意及后台核心/配置没有改动。应用源码`b2373232953c017308ae9e74b312bcce15f7c0ec`，交付记录`ad0b7887`已按用户要求推送团队origin的`codex/desktop-local-runtime`；构建镜像`6d45b864777104068a0e4744d0bf5132b93a3213`。未上传安装包、合并远端PR或部署服务。
+
+三个完整离线安装包已取回外层仓库私有`.local/desktop-releases/0.3.0-preview.22/`，各目录保存SHA256SUMS、验证回执和使用说明：
+
+| 平台 | 安装包字节 | 工具文件 | SHA256 |
+| --- | ---: | ---: | --- |
+| Windows x64 EXE | 754,723,328 | 25,666 | `67954abe412bacb74e141980afee6749d2e1d0ac800e7e52a80828023f654a30` |
+| Apple Silicon DMG | 665,068,991 | 26,220 | `1b4003d3bef8c7b0218385176c400fe7289b777fdd1f1e90acaecac0ca7b4394` |
+| Intel Mac DMG | 683,477,105 | 26,219 | `4893362b55cf0074da4fb81e5f62447b7bee40146a6466ced6638c2ed4addf84` |
+
+Windows完整工具逐文件SHA与既有已验收六包一致（零差异），包内Runtime入口和新界面匹配源码；最终EXE的`--check-ui`通过，未安装或重新计时。Mac使用公开标准免费`macos-15`和`macos-15-intel`，run`42475444604`两架构成功：DMG复制应用、卸载镜像后运行核心MCP、PPT/PDF、Remotion、统计/转换及浏览器依赖检查，全部通过，工具复制前摘要一致。本轮没有重复真实模型任务，亦未做Mac人工UAT、Apple签名或公证。
+
+安装包未发布Release；Mac授权临时Actions产物已全部取回、核对并删除，本地四份中转ZIP也已删除。Actions恢复原关闭状态，默认分支/允许列表不变，免费构建新增计费预留0，历史15美元账本保持。私有回执位于桌面工作区`.local/mac22-pr161/`及`.local/pr161-update/windows-payload-proof.json`，旧preview.21交付与用户安装保留。正式服务器的新目录仍需PR #161相应版本，客户端展示通过不等于正式部署或本机Motif重新认证通过。
+
+## 源码推送与未合并PR范围复核
+
+2026-11-08实际读取GitHub当前开放PR、fetch最新引用，并核对提交祖先及变更文件内容：
+
+| PR最新提交 | preview.22的包含范围 |
+| --- | --- |
+| [#161](https://github.com/jingyio/GeneLoop/pull/161) `225d7b55` | 旧`998cb505`已进入桌面历史。最新客户端读取/展示已适配；`src/adapters/harless_motif_catalog.ts`、新库注册及相关后台变化未整包合入，最新PR head不是桌面祖先。 |
+| [#162](https://github.com/jingyio/GeneLoop/pull/162) `ecf449cc` | 此前`7fbe8874`已集成；最新R5策略、检测器及核心更新尚未集成。不能将现有共享界面等同于最新隐私核心。 |
+| [#163](https://github.com/jingyio/GeneLoop/pull/163) `8988de79` | 最新PPT轨迹学习、原生认证与连续修订实现未集成；现有本机PPT工具适配不代表已包含该PR。 |
+
+桌面自身后端源码（`scripts/harless_desktop_model.mjs`，网关已挂接）和旧只读`/api/harless/motif-library`（`scripts/harless_motif_view.ts`）在分支中；最新`/api/harless/motif-catalog`后台由PR161提供。此轮仅回答包含范围，没有自动合并其他负责人PR或重做安装包。初次源码推送的远端自动流程为`startup_failure`（run42477299663），未当作CI通过证据；已有本地/公开免费构建回执不变。本次后续仅文档记录，检查diff与链接，不重复付费模型或平台构建。

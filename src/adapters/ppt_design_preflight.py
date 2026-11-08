@@ -61,11 +61,34 @@ def number(value):
     return result if math.isfinite(result) else None
 
 
-def inspect_svg(raw, *, check_fonts=True):
+def measured_text_bounds(text, properties):
+    """Measure simple untransformed text with the same resolved font file."""
+    from PIL import ImageFont
+    size = number(properties.get('font-size', '16'))
+    if size is None or size <= 0 or size > 400:
+        return None
+    weight = 'bold' if properties.get('font-weight') in ('bold', '600', '700', '800', '900') else 'regular'
+    resolved = font_coverage(properties.get('font-family', 'sans-serif'), weight)
+    font = ImageFont.truetype(resolved['file'], size=round(size), index=resolved['index'])
+    left, top, right, bottom = font.getbbox(text, anchor='ls')
+    anchor = properties.get('text-anchor', 'start')
+    if anchor not in ('start', 'middle', 'end'):
+        return None
+    offset = font.getlength(text) * {'start': 0, 'middle': .5, 'end': 1}[anchor]
+    return left - offset, top, right - offset, bottom
+
+
+def inspect_svg(raw, *, check_fonts=True, check_bounds=False):
     """Only enforce unambiguous findings. Complex effects remain review items."""
     root = ET.fromstring(raw)
     findings, resolved_fonts, rectangles, unresolved_contrast = [], {}, [], []
     serial = 0
+    try:
+        canvas = [float(value) for value in re.split(r'[ ,]+', root.get('viewBox', '').strip())]
+        if len(canvas) != 4 or not all(math.isfinite(value) for value in canvas):
+            canvas = None
+    except ValueError:
+        canvas = None
 
     def visit(node, inherited, complex_effect=False):
         nonlocal serial
@@ -96,6 +119,15 @@ def inspect_svg(raw, *, check_fonts=True):
         if tag in ('text', 'tspan'):
             text = (node.text or '') + ''.join(child.tail or '' for child in node)
             x, y = number(node.get('x')), number(node.get('y'))
+            if check_bounds and canvas and text.strip() and not len(node) and x is not None and y is not None and not complex_effect:
+                extent = measured_text_bounds(text, properties)
+                if extent:
+                    left, top, right, bottom = extent
+                    cx, cy, width, height = canvas
+                    if x + left < cx - 1 or y + top < cy - 1 or x + right > cx + width + 1 or y + bottom > cy + height + 1:
+                        findings.append({'rule': 'text_canvas_overflow', 'object': identity, 'severity': 'error',
+                                         'bounds': [round(x + left, 2), round(y + top, 2), round(x + right, 2), round(y + bottom, 2)],
+                                         'canvas': canvas, 'next_action': 'shorten_or_reflow_this_text_before_installation'})
             if x is not None and y is not None and not complex_effect and opaque:
                 for rectangle in reversed(rectangles):
                     if rectangle is None:
@@ -124,7 +156,7 @@ def inspect_svg(raw, *, check_fonts=True):
     visit(root, {})
     return {'version': 1, 'findings': findings, 'fonts': resolved_fonts, 'contrast_requires_visual_review': unresolved_contrast,
             'mechanical_status': 'failed' if findings else 'passed', 'visual_review': 'pending',
-            'limitations': ['Contrast checks cover solid rectangles behind text anchors. Full text extent and complex effects require visual review.',
+            'limitations': ['Contrast covers solid rectangles behind text anchors. Optional bounds cover simple positioned text; nested text and complex effects require visual review.',
                             'Font cmap coverage requires actual rendered-page review for shaping and fallback.']}
 
 

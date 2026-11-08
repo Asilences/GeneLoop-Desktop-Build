@@ -27,7 +27,7 @@ def render_component_page(directory, *, require_design=True):
             if name.rsplit('}', 1)[-1] in ('href', 'src') or re.search(r'url\s*\(', value, re.I):
                 raise ValueError('component_external_reference_refused')
     inspect_svg = runpy.run_path(str(Path(__file__).with_name('ppt_design_preflight.py')))['inspect_svg']
-    report = inspect_svg(raw)
+    report = inspect_svg(raw, check_bounds=True)
     if require_design and report['mechanical_status'] == 'failed':
         raise ValueError('component_design_preflight_failed: ' + json.dumps(report['findings'], ensure_ascii=False))
     target = directory / 'page.png'

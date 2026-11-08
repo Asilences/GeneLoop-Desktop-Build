@@ -20,14 +20,15 @@ import {LocalFileSystem} from '@deepseek-ai/dsh-fs-local';
 import {apply as skillTool} from '@deepseek-ai/dsh-tool-skill';
 import {apply as todoTool} from '@deepseek-ai/dsh-tool-todo';
 import {apply as presentTool} from '@deepseek-ai/dsh-tool-present';
-import {registerApprovedSkill,projectNativeTodos,nativePresentationPath,installNativePresentation,nativePresentedFiles} from '../src/adapters/geneloop_native_work.ts';
+import {registerApprovedSkill,bindApprovedSkill,projectNativeTodos,nativePresentationPath,installNativePresentation,nativePresentedFiles} from '../src/adapters/geneloop_native_work.ts';
 import {createTaskProgress} from '../src/adapters/harless_task_progress.ts';
 import {comparisonArtifacts,captureComparisonDeliveries} from '../src/adapters/harless_comparison_artifacts.ts';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 
-async function fixture(){
+async function fixture({skillPlugin=false}={}){
  const root=realpathSync(mkdtempSync(join(tmpdir(),'geneloop-native-work-'))),ctx=new Context();
- new SessionStore(ctx);new AgentRegistry(ctx);new SessionProjectionRegistry(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx,{});new LlmRuntime(ctx);new SkillRegistry(ctx);
+ new SessionStore(ctx);new AgentRegistry(ctx);new SessionProjectionRegistry(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx,{});new LlmRuntime(ctx);
+ if(skillPlugin)await ctx.plugin(SkillRegistry).await();else new SkillRegistry(ctx);
  const loop=new AgentLoop(ctx,{agents:[]});
  // Test-only logical mapping; production uses GeneLoopFileSystem's pinned no-follow descriptors.
  class DiagnosticFileSystem extends LocalFileSystem {
@@ -61,7 +62,8 @@ test('only locked administrator ppt-master is published through the actual nativ
   const resources=packageFixture(f.root),dispose=registerApprovedSkill(f.ctx,resources);
   assert.deepEqual((await f.ctx.skills.list({cwd:f.root})).map(row=>row.name),['ppt-master']);
   const loaded=await f.execute('skill',{name:'ppt-master'});assert.equal(loaded.isError,false);
-  assert.equal(loaded.value.resourceBase.path,'/opt/geneloop/ppt-master');assert.match(loaded.value.content,/Approved instructions/);
+  assert.equal(loaded.value.resourceBase.path,'/opt/geneloop/ppt-master');assert.match(loaded.value.content,/start_ppt/);
+  assert.doesNotMatch(loaded.value.content,/Approved instructions/);
   assert.doesNotMatch(JSON.stringify(loaded),new RegExp(f.root.replaceAll('\\','\\\\')));
   assert.equal((await f.execute('skill',{name:'unapproved'})).isError,true);
   dispose();assert.deepEqual(await f.ctx.skills.list(),[]);
@@ -77,6 +79,22 @@ test('approved PPT skill is scoped and disappears when its scene binding is disp
   assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(chat.ctx)}),[]);
   assert.deepEqual(await f.ctx.skills.list(),[]);
   dispose();assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(ppt.ctx)}),[]);
+ }finally{await ppt.dispose();await chat.dispose();await f.close();}
+});
+
+test('scene binding acquires skills in an injected agent plugin without leaking to chat',async()=>{
+ const f=await fixture({skillPlugin:true}),ppt=createScope(f.ctx,{}),chat=createScope(f.ctx,{});
+ let dispose;
+ try{
+  const plugin=ppt.ctx.plugin({name:'uninjected-agent-skill-binding',inject:[],apply(scoped){
+   assert.throws(()=>scoped.skills,/without inject/);
+   dispose=bindApprovedSkill(scoped,packageFixture(f.root));
+  }});
+  await plugin.await();
+  assert.deepEqual((await f.ctx.skills.list({scope:scopeOf(ppt.ctx)})).map(row=>row.name),['ppt-master']);
+  assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(chat.ctx)}),[]);
+  await dispose();
+  assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(ppt.ctx)}),[]);
  }finally{await ppt.dispose();await chat.dispose();await f.close();}
 });
 

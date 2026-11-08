@@ -29,6 +29,40 @@ Windows诊断入口：`npm run check:installer-payload`、`npm run check:install
 桌面模型 lease `toolsetVersion:3` 与宿主共用 `apps/desktop/runtime/native-workflow-catalog.mjs` 白名单。版本 2 和未声明版本保持原工具集合。`local_workflow_open` 固定授权资料快照并发现原场景 MCP Schema，以 `mcp__native_*` 直接注册到现有 DSH scope；不新增 Agent 循环，不自动转云端。提供通用 4、报告 17、论文 20、文件 13、PPT 21、官方源材料 5 项入口，另有 11 项原生视频入口。`local_workflow_close` 释放本轮工具状态，已交付文件保留。
 
 纯代码执行只向 QuickJS WASM 提供固定输入/新文本输出绑定；图像回传使用 DSH 附件存储并核验模型图像能力。文件方案由主进程展示并确认，作用于任务副本，交付 ZIP；不会移动或删除工作区原件。Python/Office 子进程沿 DSH 生命周期，凭证不传入。源码存在不代表正式站已部署，跨平台旧 Motif 认证不自动继承。详情及当前验证边界见[preview.13 记录](debug/desktop-preview13-full-tools-20261106.md)。
+
+> 2026-11-07 PPT109/Paper111候选（沿main `1d1e16f4`）：`execute_ppt_program({id,project,pages,delivery?,resume?})`和`release_ppt_program`提供执行/准入接口。真实材料已产生已交付草稿的单页修订→交付→预览程序，经第三来源独立原生执行认证，并在后继模型任务中由宿主实际调用；后继任务交付失败，没有合格降本对照。它不是完整整稿生成程序。随后修复能力范围、临时输出、父回执缺陷和安装前溢出准入，修复后真实效果仍待验收。页面工具支持`notes`及当前SHA保护的修订，失败不自动重写成功页。桌面共享执行层做过诊断，真实本机页写入宿主/平台认证未完成。见[当前原生验收](experiments/ppt-write-native-replay-20261107.md)，此前失败保留在[前轮记录](experiments/ppt-write-workflow-20261106-results.md)。
+
+
+## PPT轨迹续接与跨宿主执行（2026-11-06）
+
+`ppt_execution.ts`是通用分发底座，继承原工具的父调用、权限、取消及失败结果，不负责语义规划。组件在沙箱和页面安装前完成证书、参数及容量准入；真实字体/对比预检仍由原渲染器执行。相同确定失败输入在同任务内不重复执行，版本化改页仍需当前页SHA。
+
+Python的`ppt_workflow_learning.py`从账户允许学习的正常调用发现相邻操作与结果字段绑定，编译JSON IR和来源证据。契约声明工具效应和可绑定输出字段，不声明操作顺序。候选需要两个不同决定/来源/题面的支持；第三个独立来源可以做历史绑定重放，或由`ppt_workflow_certification.py`和固定`certify-ppt-workflow.mjs`执行真实原生工具与编译IR并比较页面/备注、可编辑对象、Office PNG及未选页。两种认证scope分别保留，原生执行认证不等于第三条同形历史出现。原生缓存同时绑定页面引擎全部代码锁；环境变化要求新计划。并行调用、未完成调用、未知工具、失败或模糊绑定成为边界，只有依赖哈希未变的观察可以略过。`learning_eligible=false`不进入发现。当前除交付→看图外，已认证已交付草稿的单页组件修订→交付→当前预览，没有整稿生成编译或语义质量跳过。
+
+宿主加载账户`workflows/selected.json`及不可变digest库，任务开始时冻结选择。执行绑定当前返回值、实际原生schema、平台和代码锁。`suspended.json`使库失效；disabled指针不会被下一次后台学习重新启用。适用`create_ppt_page`在已存在`delivery.json`的修订中由宿主直接续接学得程序，初稿不因此提前导出。`tools/post-execute`通过公开结果替换接口将子读取图像返回同一父工具，保留原规范值和全部质量门槛；不能在around回调拼接图像后假定SDK会保留它。子读取异常保留已经导出的成品，取消仍传播。审计记录实际子调用和续接内模型请求0，不将它自动记成已证明省下一次LLM请求。组件试用与最终成品采用仍分别记录。
+
+桌面复用同一解释器，模型仍由既有服务器转发。本机包校验共享模块和已打包的原生工具代码，证书同时绑定平台、架构、Node版本、工具schema与包摘要。服务器回执不能直接用于桌面配方。桌面适配入口为`apps/desktop/runtime/local-ppt-workflow.mjs`，由`stage-ppt-workflow.mjs`打包同一解释器；main尚缺本机页写入后端，未自动接通桌面产品，也没有Mac原机验收。发现、真实对照和成本边界见[实施计划](experiments/ppt-learned-workflow-20261106-plan.md)。
+
+## 通用PPT集成候选（2026-11-04）
+
+2026-11-05补充。自动正常页面学习使用`text_content_only_v1`生成契约，几何和固定样式封装在程序内，后继模型只填写内容。旧通用程序decoder保留原接口。能力卡携带实际版式用途。认证拒绝最多触发一次可计量纠正，后续版本再认证优先复用已绑定请求/响应和生成契约的正确提案。
+
+后台评审v4同时读取最终PDF/PNG、原文页图像，以及PPTX原生文字/形状、实际备注和文件格式证据。`inspect_delivery(files, include_content=True)`按需提供内容证据，默认返回仍兼容。相同成品与协议版本复用结果，协议改变建立新评审记录。评审实现和交付校验纳入程序签名，旧证书需要重新认证。补评费用独立保存，旧评分和原制作费用保留。
+
+普通组与优化组共用原生`read_ppt_design({category?,theme?,component_ids?,guide?})`、`start_ppt({name,title,theme?,purpose?,slide_count?})`、`compose_ppt_page({project,page,layout,content,expected_page_sha256?})`、`prepare_ppt`和`finalize_ppt`。设计工具返回21套主题的短卡或指定契约，`guide=true`按需返回模板继承和设计约定。项目创建采用原子发布，重试保留已有页面。共同页面工具支持cover/section/bullets/two_column/image_text/bar_chart/closing，content承载当前title、body、columns、image、chart、source、notes。宿主测量实际字体、校验容量与图片，修订核对当前页SHA。`create_ppt_page`仅向有权限且启用RSI的优化任务开放，支持`parameters`和`parameters_file`二选一。
+
+集成项目的`geneloop-project.json`标识统一生成路线，底层调用官方quick-generate模块及共同Office验收。旧项目保留原路线。交付缓存绑定源页、关联资产、规范、备注、来源审阅、实现和环境版本。同PNG版本成功经`read_image`返回后记录观察，未把观察记录当作质量通过。
+
+公开工具中间件仅对可完整解析、字面明确的Generate导出命令自动续接`finalize_ppt`，保留父调用ID、参数摘要、取消信号和同任务授权。复杂Shell或自定义输出仍要求模型采用明确入口。后台评审队列通过现有worker继续处理不可变成品，并使用冷却唤醒恢复环境类错误。原论文PDF原文与原页图像共同参与事实和图件核对，未知请求先对账。
+
+任务API可提供布尔`learning_eligible`。`false`禁止该任务作为Graph、页面程序及公共能力构造来源，同时允许独立质量评价与已有能力采用统计。字段纳入`request_sha256`，同request_id改变它返回冲突，上传与重启继续保留。缺省沿服务策略，保留旧规范化摘要，`true`不提升账户权限或绕过资料与认证守卫。
+
+程序库`groups`按候选维护support、uses、pairs与phase。旧pointer仍兼容；两次独立单路采用可标为retained，费用优势为unknown，严格费用晋级继续要求同条件配对证据。学习与评审不计入B/O制作对照，制作中的尝试、弃用和恢复仍计对应组。
+
+成品质量失败页通过版本绑定记录返回候选评价。失败页与组件实际采用页重合才归因停用，其他页失败保持pending。已明确不合格的支持材料不能继续支持新候选，机械通过与模型辅助质量结论分别保留。
+
+可选后台评审由私有`GENELOOP_PPT_REVIEW_POLICY`指定策略，学习worker默认继承当前`SSS_WEB_POLICY`。使用原`PptCapabilityBudget`与独立`ppt_background_review`身份，保存版本绑定、请求、响应及费用。相同版本复用结果，环境故障冷却重试，响应不明的已发出请求等待对账。来源覆盖不足保留unknown，后台结果不自动开启修订循环。实现与未完成验收见[工程记录](experiments/ppt-engineering-audit-20261104.md)。
+
 ## Recursive Abstraction Evolution（2026-11-04）
 
 规格、模块对应、T0–T8证据与研究边界见[实现记录](rae-implementation.md)。Capability IR、ID、Registry、账本不变；所有新增行为需要宿主显式启用。
@@ -1570,6 +1604,20 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 公共 `geneloop_privacy.learning_view` / TypeScript `privacyLearningView` 处理任意场景的学习 JSON；`geneloop_learning_trace` v4 为两个 Web 宿主、公共 SDK 和离线导入生成脱敏派生视图，包含任务正文、模型回答和工具参数/结果。研究学习器的上下文与工具返回使用同一内核；`admit_publication` 提供保留认证字节的公开导出准入。已有 Paper/PPT 结构编译继续使用无语义值的 v2。入口与边界见 [公共脱敏模块](rsi-data-privacy.md)。
 
+R5可选宿主配置使用`SSS_RSI_PRIVACY_CANDIDATE_CONFIG`及该文件字节的`SSS_RSI_PRIVACY_CANDIDATE_SHA256`配对选择本地官方OPF/CredSweeper；两个变量进入既有worker白名单，任务JSON不能选择后端。未知配置、摘要/版本/软件包或模型漂移、检测器失败均不能放行学习包，凭证命中仍拒绝整包。日期标签按原策略排除，原生八标签仅用于独立评测。未配置时不加载附加模型，沿用默认Presidio/Gitleaks规则；候选质量门槛未通过，不能据接线宣称产品已启用或验收。配置/来源及边界见[R5实施说明](research/rsi/privacy-official-tools-r5.md)。
+
+异常后的NLP状态恢复依赖官方spaCy3.8.18及匹配的固定组合；`requirements-rsi-privacy.txt`和信任表同步锁定，两个模型仍为3.8.0。此前3.8.7缺陷及3.8.12兼容失败保留。默认检测规则仍为Presidio/Gitleaks，依赖版本已变，不能将历史R4成绩当作当前运行库的新验证；修复版须用相同依赖下的默认组合与候选分别复测。
+
+同一入口前后扫描 JSON 包和解码字符串；CLI/嵌套 JSON 一致拒绝重复键和解析深度失败。NFKC 识别跨度通过 Unicode 字素簇映射回原文，固定协议词保护不豁免显式身份字段或凭证扫描。公共函数参数、固定拒绝码及原任务读取原件的行为保持兼容。
+
+R4要求投影器首次读取事件JSONL、工具参数及catalog时使用公共严格解码器；text内容保留字符串类型。策略及schema为 `config/geneloop-privacy-policy-v1.json` / `schemas/geneloop-privacy-policy.schema.json`，依赖和扫描器资产信任表为 `config/rsi-privacy-tools.json`；离线评测核对同一策略语义SHA256。内部 `PrivacyRejected.reason` 是固定枚举，公开错误仍为 `geneloop_privacy_rejected`，不暴露原始异常或命中值。
+
+在线 `privacy_worker_pool.ts` 调用 `geneloop_privacy_worker.py` 的受限stdio协议，支持learning/publication/project；Python仍是唯一识别规则实现。每个解释器/白名单环境组合串行复用一个子进程，最多4组、每组最多32个等待项及约32MiB未完成材料；每个请求的120秒包含排队，空闲60秒退出。`privacyLearningView` / `projectPlatformLearningTrace` 可传 `AbortSignal`；取消或协议异常终止该模块拥有的子进程，拒绝未完成请求，下一请求重新启动。只有固定CPU/Home/临时目录和扫描器环境进入子进程。别名按包重建，spaCy推理在每次文本调用的memory zone内完成，不把包内别名当作跨包身份。
+
+SDK 的 `close()` 先释放原运行时，再由后台线程生成学习副本，避免 NLP 准入增加任务结束或取消的延迟。调用方需要立即读取时，使用 `harness.wait_for_privacy(timeout=...)`；返回值仅表示后台处理是否结束，仍须检查副本或拒绝标记。线程只持有有界内存批次，不落原始队列，正常退出时等待其结束。原 observer、任务结果和账本仍由原 SDK/宿主提供。
+
+该后台线程在R4中用同一Python worker的 `--once` 执行本批事件，120秒外层超时会终止拥有的处理子进程，不能用线程join时间冒充处理取消。离线导入CLI与 `capture_run` 复用相同单次边界；CLI先固定调用目录中的绝对来源路径，通过后才输出完整JSON。底层同步Python内核仍由调用者提供外层预算，离线评测使用明确的控制器，不能把函数直调误写为内建120秒期限。Web共享从一次不可变事件快照生成准入及结构对象；离线/SDK写入先完成序列化，再以私有临时文件和不覆盖已有目标的原子发布写入派生视图。拒绝或超时不发布半成品，原始事件和证据不改写。
+
 默认私有的 `/api/harless/rsi-sharing` 从账号内任何完成场景生成严格 v4 工具流程，场景和工具名使用样本内代号。完整预览、SHA256 绑定和逐次同意后才发送。十分钟失效、重启不恢复授权、异常无自动重传；桌面支持本地副本与取消。接口动作与边界见[可选共享](rsi-data-privacy.md#默认私有与可选共享)。
 
 ## Evidence-Grounded Evolution Agent（2026-11-04）
@@ -1721,3 +1769,16 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 桌面模型转发沿用 `/api/harless/desktop-model` 账号/任务凭证与计量；`user.content` 支持官方DSH的 `text` 和内联 `image_url` 数组（PNG/JPEG/WebP/GIF），拒绝远程URL、外来file_id和未知块。`structured_output` 仅供原生子智能体驱动注册的输出工具。子智能体共享原任务计量，允许最多8条同时在途请求，撤销任务一并关闭；不限制累计模型次数。主Agent仍通过原DSH循环执行，网关不执行本地工具。
 
 PPT宿主 `prepare_ppt` / `finalize_ppt` 使用任务私有工程，读取锁定Skill并输出字体校准、PPTX/PDF和逐页图片；管理审批与补充资料沿用桌面宿主确认/问题事件，取消同时清理对应问题卡片。正式部署、Mac人工验收和Motif重新认证另计，见[验证记录](experiments/desktop-preview16-tool-parity-20261107.md)。
+
+- 此快照接口保留 Coding v1；来源执行位置不改变任务路由。正式服务及本机 Runtime 活证据桥未由本轮部署。其他场景现从下述 Runtime 目录读取，不必手动生成 Coding 快照。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
+- 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。
+
+### 现有运行库目录接线（2026-11-08）
+
+- `GET /api/harless/motif-catalog` 注册在原 DSH 任务插件，网关按既有账号转发。沿用 `connection.requestRejection`；不接受账号、文件路径或其他查询参数。响应 `geneloop-runtime-motif-catalog-v1` 的 `libraries` 来自当前宿主的 `scenes`，不扫描任意磁盘目录。
+- 通过原 `paperLearning.resolve` / `pptLearning.resolve` 选择账号当前版本，复用 `executeUnavailable` 的原准入结果。只读投影 `harless_motif_catalog.ts` 复核已绑定文件的字节，返回 `geneloop-motif-evidence-v2`，不新建 Store、不学习、不调用模型、不发放执行权限。未挂载或已失效的库返回不可读/不可用状态。
+- Paper/PPT 的原认证工具流、证书、来源文件摘要、原学习报告兼容版本进入目录；Data 的旧回执格式为 `registered`（旧格式已登记），不冒充 `independent_trace_structure` 认证。产品来源标为 `registered`，账号学习来源标为 `account_learning`；服务端准入结果不等于桌面电脑已准入。
+- 浏览器同时消费原 Coding 快照接口和此目录；支持逐来源切换，未配置 `motifEvidence.sources` 时仍可显示实际已挂载的场景库。单个接口失败提示并保留带过期警告的缓存；任一接口401清除所有来源。导入快照不显示为当前服务已核验。
+- 兼容版本记录只投影学习报告明确记载的旧版本和证书引用；不是新演化事件、可执行回滚或任意版本差异。当前库没有执行事件时，复用次数显示未知，不把空事件数组解释成任务未复用。
+- 评估页消费当前工作区原 tasks 用量，以及原 comparisons 接口的最近两侧原始用量。当前任务优先关联其真实会话，避免新近空对话遮住已有材料。没有同质量对照时不换算节省；右栏展示实际输入/输出 Tokens，导航标为「证据视图」，不提供未接通的自动演化操作。
+- Paper v86 / PPT v84 仅对 main 隐私/模型整合及本次只读目录重导出精确代码锁，并锁定新目录模块、v2 Schema 与导出脚本。旧版原件不改；IR、online manifest、task、工具 Schema、来源证据逐字节不变，零训练、零模型请求。

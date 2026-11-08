@@ -11,38 +11,34 @@ import json
 import math
 from pathlib import Path
 import re
+import subprocess
 import sys
 import unicodedata
 from jsonschema import Draft202012Validator
 
-from .rsi_text_privacy import _scan, anonymize_text
+from .rsi_text_privacy import _scan, anonymize_text, PROTOCOL_WORDS
+from .rsi_privacy_tools import PrivacyToolError
 
 MAX_BYTES = 32 * 1024 * 1024
 MAX_ITEMS = 100_000
 MAX_DEPTH = 48
-SECRET_FIELDS = frozenset(("apikey", "authorization", "accesstoken", "refreshtoken",
-                           "password", "passwd", "secret", "cookie", "setcookie",
-                           "privatekey", "clientsecret", "token", "apitoken", "authtoken", "bearertoken", "credential", "credentials",
-                           "密码", "口令", "密钥", "令牌"))
-IDENTITY_FIELDS = {
-    **dict.fromkeys(("email", "emailaddress", "邮箱", "联系邮箱"), "EMAIL_ADDRESS"),
-    **dict.fromkeys(("phone", "phonenumber", "mobile", "telephone", "手机", "电话"), "PHONE_NUMBER"),
-    **dict.fromkeys(("personname", "fullname", "username", "姓名", "联系人"), "PERSON"),
-    **dict.fromkeys(("homeaddress", "mailingaddress", "住址", "邮寄地址"), "ADDRESS"),
-    **dict.fromkeys(("streetaddress", "contactaddress", "address", "家庭地址"), "ADDRESS"),
-    **dict.fromkeys(("bankaccount", "accountnumber", "iban", "银行卡号"), "FINANCIAL_ACCOUNT"),
-    **dict.fromkeys(("passportnumber", "idnumber", "ssn", "证件号", "身份证号"), "IDENTITY_NUMBER"),
-    **dict.fromkeys(("filename", "filepath", "relativepath", "attachmentname", "文件名", "附件名", "文件路径"), "PRIVATE_REFERENCE"),
-    **dict.fromkeys(("accountid", "userid", "sessionid", "taskid"), "PRIVATE_ID"),
-}
+from .rsi_privacy_policy import POLICY
+
+SECRET_FIELDS = frozenset(POLICY['structured']['secret_fields'])
+IDENTITY_FIELDS = POLICY['structured']['identity_fields']
 _FIELD = re.compile(r"[\s_-]+")
-_PROTOCOL = frozenset(('string','number','integer','object','array','boolean','null','record_evidence_id'))
+_PROTOCOL = PROTOCOL_WORDS
 _SCHEMA_KEYS=frozenset(Draft202012Validator.VALIDATORS)|frozenset(('$schema','$defs','$ref','$comment','title','description','default','examples','deprecated','readOnly','writeOnly'))
 _OPAQUE = re.compile(r'(?:[a-f0-9]{64}|(?:task_|history_|evidence_)[a-f0-9]{24,64}|private-[a-f0-9-]{32,36})\Z')
 
 
 class PrivacyRejected(ValueError):
-    def __init__(self):
+    REASONS = frozenset(('policy_rejected','ambiguous_json','input_limit','invalid_input',
+                         'credential_detected','scanner_error','scanner_timeout',
+                         'tool_unverified','dependency_unavailable','processing_failed'))
+
+    def __init__(self, reason='policy_rejected'):
+        self.reason = reason if reason in self.REASONS else 'processing_failed'
         super().__init__("geneloop_privacy_rejected")
 
 
@@ -50,7 +46,84 @@ def _encoded(value):
     return json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
 
 
+def _json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise PrivacyRejected('ambiguous_json')
+        result[key] = value
+    return result
+
+
+def decode_material_json(value):
+    # A last-key-wins parse cannot certify the original nested text: discarded
+    # fields could still contain an explicit credential. Reuse stdlib decoding,
+    # rejecting ambiguity and resource failures instead of treating them as prose.
+    try:
+        return json.loads(value, object_pairs_hook=_json_object)
+    except RecursionError:
+        raise PrivacyRejected('input_limit') from None
+
+
+# Retain the compatibility name for existing callers and frozen evaluators.
+_decoded = decode_material_json
+
+
+def _scan_material(value):
+    """Feed Gitleaks both the JSON envelope and its decoded text, in memory.
+
+    JSON escaping changes regex context. Keep complete strings (including
+    multiline source and nested JSON strings) intact; never send only their
+    serialized representation. This adapts input, not Gitleaks rules.
+    """
+    encoded = _encoded(value)
+    if len(encoded.encode()) > MAX_BYTES:
+        raise PrivacyRejected()
+    pending = [(value, 0)]
+    normalized = unicodedata.normalize('NFKC', encoded)
+    parts = list(dict.fromkeys((encoded, normalized)))
+    seen, remaining, size = set(), MAX_ITEMS * 2, 0
+    while pending:
+        item, depth = pending.pop()
+        remaining -= 1
+        if remaining < 0 or depth > MAX_DEPTH:
+            raise PrivacyRejected()
+        if isinstance(item, dict):
+            pending.extend((child, depth + 1) for pair in item.items() for child in pair)
+        elif isinstance(item, list):
+            pending.extend((child, depth + 1) for child in item)
+        elif isinstance(item, str) and item not in seen:
+            seen.add(item)
+            for text in dict.fromkeys((item, unicodedata.normalize('NFKC', item))):
+                size += len(text.encode()) + 2
+                if size > MAX_BYTES * 2:
+                    raise PrivacyRejected()
+                parts.append(text)
+            if item.lstrip().startswith(('{', '[', '"')):
+                try:
+                    parsed = _decoded(item)
+                except PrivacyRejected:
+                    raise
+                except ValueError:
+                    continue
+                if isinstance(parsed, (dict, list, str)):
+                    pending.append((parsed, depth + 1))
+    _scan('\n\n'.join(parts))
+
+
 def learning_view(value):
+    """Apply the public contract, optionally using host-configured local tools."""
+    from .rsi_privacy_candidates import candidate_context
+    try:
+        with candidate_context(from_environment=True, admission=True):
+            return _learning_view(value)
+    except PrivacyRejected:
+        raise
+    except Exception:
+        raise PrivacyRejected('processing_failed') from None
+
+
+def _learning_view(value):
     """Sanitize arbitrary JSON keys AND values, with no scene switch or bypass.
 
     Presidio owns text recognition/anonymization; Gitleaks scans the whole
@@ -58,13 +131,7 @@ def learning_view(value):
     phone numbers and account identifiers which NLP cannot reliably infer.
     """
     try:
-        original = _encoded(value)
-        if len(original.encode()) > MAX_BYTES:
-            raise PrivacyRejected()
-        _scan(original)
-        normalized = unicodedata.normalize("NFKC", original)
-        if normalized != original:
-            _scan(normalized)
+        _scan_material(value)
         remaining, cache, identities = MAX_ITEMS, {}, {}
 
         def alias(entity, original):
@@ -95,8 +162,10 @@ def learning_view(value):
                 # encoded as text. Parse data only; never evaluate source code.
                 if value.lstrip().startswith(('{','[','"')):
                     try:
-                        parsed = json.loads(value)
-                    except (ValueError,RecursionError):
+                        parsed = _decoded(value)
+                    except PrivacyRejected:
+                        raise
+                    except ValueError:
                         parsed = None
                     if isinstance(parsed,(dict,list,str)):
                         clean = walk(parsed,1)
@@ -105,9 +174,6 @@ def learning_view(value):
                 if any(unicodedata.category(char) in ('Cc','Cf') and char not in '\n\r\t' for char in value):
                     raise PrivacyRejected()
                 cache[value] = anonymize_text(value, alias=alias)
-                shadow = unicodedata.normalize("NFKC", value)
-                if shadow != value and unicodedata.normalize("NFKC", cache[value]) != anonymize_text(shadow, alias=alias):
-                    raise PrivacyRejected()
             return cache[value]
 
         def walk(item, depth=0, schema=False, property_name=None):
@@ -160,7 +226,7 @@ def learning_view(value):
                                  if any(value.endswith(name) for value in variants)),None)
                 if secret and child is not None and child != '' and type(child) is not bool and not (
                         secret == 'token' and field.endswith('tokens') and type(child) in (int,float)):
-                    raise PrivacyRejected()
+                    raise PrivacyRejected('credential_detected')
                 safe_key = key if schema and key in _SCHEMA_KEYS else text(key)
                 if safe_key in output:
                     raise PrivacyRejected()
@@ -168,7 +234,7 @@ def learning_view(value):
                     output[safe_key] = '<BINARY_OMITTED>'
                 elif field in ('image','audio','video') and isinstance(child,str) and child.lower().startswith('data:'):
                     output[safe_key] = '<BINARY_OMITTED>'
-                elif identity == 'ADDRESS' and (type(child) in (int,float) or isinstance(child,str) and re.fullmatch(r'0x[0-9a-fA-F]+',child)):
+                elif identity in ('ADDRESS','LOCATION') and (type(child) in (int,float) or isinstance(child,str) and re.fullmatch(r'0x[0-9a-fA-F]+',child)):
                     output[safe_key] = child
                 elif identity and child is not None:
                     entity = identity
@@ -185,10 +251,19 @@ def learning_view(value):
             return output
 
         result = walk(value)
-        _scan(_encoded(result))
+        _scan_material(result)
         return result
+    except PrivacyRejected:
+        raise
+    except PrivacyToolError as error:
+        reason='dependency_unavailable' if error.reason.startswith('privacy_dependency') else 'tool_unverified'
+        raise PrivacyRejected(reason) from None
+    except subprocess.TimeoutExpired:
+        raise PrivacyRejected('scanner_timeout') from None
+    except subprocess.CalledProcessError as error:
+        raise PrivacyRejected('credential_detected' if error.returncode==1 else 'scanner_error') from None
     except Exception:
-        raise PrivacyRejected() from None
+        raise PrivacyRejected('processing_failed') from None
 
 
 def admit_publication(value):
@@ -210,7 +285,7 @@ def main():
         raw = sys.stdin.buffer.read(MAX_BYTES + 1)
         if len(raw) > MAX_BYTES:
             raise PrivacyRejected()
-        value = json.loads(raw)
+        value = _decoded(raw)
         result = admit_publication(value) if args.publication else learning_view(value)
         print(_encoded(result))
     except Exception:

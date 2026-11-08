@@ -8,13 +8,14 @@ import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createMotifViewRoute} from '../../../scripts/harless_motif_view.ts';
+import {runtimeMotifEvidence} from '../../../src/adapters/harless_motif_catalog.ts';
+import {loadedProductMotifScenes} from '../../../tests/helpers/product_motif_scenes.mjs';
 import {createRsiSharing} from '../../../src/adapters/rsi_sharing.ts';
 import {projectPrivateLearningTrace} from '../../../src/adapters/harless_learning_trace.ts';
 const require=createRequire(import.meta.url),{WebSocketServer}=require('ws');
 const app=fileURLToPath(new URL('../',import.meta.url));
 const output=join(app,'.local/validation/renderer-'+randomUUID());mkdirSync(output,{recursive:true});
-// Pinned public catalog emitted by PR161's original loader/projector; protocol only.
-const runtimeCatalog=JSON.parse(readFileSync(join(app,'../../tests/fixtures/motif-catalog-pr161.json'),'utf8')).catalog;
+const runtimeLibraries=loadedProductMotifScenes().map(scene=>{const evidence=runtimeMotifEvidence(scene,()=>null);return {id:'runtime:'+scene.id,title:evidence.source.label,scene:scene.id,status:'ready',evidence};});
 const privacyDiagnostic=process.env.GENELOOP_PRIVACY_DIAGNOSTIC==='1';
 const sharingBodies=[],sharingAudit=[];
 let receiverMode='accept',receiver;
@@ -101,7 +102,7 @@ const server=createServer(async(req,res)=>{
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
   if(path==='/api/harless/tasks')return json(res,{tasks:[...workspaceTasks,...(privacyDiagnostic?[...shareSources.keys()].map(scene=>({task_id:scene,scene,status:'completed'})):[])]});
   if(path==='/api/fixture/runtime-catalog-fail'&&req.method==='POST'){runtimeCatalogFail=!runtimeCatalogFail;return json(res,{ok:true});}
-  if(path==='/api/harless/motif-catalog')return !motifAuthenticated?json(res,{error:'login_required'},401):runtimeCatalogFail?json(res,{error:'catalog_unavailable'},503):json(res,runtimeCatalog);
+  if(path==='/api/harless/motif-catalog')return !motifAuthenticated?json(res,{error:'login_required'},401):runtimeCatalogFail?json(res,{error:'catalog_unavailable'},503):json(res,{format:'geneloop-runtime-motif-catalog-v1',libraries:runtimeLibraries});
   if(path==='/api/fixture/task-progress'&&req.method==='POST'){workspaceTasks[0].duration_ms=2400;return json(res,{ok:true});}
   if(path==='/api/fixture/workspace-task'&&req.method==='POST'){
    const time='2026-11-06T00:00:00.000Z';

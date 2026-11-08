@@ -254,6 +254,9 @@ app.whenReady().then(async()=>{
  await motifTab('运行');
  await until(()=>evaluate(`document.querySelector('#workspace-inspector .inspector-current-task').textContent.includes('界面验收（合成）')`),'工作区详情收到实际任务接口数据');
  assert.equal(await evaluate(`document.getElementById('workspace-inspector').hidden`),false);
+ const railHeights=await evaluate(`(()=>{const left=document.querySelector('.sidebar').getBoundingClientRect(),right=document.getElementById('workspace-inspector').getBoundingClientRect(),card=document.querySelector('.workspace-inspector-card').getBoundingClientRect();return {leftTop:left.top,leftHeight:left.height,rightTop:right.top,rightHeight:right.height,cardTop:card.top,cardHeight:card.height}})()`);
+ assert.ok(Math.abs(railHeights.leftTop-railHeights.rightTop)<2&&Math.abs(railHeights.leftHeight-railHeights.rightHeight)<2,'Sidebars must share the same top and height');
+ assert.ok(Math.abs(railHeights.cardTop-railHeights.rightTop)<2&&railHeights.cardHeight>=railHeights.rightHeight-2,'Inspector content must fill its rail');
  assert.equal(await evaluate(`document.querySelector('.run-plan-progress progress').value===2&&document.querySelector('.run-plan-progress progress').max===3`),true);
  await evaluate(`document.querySelector('.run-task-card>summary').click();fetch('/api/fixture/task-progress',{method:'POST'})`);
  await until(()=>evaluate(`document.querySelector('#workspace-inspector').textContent.includes('2.4s')`),'首页定时读取任务进度');

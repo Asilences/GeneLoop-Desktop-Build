@@ -7,10 +7,22 @@ import {createArtifactTrace} from './artifact_motif_trace.ts';
 import {artifactProgramPath,loadArtifactLibrary,provideArtifactPrograms,registerArtifactContext} from './artifact_motif_runtime.ts';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
 import {registerPptComponentTool} from './ppt_component_tool.ts';
-import {registerPptDeliveryTool} from './ppt_delivery_pipeline.ts';
+import {registerPptDeliveryTool,pptWorkspacePath} from './ppt_delivery_pipeline.ts';
+import {registerPptWriteTool} from './ppt_write_tool.ts';
 import {pptPublicCapabilities,pptPublicCatalog} from './ppt_capability_online.ts';
+import {registerPptDesignTools} from './ppt_design.ts';
+import {registerPptWorkflowContinuation} from './ppt_workflow_runtime.ts';
+import {pptWorkflowHost} from './ppt_workflow_host.ts';
 
-export function installPptProgramLearning(ctx:any,host:{current:(session:string)=>any;resolve:()=>any;resources:any;reused:(task:any,count:number)=>void;deliveryFontRules?:()=>any[]}){
+export function pptWriteCatalog(programs:any[]){
+ return '\n下列程序只覆盖各自已认证的mode和page_count，不是通用整稿生成器。revision只用于已有页并提供当前SHA；page_count=1每次只传一页。初稿仍用create_ppt_page写页后finalize_ppt。修订选定组件时直接调用create_ppt_page，宿主会自动续接适用程序，无需再调用execute_ppt_program。output是宿主临时目录，不要填写。失败只按返回的具体findings修复，不能无变化重试。\n'+JSON.stringify(programs.map((program:any)=>({id:program.id,mode:program.ir.mode,
+  writer:program.ir.writer.tool,page_count:program.ir.writer.repeated_page_run?'multiple':1,
+  page_fields:program.ir.writer.argument_names.filter((name:string)=>![program.ir.writer.resource_argument,'output'].includes(name)),
+  required_page_fields:program.ir.writer.required_arguments.filter((name:string)=>name!==program.ir.writer.resource_argument),
+  delivery_fields:program.ir.delivery.argument_names.filter((name:string)=>name!==program.ir.delivery.resource_argument)})))+'\n';
+}
+
+export function installPptProgramLearning(ctx:any,host:{current:(session:string)=>any;resolve:()=>any;resources:any;reused:(task:any,count:number)=>void;deliveryFontRules?:()=>any[];workflow?:()=>any}){
  const tasks=new Map<string,any>();
  function current(session:string):any{
   const task=host.current(session);
@@ -27,6 +39,13 @@ export function installPptProgramLearning(ctx:any,host:{current:(session:string)
   if(task.request.mode==='execute'&&task.selection.rsi===true){
    const auditPath=join(task.output,'artifact-motif-audit.jsonl');
    const audit=(row:any)=>appendFileSync(auditPath,JSON.stringify({...row,task_id:key})+'\n',{mode:0o600});
+   value.workflow=host.workflow?.()??null;
+   value.workflowValid=()=>{
+    const selected=host.workflow?.();
+    return !!selected&&selected.environment_sha256===value.workflow.environment_sha256&&
+      value.workflow.programs.every((program:any)=>selected.programs.some((next:any)=>next.id===program.id&&next.status==='certified'));
+   };
+   value.workflowAudit=audit;
    try{
     const selected=host.resolve();
     if(selected){
@@ -36,12 +55,9 @@ export function installPptProgramLearning(ctx:any,host:{current:(session:string)
       cacheRoot:join(dirname(selected.library),'page-cache'),
       resources:host.resources??{},audit,auditPath});
      registerArtifactContext(session,value.context);
-     value.catalog='\n本任务可选的内部程序已通过不同输入的隔离执行认证；这不代表科研/视觉质量认证。符合当前需求时优先复用，内容和方法取舍仍由你负责。不适用则使用普通工具。\n'+
-      '调用 python3 program_path，按 argv_order 传本次输入文件和一个尚不存在的 /work/outputs/新目录。无需重写、复制或 chmod 程序。执行后仍需正常检查、渲染和交付。\n'+
-      '带 component 接口的页面直接调用 create_ppt_page，填id和parameters，可同时传project与page（例如slide_03.svg），宿主安装到svg_output，output由宿主默认分配。只填本次内容参数。准备备注后使用finalize_ppt，查看实际Office逐页PNG。按具体缺陷修复，相同依赖复用检查回执。上游整页手写限制由GeneLoop运行规则覆盖。\n'+
+     value.catalog='\n本任务的认证程序如下。规划时先按结构说明判断适用页，匹配的页面优先复用，避免重写相同版式。read_ppt_design读取页面参数；使用create_ppt_page安装并写备注，随后共同finalize_ppt交付。若有写入程序，严格遵守其mode和page_count；宿主自动续接适用的修订。不适用时在design_spec.md简短记录具体原因，继续普通制作。其他程序按argv_order执行。\n'+
       JSON.stringify(library.programs.map((p:any)=>p.component?{id:p.id,
-       metadata_path:artifactProgramPath(library,p).replace(/\.py$/,'.json'),
-       component:{description:p.component.summary,parameters_schema:p.component.parameters_schema}}:({id:p.id,program_path:artifactProgramPath(library,p),interface:p.interface,inputs:p.inputs,
+       component:{description:(p.component.description??p.component.summary??'').slice(0,1200),summary:p.component.summary,contract_tool:'read_ppt_design',fields:Object.keys(p.component.parameters_schema.properties??{})}}:({id:p.id,program_path:artifactProgramPath(library,p),interface:p.interface,inputs:p.inputs,
        argv_order:Array.from({length:p.argument_count},(_,i)=>i===p.output_argument_index?'new_output_directory':'input['+p.input_argument_indices.indexOf(i)+']'),
        outputs:p.certification.output_extensions})))+'\n';
      writeFileSync(join(task.output,'ppt-program-snapshot.json'),JSON.stringify(selected),{mode:0o600,flag:'wx'});
@@ -59,10 +75,15 @@ export function installPptProgramLearning(ctx:any,host:{current:(session:string)
     }
    }catch(error:any){registerArtifactContext(session,null);value.context=null;value.catalog='';audit({kind:'ppt_program_fallback',reason:error.message});}
   }
+  const writing=value.workflow?.programs.filter((program:any)=>program.ir.kind==='observed_page_write_delivery')??[];
+  if(writing.length)value.catalog+=pptWriteCatalog(writing);
   tasks.set(key,value);return value;
  }
+ registerPptDesignTools(ctx,current,host.resources??{});
  registerPptComponentTool(ctx,current);
  registerPptDeliveryTool(ctx,current,host.resources??{});
+ registerPptWriteTool(ctx,current,pptWorkspacePath,host.resources??{});
+ registerPptWorkflowContinuation(ctx,current,pptWorkflowHost);
  ctx.on('agent/created',({agent}:any)=>{
   agent.ctx.systemPrompt.variable('ppt_program_catalog',()=>current(agent.session.id)?.catalog??'');
   agent.ctx.systemPrompt.section({name:'ppt-program-catalog',order:10230,text:'{{ppt_program_catalog}}'});

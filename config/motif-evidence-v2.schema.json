@@ -1,0 +1,675 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geneloop:motif-evidence:v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "scenario",
+    "display_only",
+    "execution_authorized",
+    "data_origin",
+    "generated_at",
+    "library",
+    "capabilities",
+    "runs",
+    "events",
+    "evidence",
+    "exporter",
+    "export_digest",
+    "source"
+  ],
+  "properties": {
+    "format": {
+      "const": "geneloop-motif-evidence-v2"
+    },
+    "scenario": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "display_only": {
+      "const": true
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "data_origin": {
+      "const": "runtime_admitted_library"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "export_digest": {
+      "$ref": "#/$defs/hash"
+    },
+    "library": {
+      "type": "object",
+      "required": [
+        "generation",
+        "snapshot_sha256",
+        "registry_digest",
+        "certified_count"
+      ],
+      "properties": {
+        "generation": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "snapshot_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "registry_digest": {
+          "$ref": "#/$defs/hash"
+        },
+        "certified_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "status",
+          "in_frozen_library",
+          "version",
+          "certification",
+          "contract",
+          "dependencies",
+          "cost",
+          "evidence_refs"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/hash"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "program",
+              "tool_flow"
+            ]
+          },
+          "status": {
+            "enum": [
+              "certified",
+              "pending_certification",
+              "invalid",
+              "registered"
+            ]
+          },
+          "in_frozen_library": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "library_generation",
+              "candidate_digest",
+              "certificate_digest"
+            ],
+            "properties": {
+              "library_generation": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "candidate_digest": {
+                "$ref": "#/$defs/hash"
+              },
+              "certificate_digest": {
+                "$ref": "#/$defs/nullableHash"
+              }
+            }
+          },
+          "certification": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "native_witness_tasks",
+              "candidate_execution_tasks",
+              "negative_kinds"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "certified",
+                  "pending_certification",
+                  "invalid",
+                  "registered"
+                ]
+              },
+              "native_witness_tasks": {
+                "$ref": "#/$defs/count"
+              },
+              "candidate_execution_tasks": {
+                "$ref": "#/$defs/count"
+              },
+              "negative_kinds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "scope": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "contract": {
+            "type": "object",
+            "required": [
+              "language",
+              "parameters_schema",
+              "read_scope",
+              "write_scope",
+              "dependency_sha256",
+              "effect_contract_sha256",
+              "environment_sha256"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string"
+              },
+              "parameters_schema": {
+                "type": "object"
+              },
+              "read_scope": {
+                "$ref": "#/$defs/strings"
+              },
+              "write_scope": {
+                "$ref": "#/$defs/strings"
+              },
+              "dependency_sha256": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "effect_contract_sha256": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "environment_sha256": {
+                "$ref": "#/$defs/nullableHash"
+              }
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "sha256"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "environment",
+                    "dependency_lock",
+                    "effect_contract",
+                    "artifact"
+                  ]
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hash"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "cost": {
+            "type": "object",
+            "required": [
+              "amount_usd",
+              "known_model_cost_usd",
+              "currency",
+              "basis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "amount_usd": {
+                "$ref": "#/$defs/amount"
+              },
+              "known_model_cost_usd": {
+                "$ref": "#/$defs/amount"
+              },
+              "currency": {
+                "const": "USD"
+              },
+              "basis": {
+                "const": "capability_attribution_unknown"
+              }
+            }
+          },
+          "evidence_refs": {
+            "$ref": "#/$defs/refs"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tool_flow": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from_tool",
+                "to_tool",
+                "from_field",
+                "to_param"
+              ],
+              "properties": {
+                "from_tool": {
+                  "type": "string"
+                },
+                "to_tool": {
+                  "type": "string"
+                },
+                "from_field": {
+                  "type": "string"
+                },
+                "to_param": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "source_task_count": {
+            "$ref": "#/$defs/count"
+          }
+        }
+      }
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "task_ref",
+          "task_kind",
+          "library_sha256",
+          "host_environment_sha256",
+          "quality",
+          "cost",
+          "native_elapsed_seconds",
+          "end_to_end_elapsed_seconds",
+          "evidence_refs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/hash"
+          },
+          "task_ref": {
+            "$ref": "#/$defs/hash"
+          },
+          "task_kind": {
+            "enum": [
+              "new",
+              "maintain"
+            ]
+          },
+          "library_sha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "host_environment_sha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "quality": {
+            "type": "object",
+            "required": [
+              "hard_checks_passed",
+              "task_qualified",
+              "required_count",
+              "executed_count",
+              "skipped_count"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "hard_checks_passed": {
+                "type": "boolean"
+              },
+              "task_qualified": {
+                "type": "boolean"
+              },
+              "required_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "executed_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "skipped_count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "cost": {
+            "type": "object",
+            "required": [
+              "requests",
+              "known_model_cost_usd",
+              "cost_usd",
+              "unknown_usage_requests",
+              "pending_requests",
+              "usage_complete",
+              "tokens",
+              "cost_basis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "requests": {
+                "$ref": "#/$defs/count"
+              },
+              "known_model_cost_usd": {
+                "$ref": "#/$defs/amount"
+              },
+              "cost_usd": {
+                "$ref": "#/$defs/amount"
+              },
+              "unknown_usage_requests": {
+                "$ref": "#/$defs/count"
+              },
+              "pending_requests": {
+                "$ref": "#/$defs/count"
+              },
+              "usage_complete": {
+                "type": "boolean"
+              },
+              "tokens": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/$defs/count"
+                }
+              },
+              "cost_basis": {
+                "type": "string"
+              }
+            }
+          },
+          "native_elapsed_seconds": {
+            "$ref": "#/$defs/amount"
+          },
+          "end_to_end_elapsed_seconds": {
+            "$ref": "#/$defs/amount"
+          },
+          "evidence_refs": {
+            "$ref": "#/$defs/refs"
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "reason",
+          "actual_execution",
+          "run_id",
+          "capability_id",
+          "call_ref",
+          "origin",
+          "project_sha256",
+          "goal_sha256",
+          "model_request_id",
+          "occurred_at",
+          "cost_usd",
+          "evidence_refs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/hash"
+          },
+          "kind": {
+            "enum": [
+              "match",
+              "invoke",
+              "fallback"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actual_execution": {
+            "type": "boolean"
+          },
+          "run_id": {
+            "$ref": "#/$defs/hash"
+          },
+          "capability_id": {
+            "$ref": "#/$defs/hash"
+          },
+          "call_ref": {
+            "$ref": "#/$defs/hash"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "project_sha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "goal_sha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "model_request_id": {
+            "type": [
+              "string",
+              "integer",
+              "null"
+            ]
+          },
+          "occurred_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cost_usd": {
+            "$ref": "#/$defs/amount"
+          },
+          "evidence_refs": {
+            "$ref": "#/$defs/refs"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "sha256",
+          "verification_scope"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/hash"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "sha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "verification_scope": {
+            "enum": [
+              "host_reverified",
+              "digest_only"
+            ]
+          }
+        }
+      }
+    },
+    "exporter": {
+      "type": "object",
+      "required": [
+        "source_sha256",
+        "schema_sha256",
+        "new_model_http_requests"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "new_model_http_requests": {
+          "const": 0
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "label",
+        "release",
+        "compatibility",
+        "unavailable_reason",
+        "revisions"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "registered",
+            "account_learning"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "release": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "compatibility": {
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "unavailable_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label",
+              "certificate_digest",
+              "current",
+              "evidence_ref"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "certificate_digest": {
+                "$ref": "#/$defs/nullableHash"
+              },
+              "current": {
+                "type": "boolean"
+              },
+              "evidence_ref": {
+                "$ref": "#/$defs/hash"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableHash": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "amount": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/hash"
+      }
+    }
+  }
+}

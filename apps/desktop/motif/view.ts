@@ -1,4 +1,4 @@
-import {evidenceView,usd} from './evidence-projection.ts';
+import {evidenceView,usd} from '../../../src/adapters/motif_evidence_projection.ts';
 import check from '../.local/motif-validator.mjs';
 import checkRuntime from '../.local/motif-validator-v2.mjs';
 export {usd};

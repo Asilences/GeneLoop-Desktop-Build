@@ -293,8 +293,8 @@ body[data-ds-dark-theme] :is(.history,#workspace-list,.motif-library)::-webkit-s
 .run-benefit span{font-size:9px;color:var(--muted)}.run-benefit strong{font-size:21px;line-height:1.25;font-weight:550;color:var(--workspace-accent)}.run-benefit small{font-size:8px;color:var(--muted)}
 .run-recent-conversations>.workspace-recent{border-radius:10px}
 .run-recent-conversations .workspace-recent-heading{display:none}
-.workspace-inspector{flex:0 0 286px;width:286px;min-height:0;padding:14px 11px;overflow:auto;border-left:1px solid var(--line);background:linear-gradient(180deg,#f8fafb,#f3f7f5);--workspace-accent:#2aaf64;--workspace-soft:#eff9f2}
-.workspace-inspector-card{padding:14px;border:1px solid #e2e8e5;border-radius:14px;background:var(--gl-canvas);box-shadow:0 4px 18px #244f4010}
+.workspace-inspector{flex:0 0 286px;width:286px;min-height:0;padding:0;overflow:auto;align-self:stretch;border-left:1px solid var(--line);background:linear-gradient(180deg,#f8fafb,#f3f7f5);--workspace-accent:#2aaf64;--workspace-soft:#eff9f2}
+.workspace-inspector-card{box-sizing:border-box;min-height:100%;padding:18px 14px;border:0;border-radius:0;background:var(--gl-canvas);box-shadow:none}
 .workspace-inspector-header{display:grid;grid-template-columns:14px minmax(0,1fr);align-items:center;column-gap:7px;padding-bottom:11px;border-bottom:1px solid var(--line)}
 .workspace-inspector-header>svg{width:14px;height:14px}
 .workspace-inspector-header h2{margin:0;font-size:12px;font-weight:600}
@@ -334,7 +334,7 @@ body[data-ds-dark-theme] .workspace-inspector-card{border-color:#39473f;backgrou
 body[data-ds-dark-theme] .inspector-stat{border-color:#45694f;background:linear-gradient(145deg,#2d4034,#2c4834)}
 body[data-ds-dark-theme] .inspector-stat strong{color:#c1e9cb}body[data-ds-dark-theme] .inspector-stat small{color:#a3bea8}
 body[data-ds-dark-theme] .run-motif-chip{background:#3c304e;color:#cfb5ed}body[data-ds-dark-theme] .run-motif-chip.tone-1{background:#2c4330;color:#afd9b6}body[data-ds-dark-theme] .run-motif-chip.tone-2{background:#453c28;color:#d6c094}body[data-ds-dark-theme] .run-motif-chip.tone-3{background:#2d3b50;color:#b3c8e8}
-@media(max-width:1180px){.workspace-inspector{position:absolute;z-index:20;right:10px;top:60px;bottom:10px;width:294px;border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 60px #1e302633}}
+@media(max-width:1180px){.workspace-inspector{position:absolute;z-index:20;right:0;top:0;bottom:0;width:294px;border-left:1px solid var(--line);border-radius:0;box-shadow:0 16px 60px #1e302633}}
 @media(max-width:900px){.conversation[data-page=workspace-home] .history{padding:20px}.motif-workspace .workspace-home-heading{padding:0}.run-task-card-header{flex-wrap:wrap}.run-task-card-header>.run-task-status{margin-left:33px}.run-benefit{padding:10px 8px;gap:5px}.run-benefit>svg{display:none}.run-benefit span{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.run-task-emblem.running svg{animation:none}}
 .run-task-card>summary{list-style:none;cursor:pointer}

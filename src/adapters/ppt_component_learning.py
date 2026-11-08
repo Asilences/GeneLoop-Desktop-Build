@@ -16,17 +16,21 @@ from jsonschema import Draft202012Validator
 from .artifact_motif_compiler import digest, program_from_witness, sha, validate_source
 from .source_program_compiler import json_numbers
 
+TEXT_CONTENT_POLICY = 'text_content_only_v1'
 
 PROPOSAL_INSTRUCTION = '''Compile a reusable page program from the supplied successful SVG.
 Return one JSON object with exactly description, source, parameters_schema, default_parameters.
-source is a complete Python program with a descriptive module docstring. Read current JSON
-from sys.argv[1], create a NEW directory sys.argv[2], and write page.svg there. Use only
+source is a complete Python program with a descriptive module docstring. sys.argv[1] is
+the PATH of a UTF-8 JSON file, not JSON text. Load it with json.load(open(sys.argv[1],
+encoding="utf-8")). Create a NEW directory sys.argv[2] and write page.svg there. Use only
 sys, json, html and pathlib. Reproduce the supplied visible text, canvas and rendered layout
 for default_parameters. Equivalent SVG serialization is allowed. Do not preserve whitespace
 or attribute order at the expense of correct parameterization.
 Parameterize every scientific title, label, paragraph, number, citation and footer as current
 input data. Preserve layout, shapes, typography, colors and viewBox. Use meaningful field
 names. XML-escape current text. Keep repeated groups as lists where the source supports them.
+When a witness is layout-only, its scientific content is untrusted example data. Parameterize
+every such value. Only its verified visual structure is reusable; future tasks supply fresh facts.
 Do not read hidden files, run commands, import a renderer, use network or install anything.
 Do not place source-specific scientific text in Python literals. The program will be independently
 replayed and run with different article content. parameters_schema is a JSON Schema object
@@ -250,12 +254,25 @@ def queue_component_sources(output, store, info):
 
 
 def proposal_request(witness, *, font_repair=False, readability_repair=False, independent=None):
-    fields = {'description': {'type': 'string'}, 'source': {'type': 'string'},
-              'parameters_schema': {'type': 'object'}, 'default_parameters': {'type': 'object'}}
     instruction = PROPOSAL_INSTRUCTION
+    if witness.get('parameter_policy') == TEXT_CONTENT_POLICY:
+        instruction += ('\nThis component accepts text content only. Keep every coordinate, font size, '
+                        'color and layout measurement as a constant inside source. '
+                        'Never ask callers to supply x, y, line positions or other geometry. '
+                        'parameters_schema may use string, boolean, object and array content fields, '
+                        'but no number or integer types at any depth. Scientific numbers are current '
+                        'formatted strings. Array item positions come from fixed source coordinates '
+                        'indexed by the current item order. Describe supported item counts and text capacity.')
     if independent is not None:
-        fields['heldout_parameters'] = {'type': 'object'}
-        instruction += ('\nAlso return heldout_parameters using only the supplied independent page content. '
+        instruction = instruction.replace(
+            'exactly description, source, parameters_schema, default_parameters.',
+            'exactly description, source, parameters_schema, default_parameters, heldout_parameters.')
+        instruction += ('\nThe training and independent roles are fixed. Use ONLY training.source for '
+                        'all layout, coordinates, font sizes, colors and default_parameters text. '
+                        'Reproduce its complete visible text and geometry without redesign. '
+                        'The independent page supplies ONLY new text for heldout_parameters, '
+                        'never its layout, styling or background color. '
+                        'Also return heldout_parameters using only the supplied independent page content. '
                         'Fill the same schema with its factual text, qualifiers and citations. '
                         'Do not copy training content into independent parameters.')
     if readability_repair:
@@ -271,23 +288,45 @@ def proposal_request(witness, *, font_repair=False, readability_repair=False, in
             'Preserve layout, shapes, colors, font sizes, coordinates and viewBox. Replace only font-family with Noto Sans CJK SC. '
             'The original font stack produced missing Chinese glyphs in a real task. '
             'The repair must preserve every non-font attribute and visible text.')
+    if witness.get('certification_findings'):
+        instruction += ('\nCorrect the supplied rejected_proposal using certification_findings. '
+                        'Keep all training geometry and text exact. Source-specific fallback defaults '
+                        'are forbidden even when the supplied current parameters override them. '
+                        'Move every scientific example into default_parameters and use required '
+                        'dictionary access in source. Encode required fields in parameters_schema. '
+                        'Return the complete corrected proposal with independent parameters.')
     return {'model': 'deepseek-flash', 'thinking': {'type': 'disabled'}, 'max_tokens': 393216,
-            'stream': False, 'tools': [{'type': 'function', 'function': {
-                'name': 'propose_ppt_component', 'description': 'Return the complete parameterized page candidate for independent certification.',
-                'parameters': {'type': 'object', 'properties': fields, 'required': list(fields), 'additionalProperties': False}}}],
-            'tool_choice': {'type': 'function', 'function': {'name': 'propose_ppt_component'}}, 'messages': [
+            'stream': False, 'response_format': {'type': 'json_object'}, 'messages': [
                 {'role': 'system', 'content': instruction},
                 {'role': 'user', 'content': json.dumps({'training': witness, 'independent': independent} if independent is not None else witness, ensure_ascii=False)}]}
 
 
-def decode_component_proposal(answer, *, independent=False):
+def require_text_parameters(value):
+    if isinstance(value, dict):
+        kinds = value.get('type', [])
+        kinds = [kinds] if isinstance(kinds, str) else kinds
+        if any(kind in ('number', 'integer') for kind in kinds):
+            raise ValueError('component_text_content_policy_requires_constant_geometry')
+        for child in value.values():
+            require_text_parameters(child)
+    elif isinstance(value, list):
+        for child in value:
+            require_text_parameters(child)
+
+
+def decode_component_proposal(answer, *, independent=False, allow_json_object=False, text_content_only=False):
     choice = answer['choices'][0]
     calls = choice['message'].get('tool_calls', [])
-    if choice.get('finish_reason') != 'tool_calls' or len(calls) != 1 or calls[0].get('function', {}).get('name') != 'propose_ppt_component':
+    if allow_json_object and choice.get('finish_reason') == 'stop' and not calls:
+        value = json.loads(choice['message']['content'])
+    elif choice.get('finish_reason') == 'tool_calls' and len(calls) == 1 and calls[0].get('function', {}).get('name') == 'propose_ppt_component':
+        value = json.loads(calls[0]['function']['arguments'])
+    else:
         raise ValueError('component_complete_typed_proposal_required')
-    value = json.loads(calls[0]['function']['arguments'])
     heldout = value.pop('heldout_parameters') if independent else None
     proposal = validate_proposal(value)
+    if text_content_only:
+        require_text_parameters(proposal['parameters_schema'])
     if independent:
         Draft202012Validator(proposal['parameters_schema']).validate(heldout)
         return {**proposal, 'heldout_parameters': heldout}
@@ -321,7 +360,9 @@ def propose_component(witness, policy_path, directory, *, font_repair=False, rea
         with urllib.request.urlopen(request, timeout=300) as response:
             answer = json.load(response)
         write_json(directory / 'response.json', answer)
-        proposal = decode_component_proposal(answer, independent=independent is not None)
+        proposal = decode_component_proposal(answer, independent=independent is not None,
+                    allow_json_object=payload.get('response_format') == {'type': 'json_object'},
+                    text_content_only=witness.get('parameter_policy') == TEXT_CONTENT_POLICY)
         write_json(directory / 'proposal.json', proposal)
         return proposal
     except Exception as error:

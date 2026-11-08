@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { pptRendererFiles, stageRuntime } from './runtime-bundle.mjs';
+import {pptWorkflowSourceFiles} from './stage-ppt-workflow.mjs';
 
 assert.ok(['win32', 'darwin'].includes(process.platform), '请在目标 Windows 或 macOS 平台原生构建。');
 assert.ok(process.arch === 'x64' || process.platform === 'darwin' && process.arch === 'arm64');
@@ -16,6 +17,8 @@ fingerprint.update(process.platform + '/' + process.arch);
 fingerprint.update(readFileSync(join(app, 'package-lock.json')));
 fingerprint.update(readFileSync(new URL('./runtime-bundle.mjs', import.meta.url)));
 fingerprint.update(readFileSync(new URL('./stage-local-runtime.mjs', import.meta.url)));
+fingerprint.update(readFileSync(new URL('./stage-ppt-workflow.mjs', import.meta.url)));
+for(const name of pptWorkflowSourceFiles)fingerprint.update(readFileSync(join(app,'../..',name)));
 if (process.platform === 'win32') fingerprint.update(readFileSync(join(app,'native/RemotionBrowser.cs')));
 for (const file of readdirSync(join(app, 'runtime')).sort()) fingerprint.update(readFileSync(join(app, 'runtime', file)));
 for (const source of pptRendererFiles) fingerprint.update(readFileSync(source));

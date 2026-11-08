@@ -1,0 +1,325 @@
+{
+  "format": "geneloop.privacy-policy/v1",
+  "version": "r4.2-contextual-label-identity-candidate",
+  "purpose": "restricted account learning copies; public tool_flow has its separate strict schema",
+  "text": {
+    "score_threshold": 0.4,
+    "declared_categories": [
+      "PERSON",
+      "PHONE_NUMBER",
+      "EMAIL_ADDRESS",
+      "LOCATION",
+      "IDENTITY_NUMBER",
+      "CREDIT_CARD",
+      "FINANCIAL_ACCOUNT",
+      "IP_ADDRESS",
+      "PRIVATE_REFERENCE",
+      "CREDENTIAL"
+    ],
+    "conditional_categories": [
+      "DATE_TIME",
+      "AGE",
+      "NRP",
+      "ORGANIZATION",
+      "COMPANY_NAME",
+      "MEDICAL_RECORD_NUMBER",
+      "HEALTH_PLAN_BENEFICIARY_NUMBER",
+      "CERTIFICATE_LICENSE_NUMBER",
+      "BIOMETRIC_IDENTIFIER",
+      "LICENSE_PLATE",
+      "VEHICLE_IDENTIFIER"
+    ],
+    "conditional_context_implemented": false,
+    "excluded_generic_entities": [
+      "AGE",
+      "DATE_TIME",
+      "NRP",
+      "ORGANIZATION"
+    ],
+    "requested_entities_by_language": {
+      "en": [
+        "ADDRESS",
+        "BINARY_PAYLOAD",
+        "CN_ID_NUMBER",
+        "CREDENTIAL",
+        "CREDIT_CARD",
+        "CRYPTO",
+        "EMAIL",
+        "EMAIL_ADDRESS",
+        "FINANCIAL_ACCOUNT",
+        "IBAN_CODE",
+        "ID",
+        "IDENTITY_NUMBER",
+        "IP_ADDRESS",
+        "LOCATION",
+        "MAC_ADDRESS",
+        "MEDICAL_LICENSE",
+        "PERSON",
+        "PHONE_NUMBER",
+        "PRIVATE_REFERENCE",
+        "UK_NHS",
+        "US_BANK_NUMBER",
+        "US_DRIVER_LICENSE",
+        "US_ITIN",
+        "US_PASSPORT",
+        "US_SSN",
+        "UUID"
+      ],
+      "zh": [
+        "CREDIT_CARD",
+        "CRYPTO",
+        "EMAIL",
+        "FINANCIAL_ACCOUNT",
+        "IBAN_CODE",
+        "ID",
+        "IDENTITY_NUMBER",
+        "IP_ADDRESS",
+        "LOCATION",
+        "MAC_ADDRESS",
+        "MEDICAL_LICENSE",
+        "PERSON",
+        "PHONE_NUMBER",
+        "UUID"
+      ]
+    },
+    "supplemental_patterns": {
+      "BINARY_PAYLOAD": [
+        "(?i)data:(?:image|audio|video|application/octet-stream)/?[^\\s,]*;base64,[A-Za-z0-9+/=_-]+"
+      ],
+      "PRIVATE_REFERENCE": [
+        "(?i)(?:https?|s3|file|ssh|ftp|smb)://[^\\s<>\\\"',;，。；！？、）\\])]+",
+        "[\"'](?:[A-Za-z]:[\\\\/]|\\\\\\\\|~/|/(?!/\\s))[^\"'\\n]+[\"']",
+        "(?<![\\w/:])(?:[A-Za-z]:[\\\\/]|\\\\\\\\|~/|/)[\\w.~-]+(?:[\\\\/][\\w.~-]+)+",
+        "(?i)(?<![\\w.-])[\\w.-]+\\.(?:pdf|pptx?|docx?|xlsx?|csv|tex|bib)(?![\\w-]|\\.[\\w-])",
+        "(?i)(?<![\\w])\\.local[\\\\/][^\\s<>\\\"',;，。；！？]+"
+      ],
+      "CREDENTIAL": [
+        "(?i)\\b(?:authorization|cookie|set-cookie)[\"']?\\s*[:=：][^\\n]+",
+        "(?i)\\b(?:api[_ -]?key|access[_ -]?token|password|passwd|secret|token)[\"']?\\s*[:=：]\\s*(?:\"[^\"\\n]*\"|'[^'\\n]*'|[^\\s,;，；]+)",
+        "(?:密码|口令|令牌|密钥)\\s*[:=：]\\s*(?:\"[^\"\\n]*\"|'[^'\\n]*'|[^\\s,;，；]+)"
+      ],
+      "PERSON": [
+        "(?<=(?:联系人|姓名)\\s*[:=：]\\s*)[\\p{Han}·]{2,8}(?=\\s|[,;，；。]|$)"
+      ],
+      "ADDRESS": [
+        "(?i)(?<=(?:通讯地址|邮寄地址|联系地址|家庭地址|住址|地址|\\b(?:(?:home|mailing|street) )?address)\\s*[:=：]\\s*)[^\\n;,，；。]+"
+      ],
+      "CN_ID_NUMBER": [
+        "(?<!\\d)[1-9]\\d{16}[\\dXx](?!\\d)"
+      ]
+    },
+    "entity_category_map": {
+      "EMAIL": "EMAIL_ADDRESS",
+      "ADDRESS": "LOCATION",
+      "ID": "IDENTITY_NUMBER",
+      "CN_ID_NUMBER": "IDENTITY_NUMBER",
+      "US_SSN": "IDENTITY_NUMBER",
+      "UK_NHS": "IDENTITY_NUMBER",
+      "US_PASSPORT": "IDENTITY_NUMBER",
+      "US_DRIVER_LICENSE": "IDENTITY_NUMBER",
+      "US_ITIN": "IDENTITY_NUMBER",
+      "US_BANK_NUMBER": "FINANCIAL_ACCOUNT",
+      "IBAN_CODE": "FINANCIAL_ACCOUNT"
+    },
+    "canonicalize_labels": true,
+    "contextual_recognizers": [
+      {
+        "name": "PersonalCardContext",
+        "upstream": "CreditCardRecognizer",
+        "entity": "CREDIT_CARD",
+        "base_score": 0.3,
+        "context_by_language": {
+          "en": [
+            "card",
+            "credit",
+            "银行卡",
+            "银行卡号",
+            "卡号"
+          ],
+          "zh": [
+            "银行卡",
+            "银行卡号",
+            "卡号",
+            "信用卡"
+          ]
+        },
+        "explicit_labels_by_language": {
+          "en": [
+            "银行卡号",
+            "银行卡",
+            "卡号",
+            "信用卡号",
+            "credit card",
+            "bank card",
+            "card number"
+          ],
+          "zh": [
+            "银行卡号",
+            "银行卡",
+            "卡号",
+            "信用卡号",
+            "credit card",
+            "bank card",
+            "card number"
+          ]
+        }
+      },
+      {
+        "name": "PersonalPassportContext",
+        "upstream": "UsPassportRecognizer",
+        "entity": "IDENTITY_NUMBER",
+        "base_score": 0.2,
+        "context_by_language": {
+          "en": [
+            "passport",
+            "护照",
+            "护照号",
+            "证件号"
+          ],
+          "zh": [
+            "护照",
+            "护照号",
+            "证件号",
+            "passport"
+          ]
+        },
+        "explicit_labels_by_language": {
+          "en": [
+            "护照号",
+            "护照",
+            "证件号",
+            "passport",
+            "passport number"
+          ],
+          "zh": [
+            "护照号",
+            "护照",
+            "证件号",
+            "passport",
+            "passport number"
+          ]
+        }
+      },
+      {
+        "name": "PersonalBankContext",
+        "upstream": "IbanRecognizer",
+        "entity": "FINANCIAL_ACCOUNT",
+        "base_score": 0.2,
+        "context_by_language": {
+          "en": [
+            "iban",
+            "account",
+            "银行账号",
+            "银行账户"
+          ],
+          "zh": [
+            "银行账号",
+            "银行账户",
+            "账号",
+            "账户",
+            "iban"
+          ]
+        },
+        "explicit_labels_by_language": {
+          "en": [
+            "IBAN",
+            "bank account",
+            "bank account number",
+            "银行账号",
+            "银行账户"
+          ],
+          "zh": [
+            "IBAN",
+            "bank account",
+            "bank account number",
+            "银行账号",
+            "银行账户"
+          ]
+        }
+      }
+    ]
+  },
+  "structured": {
+    "secret_fields": [
+      "accesstoken",
+      "apikey",
+      "apitoken",
+      "authorization",
+      "authtoken",
+      "bearertoken",
+      "clientsecret",
+      "cookie",
+      "credential",
+      "credentials",
+      "passwd",
+      "password",
+      "privatekey",
+      "refreshtoken",
+      "secret",
+      "setcookie",
+      "token",
+      "令牌",
+      "口令",
+      "密码",
+      "密钥"
+    ],
+    "identity_fields": {
+      "email": "EMAIL_ADDRESS",
+      "emailaddress": "EMAIL_ADDRESS",
+      "邮箱": "EMAIL_ADDRESS",
+      "联系邮箱": "EMAIL_ADDRESS",
+      "phone": "PHONE_NUMBER",
+      "phonenumber": "PHONE_NUMBER",
+      "mobile": "PHONE_NUMBER",
+      "telephone": "PHONE_NUMBER",
+      "手机": "PHONE_NUMBER",
+      "电话": "PHONE_NUMBER",
+      "personname": "PERSON",
+      "fullname": "PERSON",
+      "username": "PERSON",
+      "姓名": "PERSON",
+      "联系人": "PERSON",
+      "homeaddress": "LOCATION",
+      "mailingaddress": "LOCATION",
+      "住址": "LOCATION",
+      "邮寄地址": "LOCATION",
+      "streetaddress": "LOCATION",
+      "contactaddress": "LOCATION",
+      "address": "LOCATION",
+      "家庭地址": "LOCATION",
+      "bankaccount": "FINANCIAL_ACCOUNT",
+      "accountnumber": "FINANCIAL_ACCOUNT",
+      "iban": "FINANCIAL_ACCOUNT",
+      "银行卡号": "CREDIT_CARD",
+      "passportnumber": "IDENTITY_NUMBER",
+      "idnumber": "IDENTITY_NUMBER",
+      "ssn": "IDENTITY_NUMBER",
+      "证件号": "IDENTITY_NUMBER",
+      "身份证号": "IDENTITY_NUMBER",
+      "filename": "PRIVATE_REFERENCE",
+      "filepath": "PRIVATE_REFERENCE",
+      "relativepath": "PRIVATE_REFERENCE",
+      "attachmentname": "PRIVATE_REFERENCE",
+      "文件名": "PRIVATE_REFERENCE",
+      "附件名": "PRIVATE_REFERENCE",
+      "文件路径": "PRIVATE_REFERENCE",
+      "accountid": "PRIVATE_ID",
+      "userid": "PRIVATE_ID",
+      "sessionid": "PRIVATE_ID",
+      "taskid": "PRIVATE_ID"
+    }
+  },
+  "protected_prose": {
+    "protocol_words": [
+      "array",
+      "boolean",
+      "integer",
+      "new_material_requires_next_generation_snapshot",
+      "null",
+      "number",
+      "object",
+      "record_evidence_id",
+      "string"
+    ]
+  }
+}

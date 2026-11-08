@@ -5,8 +5,79 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {assertSupportedJsonSchema} from '@deepseek-ai/dsh-tools';
-import {deliveryDependencies,pptDeliveryTool,pptPreparationTool,pptDeliveryScene,pptDeliveryGraphTools,registerPptDeliveryTool,recordPptDeliveryReuse,managedExportProject,managedDefaultExport,validatePptPublication} from '../src/adapters/ppt_delivery_pipeline.ts';
+import {deliveryDependencies,pptDeliveryTool,pptPreparationTool,pptDeliveryScene,pptDeliveryGraphTools,registerPptDeliveryTool,recordPptDeliveryReuse,managedExportProject,managedDefaultExport,directManagedProject,validatePptPublication,pptReviewPages,recordPptVisualObservation,cachedPptDelivery} from '../src/adapters/ppt_delivery_pipeline.ts';
 import {deliveryProgress} from '../src/adapters/ppt_delivery_state.ts';
+
+test('literal Generate exports continue through the authorized tool and retain parent lineage',async()=>{
+ const workspace=mkdtempSync(join(tmpdir(),'ppt-continued-'));
+ mkdirSync(join(workspace,'code/projects/deck'),{recursive:true});
+ const task={workspace,output:workspace,status:'running',scene:{id:'ppt',ppt_execution_strategy:'ppt_master'},scene_options:{allow_output:true}};
+ let wrapper,guard,child,nextCalls=0;
+ const ctx={on:(name,fn)=>{if(name==='tools/execute')wrapper=fn;},tools:{register(){},guard:fn=>guard=fn,
+  async execute(execution){child=execution;return {isError:false,value:{mechanical_status:'passed',artifacts:[]}};}}};
+ registerPptDeliveryTool(ctx,()=>({task}));
+ const command='python3 /opt/geneloop/ppt-master/scripts/svg_to_pptx.py /work/projects/deck --with-notes';
+ const execution={name:'bash',callId:'parent',token:Symbol('parent'),arguments:{command},agent:{session:{id:'s'}},signal:new AbortController().signal};
+ assert.equal(guard(execution),undefined);
+ const result=await wrapper(execution,()=>{nextCalls++;});
+ assert.equal(nextCalls,0);assert.equal(child.parent,execution.token);assert.equal(child.name,'finalize_ppt');
+ assert.equal(result.value.exitCode,0);assert.match(result.value.stdout.text,/continued_by/);
+ assert.match(readFileSync(join(workspace,'ppt-delivery-audit.jsonl'),'utf8'),/arguments_sha256/);
+ for(const suffix of ['; rm a',' -o /work/outputs/custom.pptx',' --roundtrip',' | tail -2'])assert.equal(directManagedProject(command+suffix),null);
+});
+
+test('failed cached exports retain repair instructions even when their intermediate artifact bytes exist',()=>{
+ const workspace=mkdtempSync(join(tmpdir(),'ppt-failed-cache-'));
+ mkdirSync(join(workspace,'outputs/code'),{recursive:true});
+ const path=join(workspace,'outputs/code/deck.pptx');writeFileSync(path,'diagnostic');
+ const receipt={key:'version',mechanical_status:'failed',findings:[{rule:'speaker_notes_missing'}],artifacts:[{
+  path:'/work/outputs/deck.pptx',bytes:10,sha256:createHash('sha256').update('diagnostic').digest('hex')}]};
+ const task={workspace,output:workspace};
+ assert.equal(cachedPptDelivery(task,receipt,'version').next_action,'repair_specific_findings_before_rechecking');
+ assert.equal(cachedPptDelivery(task,{...receipt,retryable:true},'version'),null);
+ const passed={...receipt,mechanical_status:'passed'};
+ assert.equal(cachedPptDelivery(task,passed,'version').next_action,'present_current_delivery');
+ writeFileSync(path,'changed');assert.equal(cachedPptDelivery(task,passed,'version'),null);
+ assert.equal(cachedPptDelivery(task,receipt,'new-version'),null);
+});
+
+test('visual observation reuses only the exact successful image version returned to the model',async()=>{
+ const workspace=mkdtempSync(join(tmpdir(),'ppt-image-version-'));
+ mkdirSync(join(workspace,'outputs/code'),{recursive:true});
+ const file=join(workspace,'outputs/code/page.png');writeFileSync(file,'first-image');
+ const version=createHash('sha256').update('first-image').digest('hex');
+ const task={workspace,output:workspace},path='/work/outputs/page.png';
+ const receipt={artifacts:[{path,sha256:version}]};
+ const execution={name:'read_image',callId:'image-one',arguments:{file_path:path}};
+ const image={type:'image',attachment:{attachmentId:'sha256:'+version}};
+ await recordPptVisualObservation(task,execution,{isError:true,content:[image]});
+ await recordPptVisualObservation(task,execution,{content:[{type:'text',text:'not an image'}]});
+ assert.equal(pptReviewPages(task,receipt).length,1);
+ await recordPptVisualObservation(task,execution,{content:[image]});
+ assert.equal(pptReviewPages(task,receipt).length,0);
+ const changed=createHash('sha256').update('changed-image').digest('hex');
+ assert.equal(pptReviewPages(task,{artifacts:[{path,sha256:changed}]}).length,1);
+ writeFileSync(file,'changed-image');
+ await recordPptVisualObservation(task,execution,{content:[image]});
+ assert.equal(pptReviewPages(task,{artifacts:[{path,sha256:changed}]}).length,1);
+});
+
+test('normalized image observations bind the current source bytes before asynchronous storage',async()=>{
+ const workspace=mkdtempSync(join(tmpdir(),'ppt-image-normalized-'));
+ mkdirSync(join(workspace,'outputs/code'),{recursive:true});
+ const file=join(workspace,'outputs/code/page.png');writeFileSync(file,'source-image');
+ const version=createHash('sha256').update('source-image').digest('hex');
+ const task={workspace,output:workspace},path='/work/outputs/page.png';
+ const normalized='sha256:'+'a'.repeat(64),execution={name:'read_image',arguments:{file_path:path}};
+ const result={content:[{type:'image',attachment:{attachmentId:normalized}}]};
+ await recordPptVisualObservation(task,execution,result,{async saveImage({data}){
+  assert.equal(data.toString(),'source-image');writeFileSync(file,'later-change');
+  return {attachmentId:normalized};
+ }});
+ assert.equal(pptReviewPages(task,{artifacts:[{path,sha256:version}]}).length,0);
+ const later=createHash('sha256').update('later-change').digest('hex');
+ assert.equal(pptReviewPages(task,{artifacts:[{path,sha256:later}]}).length,1);
+});
 
 test('unchanged objective defects converge while actual improvement or new content permits repair',()=>{
  const failed={mechanical_status:'failed',page_receipts:[{text_sha256:'content'}],findings:[{rule:'text_contrast',page:1,object:'title',severity:'error',ratio:1.9}]};
@@ -14,6 +85,8 @@ test('unchanged objective defects converge while actual improvement or new conte
  assert.equal(deliveryProgress(failed,{...failed,findings:[{...failed.findings[0],ratio:3.0}]}).status,'repair_needed');
  assert.equal(deliveryProgress(failed,{...failed,page_receipts:[{text_sha256:'new-content'}]}).status,'repair_needed');
  assert.equal(deliveryProgress(failed,{mechanical_status:'passed'}).status,'checked');
+ const detail={...failed,findings:[{rule:'text_overflow',severity:'error',page:1,object:'title',detail:'x=10, overflow=12%'}]};
+ assert.equal(deliveryProgress(detail,{...detail,findings:[{...detail.findings[0],detail:'x=11, overflow=12%'}]}).status,'stalled');
 });
 
 test('shared delivery tool is offered to both PPT modes and retains the original Graph surface',()=>{
@@ -65,6 +138,15 @@ test('delivery dependencies change on source, manifest and notes revisions',()=>
  writeFileSync(join(project,'delivery.json'),'{}');writeFileSync(join(project,'svg_output/slide_01.svg'),'<svg/>');
  const first=deliveryDependencies(workspace,'/work/projects/deck','/work/projects/deck/delivery.json');
  assert.ok(first.files.some(row=>row.path==='svg_output/slide_01.svg'));
+ writeFileSync(join(project,'scratch-debug.txt'),'diagnostic scratch');
+ assert.deepEqual(first.files,deliveryDependencies(workspace,'/work/projects/deck','/work/projects/deck/delivery.json').files);
+ mkdirSync(join(project,'images'));writeFileSync(join(project,'images/figure.png'),'first asset');
+ writeFileSync(join(project,'svg_output/slide_01.svg'),'<svg><image href="../images/figure.png"/></svg>');
+ const withAsset=deliveryDependencies(workspace,'/work/projects/deck','/work/projects/deck/delivery.json');
+ assert.ok(withAsset.files.some(row=>row.path==='images/figure.png'));
+ writeFileSync(join(project,'images/figure.png'),'updated asset');
+ assert.notDeepEqual(withAsset.files,deliveryDependencies(workspace,'/work/projects/deck','/work/projects/deck/delivery.json').files);
+ writeFileSync(join(project,'svg_output/slide_01.svg'),'<svg/>');
  mkdirSync(join(project,'validation'));
  writeFileSync(join(project,'validation/presentation.report.json'),'generated export report');
  const generated=deliveryDependencies(workspace,'/work/projects/deck','/work/projects/deck/delivery.json');
@@ -98,6 +180,8 @@ test('font diagnostics route through the deterministic role calibration entry',(
  const execution=command=>({name:'bash',agent:{session:{id:'s'}},arguments:{command}});
  assert.match(guard(execution('fc-match "Noto Sans CJK SC"')),/prepare_ppt/);
  assert.match(guard(execution('python3 /opt/geneloop/ppt-master/scripts/text_measure.py calibrate /work/projects/deck --outline')),/prepare_ppt/);
+ assert.match(guard(execution('python3 -c "import text_measure as tm; print(tm.measure_text)"')),/prepare_ppt/);
+ assert.match(guard(execution('python3 -c "from text_measure import wrap_text, measure_text"')),/prepare_ppt/);
  assert.match(guard(execution('python3 -c "import fitz; p=fitz.open(\'/work/outputs/presentation.pdf\')[0]; p.get_text(\'rawdict\')"')),/finalize_ppt/);
  assert.equal(guard(execution('python3 -c "import fitz; p=fitz.open(\'/work/inputs/paper.pdf\')[0]; p.get_text(\'dict\')"')),undefined);
  assert.equal(guard(execution('cat /work/projects/deck/spec_lock.md')),undefined);

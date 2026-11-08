@@ -1,0 +1,9 @@
+GeneLoop adapts selected layout geometry and color roles from Presenton General.
+Source https://github.com/presenton/presenton
+Commit bf5179fc712c4e5d225511f46960478f80879da7
+Original file templates/general/template.json
+Licensed under Apache License 2.0. See Presenton-LICENSE.txt.
+Modifications include CJK fonts, readable type roles, parameterized user content,
+and deterministic editable SVG composition through GeneLoop's shared delivery.
+External font downloads, sample identities, stock imagery and application services
+are outside this selected adaptation.

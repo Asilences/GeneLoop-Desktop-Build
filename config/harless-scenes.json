@@ -9,7 +9,7 @@
       "adapter": "ppt",
       "ppt_execution_strategy": "ppt_master",
       "rsi": {
-        "runtime_bundle": "motif-libraries/ppt-master-v83"
+        "runtime_bundle": "motif-libraries/ppt-master-desktop-v23"
       }
     },
     {
@@ -19,7 +19,7 @@
       "instructions": "scenarios/paper_proofreading/prompt.md",
       "adapter": "workspace",
       "rsi": {
-        "runtime_bundle": "motif-libraries/paper-web-v85",
+        "runtime_bundle": "motif-libraries/paper-web-desktop-v23",
         "bundle_from_env": "HARLESS_PAPER_RUNTIME_BUNDLE"
       }
     },

@@ -19,6 +19,7 @@ import {createPaperLearning} from './harless_paper_learning.ts';
 import {createPptLearning} from './harless_ppt_learning.ts';
 import {capturePrivateLearningTrace,capturePlatformLearningTrace} from './harless_learning_trace.ts';
 import {mountRsiSharing} from './harless_rsi_sharing.ts';
+import {registerMotifCatalog} from './harless_motif_catalog.ts';
 
 import {installPptProgramLearning} from './ppt_program_learning.ts';
 import {pptComponentScene,pptComponentGraphTools} from './ppt_component_tool.ts';
@@ -62,7 +63,7 @@ import {createClosingTurnMirror} from './geneloop_task_trace.ts';
 import {PlanModeController} from '@deepseek-ai/dsh-plan-mode';
 import {createPlanAdmission,PLAN_GUIDANCE} from './geneloop_plan.ts';
 import {GoalService} from '@deepseek-ai/dsh-goal';
-import {registerApprovedSkill} from './geneloop_native_work.ts';
+import {bindApprovedSkill} from './geneloop_native_work.ts';
 import {apply as nativeGoalDriver} from '@deepseek-ai/dsh-goal-round-driver';
 import {createGoalAdmission,GOAL_GUIDANCE} from './geneloop_goal.ts';
 import {guardNativeModeCommand,protectGoalRpc} from './geneloop_runtime_routes.ts';
@@ -294,7 +295,7 @@ export function apply(ctx: any) {
         return allowed.has(call.name) ? commonToolDenial(call) : 'Tool is outside the configured capability profile';
       })];
     if (scene.id === 'ppt' && scene.ppt_execution_strategy === 'ppt_master')
-      disposers.push(registerApprovedSkill(agent.ctx, config.command_resources));
+      disposers.push(bindApprovedSkill(agent.ctx, config.command_resources));
     disposers.push(agent.ctx.systemPrompt.section({name:'geneloop:attachment-context-policy',order:10220,text:attachmentContextPolicy}));
     disposers.push(agent.ctx.systemPrompt.section({name:'geneloop:goal-policy',order:10225,text:GOAL_GUIDANCE}));
     if (instructions) {
@@ -559,6 +560,7 @@ export function apply(ctx: any) {
     python:config.provider_mode==='real'?(process.env.SSS_PYTHON??config.learning_python):undefined,taskIds:()=>[...indexedTasks]});
   const pptLearning=createPptLearning({output:config.output,user:principal,scope:runScope,
     python:config.provider_mode==='real'?(process.env.SSS_PYTHON??config.learning_python):undefined,resources:config.command_resources,taskIds:()=>[...indexedTasks]});
+  registerMotifCatalog(ctx,{scenes:()=>scenes.map(scene=>pptLearning.resolve(paperLearning.resolve(scene))),unavailable:executeUnavailable});
   let creation: Promise<unknown> = Promise.resolve();
   const active = new Map<string, { comparison?: string; provider: string }>();
   // Serial admission prevents two preview/submit retries from creating duplicate work.
@@ -592,6 +594,7 @@ export function apply(ctx: any) {
   }
   const forSession = (id: string): Task | undefined => tasks.get(sessions.get(id) ?? '');
   if(config.provider_mode==='real')installPptProgramLearning(ctx,{current:forSession,resolve:()=>pptLearning.program(),resources:config.command_resources,
+    workflow:()=>pptLearning.workflow(),
     deliveryFontRules:()=>pptLearning.deliveryFontRules(),
     reused:(task,count)=>{task.stats.program_reuses=Number(task.stats.program_reuses??0)+count;record(task);}});
   const closingTurns=createClosingTurnMirror((task,event)=>
@@ -1303,7 +1306,8 @@ export function apply(ctx: any) {
       delivery.push({ type: 'text', text: `\n\n[来源 ${reference.resource_id}；版本 ${resource.version}]\n${resource.text}` });
     }
     const originalScene=paperLearning.resolve(sessionScene(existingSession ?? '', sceneFor(request.capability_profile)));
-    const scene = pptDeliveryScene(pptComponentScene(videoProgramScene(requestedMode==='baseline'?originalScene:pptLearning.resolve(originalScene),request.mode),request.mode,config.provider_mode==='real'&&!!pptLearning.program()),config.provider_mode==='real');
+    const scene = pptDeliveryScene(pptComponentScene(videoProgramScene(requestedMode==='baseline'?originalScene:pptLearning.resolve(originalScene),request.mode),request.mode,config.provider_mode==='real'&&
+      !!pptLearning.program(),config.provider_mode==='real'&&!!pptLearning.workflow()?.programs.some((program:any)=>program.ir.kind==='observed_page_write_delivery')),config.provider_mode==='real');
     if (existingSession && legacyChatSessions.has(existingSession) && request.content.some(part => part.type !== 'text'))
       throw new TaskError('new_session_required', '历史会话可以继续文字对话；使用文件或场景工具请新建会话。', 409);
     if (scene.unavailable_reason) throw new TaskError('scene_not_connected', scene.unavailable_reason, 409);
@@ -2361,6 +2365,7 @@ export function apply(ctx: any) {
               name: body.name, data: (async function* () { yield data; })(), signal: request.signal });
             const changed = normalizeWebTaskRequest({ content: [...task.request.content, { type: 'file', receiptId: uploaded.receiptId }],
               inputs: task.request.resources, mode: task.request.mode, budget_usd: task.request.budget_usd,
+              ...(task.request.learning_eligible === undefined ? {} : { learning_eligible: task.request.learning_eligible }),
               request_id: task.request.request_id, capability_profile: task.request.capability_profile }, {
               task_id: task.request.task_id, session_id: task.request.session_id, default_mode: config.mode,
               default_budget_usd: config.budget_usd, max_budget_usd: config.budget_usd,

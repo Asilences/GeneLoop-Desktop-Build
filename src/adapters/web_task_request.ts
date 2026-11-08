@@ -46,6 +46,8 @@ export type NormalizedWebTask = {
   resources: ResourceReference[];
   mode: ExecutionMode;
   budget_usd: number | null;
+  /** false excludes this task from future learning; omission preserves server policy. */
+  learning_eligible?: boolean;
   /** 单文本保持其原始 SHA；其他形式覆盖整个有序内容。 */
   prompt_sha256: string;
   /** 始终覆盖全部文本、媒体 payload、receipt、显示名称和顺序。 */
@@ -178,7 +180,7 @@ export function normalizeWebTaskRequest(input: unknown, context: RequestContext)
   let inputKind: NormalizedWebTask['input_kind'];
   let content: PromptPart[];
   const envelope = typeof input === 'string' ? {} : object(input, 'request');
-  keys(envelope, ['instruction', 'content', 'messages', 'inputs', 'mode', 'budget_usd', 'request_id', 'capability_profile'], 'request');
+  keys(envelope, ['instruction', 'content', 'messages', 'inputs', 'mode', 'budget_usd', 'request_id', 'capability_profile', 'learning_eligible'], 'request');
   if (typeof input === 'string') {
     inputKind = 'text'; content = parts(input, 'request');
   } else {
@@ -227,6 +229,10 @@ export function normalizeWebTaskRequest(input: unknown, context: RequestContext)
   if (!context.allowed_profiles.includes(selectedProfile)) fail('request.capability_profile', 'not registered by the server', 'profile_not_allowed');
   const selectedMode = envelope.mode === undefined ? defaultMode : mode(envelope.mode, 'request.mode');
   const budget = envelope.budget_usd === undefined ? defaultBudget : amount(envelope.budget_usd, 'request.budget_usd');
+  if (envelope.learning_eligible !== undefined && typeof envelope.learning_eligible !== 'boolean') {
+    fail('request.learning_eligible', 'must be a boolean');
+  }
+  const learning = envelope.learning_eligible === undefined ? {} : { learning_eligible: envelope.learning_eligible as boolean };
   if (maximumBudget !== null && (budget === null || budget > maximumBudget)) fail('request.budget_usd', 'exceeds server maximum', 'budget_not_allowed');
   const contentDigest = sha(canonical(content));
   const promptDigest = content.length === 1 && content[0].type === 'text' ? sha(content[0].text) : contentDigest;
@@ -242,9 +248,9 @@ export function normalizeWebTaskRequest(input: unknown, context: RequestContext)
   return {
     schema_version: 1, task_id: taskId, session_id: sessionId, request_id: requestId,
     capability_profile: selectedProfile, input_kind: inputKind, content, resources,
-    mode: selectedMode, budget_usd: budget, prompt_sha256: promptDigest, content_sha256: contentDigest,
+    mode: selectedMode, budget_usd: budget, ...learning, prompt_sha256: promptDigest, content_sha256: contentDigest,
     request_sha256: sha(canonical({ schema_version: 1, request_id: requestId,
       capability_profile: selectedProfile, mode: selectedMode, budget_usd: budget,
-      content_sha256: contentDigest, resources })), summary,
+      content_sha256: contentDigest, resources, ...learning })), summary,
   };
 }

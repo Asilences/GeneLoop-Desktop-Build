@@ -25,6 +25,7 @@ import {SystemPrompt} from '@deepseek-ai/dsh-system-prompt';
 import {SkillRegistry} from '@deepseek-ai/dsh-skill';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
 import {pptDeliveryTool,pptPreparationTool} from '../src/adapters/ppt_delivery_pipeline.ts';
+import {pptDesignTool,pptStartTool,pptPageTool} from '../src/adapters/ppt_design.ts';
 import {SubagentRuntime} from '@deepseek-ai/dsh-subagent';
 import {apply as nativeSpawn} from '@deepseek-ai/dsh-subagent-spawn-in-process';
 import {CommandRuntime} from '@deepseek-ai/dsh-commands';
@@ -478,6 +479,27 @@ test('Dynamic preview creates independent tasks, binds resource versions, and is
       [{ instruction: '任务', inputs: [{ resource_id: 'source:one', version: 'v2' }] }, 'resource_version_changed'],
     ]) { const result = await f.api({ action: 'preview', request }); assert.equal(result.value.error.code, code); }
     const list = await f.api(); assert.equal(list.value.tasks.length, 2); assert.equal(list.value.aggregate.tasks, 2);
+  } finally { await f.close(); }
+});
+
+test('Task learning opt-out survives upload and restart and cannot change under the same request ID', options, async () => {
+  const f = await fixture();
+  try {
+    const input = { instruction: 'Independent held-out presentation', request_id: 'learning-opt-out', learning_eligible: false };
+    const task = await f.preview(input);
+    const path = join(f.directory, 'tasks', task.task_id, 'task.json');
+    assert.equal(JSON.parse(readFileSync(path)).learning_eligible, false);
+    const conflict = await f.api({ action: 'preview', request: { ...input, learning_eligible: true } });
+    assert.equal(conflict.status, 409);
+    assert.equal(conflict.value.error.code, 'request_id_conflict');
+    const uploaded = await f.api({ action: 'upload', task_id: task.task_id,
+      name: 'brief.txt', data: Buffer.from('Held-out source material').toString('base64') });
+    assert.equal(uploaded.status, 200, JSON.stringify(uploaded.value));
+    assert.equal(JSON.parse(readFileSync(path)).learning_eligible, false);
+    await f.restart();
+    const restored = await f.api(undefined, '?task_id=' + task.task_id);
+    assert.equal(restored.status, 200);
+    assert.equal(JSON.parse(readFileSync(path)).learning_eligible, false);
   } finally { await f.close(); }
 });
 
@@ -3182,7 +3204,7 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
 test('actual PPT adapter completion freezes single-learning evidence before another message edits outputs',
  {skip:!process.env.SSS_PYTHON},async()=>{
  const scenes=[{...multiScenes[0],id:'ppt',label:'PPT',adapter:'ppt',ppt_execution_strategy:'ppt_master',mcp_rows:[]}];
- const f=await fixture({scenes,provider_mode:'real',capability_profile:'ppt',fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool]});
+ const f=await fixture({scenes,provider_mode:'real',capability_profile:'ppt',fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool,pptDesignTool,pptStartTool,pptPageTool]});
  try{
   const task=await f.preview('Synthetic completion-boundary diagnostic; no cloud model call');
   await f.submit(task);
@@ -3240,4 +3262,22 @@ for(const scene of platformPrivacyScenes)test('platform privacy native task sett
   await f.close();
   if(prior===undefined)delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC=prior;
  }
+
+
+test('Motif读取端点复用原加载器和真实Runtime准入，拒绝未登录与路径参数', options, async()=>{
+ const {loadedProductMotifScenes}=await import('./helpers/product_motif_scenes.mjs');
+ const products=loadedProductMotifScenes();
+ const f=await fixture({scenes:products,capability_profile:'paper-proofreading'});
+ try{
+  const route=f.routes.get('/api/harless/motif-catalog');assert.ok(route);
+  const request=suffix=>{const r=new Request('http://127.0.0.1/api/harless/motif-catalog'+suffix);r.authorized=true;return r;};
+  assert.equal((await route.fetch(new Request('http://127.0.0.1/api/harless/motif-catalog'))).status,401);
+  assert.equal((await route.fetch(request('?account=foreign'))).status,400);
+  const result=await(await route.fetch(request(''))).json();
+  assert.equal(result.format,'geneloop-runtime-motif-catalog-v1');
+  assert.deepEqual(result.libraries.map(r=>[r.scene,r.status,r.evidence?.capabilities.length]),[['ppt','ready',2],['paper-proofreading','ready',1],['research-data-analysis','ready',10]]);
+  assert.ok(result.libraries.every(r=>r.evidence.source.compatibility==='available'));
+  assert.equal(result.libraries[2].evidence.library.certified_count,0);
+  assert.equal(f.modelCalls.length,0);
+ }finally{await f.close();}
 });

@@ -24,7 +24,8 @@ def test_exact_entry_and_routing_bytes(installed):
     root,reader=installed
     entry=reader.read_skill_entry()
     routing=reader.read_pinned_routing(entry['source_id'])
-    assert entry['text']=='official entry' and routing['text']=='routing'
+    assert entry['text']==Path(server.__file__).with_name('SKILL.md').read_text(encoding='utf-8').split('---',2)[-1].strip()
+    assert routing['text']==Path(server.__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')
     assert entry['version_sha256']==routing['version_sha256'] and routing['guard_exit_code']==0
     assert entry['skill_dir']=='/opt/geneloop/ppt-master'
     assert entry['runtime_policy']['text']==Path(server.__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')

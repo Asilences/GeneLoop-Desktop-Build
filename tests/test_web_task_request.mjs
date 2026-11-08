@@ -9,6 +9,30 @@ const options = { skip: !process.features?.typescript };
 const load = () => import('../src/adapters/web_task_request.ts');
 const sha = value => createHash('sha256').update(value).digest('hex');
 
+test('Learning opt-out is persisted, type checked and bound to the request without changing legacy hashes', options, async () => {
+  const { normalizeWebTaskRequest } = await load();
+  const input = { instruction: '独立留出任务', request_id: 'holdout-request' };
+  const original = normalizeWebTaskRequest(input, context);
+  assert.equal(Object.hasOwn(original, 'learning_eligible'), false);
+  const canonical = value => {
+    if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+    if (value && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+    return JSON.stringify(value);
+  };
+  assert.equal(original.request_sha256, sha(canonical({ schema_version: 1, request_id: input.request_id,
+    capability_profile: context.default_profile, mode: context.default_mode, budget_usd: context.default_budget_usd,
+    content_sha256: original.content_sha256, resources: [] })));
+  for (const learning_eligible of [false, true]) {
+    const result = normalizeWebTaskRequest({ ...input, learning_eligible }, context);
+    assert.equal(JSON.parse(JSON.stringify(result)).learning_eligible, learning_eligible);
+    assert.notEqual(result.request_sha256, original.request_sha256);
+    assert.equal(result.content_sha256, original.content_sha256);
+  }
+  for (const learning_eligible of [null, 0, 1, 'false', {}, []]) {
+    assert.throws(() => normalizeWebTaskRequest({ ...input, learning_eligible }, context), /learning_eligible/);
+  }
+});
+
 test('Unlimited tasks preserve null, finite ceilings reject it, and zero remains zero', options, async () => {
   const { normalizeWebTaskRequest } = await load();
   const unlimited = { ...context, default_budget_usd: null, max_budget_usd: null };

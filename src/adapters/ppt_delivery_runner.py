@@ -95,17 +95,24 @@ def run_delivery(request):
                     {'rule': 'official_svg_check', 'severity': 'error', 'page': index,
                      'file': row.get('file', row.get('path')), 'detail': error}
                     for index, row in enumerate(checked.get('files', []), 1) for error in row.get('errors', [])]
+                request['_stage_findings'].extend({'rule': 'official_project_error', 'severity': 'error',
+                    'scope': row.get('scope'), 'detail': row.get('message', 'Project validation failed')}
+                    for row in checked.get('categories', {}).get('blocking', {}).get('issues', [])
+                    if row.get('scope') and not row.get('file'))
             raise ValueError('delivery_stage_failed_' + label)
 
     skill = Path('/opt/geneloop/ppt-master/scripts')
+    integrated = request.get('integrated_generate') is True
+    quality_args = ['--quick-generate'] if integrated else ['--canonical-authoring']
     execute([sys.executable, str(skill / 'svg_quality_checker.py'), str(project), '--stage', 'final',
-             '--canonical-authoring', '--json'], 'official-quality')
+             *quality_args, '--json'], 'official-quality')
     if manifest.get('notes_source') == 'total':
         fixed_file(project / 'notes/total.md', project)
         execute([sys.executable, str(skill / 'total_md_split.py'), str(project)], 'notes-split')
     pptx = output / 'presentation.pptx'
+    export_args = ['--quick-generate'] if integrated else []
     execute([sys.executable, str(skill / 'svg_to_pptx.py'), str(project), '-o', str(pptx),
-             '--with-notes', '--no-animations'], 'pptx-export')
+             '--with-notes', '--no-animations', *export_args], 'pptx-export')
     profile = output / 'office-profile'
     execute(['/opt/geneloop/libreoffice/program/soffice', '-env:UserInstallation=' + profile.as_uri(),
              '--headless', '--convert-to', 'pdf:impress_pdf_Export', '--outdir', str(output), str(pptx)], 'office-render')
@@ -147,6 +154,7 @@ def run_delivery(request):
                                      'text': text})
     return {'mechanical_status': 'failed' if any(f['severity'] == 'error' for f in findings) else 'passed',
             'review_status': 'pending', 'findings': findings, 'page_receipts': page_receipts, 'commands': commands,
+            'execution_profile': 'geneloop_integrated_v1' if integrated else 'upstream_default_v1',
             'applied_font_rules': applied_rules,
             'applied_annotation_repairs': annotation_repairs,
             'artifacts': [{'path': str(p), 'sha256': hashlib.sha256(p.read_bytes()).hexdigest(), 'bytes': p.stat().st_size}

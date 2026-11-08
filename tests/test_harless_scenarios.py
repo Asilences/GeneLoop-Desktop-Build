@@ -52,7 +52,8 @@ def test_product_scenes_bind_real_backends_or_explicit_unavailability(tmp_path):
     assert rows['ppt']['allowed_tools'] == [*ppt_tools, *common]
     assert 'mcp__ppt_master__read_skill_entry' in rows['ppt']['allowed_tools']
     assert not any(t.startswith('mcp__ppt__') for t in rows['ppt']['allowed_tools'])
-    assert rows['ppt']['instructions'].startswith('完成用户的 PPT 任务。')
+    assert rows['ppt']['instructions'].startswith((ROOT/'scenarios/ppt_master/prompt.md').read_text(encoding='utf-8'))
+    assert 'start_ppt' in rows['ppt']['instructions'] and 'read_ppt_design' in rows['ppt']['instructions']
     lock=json.loads((ROOT/'scenarios/ppt_master/skill-lock.json').read_text(encoding='utf-8'))
     assert rows['ppt']['design_skill_sha256']==lock['files']['SKILL.md']
     assert rows['ppt']['skill_package_sha256']==lock['package_sha256']

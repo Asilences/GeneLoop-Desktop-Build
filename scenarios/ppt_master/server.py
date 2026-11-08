@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import io
 import json
+import hashlib
 import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -50,9 +51,12 @@ class SkillReader:
         self.source_id = 'source-' + self.version[:32]
 
     def read_skill_entry(self):
+        read_verified(self.root, 'SKILL.md', self.lock)
+        adapted = Path(__file__).with_name('SKILL.md').read_text(encoding='utf-8')
         return {'source_id': self.source_id, 'version_sha256': self.version,
                 'skill_dir': '/opt/geneloop/ppt-master',
-                'text': read_verified(self.root, 'SKILL.md', self.lock).decode('utf-8'),
+                'text': adapted.split('---', 2)[-1].strip(),
+                'entry_version_sha256': hashlib.sha256(adapted.encode()).hexdigest(),
                 'runtime_policy': {'id': 'geneloop-ppt-v1',
                                    'text': Path(__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')}}
 
@@ -61,6 +65,7 @@ class SkillReader:
             raise ValueError('ppt_master_source_version_mismatch')
         # Entry changes invalidate the continuation even after it was read.
         read_verified(self.root, 'SKILL.md', self.lock)
+        read_verified(self.root, 'workflows/routing.md', self.lock)
         read_verified(self.root, 'scripts/attribution_guard.py', self.lock)
         result = subprocess.run([sys.executable, str(self.root / 'scripts/attribution_guard.py')],
             capture_output=True, text=True, timeout=90,
@@ -68,7 +73,7 @@ class SkillReader:
         if result.returncode:
             raise ValueError('ppt_master_attribution_guard_failed')
         return {'source_id': source_id, 'version_sha256': self.version, 'guard_exit_code': 0,
-                'text': read_verified(self.root, 'workflows/routing.md', self.lock).decode('utf-8')}
+                'text': Path(__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')}
 
 
 def create_server():

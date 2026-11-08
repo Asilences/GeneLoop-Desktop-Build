@@ -238,10 +238,17 @@ def acceptance_run(mode, *, stale=False):
                         SSS_MOTIF_EMBEDDING_MODEL='fixture-vectors-not-a-semantic-model',
                         SSS_MOTIF_MIN_SIMILARITY='0.8', SSS_MOTIF_MIN_MARGIN='0.1',
                         SSS_ONLINE_MOTIF_PROMPT_SHA256=prepared['prompt_sha256'])
-                with create_harness(root=ROOT, patches=tuple(patches), env=env, cwd=temporary,
+                harness = create_harness(root=ROOT, patches=tuple(patches), env=env, cwd=temporary,
                     runtime_cwd=temporary, provider='deepseek-official', model='deepseek-flash',
-                    max_tokens=1000, request_timeout_seconds=20) as harness:
-                    result = harness.run(prepared['prompt'], session_id=task['session_id'])
+                    max_tokens=1000, request_timeout_seconds=20)
+                try:
+                    with harness:
+                        result = harness.run(prepared['prompt'], session_id=task['session_id'])
+                finally:
+                    # This example owns a temporary workspace. The SDK closes
+                    # before background admission; drain it before deleting its
+                    # files, including when the original task raised an error.
+                    harness.wait_for_privacy()
                 if handler.failures or result.finish_reason != 'completed':
                     raise ValueError('local Harness loop failed: ' + str(handler.failures))
                 calls = [event for event in result.events if event.get('type') == 'tool/call']

@@ -20,6 +20,15 @@ from .ppt_component_learning import queue_component_sources
 from .ppt_delivery_learning import learn_delivery_fonts
 
 ROOT = Path(__file__).resolve().parents[2]
+LAYOUT_ONLY_SCOPE = 'verified_layout_only_current_text_untrusted'
+
+
+def page_material_scope(proof):
+    if proof.get('status') != 'failed' and not proof.get('model_failed_pages'):
+        return 'delivered_page_parameters_scientific_quality_not_certified'
+    if proof.get('layout_status') == 'passed':
+        return LAYOUT_ONLY_SCOPE
+    return None
 
 
 def sha(path):
@@ -44,6 +53,16 @@ def digest(value):
 def program_implementation_signature():
     return digest({name: sha(ROOT / name) for name in (
         'src/adapters/ppt_program_learning.py', 'src/adapters/ppt_program_learning.ts',
+        'src/adapters/ppt_program_evaluation.py', 'src/adapters/ppt_design.ts',
+        'src/adapters/ppt_background_review.py', 'src/adapters/ppt_delivery_quality.py',
+        'src/adapters/ppt_execution.ts', 'src/adapters/ppt_workflow_runtime.ts',
+        'src/adapters/ppt_workflow_host.ts', 'src/adapters/ppt_workflow_learning.py',
+        'src/adapters/ppt_write_learning.py', 'src/adapters/ppt_write_runtime.ts', 'src/adapters/ppt_write_tool.ts',
+        'src/adapters/ppt_workflow_certification.py', 'scripts/certify-ppt-workflow.mjs',
+        'scenarios/ppt_master/workflow-contracts.json',
+        'scenarios/ppt_master/themes.json', 'scenarios/ppt_master/SKILL.md',
+        'src/adapters/ppt_page_renderer.py', 'scenarios/ppt_master/page-layouts.json',
+        'scenarios/ppt_master/design-conventions.md',
         'src/adapters/ppt_component_learning.py', 'src/adapters/ppt_page_learning.py',
         'src/adapters/ppt_component_literals.py',
         'src/adapters/ppt_component_tool.ts', 'src/adapters/ppt_component_schema.ts',
@@ -69,18 +88,18 @@ def checked(output, relative, version=None):
     return path
 
 
-def certify_programs(candidates, folder, resources):
+def certify_programs(candidates, folder, resources, *, workflow=False):
     """The member socket runs the same certifier outside its user namespace."""
     endpoint=os.environ.get('GENELOOP_COMMAND_SOCKET')
     if not endpoint:
-        return subprocess.run(['node','--experimental-strip-types',str(ROOT/'scripts/certify-artifact-motifs.mjs'),
-            str(candidates),str(folder)],cwd=ROOT,capture_output=True,text=True,timeout=90,
+        return subprocess.run(['node','--experimental-strip-types',str(ROOT/('scripts/certify-ppt-workflow.mjs' if workflow else 'scripts/certify-artifact-motifs.mjs')),
+            str(candidates),str(folder)],cwd=ROOT,capture_output=True,text=True,timeout=600 if workflow else 90,
             env={**os.environ,'GENELOOP_ARTIFACT_RESOURCES':json.dumps(resources)})
-    connection=http.client.HTTPConnection('localhost',timeout=90)
-    stream=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);stream.settimeout(90);stream.connect(endpoint)
+    connection=http.client.HTTPConnection('localhost',timeout=600 if workflow else 90)
+    stream=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);stream.settimeout(600 if workflow else 90);stream.connect(endpoint)
     connection.sock=stream
     try:
-        connection.request('POST','/artifact',json.dumps({'operation':'certify','file':str(candidates)}),{'Content-Type':'application/json'})
+        connection.request('POST','/artifact',json.dumps({'operation':'workflow-certify' if workflow else 'certify','file':str(candidates)}),{'Content-Type':'application/json'})
         response=connection.getresponse()
         if response.status!=200:raise ValueError('PPT program certification broker refused the owning job')
         stdout,stderr=[],[];code=None
@@ -105,7 +124,9 @@ def advance_programs(output, store, request, infos, turns, reviewed, *, delivery
         if info['request'].get('role') in ('holdout', 'evaluate', 'benchmark') or info['request'].get('learning_eligible') is False:
             continue
         try:
-            delivery(output, turn, lane, info['locks'])
+            proof = delivery(output, turn, lane, info['locks'], store=store, info=info, review=reviewed.get((turn['id'], lane)))
+            if proof.get('status') == 'failed' or proof.get('model_failed_pages'):
+                continue
             font_infos[info['task_id']] = info
             font_deliveries[info['task_id']] = {item['sha256'] for item in turn['lanes'][lane].get('artifacts', [])}
             if info['effective'].get('workspace'):
@@ -130,98 +151,12 @@ def advance_programs(output, store, request, infos, turns, reviewed, *, delivery
                            'cpu_cost_usd': None, 'actual_paid_usd': None, **value})
     if pointer:
         try:
-            if pointer['user'] != request['user'] or pointer['scope'] != request['scope']:
-                raise ValueError('foreign PPT program generation')
-            if pointer.get('implementation_signature') != implementation:
-                raise ValueError('PPT program implementation changed; fresh certification required')
-            library_path = checked(output, (store / pointer['library']).relative_to(output), pointer['library_sha256'])
-            if any(sha(ROOT / name) != version for name, version in read(library_path)['code_locks'].items()):
-                raise ValueError('PPT program execution code changed')
-            for name, version in pointer['evidence_locks'].items():
-                checked(output, name, version)
-            for ref in pointer['support_turns']:
-                turn = turns.get(ref)
-                lane=turn.get('learning_lane','baseline') if turn else 'baseline'
-                if not turn or not positive(reviewed.get((ref, lane)), turn, lane):
-                    raise ValueError('PPT program supporting feedback withdrawn')
-            pairs, blocked, seen = [], [], set()
-            for turn in turns.values():
-                if turn.get('presentation') == 'single' or turn.get('status') not in ('completed', 'failed', 'cancelled'):
-                    continue
-                opt_id = turn['lanes'].get('motif', {}).get('task_id')
-                info = infos.get(opt_id)
-                snapshot = output / 'tasks' / (opt_id or '') / 'ppt-program-snapshot.json'
-                if not snapshot.is_file():
-                    continue
-                snap = read(snapshot)
-                if snap.get('library_digest') != pointer['library_digest']:
-                    continue
-                if not info:
-                    blocked.append({'id': turn['id'], 'reason': 'program_candidate_accounting_incomplete'})
-                    continue
-                base = infos.get(turn['lanes'].get('baseline', {}).get('task_id'))
-                if not base:
-                    blocked.append({'id': turn['id'], 'reason': 'program_baseline_accounting_incomplete'})
-                    continue
-                if any(base[k] in pointer['support'][k] for k in ('decision_id', 'source_signature', 'question_sha256')):
-                    continue
-                independence = tuple(base[k] for k in ('decision_id', 'source_signature', 'question_sha256'))
-                if any((k, value) in seen for k, value in zip(('decision_id', 'source_signature', 'question_sha256'), independence)):
-                    continue
-                if (base['compatibility'] != info['compatibility'] or base['question_sha256'] != info['question_sha256'] or
-                    base['source_signature'] != info['source_signature'] or base['effective'].get('mode') != 'baseline' or
-                    info['effective'].get('mode') != 'execute' or any(x['state'].get('status') != 'completed' for x in (base, info))):
-                    blocked.append({'id': turn['id'], 'reason': 'program_non_matching_or_failed_comparison'})
-                    continue
-                if not all(positive(reviewed.get((turn['id'], lane)), turn, lane) for lane in ('baseline', 'motif')):
-                    blocked.append({'id': turn['id'], 'reason': 'program_negative_feedback'})
-                    continue
-                locks = {**base['locks'], **info['locks']}
-                audit = checked(output, (Path(info['task_dir']) / 'artifact-motif-audit.jsonl').relative_to(output))
-                rows = [json.loads(line) for line in audit.read_text(encoding='utf-8').splitlines() if line]
-                component_ids = {p['id'] for p in read(library_path)['programs'] if p.get('component')}
-                used = [r for r in rows if r.get('program_id') in pointer['added_program_ids'] and
-                        r.get('kind') == ('component_used_in_delivery' if r.get('program_id') in component_ids else 'artifact_program_verified')]
-                if not used:
-                    continue
-                # SVG/JSON intermediates may be rendered later. The receipt
-                # proves program execution, the separate gate checks the final
-                # PPTX/PDF/PNG; neither proves isolated causal cost savings.
-                quality = {lane: delivery(output, turn, lane, locks, store=store, info=item, review=reviewed.get((turn['id'], lane)))
-                           for lane, item in [('baseline', base), ('motif', info)]}
-                attempts = costs(turn, infos, locks)
-                if attempts['motif']['proxy_usd'] >= attempts['baseline']['proxy_usd']:
-                    blocked.append({'id': turn['id'], 'reason': 'program_full_cost_regression'})
-                    continue
-                br, op = reviewed.get((turn['id'], 'baseline')), reviewed.get((turn['id'], 'motif'))
-                if br and op and op['human_minutes'] > br['human_minutes']:
-                    blocked.append({'id': turn['id'], 'reason': 'program_human_revision_regression'})
-                    continue
-                for key, value in zip(('decision_id', 'source_signature', 'question_sha256'), independence):
-                    seen.add((key, value))
-                locks[audit.relative_to(output).as_posix()] = sha(audit)
-                locks[snapshot.relative_to(output).as_posix()] = sha(snapshot)
-                pairs.append({'comparison_id': turn['id'], 'attempts': attempts, 'quality_records': quality,
-                              'program_reuses': len(used), 'verified_skips_attributed_to_program': 0, 'evidence_locks': locks})
-            if blocked:
-                save(selected_path, {**pointer, 'phase': 'disabled', 'blocked': blocked})
-                status({'status': 'disabled', 'blocked': blocked})
-                return
-            folder = library_path.parent
-            evaluation={'pairs': pairs, 'required_independent_pairs': 2,
-                 'quality_cost_promoted': len(pairs) >= 2 and all(q['status'] == 'passed' for p in pairs for q in p['quality_records'].values()),
-                 'scope': 'paired full model cost and mechanical delivery; program reuse is not a verified LLM skip'}
-            save(folder/'evaluation.json',evaluation)
-            pointer = {**pointer, 'phase': 'active' if len(pairs) >= 2 else 'probation', 'feedback_version': feedback_version,
-                       'evaluation_sha256':sha(folder/'evaluation.json'),'quality_cost_promoted':evaluation['quality_cost_promoted'],
-                       'evidence_locks': {**pointer['evidence_locks'], **{n: h for p in pairs for n, h in p['evidence_locks'].items()}}}
-            save(selected_path, pointer)
-            (store/'program-suspended.json').unlink(missing_ok=True)
-            status({'status': pointer['phase'], 'library_digest': pointer['library_digest'], 'independent_pairs': len(pairs)})
-            # One generation at a time. Later growth is considered only after
-            # the current new program was independently used and retained.
-            if pointer['phase'] == 'probation':
-                return
+            from .ppt_program_evaluation import evaluate_generation
+            pointer = evaluate_generation(output, store, request, pointer, infos, turns, reviewed,
+                                          delivery=delivery, positive=positive, costs=costs)
+            status({'status': pointer['phase'], 'library_digest': pointer['library_digest'],
+                    'blocked': pointer.get('blocked', []),
+                    'groups': [{key: group.get(key) for key in ('id', 'phase', 'pending')} for group in pointer.get('groups', [])]})
         except (ValueError, KeyError, OSError, TypeError) as error:
             save(selected_path, {**pointer, 'phase': 'disabled', 'reason': str(error)[:200]})
             status({'status': 'disabled', 'reason': str(error)[:200]})
@@ -243,10 +178,13 @@ def advance_programs(output, store, request, infos, turns, reviewed, *, delivery
         if info['request'].get('role') in ('holdout','evaluate','benchmark') or info['request'].get('learning_eligible') is False:
             continue
         try:
-            delivery(output, turn, lane, info['locks'])
-            if info['effective'].get('workspace'):
+            proof = delivery(output, turn, lane, info['locks'], store=store, info=info, review=reviewed.get((turn['id'], lane)))
+            scope = page_material_scope(proof)
+            if scope and info['effective'].get('workspace'):
                 queue_component_sources(output, store, info)
-                page_eligible.append((turn, info))
+                page_eligible.append((turn, {**info, 'page_learning_scope': scope, 'page_quality': proof}))
+            if proof.get('status') == 'failed' or proof.get('model_failed_pages'):
+                continue
             row = collector.collect(Path(info['task_dir']))
             row['candidates'] = [p for p in row['candidates'] if p['id'] not in known]
             rows.append(row);eligible.append((turn, info))
@@ -264,16 +202,15 @@ def advance_programs(output, store, request, infos, turns, reviewed, *, delivery
         if chosen:
             break
     if not chosen:
-        if not pointer:
-            from .ppt_page_learning import advance_page_components
-            if advance_page_components(output, store, request, page_eligible):
-                page_status = read(store / 'page-learning-status.json')
-                attempted = int(page_status.get('model_request_attempted', False))
-                status({'status': 'probation', 'origin': 'automatic_normal_page_parameterization_v1', 'compilation_model_requests': attempted,
-                        'extra_provider_requests': attempted, 'page_learning': page_status})
-                return
+        from .ppt_page_learning import advance_page_components
+        if advance_page_components(output, store, request, page_eligible):
+            page_status = read(store / 'page-learning-status.json')
+            attempted = int(page_status.get('model_request_attempted', False))
+            status({'status': 'probation', 'origin': 'automatic_normal_page_parameterization_v1', 'compilation_model_requests': attempted,
+                    'extra_provider_requests': attempted, 'page_learning': page_status})
+            return
         page_status = read(store / 'page-learning-status.json') if (store / 'page-learning-status.json').exists() else None
-        status({'status': 'waiting_for_independent_program_evidence' if not pointer else 'active', 'eligible_tasks': len(rows), 'excluded': excluded,
+        status({'status': 'waiting_for_independent_program_evidence' if not pointer else pointer['phase'], 'eligible_tasks': len(rows), 'excluded': excluded,
                 'page_learning': page_status, 'compilation_model_requests': int(bool(page_status and page_status.get('model_request_attempted'))),
                 'extra_provider_requests': int(bool(page_status and page_status.get('model_request_attempted')))})
         return
@@ -299,21 +236,11 @@ def advance_programs(output, store, request, infos, turns, reviewed, *, delivery
     for k in (i, j):
         boundary = Path(eligible[k][1]['task_dir']) / 'reuse-boundaries.jsonl'
         locks[boundary.relative_to(output).as_posix()] = sha(boundary)
-    old_programs = read(store / pointer['library'])['programs'] if pointer else []
-    added = [p['id'] for p in library['programs']]
-    if old_programs:
-        if len(old_programs)+len(library['programs'])>16:
-            status({'status':'library_protocol_capacity_reached','new_candidate_retained':True})
-            return
-        body = {k: v for k, v in library.items() if k != 'digest'}
-        body.update(programs=[*old_programs, *library['programs']], parent_digest=pointer['library_digest'])
-        library = {**body, 'digest': digest(body)}
-        save(folder / 'library.json', library)
-        locks.update(pointer['evidence_locks'])
-    save(selected_path, {'schema_version': 1, 'user': request['user'], 'scope': request['scope'], 'phase': 'probation','implementation_signature':implementation,
-        'library': (folder / 'library.json').relative_to(store).as_posix(), 'library_sha256': sha(folder / 'library.json'),
-        'library_digest': library['digest'], 'added_program_ids': added, 'feedback_version': feedback_version, 'evidence_locks': locks,
-        'support_turns': list(dict.fromkeys([*(pointer['support_turns'] if pointer else []),*[eligible[k][0]['id'] for k in (i, j)]])),
-        'support': {key: list(dict.fromkeys([*(pointer['support'][key] if pointer else []),*[eligible[k][1][key] for k in (i, j)]])) for key in ('decision_id', 'source_signature', 'question_sha256')}})
-    (store/'program-suspended.json').unlink(missing_ok=True)
-    status({'status': 'probation', 'library_digest': library['digest'], 'programs': len(library['programs']), 'independent_pairs': 0, 'excluded': excluded})
+    from .ppt_program_evaluation import publish_generation
+    published = publish_generation(output, store, request, folder, library, locks,
+        [eligible[k][0]['id'] for k in (i, j)],
+        {key: [eligible[k][1][key] for k in (i, j)] for key in ('decision_id', 'source_signature', 'question_sha256')},
+        'normal_program_learning')
+    status({'status': 'probation' if published else 'certified_candidate_retained',
+            'library_digest': read(selected_path)['library_digest'] if selected_path.exists() else None,
+            'independent_pairs': 0, 'excluded': excluded})
