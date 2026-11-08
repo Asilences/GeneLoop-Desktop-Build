@@ -1,5 +1,9 @@
 # 本机完整工具适配（preview.17 候选）
 
+preview.21起正常构建恢复完整离线分发：六场景现有工具随应用安装到资源目录，默认不再要求安装后统一准备；`npm run dist`选择完整包，`npm run dist:lite`仅供显式选择小包。工具范围沿用下面的preview.20修订，既有分包与旧安装器保留；Mac需另外原生构建，旧DMG不因源码默认值改变而改变。
+
+preview.20已完成以下最新范围的实际分发更新：三平台六工具包（无speech），精简native Office Kit，共享Playwright Node／Chromium，GeneLoop自有PPT制作Skill；统计、OCR、材料与媒体能力按当前实现保留。依赖导入、实际统计回归及PPT模板／PDF原生检查通过，未重做模型效果／Mac人工安装验收。新包在本地，试用须导入对应工具目录；[大小及验证记录](../../debug/desktop-preview20-tool-refresh-20261108.md)。下面preview.17的语音依赖表和构建说明为历史，不能作为新版本安装要求。
+
 2026-11-08范围修订：桌面PPT仅制作、编辑与核验，不再默认准备语音包或edge-tts，也不提供旁白／演示视频／字幕扩展；下文preview.17为历史适配记录，新构建以[最新范围](../../debug/desktop-ppt-authoring-scope-20261108.md)为准。独立视频剪辑与Remotion保留。
 
 六场景已按当前main、相关PR、实际server／工具函数、桌面接线和构建依赖[交叉核对](../../debug/desktop-scene-scope-review-20261108.md)。Paper不新增LaTeX编译环境；Video保留现有音轨和字幕编辑，不新增ASR；Data保留当前报告实际使用的统计／绘图库；Chat／Files及共享PDF保留明确要求的OCR和公共工具。早期窄能力、单题限制、未验证状态不作为削减当前功能的依据。

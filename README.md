@@ -1,10 +1,14 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-桌面 `0.3.0-preview.19` 已取回 Windows x64、Apple Silicon／Intel 小安装器，七包工具下载及三种原生环境各六条简单真实任务通过。安装包只留本地；公开发布的仅为工具包。真实模型使用临时 Kouri 凭据，Mac 未 Apple 公证／真人安装验收，正式账号网关另计。源码、失败和边界见[本轮记录](docs/debug/desktop-preview19-macos-delivery-20261107.md)。
+桌面从 `0.3.0-preview.21` 恢复默认完整离线分发：`apps/desktop` 中的 `npm run dist` 显式选择 `--complete`，将当前六场景工具随应用一次安装；完整包使用应用资源目录中的工具，不触发首次全量工具准备。`npm run dist:lite`／`--lightweight` 仅供主动选择轻量分包方式的构建，低层 CI 的显式环境入口保持兼容。两种方式保留同一套六场景能力，PPT 仍仅制作／编辑，不恢复语音扩展。构建可通过 `GENELOOP_DESKTOP_TOOLS_STAGE` 指向已核对的当前平台工具目录；Mac 需在对应原生构建机准备工具，旧 DMG 不会自动变为新分发方式。安装包仍只本地交付。
 
-后续桌面构建默认采用固定版本的官方 native Office Kit，复用桌面宿主，取消重复 WASM／Node；仅需准备 Office 时在 `apps/desktop` 运行 `npm run tools:office -- <新工具目录>`。Windows 已验证，Mac 新引擎原生回归待做，preview.19 已交付文件未变；格式范围、兼容边界与完整 Office 构建回退见[精简 Kit 记录](docs/debug/desktop-office-kit-20261108.md)。
+桌面 `0.3.0-preview.20` 已按六场景实际实现更新工具并生成 Windows x64、Apple Silicon／Intel 本地候选。取消 PPT 语音扩展，改用精简 native Office Kit，共享 Node／Chromium并保留统计运行必需文件；安装器分别约268／230／241 MB，配套六工具包约322／257／299 MB。三平台原生依赖及实际PPT模板／PDF检查通过，本轮模型请求0。后续实测 Windows 应用首次17秒、preview.15覆盖55秒，但正常用户目录首次工具准备仍370秒，因此小包不再作为默认交付。[完整计时](docs/debug/desktop-preview20-install-20261108.md)、[计量与工具边界](docs/debug/desktop-preview20-tool-refresh-20261108.md)。
 
-桌面 PPT 最新范围仅制作／编辑演示文稿及 PDF／逐页预览；使用 GeneLoop 自有 Skill 入口，不提供上游配音、演示视频或字幕扩展。后续构建取消语音依赖与speech分包，保留其他场景，尚未制作新安装器。DSH逐项参考、同伴服务器证据边界、Windows检查和新工具集要求见[范围记录](docs/debug/desktop-ppt-authoring-scope-20261108.md)。
+桌面构建默认采用固定版本的官方 native Office Kit，复用桌面宿主，取消重复 WASM／Node；仅需准备 Office 时在 `apps/desktop` 运行 `npm run tools:office -- <新工具目录>`。三平台新引擎原生检查已在preview.20通过，preview.19已交付文件未变；格式范围、兼容边界与完整 Office 构建回退见[精简 Kit 记录](docs/debug/desktop-office-kit-20261108.md)。
+
+桌面 PPT 最新范围仅制作／编辑演示文稿及 PDF／逐页预览；使用 GeneLoop 自有 Skill 入口，不提供上游配音、演示视频或字幕扩展。preview.20已实际取消语音依赖与speech分包，保留其他场景。DSH逐项参考、同伴服务器证据边界和新工具集要求见[范围记录](docs/debug/desktop-ppt-authoring-scope-20261108.md)。
+
+旧桌面 `0.3.0-preview.19` 的七包公开下载与三种原生环境各六条简单真实任务结果保持原记录，不外推为preview.20模型效果。[历史记录](docs/debug/desktop-preview19-macos-delivery-20261107.md)。Mac仍未Apple公证／人工安装验收，正式账号网关另计。
 
 其余场景已按当前注册、实际实现与桌面依赖[交叉核对](docs/debug/desktop-scene-scope-review-20261108.md)：不额外适配论文LaTeX编译或视频ASR，保留现有统计、PDF/OCR与媒体编辑；不能按早期窄范围裁掉后来已接通的工具。
 

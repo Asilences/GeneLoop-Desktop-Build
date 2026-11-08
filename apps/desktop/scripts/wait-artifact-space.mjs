@@ -4,7 +4,9 @@ import {spawnSync} from 'node:child_process';
 import {readdirSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 const root='.local/macos-delivery';let bytes=0;for(const n of readdirSync(root))bytes+=statSync(join(root,n)).size;
-assert.ok(bytes<600*1024**2,'DMG 中转超过本轮预留大小，不能继续占用免费存储');
+// A complete DMG is larger than the previous app-only image. The aggregate
+// 1,400 MiB gate below is unchanged; two large images must transit serially.
+assert.ok(bytes<900*1024**2,'DMG 中转超过本轮预留大小，不能继续占用免费存储');
 const deadline=Date.now()+30*60*1000;
 while(Date.now()<deadline){
  const r=spawnSync('gh',['api','repos/Asilences/GeneLoop-Desktop-Build/actions/artifacts?per_page=100'],{encoding:'utf8'});assert.equal(r.status,0);

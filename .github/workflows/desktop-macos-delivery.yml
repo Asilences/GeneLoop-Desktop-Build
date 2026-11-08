@@ -1,11 +1,11 @@
-name: Desktop macOS small DMG and tool delivery
+name: Desktop macOS complete DMG and tool delivery
 on:
   workflow_dispatch:
     inputs:
       phase:
         type: choice
-        options: [build, repack, real, measure]
-        default: build
+        options: [complete, build, repack, real, measure]
+        default: complete
       deliveryRun:
         description: Successful small DMG run ID, required only for real acceptance
         type: string
@@ -45,7 +45,7 @@ jobs:
         working-directory: apps/desktop
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      GENELOOP_DESKTOP_TOOL_PACKS: '1'
+      GENELOOP_DESKTOP_TOOL_PACKS: ${{ inputs.phase == 'complete' && '0' || '1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,13 +56,13 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Prepare complete native tools
-        if: inputs.phase != 'repack'
+        if: inputs.phase != 'repack' && inputs.phase != 'complete'
         env:
           GENELOOP_REUSE_VERIFIED_PYTHON: ${{ inputs.phase == 'measure' && '1' || '0' }}
         run: node scripts/prepare-macos-tools.mjs
       - name: Build native tool archives with a fixed download address
         id: tool_archives
-        if: inputs.phase != 'repack'
+        if: inputs.phase != 'repack' && inputs.phase != 'complete'
         run: |
           VERSION=$(node -p 'require("./package.json").version')
           TAG="desktop-tools-darwin-${{ matrix.arch }}-${VERSION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -72,7 +72,7 @@ jobs:
           npm run tools:packs
           node -e "const p=require('./.local/tool-pack-build/preservation.json');if(p.downloadBytes>900000000)throw Error('工具中转超过本轮免费存储预留，保留全部工具并停止')"
       - name: Save only tool archives before any publication can fail
-        if: inputs.phase != 'repack'
+        if: inputs.phase != 'repack' && inputs.phase != 'complete'
         uses: actions/upload-artifact@v4
         with:
           name: desktop-tool-transit-${{ matrix.arch }}-${{ github.run_id }}
@@ -90,7 +90,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           DELIVERY_RUN: ${{ inputs.deliveryRun }}
         run: node scripts/reuse-macos-tool-delivery.mjs
-      - name: Package small desktop app
+      - name: Restore accepted six-scene tools for the complete offline app
+        if: inputs.phase == 'complete'
+        run: node scripts/prepare-complete-from-release.mjs
+      - name: Package desktop app
         run: npm run pack
       - name: Verify scoped tools with the actual desktop host without model calls
         if: inputs.phase == 'measure'
@@ -107,6 +110,22 @@ jobs:
           "$GENELOOP_OFFICE_NODE" scripts/check-native-ppt.mjs > .local/scoped-ppt-check.json
       - name: Reclaim only this job's reproducible tool staging
         run: |
+          if [ '${{ inputs.phase }}' = 'complete' ]; then
+            APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+            test -n "$APP"
+            echo "GENELOOP_DESKTOP_TOOLS_STAGE=$PWD/$APP/Contents/Resources/geneloop-tools" >> "$GITHUB_ENV"
+            node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {readFileSync,existsSync,rmSync,lstatSync} from 'node:fs';
+          import {resolve,dirname} from 'node:path';
+          assert.equal(JSON.parse(readFileSync('.local/complete-copy-proof.json')).allToolsRetained,true);
+          const local=resolve('.local');
+          for(const name of ['complete-tools','complete-codec']){
+            const p=resolve(local,name);assert.equal(dirname(p),local);
+            if(existsSync(p)){assert.equal(lstatSync(p).isSymbolicLink(),false);rmSync(p,{recursive:true,force:true});}
+          }
+          JS
+          else
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
           import {existsSync,readFileSync,rmSync} from 'node:fs';
@@ -119,13 +138,14 @@ jobs:
             if(existsSync(p))rmSync(p,{recursive:true,force:true});
           }
           JS
+          fi
       - name: Verify owner publication of the expected tool archives
-        if: inputs.phase != 'measure'
+        if: inputs.phase != 'measure' && inputs.phase != 'complete'
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/await-tool-publication.mjs
       - name: Verify actual packaged public download and native extraction
-        if: inputs.phase != 'measure'
+        if: inputs.phase != 'measure' && inputs.phase != 'complete'
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
@@ -146,17 +166,44 @@ jobs:
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -L "$MOUNT/Applications"
           cmp "$MOUNT/GeneLoop Desktop.app/Contents/Resources/app.asar" "$APP/Contents/Resources/app.asar"
+          if [ '${{ inputs.phase }}' = 'complete' ]; then
+            test ! -e "$MOUNT/GeneLoop Desktop.app/Contents/Resources/tool-packs.json"
+            test -f "$MOUNT/GeneLoop Desktop.app/Contents/Resources/geneloop-tools/manifest.json"
+            INSTALLED="$PWD/.local/complete-install/Applications/GeneLoop Desktop.app"
+            mkdir -p "$(dirname "$INSTALLED")"
+            ditto "$MOUNT/GeneLoop Desktop.app" "$INSTALLED"
+            cmp "$MOUNT/GeneLoop Desktop.app/Contents/Resources/app.asar" "$INSTALLED/Contents/Resources/app.asar"
+          fi
           hdiutil detach "$MOUNT"
           cp "$DMG" .local/macos-delivery/
-          cp .local/tool-pack-build/{tool-packs.json,preservation.json} .local/macos-delivery/
-          if [ '${{ inputs.phase }}' = 'measure' ]; then
+          if [ '${{ inputs.phase }}' = 'complete' ]; then
+            export ELECTRON_RUN_AS_NODE=1
+            export GENELOOP_OFFICE_NODE="$INSTALLED/Contents/MacOS/GeneLoop Desktop"
+            "$GENELOOP_OFFICE_NODE" scripts/check-complete-app.mjs "$INSTALLED/Contents/Resources" .local/complete-native-checks
+            "$INSTALLED/Contents/Resources/geneloop-tools/python/bin/geneloop-python" -B scripts/check-native-extras.py "$INSTALLED/Contents/Resources/geneloop-tools" > .local/complete-native-checks/extras.json
+            cp .local/complete-{copy-proof,tool-import}.json .local/macos-delivery/
+            cp .local/complete-native-checks/{summary.json,extras.json} .local/macos-delivery/
+          elif [ '${{ inputs.phase }}' = 'measure' ]; then
+            cp .local/tool-pack-build/{tool-packs.json,preservation.json} .local/macos-delivery/
             cp .local/scoped-{tools,ppt}-check.json .local/macos-delivery/
           else
+            cp .local/tool-pack-build/{tool-packs.json,preservation.json} .local/macos-delivery/
             cp .local/tool-pack-build/publication-receipt.json .local/macos-delivery/
             cp .local/public-tool-restore/download-receipt.json .local/macos-delivery/
           fi
           cd .local/macos-delivery
           shasum -a 256 *.dmg > SHA256SUMS.txt
+      - name: Preserve compact native complete-app diagnostics
+        if: always() && inputs.phase == 'complete'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-complete-checks-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            apps/desktop/.local/complete-native-checks/*
+            apps/desktop/.local/complete-copy-proof.json
+            apps/desktop/.local/complete-tool-import.json
+          retention-days: 1
+          if-no-files-found: warn
       - name: Keep temporary delivery inside the included artifact storage
         env:
           GH_TOKEN: ${{ github.token }}
@@ -170,7 +217,7 @@ jobs:
           compression-level: 0
           if-no-files-found: error
       - name: Real six-scene acceptance using the actual DMG and downloaded tools
-        if: inputs.phase != 'measure'
+        if: inputs.phase != 'measure' && inputs.phase != 'complete'
         env:
           GENELOOP_TEST_MODEL_KEY: ${{ secrets.GENELOOP_DESKTOP_ACCEPTANCE_KEY }}
           GENELOOP_TEST_PROVIDER: kouri
@@ -182,7 +229,7 @@ jobs:
           TOOLS=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(".local/public-tool-restore/download-receipt.json")).tools)')
           ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-real-six-scenes.mjs "$APP/Contents/Resources" "$TOOLS" .local/real-six-scenes
       - name: Preserve only the synthetic real acceptance summary
-        if: always() && inputs.phase != 'measure'
+        if: always() && inputs.phase != 'measure' && inputs.phase != 'complete'
         uses: actions/upload-artifact@v4
         with:
           name: desktop-real-${{ matrix.arch }}-${{ github.run_id }}

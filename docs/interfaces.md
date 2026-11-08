@@ -1,6 +1,14 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
-## Desktop 安装后工具准备（preview.19 候选）
+## Desktop 默认完整离线分发（preview.21）
+
+正常 `npm run dist` 显式传 `build-installer.mjs --complete`，忽略遗留轻量环境开关，生成包含当前六场景工具的完整包。工具放在应用资源目录的 `geneloop-tools`；不附带激活延后准备的 `tool-packs.json`，因此现有 `localToolDirectory()` 直接定位随包工具，`ToolPreparation.offer()` 不弹出全量准备窗口，也不在首启调用 `ToolPackStore` 全目录扫描。Windows 沿用 NSIS 生命周期和经完整载荷 SHA 校验的 .NET 直接解压；没有新建执行器或改变场景／模型协议。
+
+`npm run dist:lite`／`--lightweight` 保留为显式可选分发；其清单、解码、权限及逐文件校验协议不变。两个参数同时出现时拒绝构建；低层 CI 的原有显式环境入口保持兼容。完整构建校验平台、当前 PPT 制作范围、GeneLoop Skill 和默认 Office Kit，并排除运行时生成缓存；不因包体目标削减六场景工具。既有用户目录工具缓存和旧安装器保留，不与完整包资源混用。Mac 使用相同默认构建入口，但须另外原生构建和验收，旧 DMG 保持其原版本分发方式。
+
+## Desktop 安装后工具准备（preview.20 候选）
+
+preview.20按已确认范围改为六包，取消speech，新增必需的GeneLoop PPT制作Skill；使用精简native Office Kit、共享Node／Chromium，保留NumPy正常导入依赖。构建拒绝旧范围、重复Playwright Node或缺少必需文件。新清单尚未绑定公开源，`baseUrl=null`，需从本机导入配套工具目录；不将旧七包地址套给新版本。三平台包体实测及原生检查见[preview.20记录](debug/desktop-preview20-tool-refresh-20261108.md)。以下清单安全协议不变，旧preview.19七包发布保持历史版本。
 
 小包模式的 `tool-packs.json` 是随应用固定的平台／架构工具清单，含包与逐文件 SHA-256；只允许该清单列出的工具包进入解码器。`ToolPackStore` 在应用数据目录按 toolset ID 保存下载、验证和完成标记；来源为固定 HTTPS 根地址或用户选择的本机工具包目录。独立隔离准备页仅向其自身主 frame 暴露 state/start/cancel/import/close，不能更改清单、凭证、下载源或启动任意进程。`tool-releases.json` 分别固定 Windows x64、Mac ARM64／Intel 的工具集和下载根；构建时仅完整摘要相符才自动绑定，不跨版本或平台套用地址。Mac 框架链接在解码阶段排除，再按固定清单恢复内部相对链接，拒绝链接目录下的成员；仍逐文件校验，不放宽解码器安全等级。原本机 Agent、场景 MCP、模型认证不变。旧完整离线构建保留；用户仅授权公开各平台七个工具包，安装包只留本地，Mac 按授权临时中转后删除。当前原生验收及边界见[本轮记录](debug/desktop-preview19-macos-delivery-20261107.md)。
 

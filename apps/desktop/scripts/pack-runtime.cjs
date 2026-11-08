@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { accessSync,existsSync } = require('node:fs');
+const { accessSync,existsSync,writeFileSync } = require('node:fs');
 const { join, normalize } = require('node:path');
 const asar = require('@electron/asar');
 
@@ -9,6 +9,11 @@ module.exports = async ({ appOutDir, electronPlatformName }) => {
   const resources = electronPlatformName === 'darwin'
     ? join(appOutDir,'GeneLoop Desktop.app','Contents','Resources') : join(appOutDir,'resources');
   if (electronPlatformName === 'win32'&&existsSync(join(resources,'geneloop-tools'))) require('./prune-windows-tools.cjs')(resources);
+  if(electronPlatformName==='darwin'&&process.env.GENELOOP_COMPLETE_TOOL_CATALOG){
+    const {verifyCompleteTools}=await import('./verify-complete-tools.mjs');
+    const proof=await verifyCompleteTools(resources,process.env.GENELOOP_COMPLETE_TOOL_CATALOG);
+    writeFileSync(join(__dirname,'../.local/complete-copy-proof.json'),JSON.stringify(proof,null,2)+'\n');
+  }
   const archive = join(resources, 'geneloop-runtime.asar');
   await asar.createPackageWithOptions(source, archive, { unpack: '*.{node,dll,exe,dylib,so}',
     unpackDir:'{node_modules/@remotion/compositor-*,node_modules/@esbuild/*,node_modules/esbuild,node_modules/@vscode/ripgrep*}' });

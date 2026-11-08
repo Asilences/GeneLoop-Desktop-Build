@@ -10,6 +10,13 @@ if(process.env.GENELOOP_DESKTOP_TOOL_PACKS==='1'){
   if(catalog.toolsetId!==proof.toolsetId||catalog.platform!==process.platform||catalog.arch!==process.arch||
     catalog.packages.reduce((n,p)=>n+p.files.length,0)!==proof.filesBefore||
     !existsSync(join(root,'installer-tools',catalog.codec.filename)))throw Error('工具目录、平台或解码器不匹配');
+  const files=catalog.packages.flatMap(p=>p.files.map(f=>f.path));
+  if(catalog.packages.some(p=>p.id==='speech')||!files.includes('skills/geneloop-ppt/SKILL.md')||
+    files.some(p=>/\/playwright\/driver\/node(?:\.exe)?$/.test(p))||
+    !files.some(p=>p.endsWith('/numpy/_core/tests/_natype.py')))
+    throw Error('工具分包范围过期或缺少统计运行模块，请重新准备当前六场景工具。');
+  if(process.env.GENELOOP_DESKTOP_OFFICE_ENGINE!=='libreoffice'&&!files.includes('libreoffice/office-kit.json'))
+    throw Error('默认构建必须使用已核对的精简 Office Kit。');
   const published=require('./tool-releases.json').releases[process.platform+'-'+process.arch];
   if(published?.toolsetId===catalog.toolsetId&&!catalog.baseUrl)throw Error('该工具版本已有下载源，请重新生成工具目录');
   config.extraResources=[{from:join(root,'tool-packs.json'),to:'tool-packs.json'},{from:join(root,'installer-tools'),to:'installer-tools'}];
@@ -19,6 +26,10 @@ if(process.env.GENELOOP_DESKTOP_TOOL_PACKS==='1'){
   if(manifest?.profile?.scope!=='six-scenes-ppt-authoring'||existsSync(join(root,'speech'))||
     !existsSync(join(root,'skills/geneloop-ppt/SKILL.md')))
     throw Error('完整离线包的工具目录已过期，请按当前六场景范围重新准备工具；不能复用旧语音目录。');
-  config.extraResources=config.extraResources.map(row=>row.to==='geneloop-tools'?{...row,from:root}:row);
+  if(manifest.platform!==process.platform||manifest.arch!==process.arch)throw Error('完整离线包的工具平台与当前构建不匹配。');
+  if(process.env.GENELOOP_DESKTOP_OFFICE_ENGINE!=='libreoffice'&&!existsSync(join(root,'libreoffice/office-kit.json')))
+    throw Error('完整离线包必须包含已核对的精简 Office Kit。');
+  config.extraResources=config.extraResources.map(row=>row.to==='geneloop-tools'?{...row,from:root,
+    filter:['**/*','!**/__pycache__/**','!**/*.pyc','!**/*.pyo']}:row);
 }
 module.exports=config;
