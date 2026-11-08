@@ -3262,6 +3262,7 @@ for(const scene of platformPrivacyScenes)test('platform privacy native task sett
   await f.close();
   if(prior===undefined)delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC=prior;
  }
+});
 
 
 test('Motif读取端点复用原加载器和真实Runtime准入，拒绝未登录与路径参数', options, async()=>{
