@@ -1,6 +1,6 @@
 import {execFileSync} from 'node:child_process';
 import {cpSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
-import {dirname,join,basename} from 'node:path';
+import {dirname,join,basename,isAbsolute,relative,resolve} from 'node:path';
 import {stripTypeScriptTypes} from 'node:module';
 
 // Only tracked public implementation/configuration files. Never glob .local,
@@ -34,6 +34,15 @@ export function stageWorkflowSource(repo,destination) {
     for(const name of ['entry.json',...Object.keys(registered.files)]){
       if(name!==basename(name))throw Error('Invalid registered library member');
       const to=join(destination,selected,name);mkdirSync(dirname(to),{recursive:true});cpSync(join(release,name),to);
+    }
+    if(registered.files['certification.json']){
+      const certificate=JSON.parse(readFileSync(join(release,'certification.json'),'utf8'));
+      for(const name of Object.keys(certificate.code_locks??{})){
+        const local=relative(repo,resolve(repo,name));
+        if(isAbsolute(name)||local==='..'||local.startsWith('..\\')||local.startsWith('../')||
+          !/^(?:src|scripts|scenarios|config|schemas|benchmarks)\//.test(name))throw Error('Invalid public code dependency');
+        const to=join(destination,name);mkdirSync(dirname(to),{recursive:true});cpSync(join(repo,name),to);
+      }
     }
   }
   for(const name of ['config/geneloop-capabilities.json','config/general-tools.json','config/harless-scenes.json',

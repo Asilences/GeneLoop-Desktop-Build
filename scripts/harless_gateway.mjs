@@ -85,7 +85,7 @@ const inviteUsable = invite => Boolean(invite && !invite.revokedAt &&
 export function memberProductProfile() {
   return {
     persona: productPersona(),
-    sandboxArgs: ['--dir', '/app/config', ...['geneloop-persona.json', 'geneloop-capabilities.json', 'geneloop-capabilities.md', 'pdf-ocr-assets.json', 'geneloop-transport.json', 'motif-evidence-v1.schema.json', 'motif-evidence-v2.schema.json']
+    sandboxArgs: ['--dir', '/app/config', ...['geneloop-persona.json', 'geneloop-capabilities.json', 'geneloop-capabilities.md', 'pdf-ocr-assets.json', 'geneloop-transport.json', 'motif-evidence-v1.schema.json', 'motif-evidence-v2.schema.json', 'geneloop-privacy-policy-v1.json', 'rsi-privacy-tools.json', 'rsi-privacy-candidate-tools.json']
       .flatMap(name => ['--ro-bind', fileURLToPath(new URL('../config/' + name, import.meta.url)), '/app/config/' + name])],
   };
 }

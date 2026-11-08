@@ -1761,6 +1761,7 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 - 该工作区导出接口仍覆盖Coding v1，不推测缺失的组合、学习/发布事件或历史版本；来源执行位置不改变任务路由。正式服务及本机Runtime活证据桥未由本轮部署。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
 - 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。
 - Desktop preview.22额外消费[PR #161](https://github.com/jingyio/GeneLoop/pull/161)提供的`GET /api/harless/motif-catalog`（不传账号/路径/查询），读取`geneloop-runtime-motif-catalog-v1.libraries`及`geneloop-motif-evidence-v2`；后台端点仍由该PR部署，本分支本轮仅适配客户端。v2显示注册/账号学习来源、实际工具流和版本证据，Data旧回执不冒充认证；服务端已准入不代表本机已认证。桌面内兼容Schema/投影在`apps/desktop/motif/`，根目录后台共享模块未改。目录失败提示缓存可能过期，401清空全部来源；[接线与验证边界](debug/desktop-pr161-sync-20261108.md)。
+- Desktop preview.23已将PR161/162/163完整源码合入独立桌面分支，包括`harless_motif_catalog.ts`的实际后台路由、隐私准入与PPT工作流；客户端与后台共用投影器。成员宿主只读挂载明确列出的三个公共隐私配置，不挂整个config目录。随包携带所选库、当前公开实现与其代码闭包；源版本和本机平台认证仍分别校验。源码整合不表示正式服务已部署，见[整合记录](debug/desktop-preview23-integration-20261108.md)。
 
 ## Desktop 工具兼容补充（preview.16）
 

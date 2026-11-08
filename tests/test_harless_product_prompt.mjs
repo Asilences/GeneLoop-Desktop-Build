@@ -83,7 +83,7 @@ test('member startup mounts only public product policy and every certified publi
   const profile=memberProductProfile();
   assert.deepEqual(profile.persona,productPersona());
   assert.deepEqual(profile.sandboxArgs.slice(0,3),['--dir','/app/config','--ro-bind']);
-  assert.equal(profile.sandboxArgs.length,23);
+  assert.equal(profile.sandboxArgs.length,32);
   assert.equal(profile.sandboxArgs[4],'/app/config/geneloop-persona.json');
   assert.deepEqual(JSON.parse(readFileSync(profile.sandboxArgs[3],'utf8')),productPersona());
   assert.deepEqual([profile.sandboxArgs[7],profile.sandboxArgs[10]],['/app/config/geneloop-capabilities.json','/app/config/geneloop-capabilities.md']);
@@ -103,6 +103,6 @@ test('member startup mounts only public product policy and every certified publi
     for(const path of Object.keys(cert.code_locks??{}))if(path.startsWith('config/'))
       assert.ok(targets.has('/app/'+path),'certified public dependency must exist inside member namespace: '+path);
   }
-  assert.deepEqual([...targets].sort(),['geneloop-persona.json','geneloop-capabilities.json','geneloop-capabilities.md','pdf-ocr-assets.json','geneloop-transport.json','motif-evidence-v1.schema.json','motif-evidence-v2.schema.json'].map(name=>'/app/config/'+name).sort(),
+  assert.deepEqual([...targets].sort(),['geneloop-persona.json','geneloop-capabilities.json','geneloop-capabilities.md','pdf-ocr-assets.json','geneloop-transport.json','motif-evidence-v1.schema.json','motif-evidence-v2.schema.json','geneloop-privacy-policy-v1.json','rsi-privacy-tools.json','rsi-privacy-candidate-tools.json'].map(name=>'/app/config/'+name).sort(),
     'never mount private config siblings');
 });

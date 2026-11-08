@@ -15,12 +15,12 @@ COMMON={
     'src/adapters/dsh_web_tasks.ts','src/adapters/geneloop_video.ts',
 }
 compat.RELEASES=[
-    ('ppt-master-v109','ppt-master-desktop-v23','ppt','scenarios/ppt_master/contracts.json',
+    ('ppt-master-v109','ppt-master-desktop-v24','ppt','scenarios/ppt_master/contracts.json',
      COMMON|{'scenarios/ppt_master/converted_source.py'}),
-    ('paper-web-v111','paper-web-desktop-v23','paper-proofreading','scenarios/paper_proofreading/document-read-contracts.json',
+    ('paper-web-v111','paper-web-desktop-v24','paper-proofreading','scenarios/paper_proofreading/document-read-contracts.json',
      COMMON|{'scenarios/paper_proofreading/server.py','scripts/export-online-motif-manifest.py'}),
 ]
-compat.REGISTRY_SELECTED={old:old for old,*_ in compat.RELEASES}
+compat.REGISTRY_SELECTED={'ppt-master-v109':'ppt-master-desktop-v23','paper-web-v111':'paper-web-desktop-v23'}
 compat.ADDITIONAL_LOCKS|={
     'scripts/reexport-desktop-pr-integration.py','src/adapters/harless_motif_catalog.ts',
     'src/adapters/motif_evidence_projection.ts','config/motif-evidence-v2.schema.json',
@@ -30,7 +30,6 @@ compat.ADDITIONAL_LOCKS|={
     'src/adapters/rsi_privacy_recognizers.py','src/adapters/rsi_privacy_tools.py',
     'config/geneloop-privacy-policy-v1.json','config/rsi-privacy-tools.json',
     'config/rsi-privacy-candidate-tools.json','schemas/geneloop-privacy-policy.schema.json',
-    'requirements-rsi-privacy.txt',
 }
 original=compat.compatibility_record
 def compatibility_record(candidate,validation_record):
