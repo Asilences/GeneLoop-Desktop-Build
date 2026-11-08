@@ -1,6 +1,8 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-桌面`0.3.0-preview.23`在独立桌面分支完整整合PR161 `225d7b55`、PR162 `7e4eda5e`、PR163 `8988de79`，包含桌面模型路由、Motif目录后台、新隐私准入和PPT工作流源码；保留原桌面风格及紧凑安装器，右侧详情栏改为与左栏同高。Windows/Mac安装包构建中，不合并main、不部署正式服务、不发布安装包。定向及原生工具检查与全仓回归的未通过项分列，见[整合记录](docs/debug/desktop-preview23-integration-20261108.md)。
+桌面`0.3.0-preview.24`在preview.23基础上优化工具资源：发现目录不启动服务，选定工具后连接；空闲回收和并发限制沿用DSH原生工具及MCP，六场景能力与界面保留。当前构建中，诊断与验证边界见[资源管理记录](docs/debug/desktop-preview24-resources-20261108.md)。
+
+桌面`0.3.0-preview.23`在独立桌面分支完整整合PR161 `225d7b55`、PR162 `91bbead0`、PR163 `8988de79`，包含桌面模型路由、Motif目录后台、新隐私准入和PPT工作流源码；保留原桌面风格及紧凑安装器，右侧详情栏改为与左栏同高。Windows EXE与Apple Silicon/Intel完整DMG已本地交付，不合并main、不部署正式服务、不发布安装包。定向及原生工具检查与全仓回归的未通过项分列，见[整合记录](docs/debug/desktop-preview23-integration-20261108.md)。
 
 桌面`0.3.0-preview.22`客户端适配[PR #161](https://github.com/jingyio/GeneLoop/pull/161)的场景库目录和v2只读证据，保留工作区v1、现有风格、本机执行与紧凑安装器。协议/界面检查通过，Windows EXE与Apple Silicon、Intel完整离线DMG已本地交付，工具摘要一致；安装包未发布Release，Mac授权临时产物已取回删除。后台接口仍由该PR部署，服务端准入不等于本机已认证。[适配范围与证据](docs/debug/desktop-pr161-sync-20261108.md)。
 

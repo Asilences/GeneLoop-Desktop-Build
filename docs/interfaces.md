@@ -1762,6 +1762,8 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 - 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。
 - Desktop preview.22额外消费[PR #161](https://github.com/jingyio/GeneLoop/pull/161)提供的`GET /api/harless/motif-catalog`（不传账号/路径/查询），读取`geneloop-runtime-motif-catalog-v1.libraries`及`geneloop-motif-evidence-v2`；后台端点仍由该PR部署，本分支本轮仅适配客户端。v2显示注册/账号学习来源、实际工具流和版本证据，Data旧回执不冒充认证；服务端已准入不代表本机已认证。桌面内兼容Schema/投影在`apps/desktop/motif/`，根目录后台共享模块未改。目录失败提示缓存可能过期，401清空全部来源；[接线与验证边界](debug/desktop-pr161-sync-20261108.md)。
 - Desktop preview.23已将PR161/162/163完整源码合入独立桌面分支，包括`harless_motif_catalog.ts`的实际后台路由、隐私准入与PPT工作流；客户端与后台共用投影器。成员宿主只读挂载明确列出的三个公共隐私配置，不挂整个config目录。随包携带所选库、当前公开实现与其代码闭包；源版本和本机平台认证仍分别校验。源码整合不表示正式服务已部署，见[整合记录](debug/desktop-preview23-integration-20261108.md)。
+- 完整离线包的`geneloop-complete-tool-roster-v1`名册与联网下载分包目录分开：在已核验平台/架构的生成副本中刷新公开源码、配置、注册库和代码锁依赖，再记录全部文件大小/SHA及受限相对链接。校验拒绝重复路径、越界、链接目标变化和字节篡改；不伪造旧下载压缩包摘要。原生工具保留原字节，Runtime另携带PR163共享PPT解释器；没有本平台程序认证时仍回退原普通工具，不跳过守卫或自动转云端。左右栏以窗口内容区齐顶满高，右栏内容独立滚动，窄窗口抽屉同样不留上下空隙。
+- Desktop preview.24保持DSH原生Function Calling和MCP接口：`discover_tools`只返回登记信息/已有目录提示，不建连接；`available:null`、`connection_status:not_started`表示尚未检测可用性，不能当成已成功连接。`describe_tool(provider_id, tool_name='')`才连接选中的提供方；空名称返回实际完整目录，原指定名称用法不变。准备和执行仍重新读取真实Schema与权限；缓存目录不授权执行。已有Gateway按任务限定连接（桌面2个、普通宿主默认4个），运行中的租约不被淘汰，空闲60秒退出；准备记录绑定具体连接代次，回收/重连后旧待执行请求须重新准备，已有完成/未知结果回执不重放。桌面每轮最多2个场景工作流，昂贵原生命令在同一DSH root跨作用域最多2条，取消/超时在排队中同样生效；有状态场景保留到显式关闭/任务结束，不为省内存擅自丢弃句柄或中间材料。不修改上游DSH核心。
 
 ## Desktop 工具兼容补充（preview.16）
 

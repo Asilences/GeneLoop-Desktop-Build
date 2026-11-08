@@ -61,12 +61,14 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
   const workflows={
     async open(sourcesJSON,request,settingsJSON='{}') {
       if(closed||pending)throw Error('工作流正在打开或已关闭。');
-      if(active.size>=3)throw Error('本轮最多同时打开三个场景工作流。');
       if(typeof request!=='string'||!request.trim()||Buffer.byteLength(request)>256*1024)throw Error('请输入本轮实际任务说明。');
       const settings=JSON.parse(settingsJSON),sources=JSON.parse(sourcesJSON);
       if(!object(settings)||Object.keys(settings).some(k=>!['workflow','slides','template','operation'].includes(k)))throw Error('工作流设置包含未知字段。');
       const kind=settings.workflow??(extended&&scene==='ppt'?'skill':kinds[scene]?.[0]);
       if(!kinds[scene]?.includes(kind))throw Error('该工作流不在当前场景内。');
+      const previous=[...active.entries()].find(([,row])=>row.kind===kind);
+      if(previous?.[1].busy)throw Error('请等待该工作流完成当前操作。');
+      if(active.size>=2&&!previous)throw Error('本轮最多同时打开两个场景工作流，请先关闭不再使用的工作流。');
       if(!extended&&extendedWorkflowKinds.has(kind))throw Error('当前网关尚未启用新版工具集；已有场景工具仍可使用。');
       if(!Array.isArray(sources)||sources.length>16||sources.some(s=>!object(s)||Object.keys(s).sort().join(',')!=='path,sha256'||typeof s.path!=='string'||!/^[a-f0-9]{64}$/.test(s.sha256)))throw Error('来源必须为最多16项的路径和SHA-256数组。');
       const aliases=new Map();let total=0;
@@ -91,6 +93,9 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
       const row={root,work,kind,task,sources:snapshots.map(({path,sha256})=>({path,sha256})),published:new Map()};
       pending=true;
       try {
+        // Release the old same-kind process before starting its replacement,
+        // rather than temporarily exceeding the live workflow limit.
+        if(previous){onCatalog?.(kind,previous[0],[]);active.delete(previous[0]);await closeOne(previous[1]);}
         await ensureNativeFonts(ctx,tools,root,signal);
         // A TeX tree is supplied as one approved archive to preserve includes.
         if(kind==='paper'&&snapshots.some(s=>s.name.endsWith('.tex'))&&snapshots.some(s=>s.path.includes('/')||s.path.includes('\\'))) {

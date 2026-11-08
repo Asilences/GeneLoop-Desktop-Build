@@ -5,7 +5,7 @@ credentials or permissions. Existing native task/model budgets remain in force.
 """
 from __future__ import annotations
 import asyncio,copy,hashlib,json,os,re,sys,time
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack,asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
 from mcp import Client,StdioServerParameters
@@ -22,10 +22,12 @@ def save(path,value):
 
 class ProviderConnection:
     """Own a live MCP session in one long-lived task, across native tool turns."""
-    def __init__(self,row,bound):
+    def __init__(self,row,bound,*,idle_seconds=60):
         self.row=row;self.bound=bound;self.queue=asyncio.Queue();self.ready=asyncio.get_running_loop().create_future()
+        self.idle_seconds=idle_seconds;self.leases=0;self.closing=False;self.last_used=time.monotonic();self.generation=uuid4().hex
         self.task=asyncio.create_task(self.worker())
     async def worker(self):
+        item=None
         try:
             async with AsyncExitStack() as stack:
                 row=self.row
@@ -43,7 +45,11 @@ class ProviderConnection:
                 client=await stack.enter_async_context(Client(connection,read_timeout_seconds=row.get('timeout_seconds',120)))
                 self.ready.set_result(True)
                 while True:
-                    item=await self.queue.get()
+                    try:item=await asyncio.wait_for(self.queue.get(),timeout=self.idle_seconds)
+                    except asyncio.TimeoutError:
+                        if self.leases:continue
+                        self.closing=True
+                        break
                     if item is None:break
                     method,args,future=item
                     if future.cancelled():continue
@@ -52,11 +58,14 @@ class ProviderConnection:
                         if not future.done():future.set_exception(e)
                     else:
                         if not future.done():future.set_result(value)
+                    self.last_used=time.monotonic();item=None
         except BaseException as e:
             if not self.ready.done():self.ready.set_exception(e)
+            if item and not item[2].done():item[2].set_exception(ToolError('provider connection stopped; outcome may be unknown'))
             while not self.queue.empty():
                 item=self.queue.get_nowait()
                 if item and not item[2].done():item[2].set_exception(RuntimeError('provider process exited'))
+        finally:self.closing=True
     async def invoke(self,method,*args):
         await self.ready
         if self.task.done():raise ToolError('provider process exited; prepare against a new connection')
@@ -64,11 +73,13 @@ class ProviderConnection:
     async def list_tools(self):return await self.invoke('list_tools')
     async def call_tool(self,*args):return await self.invoke('call_tool',*args)
     async def close(self):
-        if not self.task.done():await self.queue.put(None)
-        await self.task
+        self.closing=True
+        if not self.task.done():self.task.cancel()
+        try:await self.task
+        except asyncio.CancelledError:pass
 
 class Gateway:
-    def __init__(self,workspace,scope,*,config=None,guard=None,private_root=None,public_registry=None):
+    def __init__(self,workspace,scope,*,config=None,guard=None,private_root=None,public_registry=None,connection_limit=4,idle_seconds=60):
         self.workspace=Path(workspace).resolve();self.scope=copy.deepcopy(scope);self.guard=guard or (lambda:None)
         private_root=Path(private_root).resolve(strict=True) if private_root is not None else ROOT/'.local'
         if not private_root.is_absolute() or '.local' not in private_root.parts or not self.workspace.is_relative_to(private_root) or self.workspace.is_symlink():raise ValueError('private task tool workspace required')
@@ -76,6 +87,10 @@ class Gateway:
         self.home=self.workspace/'tool-access';self.home.mkdir(parents=True,exist_ok=True,mode=0o700)
         self.config=Path(config or os.environ.get('SSS_TOOL_PROVIDERS',Path(os.environ.get('HARLESS_MANAGEMENT_PRIVATE_ROOT', ROOT/'.local'))/'general-tools/providers.json'))
         self.clients={};self.locks={};self.generation=uuid4().hex
+        if type(connection_limit) is not int or not 1<=connection_limit<=16 or not isinstance(idle_seconds,(int,float)) or not 0<idle_seconds<=3600:
+            raise ValueError('invalid host connection resource limits')
+        self.connection_limit=connection_limit;self.idle_seconds=idle_seconds
+        self._slots=asyncio.Semaphore(connection_limit);self._connections=asyncio.Lock();self._catalogs={};self._closed=False
 
     def private_providers(self):
         return json.loads(self.config.read_text(encoding='utf-8')) if self.config.exists() else {'format':FORMAT,'providers':[]}
@@ -107,38 +122,75 @@ class Gateway:
 
     async def connect(self,row):
         key=digest({'provider':row,'scope':self.scope})
-        if key in self.clients:return self.clients[key]
-        client=ProviderConnection(row,self.bound);self.clients[key]=client
-        await client.ready;return client
+        if key in self.clients and not self.clients[key].task.done() and not self.clients[key].closing:return self.clients[key]
+        for previous,client in list(self.clients.items()):
+            if client.task.done() or client.closing:
+                await client.close();del self.clients[previous]
+        if len(self.clients)>=self.connection_limit:
+            candidates=[(k,c) for k,c in self.clients.items() if not c.leases]
+            if not candidates:raise ToolError('provider connection limit reached; wait for current tools')
+            previous,client=min(candidates,key=lambda pair:pair[1].last_used)
+            await client.close();del self.clients[previous]
+        client=ProviderConnection(row,self.bound,idle_seconds=self.idle_seconds);self.clients[key]=client
+        try:await client.ready
+        except BaseException:
+            await client.close();self.clients.pop(key,None);raise
+        return client
+
+    @asynccontextmanager
+    async def provider(self,pid):
+        # Hold the lease through catalog validation AND the actual call. LRU and
+        # idle cleanup cannot kill a running tool or swap its stateful handles.
+        async with self._slots:
+            self.guard()
+            if self._closed:raise ToolError('tool gateway closed')
+            row=self.providers().get(pid)
+            if not row:raise ToolError('provider is not in the host registry; model cannot register commands')
+            async with self._connections:
+                if self._closed:raise ToolError('tool gateway closed')
+                client=await self.connect(row);client.leases+=1
+            try:yield row,client
+            finally:client.leases-=1;client.last_used=time.monotonic()
+
+    async def _catalog(self,pid,row,client):
+        result=await client.list_tools()
+        tools=[t.model_dump(mode='json',by_alias=True,exclude_none=True) for t in result.tools]
+        version=digest({'provider':row,'tools':tools,'scope':self.scope})
+        self._catalogs[digest(row)]=(tools,version)
+        return row,client,tools,version
 
     async def catalog(self,pid):
-        self.guard();row=self.providers().get(pid)
-        if not row:raise ToolError('provider is not in the host registry; model cannot register commands')
-        client=await self.connect(row);result=await client.list_tools()
-        tools=[t.model_dump(mode='json',by_alias=True,exclude_none=True) for t in result.tools]
-        return row,client,tools,digest({'provider':row,'tools':tools,'scope':self.scope})
+        async with self.provider(pid) as (row,client):return await self._catalog(pid,row,client)
 
     async def discover_tools(self,query:str=''):
-        """Discover connected tools by goal. Missing credentials/connections are explicit.
+        """List host-registered providers without starting or probing their services.
+        Use describe_tool(provider_id, '') to fetch only the chosen live catalog.
         Other tools work through ordinary Harness without a Motif or RSI certificate.
         """
         self.guard();found=[]
         for pid,row in self.providers().items():
-            try:
-                _,_,tools,version=await self.catalog(pid)
-                selected=[{'name':t['name'],'description':t.get('description','')} for t in tools
-                          if not query or query.casefold() in json.dumps(t,ensure_ascii=False).casefold()]
-                if selected:found.append({'provider_id':pid,'description':row.get('description',''),'available':True,
-                    'catalog_sha256':version,'tools':selected,'policy':row['policy'],'motif_required':False})
-            except Exception as e:
-                found.append({'provider_id':pid,'available':False,'reason':type(e).__name__,
-                    'description':row.get('description',''),'motif_required':False})
+            cached=self._catalogs.get(digest(row));tools,version=cached if cached else ([],None)
+            selected=[{'name':t['name'],'description':t.get('description','')} for t in tools
+                      if not query or query.casefold() in json.dumps(t,ensure_ascii=False).casefold()]
+            client=self.clients.get(digest({'provider':row,'scope':self.scope}))
+            starting=bool(client and not client.task.done() and not client.closing)
+            live=bool(starting and client.ready.done() and not client.ready.cancelled() and client.ready.exception() is None)
+            # Cached names are discovery hints, never authority for execution.
+            # Unknown providers stay visible even when only their live tools
+            # might match the query. Do not start them just to filter names.
+            found.append({'provider_id':pid,'description':row.get('description',''),'available':True if live else None,
+                'registered':True,'connection_status':'connected' if live else 'starting' if starting else 'not_started',
+                'catalog_source':'cached_hint' if cached else 'not_loaded','catalog_sha256':version,
+                'tools':selected,'matches_query':bool(selected) or not query or query.casefold() in (pid+' '+row.get('description','')).casefold(),
+                'policy':row['policy'],'motif_required':False,'next_step':"describe_tool with this provider_id and tool_name='' to load its actual catalog"})
+        found.sort(key=lambda row:not row['matches_query'])
         return {'format':FORMAT,'providers':found,'registry_file':str(self.config),
             'registration':'Host config supports stdio and streamable-http MCP; tools are not a hard-coded scene limit.'}
 
-    async def describe_tool(self,provider_id:str,tool_name:str):
-        """Return the actual provider's complete tool schema before choosing arguments."""
+    async def describe_tool(self,provider_id:str,tool_name:str=''):
+        """Connect only this provider; empty tool_name returns its full live catalog."""
         row,_,tools,version=await self.catalog(provider_id)
+        if not tool_name:return {'provider_id':provider_id,'tools':tools,'catalog_sha256':version,'policy':row['policy'],'motif_required':False}
         tool=next((t for t in tools if t['name']==tool_name),None)
         if not tool:raise ToolError('tool not present in actual provider catalog')
         return {'provider_id':provider_id,'tool':tool,'catalog_sha256':version,'policy':row['policy'],'motif_required':False}
@@ -147,7 +199,7 @@ class Gateway:
         """Validate a model-selected tool and arguments without executing it.
         Preserve returned request_id; execute that exact request once.
         """
-        row,_,tools,version=await self.catalog(provider_id)
+        row,client,tools,version=await self.catalog(provider_id)
         for p in (self.home/'requests').glob('*.json'):
             prior=json.loads(p.read_text(encoding='utf-8'))
             if (prior.get('scope')==self.scope and prior.get('provider_id')==provider_id and prior.get('tool_name')==tool_name
@@ -163,6 +215,7 @@ class Gateway:
             raise ToolError('host registered this provider read-only; tool needs a provider-enforced permission adapter')
         q={'format':FORMAT,'request_id':'tool-request-'+uuid4().hex,'provider_id':provider_id,'tool_name':tool_name,
             'arguments':copy.deepcopy(arguments),'catalog_sha256':version,'scope':self.scope,'generation':self.generation,
+            'provider_generation':client.generation,
             'provider_contract':copy.deepcopy(row),'tool_schema':copy.deepcopy(schema),'catalog_tools':copy.deepcopy(tools),
             'status':'prepared','created_at':time.time()}
         q['request_sha256']=digest({k:v for k,v in q.items() if k not in ('status','created_at')})
@@ -191,16 +244,18 @@ class Gateway:
             if q['status'] in ('completed','tool_error','transport_error'):return self.receipt_summary(q)
             if q['status']=='executing':raise ToolError('interrupted tool outcome unknown; inspect retained request, do not replay effects')
             if q['generation']!=self.generation:raise ToolError('provider process restarted; prepare a fresh call against current handles')
-            _,client,_,version=await self.catalog(q['provider_id'])
-            if q['catalog_sha256']!=version:raise ToolError('provider schema/permissions changed; choose tool again')
-            q['status']='executing';save(p,q)
-            try:
-                result=await client.call_tool(q['tool_name'],q['arguments'])
-                raw=result.model_dump(mode='json',by_alias=True,exclude_none=True)
-                q['status']='tool_error' if raw.get('isError',raw.get('is_error',False)) else 'completed'
-            except Exception as e:
-                raw={'isError':True,'content':[{'type':'text','text':'Provider transport failed; outcome may be unknown: '+type(e).__name__}]}
-                q['status']='transport_error'
+            async with self.provider(q['provider_id']) as (row,client):
+                if q.get('provider_generation')!=client.generation:raise ToolError('provider connection expired; prepare a fresh call against current handles')
+                _,_,_,version=await self._catalog(q['provider_id'],row,client)
+                if q['catalog_sha256']!=version:raise ToolError('provider schema/permissions changed; choose tool again')
+                q['status']='executing';save(p,q)
+                try:
+                    result=await client.call_tool(q['tool_name'],q['arguments'])
+                    raw=result.model_dump(mode='json',by_alias=True,exclude_none=True)
+                    q['status']='tool_error' if raw.get('isError',raw.get('is_error',False)) else 'completed'
+                except Exception as e:
+                    raw={'isError':True,'content':[{'type':'text','text':'Provider transport failed; outcome may be unknown: '+type(e).__name__}]}
+                    q['status']='transport_error'
             rid='tool-result-'+request_id.removeprefix('tool-request-')
             receipt={'receipt_id':rid,'request_id':request_id,'request_sha256':q['request_sha256'],'scope':self.scope,
                      'provider_id':q['provider_id'],'tool_name':q['tool_name'],'status':q['status'],
@@ -223,7 +278,9 @@ class Gateway:
         return r
 
     async def close(self):
-        for client in self.clients.values():await client.close()
+        self._closed=True
+        await asyncio.gather(*(client.close() for client in list(self.clients.values())))
+        self.clients.clear()
 
 class GeneralTools:
     """Same generic gateway in SDK and native management; no second Agent loop."""
@@ -259,7 +316,7 @@ class GeneralTools:
     async def discover_tools(self,query:str=''):
         """Discover general tools beyond file organization, without requiring a Motif."""
         return self.stamp(await self.gateway().discover_tools(query))
-    async def describe_tool(self,provider_id:str,tool_name:str):
+    async def describe_tool(self,provider_id:str,tool_name:str=''):
         """Read the actual tool schema of a host-connected MCP provider."""
         return self.stamp(await self.gateway().describe_tool(provider_id,tool_name))
     async def prepare_tool_call(self,provider_id:str,tool_name:str,arguments:dict):

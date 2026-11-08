@@ -65,7 +65,13 @@ try {
   const revState=await revision.call(rev.workflow_id,'read_task_state','{}');assert.equal(revState.isError,undefined,JSON.stringify(revState));
   const gateway=controller('chat'),gw=await gateway.open(sources(['notes.txt']),'检查实际动态工具目录','{"workflow":"gateway"}');
   const discovery=await gateway.call(gw.workflow_id,'discover_tools','{}');assert.equal(discovery.isError,undefined,JSON.stringify(discovery));
-  assert.equal(discovery.result.providers.length,4);assert.ok(discovery.result.providers.every(row=>row.available),JSON.stringify(discovery));
+  assert.equal(discovery.result.providers.length,4);
+  assert.ok(discovery.result.providers.every(row=>row.available===null&&row.connection_status==='not_started'),JSON.stringify(discovery));
+  const selectedCatalog=await gateway.call(gw.workflow_id,'describe_tool',JSON.stringify({provider_id:'workspace-runtime'}));
+  assert.ok(selectedCatalog.result.tools.some(tool=>tool.name==='create_text'),JSON.stringify(selectedCatalog));
+  const afterSelection=(await gateway.call(gw.workflow_id,'discover_tools','{}')).result.providers;
+  assert.equal(afterSelection.filter(row=>row.connection_status==='connected').length,1);
+  assert.equal(afterSelection.filter(row=>row.connection_status==='not_started').length,3);
   const manager=controller('files'),managed=await manager.open(sources(['notes.txt']),'整理本轮副本并验证恢复','{"workflow":"management"}');
   assert.equal(managed.tools.length,27);assert.ok(!managed.tools.some(tool=>tool.name==='_native_authorize_plan'));
   await manager.call(managed.workflow_id,'read_task','{}');

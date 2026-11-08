@@ -8,6 +8,8 @@ from src.adapters.general_tools import Gateway
 
 class NativeGateway(Gateway):
     def __init__(self, *args, **kwargs):
+        kwargs.setdefault('connection_limit',2)
+        kwargs.setdefault('idle_seconds',60)
         super().__init__(*args, **kwargs)
         raw = os.environ.pop('GENELOOP_NATIVE_PROVIDER_CONFIG', None)
         self.native_config = json.loads(base64.b64decode(raw, validate=True)) if raw else {'format':'sss-general-tools-v1','providers':[]}

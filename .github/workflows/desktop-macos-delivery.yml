@@ -180,9 +180,11 @@ jobs:
             export ELECTRON_RUN_AS_NODE=1
             export GENELOOP_OFFICE_NODE="$INSTALLED/Contents/MacOS/GeneLoop Desktop"
             "$GENELOOP_OFFICE_NODE" scripts/check-complete-app.mjs "$INSTALLED/Contents/Resources" .local/complete-native-checks
+            GENELOOP_NATIVE_RUNTIME="$INSTALLED/Contents/Resources/geneloop-runtime.asar" "$GENELOOP_OFFICE_NODE" scripts/check-native-budget.mjs > .local/complete-native-checks/resource-budget.json
             "$INSTALLED/Contents/Resources/geneloop-tools/python/bin/geneloop-python" -B scripts/check-native-extras.py "$INSTALLED/Contents/Resources/geneloop-tools" > .local/complete-native-checks/extras.json
             cp .local/complete-{copy-proof,tool-import}.json .local/macos-delivery/
             cp .local/complete-native-checks/{summary.json,extras.json} .local/macos-delivery/
+            cp .local/complete-native-checks/resource-budget.json .local/macos-delivery/
           elif [ '${{ inputs.phase }}' = 'measure' ]; then
             cp .local/tool-pack-build/{tool-packs.json,preservation.json} .local/macos-delivery/
             cp .local/scoped-{tools,ppt}-check.json .local/macos-delivery/

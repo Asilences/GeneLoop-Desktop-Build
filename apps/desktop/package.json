@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.23",
+  "version": "0.3.0-preview.24",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -23,6 +23,7 @@
     "check:installer-transaction": "node scripts/check-installer-transaction.mjs",
     "check:tool-parity": "node scripts/audit-web-tool-parity.mjs --check",
     "smoke:common": "node scripts/check-native-common.mjs",
+    "smoke:resources": "node scripts/check-native-budget.mjs",
     "pack": "npm run build && npm run runtime:stage && electron-builder --config electron-builder.config.cjs --dir --publish never",
     "dist": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs --complete",
     "dist:lite": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs --lightweight",
