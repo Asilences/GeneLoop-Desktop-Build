@@ -1,5 +1,5 @@
 import {execFileSync} from 'node:child_process';
-import {readFileSync,readdirSync,statSync,writeFileSync} from 'node:fs';
+import {existsSync,readFileSync,readdirSync,statSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {buildWindowsEngine} from './build-windows-engine.mjs';
@@ -24,8 +24,9 @@ function directoryBytes(directory){
 const payloadReceipt=JSON.parse(readFileSync(join(release,'direct-payload.json'),'utf8'));
 const payloadBytes=payloadReceipt.bytes;
 if(!Number.isSafeInteger(payloadBytes)||payloadBytes<1)throw Error('安装载荷大小记录无效');
+const toolsBundled=payloadReceipt.toolsBundled??existsSync(join(payloadReceipt.packed,'resources','geneloop-tools'));
 writeFileSync(versionSource,'[assembly: System.Reflection.AssemblyInformationalVersion('+JSON.stringify(version)+')]\n'+
-  'internal static class SetupBuild { public const long PayloadBytes = '+payloadBytes+'L; }\n');
+  'internal static class SetupBuild { public const long PayloadBytes = '+payloadBytes+'L; public const bool ToolsBundled = '+(toolsBundled?'true':'false')+'; }\n');
 execFileSync(compiler,[
   '/nologo','/target:winexe','/platform:x64','/optimize+','/codepage:65001',
   '/out:'+join(release,prefix+'-Setup.exe'),

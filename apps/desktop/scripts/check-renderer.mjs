@@ -13,6 +13,8 @@ import {projectPrivateLearningTrace} from '../../../src/adapters/harless_learnin
 const require=createRequire(import.meta.url),{WebSocketServer}=require('ws');
 const app=fileURLToPath(new URL('../',import.meta.url));
 const output=join(app,'.local/validation/renderer-'+randomUUID());mkdirSync(output,{recursive:true});
+// Pinned public catalog emitted by PR161's original loader/projector; protocol only.
+const runtimeCatalog=JSON.parse(readFileSync(join(app,'../../tests/fixtures/motif-catalog-pr161.json'),'utf8')).catalog;
 const privacyDiagnostic=process.env.GENELOOP_PRIVACY_DIAGNOSTIC==='1';
 const sharingBodies=[],sharingAudit=[];
 let receiverMode='accept',receiver;
@@ -54,6 +56,7 @@ const sharing=createRsiSharing({
 const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFileSync(join(app,'ui/desktop/motif-example.json')));
 const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'}]});
 let motifAuthenticated=true;
+let runtimeCatalogFail=false;
 let workspaceTasks=[];
 // The UI must offer completed tasks from future MCP scenes as well. Its
 // protocol fixture needs no NLP installation; actual v4 admission runs on Linux.
@@ -97,6 +100,8 @@ const server=createServer(async(req,res)=>{
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
   if(path==='/api/harless/tasks')return json(res,{tasks:[...workspaceTasks,...(privacyDiagnostic?[...shareSources.keys()].map(scene=>({task_id:scene,scene,status:'completed'})):[])]});
+  if(path==='/api/fixture/runtime-catalog-fail'&&req.method==='POST'){runtimeCatalogFail=!runtimeCatalogFail;return json(res,{ok:true});}
+  if(path==='/api/harless/motif-catalog')return !motifAuthenticated?json(res,{error:'login_required'},401):runtimeCatalogFail?json(res,{error:'catalog_unavailable'},503):json(res,runtimeCatalog);
   if(path==='/api/fixture/task-progress'&&req.method==='POST'){workspaceTasks[0].duration_ms=2400;return json(res,{ok:true});}
   if(path==='/api/fixture/workspace-task'&&req.method==='POST'){
    const time='2026-11-06T00:00:00.000Z';

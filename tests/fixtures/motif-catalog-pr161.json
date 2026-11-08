@@ -1,0 +1,1539 @@
+{
+  "kind": "desktop_protocol_fixture",
+  "sourcePr": 161,
+  "sourceCommit": "225d7b557b640a7e66610077b9694c781da8cf37",
+  "capturedAt": "2026-11-08T10:20:19.845Z",
+  "note": "从PR原加载器实际准入的公共库生成，仅用于桌面协议和渲染检查，不代表生产账号或本机认证。",
+  "modelRequests": 0,
+  "catalog": {
+    "format": "geneloop-runtime-motif-catalog-v1",
+    "libraries": [
+      {
+        "id": "runtime:ppt",
+        "title": "PPT",
+        "scene": "ppt",
+        "status": "ready",
+        "evidence": {
+          "format": "geneloop-motif-evidence-v2",
+          "scenario": "ppt",
+          "display_only": true,
+          "execution_authorized": false,
+          "data_origin": "runtime_admitted_library",
+          "generated_at": "2026-11-08T10:20:19.827Z",
+          "source": {
+            "kind": "registered",
+            "label": "PPT",
+            "release": "ppt-master-v84",
+            "compatibility": "available",
+            "unavailable_reason": null,
+            "revisions": [
+              {
+                "label": "ppt-master-v7",
+                "certificate_digest": "dcd6b23988aaaa8dfb462a7d60a79b7589fb2ae02bb936092c163e5147e4d605",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v8",
+                "certificate_digest": "37abaabb56861cf0be5d52e920aa5244a9952ed376c47d3af9ea77a5027d7350",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v9",
+                "certificate_digest": "a4fe0e5c0611de0c7d72af6b8a66d2cc895610eb02a7af5d4868758011690967",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v10",
+                "certificate_digest": "4ca8b1a1af242bc66fdd8f26e03d7a8ba00edc1e2f79f598641a35860ebe52d0",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v73",
+                "certificate_digest": "11ce5903aab23082531763431583bfff52b308b01a00a8ee121316953a28bf85",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v13",
+                "certificate_digest": "5ebbf5222939adba5b51146a4046275226ab8918c254008a9e9d1c7cf174db89",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v14",
+                "certificate_digest": "e7599a796eeab44b9f1e22f46e795990f3fcd0fa09981b31f6e8a4a6a931f9a5",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v15",
+                "certificate_digest": "8472c4398cf9e35635f9cb43a8bd1dd7211b26bb7a19f7337945e09536349569",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v16",
+                "certificate_digest": "2739e82b1ff69d9bc6a1c0a15a3adc6115bcd6f5531553f3aa12fe4f361fb468",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v17",
+                "certificate_digest": "54fbbdc5f99027f3813df3e9438cf76a23ab7c58bf88910eee14c41b7e343585",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v18",
+                "certificate_digest": "8273dbde7b74ce00fc55b00b22479b1f1827ef556e0fcc6d2ca621e574257a37",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v19",
+                "certificate_digest": "28061f4d28c847eb2a91484bffa35845addb50ed2b6366f6b41fdc663fd4347b",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v20",
+                "certificate_digest": "5ee4a456c6c82115646786bbbfdaf85a0c07d009c57f222144ed3a4b1744e841",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v81",
+                "certificate_digest": "5e053f40634534ca34c4237783decd9621ee2031e4e70b7b037aff7e1ac71a8a",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v29",
+                "certificate_digest": "17964324918e9d7d5d6b0224b6d632007215b6a7061657b92a39629f81682ab1",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v39",
+                "certificate_digest": "4b213e10e3e5d44e7334c0f812d4ced3b3974770aa8273e2d74b13b364608d2a",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v82",
+                "certificate_digest": "72bff04002fe5abe38cac609c8cb7876de6b88dd8bd5f96233101a7d856ee29b",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v83",
+                "certificate_digest": "fe39218e9863752f198a5d3988fa7c29c5066b29e773402cc56afef59cace047",
+                "current": false,
+                "evidence_ref": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63"
+              },
+              {
+                "label": "ppt-master-v84",
+                "certificate_digest": "8ec16827a60912230846f1750a9aaa0df8bf16b2e260cf41b229a83528b44c4d",
+                "current": true,
+                "evidence_ref": "f293bd595754f7ca3880f8060dae964258b9590226f5ab47eda709ed18e0fffc"
+              }
+            ]
+          },
+          "library": {
+            "generation": null,
+            "snapshot_sha256": "94273935f2d94e9217c1d79679bad44cf8de889a07483391505d5174071131c7",
+            "registry_digest": "abce034fcdde4dd4e2534928cc677336c11d44b5bcbe07f8fed53108e84c767e",
+            "certified_count": 2
+          },
+          "capabilities": [
+            {
+              "id": "4af46ae1264fb1520664d2b8646f11bfa6bea735ce61065effccf4b69e6fc79f",
+              "name": "convert_source → read_converted_source",
+              "kind": "tool_flow",
+              "status": "certified",
+              "in_frozen_library": true,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "99f89de26b00b2b82037dd9ec99ee8478de79fce7e94f53eab6bd1725cb836e5",
+                "certificate_digest": "8ec16827a60912230846f1750a9aaa0df8bf16b2e260cf41b229a83528b44c4d"
+              },
+              "certification": {
+                "status": "certified",
+                "native_witness_tasks": 1,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": "independent_trace_structure"
+              },
+              "contract": {
+                "language": "sss-local-ops-v1",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "source_id": {
+                      "title": "Source Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "source_id"
+                  ],
+                  "title": "convert_sourceArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [
+                {
+                  "kind": "artifact",
+                  "name": "learning-report.json",
+                  "sha256": "482ad16da2f1866e148be6cf5e893202bf567dc2a9aaa497a992258af7e3ed8e"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "online-manifest.json",
+                  "sha256": "093dd70cd6ef8c349ae3e620637a6efbecb20887805d261d1da0016cd92b9c62"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "library.json",
+                  "sha256": "94273935f2d94e9217c1d79679bad44cf8de889a07483391505d5174071131c7"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "task.json",
+                  "sha256": "7cf5b20765a0fd634053c0382476595eeaff15029b84d18b2d3ae8a669cddb4f"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "tool-schemas.json",
+                  "sha256": "2f3fe69c8124c84933e8b3cef33087f4e05842e239603fe1ab1df1ce403b13d8"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "source-evidence.json",
+                  "sha256": "87d64e6fff3b57926271b650b13d877d1c4e68c3cc426d1a520e5e698b890dd8"
+                }
+              ],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "550d4dbb6eb021b8e2456a3b2fb7ad35181a50c060a246aa3d24b82874b46541",
+                "f293bd595754f7ca3880f8060dae964258b9590226f5ab47eda709ed18e0fffc"
+              ],
+              "tools": [
+                "mcp__ppt_master__convert_source",
+                "mcp__ppt_master__read_converted_source"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__ppt_master__convert_source",
+                  "to_tool": "mcp__ppt_master__read_converted_source",
+                  "from_field": "converted_id",
+                  "to_param": "converted_id"
+                }
+              ],
+              "source_task_count": 2
+            },
+            {
+              "id": "51be1e85076a6fc1376a3e07f27c520a8986ac5b35ea01aa9470ab166406030e",
+              "name": "pin_source → convert_source",
+              "kind": "tool_flow",
+              "status": "certified",
+              "in_frozen_library": true,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "5232530454b608ef0e9aff7861d694fc77aa97a1c72d4de574074ee032db69e4",
+                "certificate_digest": "8ec16827a60912230846f1750a9aaa0df8bf16b2e260cf41b229a83528b44c4d"
+              },
+              "certification": {
+                "status": "certified",
+                "native_witness_tasks": 1,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": "independent_trace_structure"
+              },
+              "contract": {
+                "language": "sss-local-ops-v1",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "title": "Name",
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "title": "Sha256",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "sha256"
+                  ],
+                  "title": "pin_sourceArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [
+                {
+                  "kind": "artifact",
+                  "name": "learning-report.json",
+                  "sha256": "482ad16da2f1866e148be6cf5e893202bf567dc2a9aaa497a992258af7e3ed8e"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "online-manifest.json",
+                  "sha256": "093dd70cd6ef8c349ae3e620637a6efbecb20887805d261d1da0016cd92b9c62"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "library.json",
+                  "sha256": "94273935f2d94e9217c1d79679bad44cf8de889a07483391505d5174071131c7"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "task.json",
+                  "sha256": "7cf5b20765a0fd634053c0382476595eeaff15029b84d18b2d3ae8a669cddb4f"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "tool-schemas.json",
+                  "sha256": "2f3fe69c8124c84933e8b3cef33087f4e05842e239603fe1ab1df1ce403b13d8"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "source-evidence.json",
+                  "sha256": "87d64e6fff3b57926271b650b13d877d1c4e68c3cc426d1a520e5e698b890dd8"
+                }
+              ],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "550d4dbb6eb021b8e2456a3b2fb7ad35181a50c060a246aa3d24b82874b46541",
+                "f293bd595754f7ca3880f8060dae964258b9590226f5ab47eda709ed18e0fffc"
+              ],
+              "tools": [
+                "mcp__ppt_master__pin_source",
+                "mcp__ppt_master__convert_source"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__ppt_master__pin_source",
+                  "to_tool": "mcp__ppt_master__convert_source",
+                  "from_field": "source_id",
+                  "to_param": "source_id"
+                }
+              ],
+              "source_task_count": 2
+            }
+          ],
+          "runs": [],
+          "events": [],
+          "evidence": [
+            {
+              "id": "550d4dbb6eb021b8e2456a3b2fb7ad35181a50c060a246aa3d24b82874b46541",
+              "kind": "library",
+              "sha256": "94273935f2d94e9217c1d79679bad44cf8de889a07483391505d5174071131c7",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "f293bd595754f7ca3880f8060dae964258b9590226f5ab47eda709ed18e0fffc",
+              "kind": "certificate",
+              "sha256": "8ec16827a60912230846f1750a9aaa0df8bf16b2e260cf41b229a83528b44c4d",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "b440e10277b6d0e4cb4da1f3cd97653e2f8d4089fe1a6e2ddac7dd1f78eff48a",
+              "kind": "bound_artifact",
+              "sha256": "482ad16da2f1866e148be6cf5e893202bf567dc2a9aaa497a992258af7e3ed8e",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "4c87ba66be2483e120a82b5350d1d11e674f22df8c7190b269307dab914b5f63",
+              "kind": "learning_report",
+              "sha256": "482ad16da2f1866e148be6cf5e893202bf567dc2a9aaa497a992258af7e3ed8e",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "ff2cb0b536c98df6601a3dc8ce68644059e38093c47f6d4ef4d3479f9a753aad",
+              "kind": "bound_artifact",
+              "sha256": "093dd70cd6ef8c349ae3e620637a6efbecb20887805d261d1da0016cd92b9c62",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "e047e97eaa77b649858a761a692a9391b2b99245e706c802116bb3b76df900d2",
+              "kind": "bound_artifact",
+              "sha256": "94273935f2d94e9217c1d79679bad44cf8de889a07483391505d5174071131c7",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "226ad167f611356f8f022f0f09acaa7af9e8cdea02c896f0f3a6325d970eca63",
+              "kind": "bound_artifact",
+              "sha256": "7cf5b20765a0fd634053c0382476595eeaff15029b84d18b2d3ae8a669cddb4f",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "4c2654bcfa538c956d8a756ca7146d32b6ac827b14056694820c1b4575e74fc5",
+              "kind": "bound_artifact",
+              "sha256": "2f3fe69c8124c84933e8b3cef33087f4e05842e239603fe1ab1df1ce403b13d8",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "6a6f30054bbc2d769e4aa4647315223a30040f3eee74c7795088e71e16ba8fea",
+              "kind": "source_evidence",
+              "sha256": "87d64e6fff3b57926271b650b13d877d1c4e68c3cc426d1a520e5e698b890dd8",
+              "verification_scope": "host_reverified"
+            }
+          ],
+          "exporter": {
+            "source_sha256": "617108ca58b58e321b5a067f98b742f1b7e17e617922638f9f99664b539f90ea",
+            "schema_sha256": "df64b9dcbc6f90a5588c1b993e05a01e66a10d14f7550b63a2c15db72a58b07a",
+            "new_model_http_requests": 0
+          },
+          "export_digest": "39379353d528f946c39a4a696c89d48e2c19ad9f4deeb4ccfe14b615441dafee"
+        }
+      },
+      {
+        "id": "runtime:paper-proofreading",
+        "title": "论文核验",
+        "scene": "paper-proofreading",
+        "status": "ready",
+        "evidence": {
+          "format": "geneloop-motif-evidence-v2",
+          "scenario": "paper-proofreading",
+          "display_only": true,
+          "execution_authorized": false,
+          "data_origin": "runtime_admitted_library",
+          "generated_at": "2026-11-08T10:20:19.835Z",
+          "source": {
+            "kind": "registered",
+            "label": "论文核验",
+            "release": "paper-web-v86",
+            "compatibility": "available",
+            "unavailable_reason": null,
+            "revisions": [
+              {
+                "label": "paper-web-v12",
+                "certificate_digest": "eb4dfd9ed9258013d0e850f694bea0bb5dc86fd8811ad5b849f0ce45763df47d",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v13",
+                "certificate_digest": "2e7fc9dc0041d7ed086da95de28bd691da75c516cfe8d5553d0d18c2bbf4bfd3",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v14",
+                "certificate_digest": "94fc7558e0654cf9aaa9a3f7fb0e56dec2ffc803f01cf18108c742bfb5bec34a",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v15",
+                "certificate_digest": "cdf35e92bb893e7f8d80bf04a06fc40350399fc0a9d286779492e28de8f61ad5",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v75",
+                "certificate_digest": "e28bc006fe688146b083447eaab051eec5af0b7fcaf979b3342ed2bfe2320ef5",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v18",
+                "certificate_digest": "619bf5b1f0d8854a7ee7867ad67f84af26e99d9f85158972c6612a80b50a6612",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v19",
+                "certificate_digest": "8878bf1d570e009a72510fe25f74fe963917be1cb5282532a27e91a9f37ee806",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v20",
+                "certificate_digest": "e1c808feb6cbeacf77d3627a29b2a76bec82947310d51fe5bede59cdc5a24d37",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v21",
+                "certificate_digest": "81914ccbe14762083e133b71d8088a33ae8b837e8fc739be75d987d85e29666a",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v22",
+                "certificate_digest": "a88c35621497a0735f132579ac3ffd47286365ba1fc07944e6ba0d677b9b6c4a",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v23",
+                "certificate_digest": "b03a719e60c03b07d8c0cea132aae2cacad9489afd7aacc7c24db21383a16cd1",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v83",
+                "certificate_digest": "b1343d2faa4586dc40d991b0eeaa9393b2f48e6e56fbc4884799e75536882ff0",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v32",
+                "certificate_digest": "0d7b0ca0e56a4a3d2e2ca7b6c549b58b5c25cd56d0e2b891bef86ee48dfc867e",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v42",
+                "certificate_digest": "0ef1b2166e75d054309d1c96a3e6552bfabf383cf045fd9bbb186f86f955b623",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v84",
+                "certificate_digest": "01d3e44178001f9d73f1a3855b01e942afdbdaeeb03ba0b95e4d392277e069d1",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v85",
+                "certificate_digest": "5ebb06958f6d5392db309a75e3b6ce4970436fac63e7de577100905e31737747",
+                "current": false,
+                "evidence_ref": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f"
+              },
+              {
+                "label": "paper-web-v86",
+                "certificate_digest": "a69775c853ebaefb8c96c8daa717a14f69a0555e5f4ac4e77c6ea5cc791ada7a",
+                "current": true,
+                "evidence_ref": "53ff49e0d2b6a0dd466d017b0417ffb057091fcc468707630e1b9bde5e9afc2a"
+              }
+            ]
+          },
+          "library": {
+            "generation": null,
+            "snapshot_sha256": "61ff932d7143fa3784ef122d1dfbe598bf65319c8d86989ff6e534eff5d1ec41",
+            "registry_digest": "4cca3817ce73d4a1f5c71a4c6dfa0f3775f263bad07aa0153c93eb5a658bfdc4",
+            "certified_count": 1
+          },
+          "capabilities": [
+            {
+              "id": "1ec3f2b13da2898b53fb922b7acfbabedba0524ca8d68db901365c4d8887d3dd",
+              "name": "pin_document → read_pinned_document",
+              "kind": "tool_flow",
+              "status": "certified",
+              "in_frozen_library": true,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "2683e6525ff5c1fbdad660f53ce031b6b5bdd286e6b80b92ee4b68f0ddb4b0aa",
+                "certificate_digest": "a69775c853ebaefb8c96c8daa717a14f69a0555e5f4ac4e77c6ea5cc791ada7a"
+              },
+              "certification": {
+                "status": "certified",
+                "native_witness_tasks": 1,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": "independent_trace_structure"
+              },
+              "contract": {
+                "language": "sss-local-ops-v1",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "title": "Name",
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "title": "Sha256",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "sha256"
+                  ],
+                  "title": "pin_documentArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [
+                {
+                  "kind": "artifact",
+                  "name": "learning-report.json",
+                  "sha256": "10e66ce8b92c7a86bbfd1bb5d81b7437bca4842b1d17f710b1133d1c9c2011fb"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "online-manifest.json",
+                  "sha256": "7b5e9274b712501a59369403e5707b771a32bd7ffa75bf512844206bb85ad0d1"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "library.json",
+                  "sha256": "61ff932d7143fa3784ef122d1dfbe598bf65319c8d86989ff6e534eff5d1ec41"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "task.json",
+                  "sha256": "d527101604be85ea4c50ee3a8c018d8643c44749e986d1caf15a521f9ff72c65"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "tool-schemas.json",
+                  "sha256": "0ba797b7a3ed5155d92e4fda235ba4b251162cc0e7f014bb778ea956d29da0b0"
+                },
+                {
+                  "kind": "artifact",
+                  "name": "source-evidence.json",
+                  "sha256": "76ddb181021106915fea64ee02117c78db8fb3ef9d6324cb35a488fc9f459629"
+                }
+              ],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "f3c048524ac533a8b41a7f1b39b9e309a809aed710cb399e0272451952067284",
+                "53ff49e0d2b6a0dd466d017b0417ffb057091fcc468707630e1b9bde5e9afc2a"
+              ],
+              "tools": [
+                "mcp__paper_checks__pin_document",
+                "mcp__paper_checks__read_pinned_document"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__paper_checks__pin_document",
+                  "to_tool": "mcp__paper_checks__read_pinned_document",
+                  "from_field": "source_id",
+                  "to_param": "source_id"
+                }
+              ],
+              "source_task_count": 2
+            }
+          ],
+          "runs": [],
+          "events": [],
+          "evidence": [
+            {
+              "id": "f3c048524ac533a8b41a7f1b39b9e309a809aed710cb399e0272451952067284",
+              "kind": "library",
+              "sha256": "61ff932d7143fa3784ef122d1dfbe598bf65319c8d86989ff6e534eff5d1ec41",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "53ff49e0d2b6a0dd466d017b0417ffb057091fcc468707630e1b9bde5e9afc2a",
+              "kind": "certificate",
+              "sha256": "a69775c853ebaefb8c96c8daa717a14f69a0555e5f4ac4e77c6ea5cc791ada7a",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "e9dbf3f830234dfa2916cb6ea0093f53d9e774359fc9e83bc5951d464903a0c5",
+              "kind": "bound_artifact",
+              "sha256": "10e66ce8b92c7a86bbfd1bb5d81b7437bca4842b1d17f710b1133d1c9c2011fb",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "ba29a4853d4c0eb586cfa151c12d7465da90e4f002b35d619b75cbefc0740e6f",
+              "kind": "learning_report",
+              "sha256": "10e66ce8b92c7a86bbfd1bb5d81b7437bca4842b1d17f710b1133d1c9c2011fb",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "402f1811409efcc6f3b328ebe32353219496ec98c6f359525d3fe06305e2e0e2",
+              "kind": "bound_artifact",
+              "sha256": "7b5e9274b712501a59369403e5707b771a32bd7ffa75bf512844206bb85ad0d1",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "c0b6ad2e60ee1af60b8b32f4e3aa77133be91327ee8b8e546aa7484d9a7617fe",
+              "kind": "bound_artifact",
+              "sha256": "61ff932d7143fa3784ef122d1dfbe598bf65319c8d86989ff6e534eff5d1ec41",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "3492e9a5601acd10a50953efb8612e6c89c69db8a652c14e64e403abadbc863c",
+              "kind": "bound_artifact",
+              "sha256": "d527101604be85ea4c50ee3a8c018d8643c44749e986d1caf15a521f9ff72c65",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "d093a80ded9fcca41c27cc0724f6616352209bec98074547b874a54b2c75ff5f",
+              "kind": "bound_artifact",
+              "sha256": "0ba797b7a3ed5155d92e4fda235ba4b251162cc0e7f014bb778ea956d29da0b0",
+              "verification_scope": "host_reverified"
+            },
+            {
+              "id": "c4b7758cecfd7fe3ba36ea8053e38624e55daf26a5f722b8f5ba18deca8245da",
+              "kind": "source_evidence",
+              "sha256": "76ddb181021106915fea64ee02117c78db8fb3ef9d6324cb35a488fc9f459629",
+              "verification_scope": "host_reverified"
+            }
+          ],
+          "exporter": {
+            "source_sha256": "617108ca58b58e321b5a067f98b742f1b7e17e617922638f9f99664b539f90ea",
+            "schema_sha256": "df64b9dcbc6f90a5588c1b993e05a01e66a10d14f7550b63a2c15db72a58b07a",
+            "new_model_http_requests": 0
+          },
+          "export_digest": "e3bba78524c9d1938da88497a81ea543d77d2097af9c21ac879b55f0c2bc6369"
+        }
+      },
+      {
+        "id": "runtime:research-data-analysis",
+        "title": "数据分析",
+        "scene": "research-data-analysis",
+        "status": "ready",
+        "evidence": {
+          "format": "geneloop-motif-evidence-v2",
+          "scenario": "research-data-analysis",
+          "display_only": true,
+          "execution_authorized": false,
+          "data_origin": "runtime_admitted_library",
+          "generated_at": "2026-11-08T10:20:19.836Z",
+          "source": {
+            "kind": "registered",
+            "label": "数据分析",
+            "release": "data",
+            "compatibility": "available",
+            "unavailable_reason": null,
+            "revisions": [
+              {
+                "label": "data",
+                "certificate_digest": null,
+                "current": true,
+                "evidence_ref": "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              }
+            ]
+          },
+          "library": {
+            "generation": null,
+            "snapshot_sha256": "6a199f143a7a86928d08ee20effd6959ac068f374566a267435a5441ebb9906d",
+            "registry_digest": "9053fe43d8a117eefd4d4dd0ba54aad53aec24d57c585e1d75cceb54789b5eb2",
+            "certified_count": 0
+          },
+          "capabilities": [
+            {
+              "id": "2157da2d939fccfc823119af520fdc58e4898414a4e22a2e64451d0d9f446acd",
+              "name": "approve_analysis → run_analysis",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "1e0a96c9835c2ec62a13691f4631174c7ab246c3610aa02c9513061823e0f4e6",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "study_id": {
+                      "title": "Study Id",
+                      "type": "string"
+                    },
+                    "plan": {
+                      "additionalProperties": true,
+                      "title": "Plan",
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "study_id",
+                    "plan"
+                  ],
+                  "title": "approve_analysisArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__approve_analysis",
+                "mcp__research_report__run_analysis"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__approve_analysis",
+                  "to_tool": "mcp__research_report__run_analysis",
+                  "from_field": "plan_id",
+                  "to_param": "plan_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "ec22126d61104b12434cb3e0bad72b8abfc6bf6cf939a92497d6bdc8525f0bd2",
+              "name": "approve_presentation → render_figures",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "f1d7ef7b92f572518805b6328211cb3f1381b8bad3d730b044479571843b3ed0",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "evidence_id": {
+                      "title": "Evidence Id",
+                      "type": "string"
+                    },
+                    "presentation": {
+                      "additionalProperties": true,
+                      "title": "Presentation",
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "evidence_id",
+                    "presentation"
+                  ],
+                  "title": "approve_presentationArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__approve_presentation",
+                "mcp__research_report__render_figures"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__approve_presentation",
+                  "to_tool": "mcp__research_report__render_figures",
+                  "from_field": "presentation_id",
+                  "to_param": "presentation_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "514a40440f29d606ac23c2db150c17a8de39a7bde765fb68b25a449347e6fafd",
+              "name": "audit_layout → verify_report",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "5377a81d030f4df887eb97435757e86dfbd8b3cc2d589a2a080757f80d4fed7d",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "layout_id": {
+                      "title": "Layout Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "layout_id"
+                  ],
+                  "title": "audit_layoutArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__audit_layout",
+                "mcp__research_report__verify_report"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__audit_layout",
+                  "to_tool": "mcp__research_report__verify_report",
+                  "from_field": "report_id",
+                  "to_param": "report_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "09d15d82cd9b5dec834638db7febf9557725266ebc4b673207ed826187387a95",
+              "name": "compose_report → layout_report",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "baaec1b17a12980a1cb2c49be4c93c031c8ae932ad567b47e947f3a97cda3a84",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "text_id": {
+                      "title": "Text Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text_id"
+                  ],
+                  "title": "compose_reportArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__compose_report",
+                "mcp__research_report__layout_report"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__compose_report",
+                  "to_tool": "mcp__research_report__layout_report",
+                  "from_field": "draft_id",
+                  "to_param": "draft_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "a04b814726beb358cddb5276d00d55107d4f233a4fbd035ba6d8f87e9b24606e",
+              "name": "layout_report → audit_layout",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "6f114edcd3a3c9af0fe54e2e0b8c86a2647f89bd8ad136ad40f2d250c23a2139",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "draft_id": {
+                      "title": "Draft Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "draft_id"
+                  ],
+                  "title": "layout_reportArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__layout_report",
+                "mcp__research_report__audit_layout"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__layout_report",
+                  "to_tool": "mcp__research_report__audit_layout",
+                  "from_field": "layout_id",
+                  "to_param": "layout_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "0e3594def7235d1603c39bd0bb5d7fc4669d9b2e2615b1174707043984a284dc",
+              "name": "render_figures → verify_figures",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "06fdc8a77f3e413e4a77bffda35e21f63967a48c99bbf6ea4920c7c72c4527eb",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "presentation_id": {
+                      "title": "Presentation Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "presentation_id"
+                  ],
+                  "title": "render_figuresArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__render_figures",
+                "mcp__research_report__verify_figures"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__render_figures",
+                  "to_tool": "mcp__research_report__verify_figures",
+                  "from_field": "figure_bundle_id",
+                  "to_param": "figure_bundle_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "ffbb3b5d3daeba5e696916e64d01ffc0ee988eead9f2de658730a8e247730543",
+              "name": "run_analysis → verify_analysis",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "90ca83bc4dd44a2224edfafc29fb8a901a88a79a56e29580fc29fe9abc7cc5a0",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan_id": {
+                      "title": "Plan Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "plan_id"
+                  ],
+                  "title": "run_analysisArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__run_analysis",
+                "mcp__research_report__verify_analysis"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__run_analysis",
+                  "to_tool": "mcp__research_report__verify_analysis",
+                  "from_field": "analysis_id",
+                  "to_param": "analysis_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "d2f453dd163f526d058bb40634a4b9568910a2a8aa6a582c78f0204ec86bb69e",
+              "name": "submit_report_text → compose_report",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "8bf951a2d1fbbc264108baf123faeffa9ab6312e171012552eaab14c08d9b167",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "packet_id": {
+                      "title": "Packet Id",
+                      "type": "string"
+                    },
+                    "report_text": {
+                      "$ref": "#/$defs/ReportText"
+                    }
+                  },
+                  "required": [
+                    "packet_id",
+                    "report_text"
+                  ],
+                  "$defs": {
+                    "ReportSection": {
+                      "additionalProperties": false,
+                      "description": "One body section, in the already approved order. No extra fields.",
+                      "properties": {
+                        "heading": {
+                          "description": "Copy the exact corresponding approved outline heading. Put scientific roles only in presentation.report.outline, not here.",
+                          "title": "Heading",
+                          "type": "string"
+                        },
+                        "paragraphs": {
+                          "description": "Write the complete body yourself. Bind ALL scientific numbers to available {{name}} tokens. Legal existing figure labels such as 图1/Figure 1 and consecutive list markers such as （1）…；（2）… are formatting. Do not write source hashes or paths in prose; they are retained automatically in sidecar records.",
+                          "items": {
+                            "maxLength": 2000,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 12,
+                          "minItems": 1,
+                          "title": "Paragraphs",
+                          "type": "array"
+                        },
+                        "figure_indices": {
+                          "description": "Required zero-based indexes of actual approved figures placed in this section. Use [] if none. Across all sections include every actual figure exactly once. Body references 图1/Figure 1 use one-based labels.",
+                          "items": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "title": "Figure Indices",
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "heading",
+                        "paragraphs",
+                        "figure_indices"
+                      ],
+                      "title": "ReportSection",
+                      "type": "object"
+                    },
+                    "ReportText": {
+                      "additionalProperties": false,
+                      "description": "Full model-written body, not a template or permission to invent numbers.",
+                      "properties": {
+                        "sections": {
+                          "description": "Exactly the approved headings in order. Write methods, results, interpretation, diagnostics and limitations. Across the body use {{estimate}},{{ci_low}},{{ci_high}},{{p_value}},{{n}},{{excluded_rows}}. State synthetic-data limitations when source metadata says synthetic and state that this analysis does not establish causality. Use {{confidence_pct}}%, {{null_value}} and {{unit_increment}} instead of literal confidence/zero/unit-count numbers.",
+                          "items": {
+                            "$ref": "#/$defs/ReportSection"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "title": "Sections",
+                          "type": "array"
+                        },
+                        "allow_deterministic_continuation": {
+                          "description": "REQUIRED explicit JSON boolean, no default. true authorizes assembly, layout and verification of THIS submitted text; false leaves continuation to the model. It never authorizes changing scientific prose.",
+                          "title": "Allow Deterministic Continuation",
+                          "type": "boolean"
+                        },
+                        "research_options": {
+                          "description": "Supply at least the returned research_options_min when the user requests alternative studies; otherwise may omit. These model-written fields are inserted into an existing approved next_steps/limitations section.",
+                          "items": {
+                            "$ref": "#/$defs/ResearchOption"
+                          },
+                          "maxItems": 4,
+                          "title": "Research Options",
+                          "type": "array"
+                        },
+                        "comparison_summary": {
+                          "anyOf": [
+                            {
+                              "maxLength": 2000,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "default": null,
+                          "description": "Required when research_options is nonempty: compare their objectives and trade-offs using actual evidence; all scientific numbers use {{name}} tokens. Otherwise omit this field or put ordinary discussion in sections.",
+                          "title": "Comparison Summary"
+                        }
+                      },
+                      "required": [
+                        "sections",
+                        "allow_deterministic_continuation"
+                      ],
+                      "title": "ReportText",
+                      "type": "object"
+                    },
+                    "ResearchOption": {
+                      "additionalProperties": false,
+                      "description": "An LLM-written study choice; this schema does not judge its merit.",
+                      "properties": {
+                        "name": {
+                          "description": "A distinct research/sampling option name; do not add fields beyond name,rationale,tradeoff.",
+                          "maxLength": 2000,
+                          "minLength": 1,
+                          "title": "Name",
+                          "type": "string"
+                        },
+                        "rationale": {
+                          "description": "Explain why this option serves the actual findings/question. All quantitative values use verified {{name}} tokens.",
+                          "maxLength": 2000,
+                          "minLength": 1,
+                          "title": "Rationale",
+                          "type": "string"
+                        },
+                        "tradeoff": {
+                          "description": "Explain costs, assumptions and limitations; describe untested scientific benefits as conditional hypotheses.",
+                          "maxLength": 2000,
+                          "minLength": 1,
+                          "title": "Tradeoff",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "rationale",
+                        "tradeoff"
+                      ],
+                      "title": "ResearchOption",
+                      "type": "object"
+                    }
+                  },
+                  "title": "submit_report_textArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__submit_report_text",
+                "mcp__research_report__compose_report"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__submit_report_text",
+                  "to_tool": "mcp__research_report__compose_report",
+                  "from_field": "text_id",
+                  "to_param": "text_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "9202a9e26bf9bae29d4a58349a40a8ab0d4ddc2151eb2845e8077883da1328de",
+              "name": "verify_analysis → build_evidence",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "ed6e0c2956a45b37aa00e0d0ceba1b81885d68d2717be051f9e2ea885117d4b7",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "analysis_id": {
+                      "title": "Analysis Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "analysis_id"
+                  ],
+                  "title": "verify_analysisArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__verify_analysis",
+                "mcp__research_report__build_evidence"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__verify_analysis",
+                  "to_tool": "mcp__research_report__build_evidence",
+                  "from_field": "verified_id",
+                  "to_param": "verified_id"
+                }
+              ],
+              "source_task_count": null
+            },
+            {
+              "id": "8177407d77cd5adf52216254357edab4930f010aad18cc83970d2babc9a0cbf8",
+              "name": "verify_report → deliver_report",
+              "kind": "tool_flow",
+              "status": "registered",
+              "in_frozen_library": false,
+              "version": {
+                "library_generation": null,
+                "candidate_digest": "8cfd74abe97c2ade25cb204a6333ba0fb6b7d061736c072a769e3071cc5c4cb5",
+                "certificate_digest": null
+              },
+              "certification": {
+                "status": "registered",
+                "native_witness_tasks": null,
+                "candidate_execution_tasks": null,
+                "negative_kinds": [],
+                "scope": null
+              },
+              "contract": {
+                "language": "receipt_transfer_v3",
+                "parameters_schema": {
+                  "type": "object",
+                  "properties": {
+                    "report_id": {
+                      "title": "Report Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "report_id"
+                  ],
+                  "title": "verify_reportArguments"
+                },
+                "read_scope": [],
+                "write_scope": [],
+                "dependency_sha256": null,
+                "effect_contract_sha256": null,
+                "environment_sha256": null
+              },
+              "dependencies": [],
+              "cost": {
+                "amount_usd": null,
+                "known_model_cost_usd": null,
+                "currency": "USD",
+                "basis": "capability_attribution_unknown"
+              },
+              "evidence_refs": [
+                "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9"
+              ],
+              "tools": [
+                "mcp__research_report__verify_report",
+                "mcp__research_report__deliver_report"
+              ],
+              "tool_flow": [
+                {
+                  "from_tool": "mcp__research_report__verify_report",
+                  "to_tool": "mcp__research_report__deliver_report",
+                  "from_field": "verification_id",
+                  "to_param": "verification_id"
+                }
+              ],
+              "source_task_count": null
+            }
+          ],
+          "runs": [],
+          "events": [],
+          "evidence": [
+            {
+              "id": "4d1237be07e3443018cdbc23249541010db4b1e3960c576378bafd8dd2fac8b9",
+              "kind": "library",
+              "sha256": "6a199f143a7a86928d08ee20effd6959ac068f374566a267435a5441ebb9906d",
+              "verification_scope": "host_reverified"
+            }
+          ],
+          "exporter": {
+            "source_sha256": "617108ca58b58e321b5a067f98b742f1b7e17e617922638f9f99664b539f90ea",
+            "schema_sha256": "df64b9dcbc6f90a5588c1b993e05a01e66a10d14f7550b63a2c15db72a58b07a",
+            "new_model_http_requests": 0
+          },
+          "export_digest": "5121b0a8ba88ee89fe9d358fe3c0f827153b595f8651c990295c1a8831a3b1ce"
+        }
+      }
+    ]
+  }
+}

@@ -7,7 +7,46 @@ import {createHash} from 'node:crypto';
 import {createGateway} from '../scripts/harless_gateway.mjs';
 import {motifEvidenceView as readMotifEvidence} from '../scripts/harless_motif_view.ts';
 import {usd} from '../src/adapters/motif_evidence_projection.ts';
+import Ajv2020 from 'ajv/dist/2020.js';
+import {evidenceView as desktopEvidenceView} from '../apps/desktop/motif/evidence-projection.ts';
+import {apiPurpose} from '../apps/desktop/src/privacy.ts';
 const sample=()=>JSON.parse(readFileSync(new URL('../apps/desktop/ui/desktop/motif-example.json',import.meta.url),'utf8'));
+const catalogFixture=()=>JSON.parse(readFileSync(new URL('./fixtures/motif-catalog-pr161.json',import.meta.url),'utf8'));
+// Unit checks stay runnable on a clean checkout without generated browser bundles.
+const ajv=new Ajv2020({allowUnionTypes:true});
+const runtimeCheck=ajv.compile(JSON.parse(readFileSync(new URL('../apps/desktop/motif/evidence-v2.schema.json',import.meta.url),'utf8')));
+const legacyCheck=ajv.compile(JSON.parse(readFileSync(new URL('../config/motif-evidence-v1.schema.json',import.meta.url),'utf8')));
+const runtimeEvidence=data=>desktopEvidenceView(data,runtimeCheck);
+
+test('桌面兼容原v1及PR161实际注册库的v2只读快照，费用与执行记录不虚构',()=>{
+  assert.equal(desktopEvidenceView(sample(),legacyCheck).summary.applied,1);
+  const fixture=catalogFixture();assert.equal(fixture.sourceCommit,'225d7b557b640a7e66610077b9694c781da8cf37');
+  const views=fixture.catalog.libraries.map(row=>runtimeEvidence(row.evidence));
+  assert.deepEqual(views.map(v=>v.capabilities.length),[2,1,10]);
+  for(const view of views){
+    assert.equal(view.raw.execution_authorized,false);assert.equal(view.raw.display_only,true);
+    assert.equal(view.summary.savings,null);assert.equal(view.runs.length,0);assert.equal(view.summary.applied,0);
+    assert.ok(view.capabilities.every(c=>c.cost==='未知'&&c.toolFlow.length>0));
+    assert.ok(view.raw.source.revisions.length>0);
+  }
+  assert.equal(views[2].summary.certified,0);assert.equal(views[2].summary.registered,10);
+  assert.ok(views[2].raw.capabilities.every(c=>!c.in_frozen_library&&c.status==='registered'));
+});
+
+test('桌面v2拒绝执行授权、伪认证和断开的版本证据，保持原v1边界',()=>{
+  const original=catalogFixture().catalog.libraries[0].evidence;
+  let data=structuredClone(original);data.execution_authorized=true;assert.throws(()=>runtimeEvidence(data));
+  data=structuredClone(original);data.capabilities[0].version.certificate_digest=null;assert.throws(()=>runtimeEvidence(data));
+  data=structuredClone(original);data.source.revisions[0].evidence_ref='f'.repeat(64);assert.throws(()=>runtimeEvidence(data));
+  data=sample();data.capabilities[0].version.certificate_digest=null;assert.throws(()=>desktopEvidenceView(data,legacyCheck));
+});
+
+test('目录读取仅增加任务用途，保留本机模型通道与可选共享分类',()=>{
+  for(const path of ['/api/harless/motif-catalog','/api/harless/motif-library','/api/harless/desktop-model/lease',
+    '/api/harless/desktop-model/v1/chat/completions','/api/harless/desktop-model/video/render'])assert.equal(apiPurpose(path),'task');
+  assert.equal(apiPurpose('/api/harless/rsi-sharing'),'sharing');
+  assert.equal(apiPurpose('/api/harless/motif-catalog-write'),undefined);
+});
 test('公开证据只统计实际调用，未知费用和耗时保持未知',()=>{
   const data=sample(),view=readMotifEvidence(data);
   assert.equal(view.summary.certified,1);assert.equal(view.summary.applied,1);assert.equal(view.summary.fallbacks,1);assert.equal(view.summary.savings,null);

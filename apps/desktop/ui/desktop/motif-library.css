@@ -40,6 +40,7 @@ body[data-ds-dark-theme]{color:var(--gl-ink)}
 .motif-culture-stat strong{font-size:24px;line-height:28px;font-weight:650;letter-spacing:-.8px;font-variant-numeric:tabular-nums;color:var(--gl-ink)}
 .motif-culture-stat.reuse strong{color:var(--culture-green)}
 .motif-culture-status{font-size:10px;color:var(--muted);margin:9px 0 0}
+.motif-source-selector{display:flex;align-items:center;gap:12px;margin:12px 0 18px;color:var(--muted);font-size:12px}.motif-source-selector .choice-control{min-width:0;max-width:100%}.motif-source-selector .choice-trigger{max-width:100%}.motif-source-selector .choice-trigger>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.motif-task-usage{padding:12px 0;border-bottom:1px solid var(--line)}.motif-culture-legend i.registered{background:#d8bf8c}.motif-badge.registered{color:#987631}
 .motif-summary-toggle{position:absolute;top:12px;right:10px;width:22px;height:22px;border-radius:6px;color:#8b9aa4}
 .motif-summary-toggle:hover{color:var(--gl-ink);background:#6b969115}.motif-summary-toggle svg{width:12px;height:12px}
 .motif-evolution-card[data-collapsed=true]{padding:12px 14px}

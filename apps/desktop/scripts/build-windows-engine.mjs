@@ -75,6 +75,6 @@ export async function buildWindowsEngine(app,release,compiler,extraArgs) {
 !macroend
 `);
   execFileSync(process.execPath,[cli,'--config',join(app,'electron-builder.config.cjs'),'--win','nsis','--x64','--publish','never','--prepackaged',bootstrap,'-c.directories.output='+release,'-c.nsis.include='+include,'-c.nsis.packElevateHelper=false','-c.nsis.differentialPackage=false',...options],{cwd:app,stdio:'inherit',windowsHide:true});
-  fs.writeFileSync(join(release,'direct-payload.json'),JSON.stringify({schema:1,files,bytes,sha256,payload,extractor,packed,reuseParts,reuseManifest,method:'NSIS lifecycle + verified .NET ZIP direct extraction and unchanged tool reuse'},null,2)+'\n');
+  fs.writeFileSync(join(release,'direct-payload.json'),JSON.stringify({schema:1,files,bytes,sha256,payload,extractor,packed,toolsBundled:fs.existsSync(join(packed,'resources','geneloop-tools')),reuseParts,reuseManifest,method:'NSIS lifecycle + verified .NET ZIP direct extraction and unchanged tool reuse'},null,2)+'\n');
   return bytes;
 }

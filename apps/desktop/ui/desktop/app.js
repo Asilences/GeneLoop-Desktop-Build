@@ -668,12 +668,19 @@ async function refreshHomeDelivery(workspaceId){
   if(!current())return;
   const scoped=(tasks?.tasks||[]).filter(task=>sessionIds.has(task.session_id)&&typeof task.task_id==='string')
     .sort((a,b)=>Number(['running','preparing','queued'].includes(b.status))-Number(['running','preparing','queued'].includes(a.status))||(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0));
-  if(tasks)homeActivity={workspaceId,tasks:scoped};
+  const assessment=homeActivity?.workspaceId===workspaceId&&sessionIds.has(homeActivity.assessment?.session_id)?homeActivity.assessment:null;
+  if(tasks)homeActivity={workspaceId,tasks:scoped,error:null,assessment};
+  else homeActivity={workspaceId,tasks:homeActivity?.workspaceId===workspaceId?homeActivity.tasks:[],error:'任务接口暂不可用，已有记录可能不是最新状态。'};
   scheduleRender();
-  const row=visible[0];if(!row||row.running)return;
+  const row=visible.find(row=>row.sessionId===scoped[0]?.session_id)||visible[0];if(!row||row.running)return;
   const {sessionId}=row;
   const records=await recentSessionEvents(sessionId).catch(()=>[]);if(!current())return;
   const refs=records.map(row=>row.event?.data?.harless_comparison).filter(Boolean).reverse();
+  if(refs[0]?.id){
+    const comparison=await request('/api/harless/comparisons?session_id='+encodeURIComponent(sessionId)+'&id='+encodeURIComponent(refs[0].id)).catch(()=>null);
+    if(!current())return;
+    if(comparison?.session_id===sessionId&&comparison.id===refs[0].id){homeActivity={...homeActivity,assessment:comparison};scheduleRender();}
+  }
   const native=scoped.filter(task=>task.session_id===sessionId&&task.status==='completed')
     .sort((a,b)=>(b.native_turn||0)-(a.native_turn||0));
   const candidates=[...refs.map(ref=>({id:ref.id,turn:ref.turn})),
@@ -694,7 +701,8 @@ async function refreshHomeDelivery(workspaceId){
 }
 function workspaceHome(group){
   const rows=workspaceSessions(group);
-  const next=rows.find(row=>row.running)||rows[0];
+  const currentTask=homeActivity?.workspaceId===group.workspaceId?homeActivity.tasks?.[0]:null;
+  const next=rows.find(row=>row.sessionId===currentTask?.session_id)||rows.find(row=>row.running)||rows[0];
   const decks=!next?.running&&homeDelivery?.sessionId===next?.sessionId?homeDelivery?.decks:null;
   const previewDelivery=decks?()=>{
         if(decks.length===1&&decks[0].deck.slides.length)previewPresentation(decks[0].deck);
@@ -724,7 +732,7 @@ function workspaceHome(group){
     }
     section.append(list);
   }
-  return motifUI.workspaceHome(group,{heading:summary,title:group.title,recent:section,nextSession:next?{sessionId:next.sessionId,title:titleOf(next),running:next.running}:null,sceneLabel:id=>labels[id]||id,tasks:homeActivity?.workspaceId===group.workspaceId?homeActivity.tasks:[],resources:homeDelivery?.files||[],resourceSession:homeDelivery?.sessionId,resourceTask:homeDelivery?.taskId,previewDelivery,openSession:id=>selectSession(id).catch(fail),sessionCount:rows.length,runningCount:rows.filter(row=>row.running).length});
+  return motifUI.workspaceHome(group,{heading:summary,title:group.title,recent:section,nextSession:next?{sessionId:next.sessionId,title:titleOf(next),running:next.running}:null,sceneLabel:id=>labels[id]||id,tasks:homeActivity?.workspaceId===group.workspaceId?homeActivity.tasks:[],taskError:homeActivity?.workspaceId===group.workspaceId?homeActivity.error:null,assessment:homeActivity?.workspaceId===group.workspaceId?homeActivity.assessment:null,resources:homeDelivery?.files||[],resourceSession:homeDelivery?.sessionId,resourceTask:homeDelivery?.taskId,previewDelivery,openSession:id=>selectSession(id).catch(fail),sessionCount:rows.length,runningCount:rows.filter(row=>row.running).length});
 }
 function renderLocalConversation(row){
   const threads=threadsFor(row.id);

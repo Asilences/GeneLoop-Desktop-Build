@@ -95,6 +95,7 @@ internal static class InstallEngine
 
     private static int RunLocked(InstallTarget target, string arguments, IProgress<string> phases)
     {
+        if (phases != null) phases.Report("check|正在检查安装位置与现有版本");
         string flags = arguments ?? ("/S " + (target.Machine ? "/allusers" : "/currentuser") + " /D=" + target.Path);
         bool elevate = flags.IndexOf("/allusers", StringComparison.OrdinalIgnoreCase) >= 0 ||
             (target.Machine && flags.IndexOf("/currentuser", StringComparison.OrdinalIgnoreCase) < 0);
@@ -142,11 +143,14 @@ internal static class InstallEngine
             using (var lockFile = new FileStream(engine, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var process = Process.Start(new ProcessStartInfo(engine, flags) { UseShellExecute = true, Verb = elevate && !IsElevated() ? "runas" : "" }))
             {
-                if (phases != null) phases.Report("正在解压并写入安装目录");
-                process.WaitForExit();
+                if (phases != null) phases.Report("verify|正在校验安装文件");
+                int seenTraceLines = 0;
+                while (!process.WaitForExit(250)) ReportTraceProgress(trace, ref seenTraceLines, phases);
+                ReportTraceProgress(trace, ref seenTraceLines, phases);
                 record("engine_finished");
                 if (process.ExitCode == 0)
                 {
+                    if (phases != null) phases.Report("finish|正在核对安装结果");
                     var expected = (AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(AssemblyInformationalVersionAttribute));
                     var installed = Path.Combine(target.Path, "GeneLoop Desktop.exe");
                     if (!File.Exists(installed) || FileVersionInfo.GetVersionInfo(installed).FileVersion != expected.InformationalVersion)
@@ -182,6 +186,45 @@ internal static class InstallEngine
             } catch (IOException) { } catch (UnauthorizedAccessException) { }
             record("installer_cleanup_complete");
         }
+    }
+
+    private static void ReportTraceProgress(string trace, ref int seenLines, IProgress<string> phases)
+    {
+        if (phases == null) return;
+        try
+        {
+            // The extractor appends only a few small receipt lines. Reading them
+            // never touches payload files and does not hold the writer's lock.
+            var lines = File.ReadAllLines(trace);
+            for (; seenLines < lines.Length; seenLines++)
+            {
+                string line = lines[seenLines];
+                if (!line.TrimEnd().EndsWith("}", StringComparison.Ordinal)) break;
+                if (line.IndexOf("\"phase\":\"payload_verified\"", StringComparison.Ordinal) >= 0)
+                    phases.Report("verify|正在检查文件清单");
+                else if (line.IndexOf("\"phase\":\"paths_validated\"", StringComparison.Ordinal) >= 0)
+                    phases.Report("write|正在写入文件");
+                else if (line.IndexOf("\"phase\":\"checking_existing_tools\"", StringComparison.Ordinal) >= 0)
+                    phases.Report("write|正在检查现有文件");
+                else if (line.IndexOf("\"phase\":\"files_written\"", StringComparison.Ordinal) >= 0)
+                {
+                    int start = line.IndexOf("\"files\":", StringComparison.Ordinal);
+                    if (start >= 0)
+                    {
+                        start += 8;
+                        int end = start;
+                        while (end < line.Length && Char.IsDigit(line[end])) end++;
+                        int count;
+                        if (Int32.TryParse(line.Substring(start, end - start), out count))
+                            phases.Report("write|正在写入文件，已处理 " + count.ToString("N0") + " 个文件");
+                    }
+                }
+                else if (line.IndexOf("\"phase\":\"extract_complete\"", StringComparison.Ordinal) >= 0)
+                    phases.Report("finish|正在完成设置");
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     [STAThread]

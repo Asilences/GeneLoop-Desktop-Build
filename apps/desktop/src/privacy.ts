@@ -9,7 +9,7 @@ const TASK = new Set([
   '/api/$events/result', '/api/harless/settings', '/api/harless/models', '/api/harless/file-scene',
   '/api/harless/questions', '/api/harless/session-trash', '/api/harless/workspaces',
   '/api/harless/workspaces/preferences', '/api/harless/tasks', '/api/harless/comparisons',
-  '/api/harless/deliveries', '/api/harless/motif-library',
+  '/api/harless/deliveries', '/api/harless/motif-library', '/api/harless/motif-catalog',
   // Normal local-task model transport; these are not optional sharing endpoints.
   '/api/harless/desktop-model/lease', '/api/harless/desktop-model/v1/chat/completions',
   '/api/harless/desktop-model/video/render',

@@ -55,22 +55,24 @@ export function workspaceRunView({workspace,model,viewState,onTab,onTask}){
   if(task?.scene)context.append(node('span',{class:'run-context-tag'},'场景 · '+(workspace.sceneLabel?.(task.scene)||task.scene)));
   const contextBlock=disclosure(node('span',{class:'run-disclosure-title'},icon('document'),'计划与上下文'),context,'contextOpen');
   const benefit=(symbol,label,value,note)=>node('div',{class:'run-benefit'},icon(symbol),node('div',{},node('span',{},label),node('strong',{},value),node('small',{},note)));
-  const benefits=node('section',{class:'run-section'},panelTitle('like','效果与用量'),node('div',{class:'run-benefit-grid'},
-    benefit('document','预计节省 Tokens','—','待同质量对照'),benefit('chart-column-increasing','预计效率提升','—','待同质量对照'),
+  const benefits=node('section',{class:'run-section'},panelTitle('like','实际用量'),node('div',{class:'run-benefit-grid'},
+    benefit('document','输入 Tokens',task?.stats?.input_tokens??task?.stats?.prompt_tokens??'—','原任务记录'),
+    benefit('chart-column-increasing','输出 Tokens',task?.stats?.output_tokens??task?.stats?.completion_tokens??'—','原任务记录'),
     benefit('scenes','模型请求',finite(task?.stats?.model_requests)?task.stats.model_requests:'—','原任务用量')));
   const recent=workspace.sessionCount?disclosure('最近对话 · '+workspace.sessionCount,workspace.recent,'recentOpen','run-recent-conversations'):workspace.recent;
   const main=node('div',{class:'workspace-run-surface'},taskCard,outputBlock,contextBlock,benefits,recent);
+  if(workspace.taskError)main.prepend(node('p',{class:'motif-error',role:'alert'},workspace.taskError));
 
   const info=(symbol,label,value,cls='')=>node('div',{class:'inspector-info-row'},node('span',{},icon(symbol),label),node('strong',{class:cls},value));
   const section=(symbol,title,...children)=>node('section',{class:'inspector-section'},node('h3',{},icon(symbol),title),...children);
   const inspectTask=node('div',{class:'inspector-current-task'},node('span',{class:'inspector-kicker'},'当前任务'),node('div',{},icon('document'),node('strong',{},task?taskTitle:workspace.nextSession?'尚无任务回执 · '+workspace.nextSession.title:'尚未开始任务')));
   const use=section('scenes','Motif 调用回执',motifBadges());
   const runtime=section('monitor','运行信息',info('refresh','状态',statusNode()),info('trace','已用时间',duration(task)),
-    info('document','预计节省 Tokens','—'),info('chart-column-increasing','预计效率提升','—'),info('scenes','任务估费',money(task?.stats?.cost_usd)),hint('收益须经过同质量对照后确认。'));
+    info('document','输入 Tokens',task?.stats?.input_tokens??task?.stats?.prompt_tokens??'—'),info('chart-column-increasing','输出 Tokens',task?.stats?.output_tokens??task?.stats?.completion_tokens??'—'),info('scenes','任务估费',money(task?.stats?.cost_usd)),hint('原任务用量；收益须经过同质量对照后确认。'));
   const statistic=(symbol,label,value)=>node('div',{class:'inspector-stat'},icon(symbol),node('div',{},node('small',{},label),node('strong',{},value)));
-  const evolution=section('refresh','演化统计',node('div',{class:'inspector-stat-grid'},statistic('scenes','Motif 数量',model?model.capabilities.length:'—'),statistic('refresh','演化次数','—')),hint('当前来源未提供演化发布次数。'));
+  const evolution=section('refresh','库内记录',node('div',{class:'inspector-stat-grid'},statistic('scenes','Motif 数量',model?model.capabilities.length:'—'),statistic('refresh','实际复用回执',model&&!model.raw.source?model.summary.applied:'—')),hint(model?.raw.source?'所选场景库，未作为当前工作区已使用能力统计。':'只统计当前证据源的实际回执。'));
   const route=(symbol,label,tab)=>button([icon(symbol),node('span',{},label),icon('chevron-right')],()=>onTab(tab),'inspector-route');
-  const options=section('settings','演化选项',route('refresh','查看工作区演化记录','evolution'),route('scenes','查看当前能力组合','combination'),route('document','查看版本与认证','versions'),route('chart-column-increasing','在评估页核对效果','evaluation'),hint('自动演化与任务模板生成待接入。'));
+  const options=section('settings','证据视图',route('refresh','查看调用与回退记录','evolution'),route('scenes','查看当前能力与工具流','combination'),route('document','查看版本与认证','versions'),route('chart-column-increasing','核对任务用量','evaluation'));
   const resourceFiles=(workspace.resources||[]).filter(file=>workspace.resourceTask===task?.task_id||workspace.resourceSession===sessionId);
   const resources=section('files','相关资源');
   if(resourceFiles.length){resources.append(node('span',{class:'inspector-kicker'},workspace.resourceTask===task?.task_id?'任务交付':'此对话的交付'));

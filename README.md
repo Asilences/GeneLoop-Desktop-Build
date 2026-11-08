@@ -1,6 +1,8 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-桌面从 `0.3.0-preview.21` 恢复默认完整离线分发：`apps/desktop` 中的 `npm run dist` 显式选择 `--complete`，将当前六场景工具随应用一次安装；完整包使用应用资源目录中的工具，不触发首次全量工具准备。`npm run dist:lite`／`--lightweight` 仅供主动选择轻量分包方式的构建，低层 CI 的显式环境入口保持兼容。两种方式保留同一套六场景能力，PPT 仍仅制作／编辑，不恢复语音扩展。构建可通过 `GENELOOP_DESKTOP_TOOLS_STAGE` 指向已核对的当前平台工具目录；Mac 需在对应原生构建机准备工具，旧 DMG 不会自动变为新分发方式。安装包仍只本地交付。
+桌面`0.3.0-preview.22`客户端适配[PR #161](https://github.com/jingyio/GeneLoop/pull/161)的场景库目录和v2只读证据，保留工作区v1、现有风格、本机执行与紧凑安装器。协议/界面检查通过，新增只读地址登记已获明确授权，安装包待重打。后台接口仍由该PR部署，服务端准入不等于本机已认证。[适配范围与证据](docs/debug/desktop-pr161-sync-20261108.md)。
+
+桌面从 `0.3.0-preview.21` 恢复默认完整离线分发：`apps/desktop` 中的 `npm run dist` 显式选择 `--complete`，将当前六场景工具随应用一次安装；完整包使用应用资源目录中的工具，不触发首次全量工具准备。`npm run dist:lite`／`--lightweight` 仅供主动选择轻量分包方式的构建，低层 CI 的显式环境入口保持兼容。两种方式保留同一套六场景能力，PPT 仍仅制作／编辑，不恢复语音扩展。构建可通过 `GENELOOP_DESKTOP_TOOLS_STAGE` 指向已核对的当前平台工具目录；Apple Silicon 和 Intel 的完整离线 DMG 已分别在原生构建机生成，并通过实际镜像复制副本的核心工具、PPT/PDF、Remotion 与统计/转换依赖检查；无需安装后再准备全套工具。[Mac交付与边界](docs/debug/desktop-preview21-macos-complete-20261108.md)。安装包仍只本地交付。
 
 桌面 `0.3.0-preview.20` 已按六场景实际实现更新工具并生成 Windows x64、Apple Silicon／Intel 本地候选。取消 PPT 语音扩展，改用精简 native Office Kit，共享 Node／Chromium并保留统计运行必需文件；安装器分别约268／230／241 MB，配套六工具包约322／257／299 MB。三平台原生依赖及实际PPT模板／PDF检查通过，本轮模型请求0。后续实测 Windows 应用首次17秒、preview.15覆盖55秒，但正常用户目录首次工具准备仍370秒，因此小包不再作为默认交付。[完整计时](docs/debug/desktop-preview20-install-20261108.md)、[计量与工具边界](docs/debug/desktop-preview20-tool-refresh-20261108.md)。
 
