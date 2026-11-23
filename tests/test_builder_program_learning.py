@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters import capability_program_training as training
-from src.adapters.capability_contract import capability_digest, capability_ref, create_capability_snapshot
-from src.adapters.capability_motif_learning import capture_composition_trace, learn_capability_motifs, _at
+from src.rsi.learning import capability_program_training as training
+from src.capability.graph.capability_contract import capability_digest, capability_ref, create_capability_snapshot
+from src.rsi.learning.capability_motif_learning import capture_composition_trace, learn_capability_motifs, _at
 from tests.test_capability_composition_projection import nested, run
 from tests.test_capability_motif_learning import put
 

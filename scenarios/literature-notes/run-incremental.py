@@ -25,8 +25,8 @@ def load_entry(name, filename):
 
 def collect_incremental(model_run, scene):
     sys.path.insert(0, str(ROOT))
-    from src.adapters.dsh_trajectory import extract_dsh_trace
-    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.adapters.harness.dsh_trajectory import extract_dsh_trace
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
     contracts = parse_tool_contracts({TOOL: {'required_params': ['update'], 'read_only': True, 'replay_stable': False}})
     events = [json.loads(line) for line in (Path(model_run) / 'agent-events.jsonl').read_text().splitlines()]
     trace = extract_dsh_trace(events, contracts, trace_id=Path(model_run).name)

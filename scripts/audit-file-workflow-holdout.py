@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT));sys.path.i
 from common import digest,sha,snapshot,save,PREFIX
 from workflow_contract import verify_workflow
 from experiment import accounting
-from src.adapters.file_cost_gate import observed_peak_cost
+from src.adapters.deepseek_cost_gate import observed_peak_cost
 from src.adapters.file_job_budget import job_command
 
 def audit(exp,partial=False):

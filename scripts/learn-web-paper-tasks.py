@@ -18,7 +18,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.harless_rsi_bundle import load_product_bundle
+from src.adapters.web.learning.harless_rsi_bundle import load_product_bundle
 spec = importlib.util.spec_from_file_location('paper_learning', ROOT/'scripts/learn-web-paper-document-motif.py')
 compiler = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(compiler)

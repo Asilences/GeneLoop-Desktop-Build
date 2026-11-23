@@ -26,8 +26,8 @@ def prepare(plan_path, output, public_origin=None):
     root = Path(deployment['projectRoot']).resolve(strict=True)
     sys.path.insert(0, str(root))
     from src.adapters.scenario import prepare_scenario
-    from src.adapters.harless_scenarios import prepare_scene_registry, WORKSPACE
-    from src.adapters.harless_product_prompt import product_persona
+    from src.adapters.web.scenes.harless_scenarios import prepare_scene_registry, WORKSPACE
+    from src.adapters.web.tasks.harless_product_prompt import product_persona
     registry_path = root / 'config/harless-scenes.json'
     definitions = read(registry_path)['scenes']
     owner = read(old['owner']['env']['SSS_WEB_POLICY'])
@@ -36,7 +36,8 @@ def prepare(plan_path, output, public_origin=None):
         if os.environ.get(key):
             raise RuntimeError('Private library overrides require a separately reviewed release recipe')
     environment = {'SSS_PYTHON': deployment['pythonExecutable']}
-    mapping = {'pptMasterRoot':'GENELOOP_PPT_MASTER_ROOT','pdfToolchainRoot':'HARLESS_PDF_TOOLCHAIN_ROOT',
+    deployment.pop('pptMasterRoot', None)
+    mapping = {'pdfToolchainRoot':'HARLESS_PDF_TOOLCHAIN_ROOT',
                'pdfOcrRoot':'GENELOOP_PDF_OCR_ROOT','fontRoot':'HARLESS_PPT_FONT_ROOT',
                'rendererRoot':'HARLESS_PPT_RENDERER_ROOT','paperRendererRoot':'HARLESS_PAPER_RENDERER_ROOT','videoRendererConfig':'GENELOOP_VIDEO_RENDERER_CONFIG',
                'videoMotifStore':'GENELOOP_VIDEO_MOTIF_STORE','videoMotifOwner':'GENELOOP_VIDEO_MOTIF_OWNER'}
@@ -75,6 +76,10 @@ def prepare(plan_path, output, public_origin=None):
         selected=next(row for row in scenes if row['id']==default_id)
         policy.update(scenes=scenes,allowed_tools=selected['allowed_tools'],
                       scene_registry_sha256=hashlib.sha256(registry_path.read_bytes()).hexdigest())
+        if label == 'owner' and any(scene.get('ppt_execution_strategy') == 'ppt_master' and not scene.get('unavailable_reason') for scene in scenes):
+            from scenarios.ppt_master.package import bundled_root
+            policy['command_resources'] = {**policy.get('command_resources', {}),
+                'projectRoot': str(root), 'pptMasterRoot': str(bundled_root())}
     if deployment.get('videoRenderer'):gateway['ownerCommandOutput']=owner['output']
     old_patch=old['owner']['argv'][old['owner']['argv'].index('--patch')+1]
     patch=read(old_patch)

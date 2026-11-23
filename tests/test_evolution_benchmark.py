@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters import evolution_benchmark as benchmark
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.skill_infinity_baseline import create_seed_task_skill, create_seed_meta_skill, optimize_task_skill
-from src.adapters.skillsbench_trial import SkillsBenchTrial
+from benchmarks.evolution import evolution_benchmark as benchmark
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from benchmarks.evolution.skill_infinity_baseline import create_seed_task_skill, create_seed_meta_skill, optimize_task_skill
+from benchmarks.evolution.skillsbench_trial import SkillsBenchTrial
 from tests.test_skillsbench_trial import DockerDiagnostic, source, assertion_report
 
 
@@ -139,8 +139,8 @@ def test_legacy_input_identity_comes_from_verified_manifest(fixture):
 
 
 def _independence_context(fixture, trials):
-    from src.adapters.capability_contract import create_capability_snapshot
-    from src.adapters.capability_investigation import Investigation
+    from src.capability.graph.capability_contract import create_capability_snapshot
+    from src.rsi.evolution.capability_investigation import Investigation
     owner = json.loads(verify(trials[0]['observation']))['owner']
     entries = [{'split': 'training', 'scope': 'diagnostic', 'evidence': trial['observation']}
                for trial in trials]
@@ -160,7 +160,7 @@ def _independence_context(fixture, trials):
 
 
 def test_distinct_inputs_in_one_family_support_the_existing_investigation(fixture):
-    from src.adapters.capability_evolution_agent import validate_candidate
+    from src.rsi.evolution.capability_evolution_agent import validate_candidate
     (fixture.test / 'environment/input.txt').write_text('Separate original input')
     trials = [fixture.host.trial('task-one', label='prior-development'),
               fixture.host.trial('task-one', split='test', label='prior-observed-instance')]
@@ -181,7 +181,7 @@ def test_distinct_inputs_in_one_family_support_the_existing_investigation(fixtur
 
 @pytest.mark.parametrize('second_kind', ['renamed-task', 'retry', 'continuation'])
 def test_same_input_does_not_gain_support_through_names_retries_or_continuations(fixture, second_kind):
-    from src.adapters.capability_evolution_agent import validate_candidate
+    from src.rsi.evolution.capability_evolution_agent import validate_candidate
     first = fixture.host.trial('task-one')
     task = 'task-one'
     if second_kind == 'renamed-task':
@@ -316,7 +316,7 @@ def test_failed_model_session_is_retained_and_not_scored_as_valid_execution(fixt
 
 
 def test_dependency_setup_precedes_model_and_keeps_original_verifier(fixture, monkeypatch):
-    from src.adapters import benchmark_dependency_profile
+    from benchmarks.evolution import benchmark_dependency_profile
     monkeypatch.setattr(benchmark_dependency_profile, 'dependency_profile', lambda source: {
         'id': 'synthetic-public-dependency-diagnostic', 'environment_keys': ['UV_DOWNLOAD_URL'],
         'steps': [{'id': 'versions', 'command': 'python --version', 'timeout_seconds': 20}]})
@@ -335,7 +335,7 @@ def test_dependency_setup_precedes_model_and_keeps_original_verifier(fixture, mo
 
 
 def test_failed_dependency_setup_preserves_record_without_model_call(fixture, monkeypatch):
-    from src.adapters import benchmark_dependency_profile
+    from benchmarks.evolution import benchmark_dependency_profile
     monkeypatch.setattr(benchmark_dependency_profile, 'dependency_profile', lambda source: {
         'id': 'synthetic-failure', 'environment_keys': [],
         'steps': [{'id': 'download', 'command': 'fetch-public-dependency', 'timeout_seconds': 20}]})
@@ -466,7 +466,7 @@ def test_old_post_verification_artifact_index_is_not_evolution_input(fixture):
 
 
 def test_host_exposes_native_task_tools_and_original_capture(fixture):
-    from src.adapters.capability_contract import capability_ref
+    from src.capability.graph.capability_contract import capability_ref
     from tests.test_capability_motif_learning import run_driver
     snapshot = run_driver({'action': 'seed', 'owner': 'overnight-research'})
     class Materials:
@@ -511,7 +511,7 @@ def test_host_exposes_native_task_tools_and_original_capture(fixture):
 
 
 def test_empty_capability_pool_adds_only_a_zero_count(fixture):
-    from src.adapters.capability_contract import create_capability_snapshot
+    from src.capability.graph.capability_contract import create_capability_snapshot
     empty = create_capability_snapshot('overnight-research', [], [])
     fixture.host.materials = SimpleNamespace(owner='overnight-research',
                                             catalog=lambda: {'snapshot': empty, 'catalog': []})
@@ -520,7 +520,7 @@ def test_empty_capability_pool_adds_only_a_zero_count(fixture):
 
 
 def test_task_initial_directory_is_small_when_pool_grows(fixture):
-    from src.adapters.capability_contract import capability_ref, create_capability_snapshot
+    from src.capability.graph.capability_contract import capability_ref, create_capability_snapshot
     from tests.test_capability_contract import leaf
     capabilities = [leaf('directory-diagnostic-' + str(index), 'overnight-research') for index in range(12)]
     snapshot = create_capability_snapshot('overnight-research', [capability_ref(cap) for cap in capabilities], capabilities)
@@ -778,7 +778,7 @@ def test_cli_freezes_final_test_after_optimization_and_keeps_seed_only_label(tmp
 @pytest.mark.parametrize('evidence,expected', [({'accepted': False}, False),
     ({'accepted': 'true'}, False), ({'runtime_closed': True}, True), ({}, False)])
 def test_timeout_scoring_requires_effective_cancel_content(tmp_path, evidence, expected):
-    from src.adapters.evolution_benchmark import _model_scoreable
+    from benchmarks.evolution.evolution_benchmark import _model_scoreable
     path = tmp_path / 'cancel.json'
     path.write_text(json.dumps(evidence))
     assert _model_scoreable({'status': 'timeout', 'timed_out': True, 'provider_requests': 1,
@@ -786,8 +786,8 @@ def test_timeout_scoring_requires_effective_cancel_content(tmp_path, evidence, e
 
 
 def test_verifier_diagnostics_are_explicitly_readable_without_post_verification_files(fixture):
-    from src.adapters.capability_contract import create_capability_snapshot
-    from src.adapters.capability_investigation import Investigation
+    from src.capability.graph.capability_contract import create_capability_snapshot
+    from src.rsi.evolution.capability_investigation import Investigation
     result = fixture.host.trial('task-one')
     row = benchmark.inspect_benchmark(result['observation'], 'overnight-research')
     evaluation = result['evaluation']

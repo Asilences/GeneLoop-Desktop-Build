@@ -8,9 +8,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from src.adapters.harless_models import CATALOG_URL, discover_deepseek_models, model_options, price_basis
+from src.adapters.web.tasks.harless_models import CATALOG_URL, discover_deepseek_models, model_options, price_basis
 from src.adapters.deepseek_cost_gate import State
-from src.adapters.web_task_budget import TaskBudgetRegistry
+from src.adapters.web.web_task_budget import TaskBudgetRegistry
 
 
 class ModelCatalogTests(unittest.TestCase):

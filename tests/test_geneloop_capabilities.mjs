@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync,realpathSync,symlinkSync,existsSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync,realpathSync,symlinkSync,existsSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {dirname,join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {request} from 'node:http';
 const ts={skip:!process.features?.typescript};
 test('common tools augment explicit scene capabilities without weakening certified MCP contracts',ts,async()=>{
  const {COMMON_TOOLS,sceneCertifiedTools,commonToolDenial}=await import('../src/adapters/geneloop_capabilities.ts');
- const {sceneCatalog}=await import('../src/adapters/harless_settings.ts');
+ const {sceneCatalog}=await import('../src/adapters/web/account/harless_settings.ts');
  const scene={id:'new-scene',label:'Chat',preset:'sss-task',common_tools:[...COMMON_TOOLS],allowed_tools:['mcp__workspace__read_file',...COMMON_TOOLS]};
  assert.equal(sceneCatalog([scene]).length,1);
  const certified={name:'mcp__workspace__read_file',parameters:{type:'object'}};
@@ -26,10 +26,25 @@ test('Private account command transport computes without nested namespaces and r
  const {commandLayout}=await import('../src/adapters/geneloop_shell.ts');
  const root=realpathSync(mkdtempSync(join(tmpdir(),'geneloop-command-broker-')));
  const session='session-11111111-1111-4111-8111-111111111111';commandLayout(root,session);
- const broker=await startCommandBroker({output:root,python:'/usr/bin/python3',node:process.execPath});
+ const longTemp=join(root,'隔'.repeat(45));mkdirSync(longTemp);
+ const previousTemp=process.env.TMPDIR;
+ let broker;
+ try{
+  process.env.TMPDIR=longTemp;
+  broker=await startCommandBroker({output:root,python:'/usr/bin/python3',node:process.execPath});
+ }catch(error){
+  rmSync(root,{recursive:true,force:true});
+  throw error;
+ }finally{
+  if(previousTemp===undefined)delete process.env.TMPDIR;
+  else process.env.TMPDIR=previousTemp;
+ }
  const call=payload=>new Promise((resolve,reject)=>{const req=request({socketPath:broker.socketPath,path:'/run',method:'POST'},res=>{
   let body='';res.on('data',part=>body+=part);res.on('end',()=>resolve({status:res.statusCode,body}));});req.on('error',reject);req.end(JSON.stringify(payload));});
  try{
+  assert.ok(Buffer.byteLength(broker.socketPath)<=107);
+  assert.equal(statSync(dirname(broker.socketPath)).mode&0o777,0o700);
+  assert.equal(statSync(broker.socketPath).mode&0o777,0o600);
   const payload={session,command:'python3 -c "print(sum([3,5,8,13]))"',cwd:'/work',readOnly:false};
   const result=await call(payload);assert.equal(result.status,200);
   const rows=result.body.trim().split('\n').map(line=>JSON.parse(line));

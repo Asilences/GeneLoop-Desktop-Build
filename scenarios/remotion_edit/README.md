@@ -57,7 +57,7 @@ node scripts/project.mjs python scenarios/remotion_edit/verify.py
 
 ## 扩展到30题（第二批20题）
 
-`tasks-v2.json`固定新增第11–30题；`tasks-all.json`只是30题注册表，不能拿它重跑或覆盖第一批。`split-v2.json`在新增调用前冻结：10题训练候选、5题认证、5题评测；旧10题仅作历史描述。
+`tasks-v2.json` 固定新增第 11–30 题。分析 30 题时依次读取 `tasks.json` 和 `tasks-v2.json`，原批次分别运行。`split-v2.json`在新增调用前冻结：10题训练候选、5题认证、5题评测；旧10题仅作历史描述。
 
 新增输入为官方示例《Big Buck Bunny》的三个不同12秒片段（24/30/60fps、640×360）和绿幕公共夹具。它们是同一影片的派生素材，来源与本次实际SHA见`assets-v2-sources.json`，不称独立拍摄任务。完整FFmpeg对模型工具开放、准确工具名/参数范围、日志移出工作区及单位提示均为第二批显式条件变化；前后费用差不构成Motif收益。
 
@@ -75,7 +75,7 @@ node scripts/project.mjs python scenarios/remotion_edit/verify.py \
   --tasks scenarios/remotion_edit/tasks-v2.json \
   --output-dir "$REMOTION_EXPERIMENT_ROOT/qa-v2"
 node scripts/project.mjs python scenarios/remotion_edit/analyze.py \
-  --tasks scenarios/remotion_edit/tasks-all.json \
+  --tasks scenarios/remotion_edit/tasks.json scenarios/remotion_edit/tasks-v2.json \
   --split-file scenarios/remotion_edit/split-v2.json \
   --output-dir "$REMOTION_EXPERIMENT_ROOT/analysis-v2"
 ```

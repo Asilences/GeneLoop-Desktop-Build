@@ -4,10 +4,10 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {capabilityDigest,capabilityRef} from '../../src/adapters/capability_contract.ts';
-import {bytesSha256} from '../../src/adapters/rsi_protocol.ts';
+import {capabilityDigest,capabilityRef} from '../../src/capability/graph/capability_contract.ts';
+import {bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
 import {runScriptCapability} from '../../src/adapters/script_capability_runtime.ts';
-import {completeCapabilityCycle} from '../../src/adapters/capability_cycle.ts';
+import {completeCapabilityCycle} from '../../src/rsi/learning/capability_cycle.ts';
 const root=fileURLToPath(new URL('../../',import.meta.url)),exec=promisify(execFile);
 const read=path=>JSON.parse(readFileSync(path,'utf8'));
 const save=(path,value)=>writeFileSync(path,JSON.stringify(value,null,2),{flag:'wx',mode:0o600});
@@ -15,7 +15,7 @@ const plan=read(process.argv[2]),output=resolve(plan.output),candidate=read(plan
 mkdirSync(output,{mode:0o700});save(join(output,'plan.json'),plan);
 const controller=new AbortController();process.on('SIGINT',()=>controller.abort());process.on('SIGTERM',()=>controller.abort());
 const checker=join(root,'scenarios/paper_proofreading/verify_capability_outputs.py');
-const checkerFiles=[checker,join(root,'src/adapters/paper_bibliography.py'),join(root,'src/adapters/capability_contract.py')];
+const checkerFiles=[checker,join(root,'src/adapters/paper_bibliography.py'),join(root,'src/capability/graph/capability_contract.py')];
 const checkerDigest=()=>capabilityDigest(checkerFiles.map(path=>({path,sha256:bytesSha256(readFileSync(path))})));
 const code=checkerDigest();
 // A path can remain unchanged while its source bytes change. The lifecycle

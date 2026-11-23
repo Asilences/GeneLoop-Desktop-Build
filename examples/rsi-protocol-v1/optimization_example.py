@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 
-from src.adapters.rsi_protocol import envelope
-from src.adapters.rsi_optimization import digest, assess_opportunities
+from src.rsi.protocol.rsi_protocol import envelope
+from src.rsi.learning.rsi_optimization import digest, assess_opportunities
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -69,5 +69,5 @@ def example():
         policy=policy, discovery=discovery, assessments=assess_opportunities(encode(discovery), encode(policy)),
         versions=versions, diagnosis=diagnosis, candidate=candidate,
         conditions_sha256=conditions, rubric_sha256=rubric, measurements=measurement,
-        evaluator=dict(id='offline-evaluator-v1',sha256=digest((ROOT / 'src/adapters/rsi_optimization.py').read_bytes())),
+        evaluator=dict(id='offline-evaluator-v1',sha256=digest((ROOT / 'src/rsi/learning/rsi_optimization.py').read_bytes())),
         validation_tasks={task: digest(task.encode()) for task in ['validation-report-D', 'validation-registration-E']})

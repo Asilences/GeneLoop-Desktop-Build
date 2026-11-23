@@ -8,21 +8,27 @@ import { pathToFileURL } from 'node:url';
 
 export type LocalTaskUpdate =
   | { kind: 'ready' }
+  | { kind: 'session-opened' }
+  | { kind: 'rsi-event'; event: unknown }
   | { kind: 'answer'; text: string }
   | { kind: 'progress'; phase: 'remote-render' | 'local' }
   | { kind: 'report'; report: { name: string; bytes: number } }
+  | { kind: 'question'; id: string; questions: unknown[] }
+  | { kind: 'question-cleared'; id: string }
   | { kind: 'done'; status: 'completed' | 'canceled' | 'error'; error?: string };
 export type LocalScene = 'chat' | 'files' | 'data' | 'paper' | 'ppt' | 'video';
 export type LocalMediaTools = { ffmpeg: string; ffprobe: string; remotion?: {browser:string; binaries:string} };
 export type VideoApproval = { sourceBytes: number; assets: { path: string; bytes: number }[] };
 export type FilePlanApproval = { kind: 'files'; preview: Record<string, unknown> };
-export type LocalPptTools = { python: string; sourceRoot: string; skill: string; soffice: string };
+export type LocalPptTools = { python: string; sourceRoot: string; skill: string; soffice: string; deck?: string };
 
 export function startLocalWorker(options: {
   executable: string; runtime: string; home: string; directory: string;
   endpoint: string; token: string; model: string; prompt: string;
-  sessionId?: string; resume?: boolean; scene?: LocalScene; media?: LocalMediaTools;
-  ppt?: LocalPptTools; legacyTools?: boolean; fullWorkflows?: boolean;
+  sessionId?: string; resume?: boolean; recover?: boolean; fileJev?: boolean; fileJevAccount?: string; scene?: LocalScene; media?: LocalMediaTools;
+  ppt?: LocalPptTools; legacyTools?: boolean; fullWorkflows?: boolean; commonCapabilities?: boolean; nativePptDeck?: boolean;
+  nativeProviders?: object;
+  fileHome?: string; rsiRoot?: string; rsiReuse?:boolean;
   approveVideo?: (request: VideoApproval) => Promise<boolean>;
   approveFilePlan?: (request: FilePlanApproval) => Promise<boolean>;
   onUpdate: (event: LocalTaskUpdate) => void;
@@ -81,8 +87,8 @@ export function startLocalWorker(options: {
       if (canceled) return finish({ kind: 'done', status: 'canceled' });
       options.onUpdate({ kind: 'ready' });
       send({ kind: 'run', directory: options.directory, model: options.model, prompt: options.prompt,
-        sessionId: options.sessionId, resume: options.resume, scene: options.scene, media: options.media,
-        ppt: options.ppt, legacyTools:options.legacyTools===true,fullWorkflows:options.fullWorkflows===true,videoRendering: !!options.approveVideo });
+        sessionId: options.sessionId, resume: options.resume, recover: options.recover, fileJev:options.fileJev,fileJevAccount:options.fileJevAccount, scene: options.scene, media: options.media,
+        ppt: options.ppt, nativeProviders:options.nativeProviders, fileHome:options.fileHome, rsiRoot:options.rsiRoot, rsiReuse:options.rsiReuse, legacyTools:options.legacyTools===true,fullWorkflows:options.fullWorkflows===true,commonCapabilities:options.commonCapabilities===true,nativePptDeck:options.nativePptDeck===true,videoRendering: !!options.approveVideo });
     } else if (message.kind === 'video-approval') {
       const answer = (allowed: boolean) => send({ kind: 'video-approved', id: message.id, allowed: allowed && !canceled && !ending });
       if (canceled || !options.approveVideo) answer(false);
@@ -92,11 +98,12 @@ export function startLocalWorker(options: {
       if(canceled||!options.approveFilePlan)answer(false);
       else void options.approveFilePlan(message.request).then(answer,()=>answer(false));
     } else if (message.kind === 'done') finish(message);
-    else if (message.kind === 'answer' || message.kind === 'report' || message.kind === 'progress') options.onUpdate(message);
+    else if (message.kind === 'rsi-event' || message.kind === 'session-opened' || message.kind === 'answer' || message.kind === 'report' || message.kind === 'progress' || message.kind==='question' || message.kind==='question-cleared') options.onUpdate(message);
   });
 
   return {
     closed,
+    answerQuestion(id: string, answers: unknown[]) {if(!ending&&!canceled)send({kind:'question-answered',id,answers});},
     cancel() {
       if (ending || canceled) return;
       canceled = true;

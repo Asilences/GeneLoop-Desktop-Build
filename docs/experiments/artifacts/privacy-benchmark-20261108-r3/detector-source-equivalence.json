@@ -1,0 +1,10 @@
+{
+  "rule_commit": "ea819fc6ecb1f32d69d61a3f5619419e181f947e",
+  "transport_runtime_commit": "4f6adedbc1f854f9f9bbd9e323fb3f460bd65afa",
+  "python_files_equal_sha256": {
+    "src/adapters/rsi_text_privacy.py": "37bbe14beb55cc7f9679b0bd34eea71173da044b0becc8c77f655aaa9366c69b",
+    "src/adapters/geneloop_privacy.py": "ab74619cc9ca0d0185db00ab50fd297308e6b4806d5f6f25ede6f9f9e2008650",
+    "src/adapters/geneloop_learning_trace.py": "774f212c96c2bc810638400b529f970bfb80aa3970efb6f72b10c7d8844513d1",
+    "src/adapters/rsi_learning_trace.py": "81a559aa6779fd34bdab8006a3d6224026c8f0f210b2a3a3ef60bfac3a4f00e0"
+  }
+}

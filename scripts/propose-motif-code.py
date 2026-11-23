@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.motif_core.pure_code import validate_expression  # noqa: E402
+from src.motif_core.runtime.pure_code import validate_expression  # noqa: E402
 
 
 FIELDS = {"trace_id", "tools", "from_tool", "from_field",

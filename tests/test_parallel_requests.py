@@ -1,7 +1,7 @@
 """Parallel prepared routes retain request ownership and independent evidence."""
 import copy
-from src.motif_core.offline.operation_graph import catalog,discover_graphs,certify_graph,witnesses
-from src.motif_core.offline.experience_registry import digest
+from src.motif_core.offline.compilation.operation_graph import catalog,discover_graphs,certify_graph,witnesses
+from src.motif_core.reuse.experience_registry import digest
 from src.adapters.general_tool_replay import operator_contract
 
 NAMES=['mcp__file_management__'+n for n in ['prepare_tool_call','execute_tool_call','inspect_tool_result']]

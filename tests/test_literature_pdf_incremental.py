@@ -229,7 +229,7 @@ def test_collector_requires_witnessed_receipt_and_rechecks_artifact(dependency_f
     make_pdf(directory / 'B.pdf', ['A revised scientific method with distinct experimental conditions.'])
     s = scene(dependency_fixture); receipt = s.submit_incremental_update(update_for(s))
     rows = []
-    monkeypatch.setattr('src.adapters.dsh_trajectory.extract_dsh_trace',
+    monkeypatch.setattr('src.adapters.harness.dsh_trajectory.extract_dsh_trace',
                         lambda *a, **k: SimpleNamespace(records=rows))
     (base / 'agent-events.jsonl').write_text('')
     assert RUN.collect_incremental(base, s) is None

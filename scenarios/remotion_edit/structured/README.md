@@ -2,7 +2,7 @@
 
 2026-10-30 新入口：从正常模型轨迹学习参数化 TSX 程序，并对**复用形式本身**做外环 RSI，详见[新实验记录](../../../docs/experiments/remotion-program-rsi-20261030-v1.md)。下面的只读参数边实验保留为历史对照。新入口仍在同一 Remotion 沙箱实际生成视频，不复用旧成片。
 
-程序学习使用 `learn_programs.py --run <正常成功运行目录> --output <新目录> --call-model`；`certify_programs.py --library <候选库> --output <新目录>`用实际渲染检查选定来源帧。正常调用中新写出的源码也可来自程序臂的回退/修复，仍须有当前源码全文调用与同一视频收据，程序重放不能自证。当前任务仍由模型选择程序和当前参数。Python负责编译，`src/adapters/source_program_runtime.ts`校验和实例化；场景服务负责已有写入和渲染权限。
+程序学习使用 `learn_programs.py --run <正常成功运行目录> --output <新目录> --call-model`；`certify_programs.py --library <候选库> --output <新目录>`用实际渲染检查选定来源帧。正常调用中新写出的源码也可来自程序臂的回退/修复，仍须有当前源码全文调用与同一视频收据，程序重放不能自证。当前任务仍由模型选择程序和当前参数。Python负责编译，`src/capability/runtime/source_program_runtime.ts`校验和实例化；场景服务负责已有写入和渲染权限。
 
 同一个已学库可以表示为 `program_catalog`（目录+通用调用）或 `typed_tools`（由学出的参数schema自动生成具体MCP工具），后者可以用程序描述自动命名。它们共用同一程序与渲染器；普通基线也有 `render_source(text)`，从而区分程序学习收益与普通工具融合收益。普通基线实际注册8个原生工具，目录形式增加2个接口，类型化形式只增加学习库工具，不再注册重复目录API；四程序库时分别8/10/12项。
 

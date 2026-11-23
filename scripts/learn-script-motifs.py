@@ -11,8 +11,8 @@ import subprocess
 import sys
 import re
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from src.adapters.script_motif_compiler import observe,sha,digest,extract
-from src.adapters.script_dataflow_compiler import observe_slices
+from src.motif_core.offline.compilation.script_motif_compiler import observe,sha,digest,extract
+from src.motif_core.offline.compilation.script_dataflow_compiler import observe_slices
 from src.adapters.reuse_snapshot import restore_boundary, restore_call_records
 
 def collect(task, snapshot_root=None):

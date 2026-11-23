@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from src.adapters.paper_shadow_compiler import compile_paper_shadow, artifact_path, VALIDATOR_FILES
-from src.adapters.native_motif_compiler import digest
+from scenarios.paper_proofreading.learning.paper_shadow_compiler import compile_paper_shadow, artifact_path, VALIDATOR_FILES
+from src.motif_core.offline.compilation.trace.native_motif_compiler import digest
 
 
 def make_run(root, name, anchor='write', ok=True, interleave=False):

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, symlinkSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createDeliveryChecker, apply, checkToolName } from '../src/adapters/dsh_paper_delivery_check.ts';
+import { createDeliveryChecker, apply, checkToolName } from '../src/adapters/harness/paper/dsh_paper_delivery_check.ts';
 import { snapshotSource, sha256, acceptEvidencePacket, checkReport, validateTriage } from '../src/adapters/paper_triage_validation.ts';
 import { Context } from '@deepseek-ai/cordis';
 import { ToolRuntime } from '@deepseek-ai/dsh-tools';

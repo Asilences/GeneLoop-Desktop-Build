@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {selectExperience,createExperienceController} from '../src/adapters/dsh_experience.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {selectExperience,createExperienceController} from '../src/adapters/harness/learning/dsh_experience.ts';
 
 const hex=n=>String(n).repeat(64);
 function fixture(){
@@ -16,7 +16,7 @@ function fixture(){
   steps:[{op:'hash_representatives',order:'min'},{op:'copy_map',source:'hash_representatives',strip_prefix:'',destination_slot:0}],
   guard_cases:[{objective_sha256:digest(task.objective),context_text_sha256:digest(rule),destination_prefixes:['merged/']}],
   training:[{role:'explore',task_fingerprint:hex('a'),events_sha256:hex('d')},{role:'explore',task_fingerprint:hex('b'),events_sha256:hex('e')}],
-  runtime_source:Object.fromEntries(['src/adapters/dsh_learned_script_v2.ts','src/motif_core/online_skill_runtime.mjs','src/motif_core/terminal_receipt_policy.ts'].map(n=>[n,hex('f')])),
+  runtime_source:Object.fromEntries(['src/adapters/harness/learning/dsh_learned_script.ts','src/motif_core/runtime/online_skill_runtime.mjs','src/motif_core/runtime/policies/terminal_receipt_policy.ts'].map(n=>[n,hex('f')])),
   tool_schema_sha256:Object.fromEntries(tools.map(t=>[t.name,digest(t.parameters)]))};payload.script_digest=digest(payload);
  const entry={entry_id:payload.script_digest,kind:'script_v2',payload,compatible:true,activated_generation:2};
  return {tools,spec,task,rule,inventory,entry,facts:{task,rule,inventory},binding:{spec,prompt_sha256:hex('a'),session_id:'s'}};

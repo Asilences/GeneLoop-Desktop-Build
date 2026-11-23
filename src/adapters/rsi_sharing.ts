@@ -6,10 +6,11 @@ export const PRIVATE_DEFAULTS = Object.freeze({
 const MAX_BYTES = 256 * 1024;
 const EXPIRY_MS = 10 * 60 * 1000;
 type State = 'preview' | 'sending' | 'sent' | 'cancelled' | 'unknown';
-type Preview = {id: string; body: string; sha256: string; bytes: number; expires: number; state: State; abort?: AbortController};
+type Preview = {id: string; taskId: string; body: string; sha256: string; bytes: number; expires: number; state: State; abort?: AbortController};
 type Audit = {event: 'preview' | 'rejected' | 'sending' | 'sent' | 'cancelled' | 'unknown' | 'expired'};
 type Options = {
   prepare: (taskId: string) => Promise<string>;
+  authorize?: (taskId: string) => Promise<void>;
   endpoint?: string;
   allowLoopback?: boolean;
   audit: (event: Audit) => void;
@@ -52,6 +53,11 @@ export function createRsiSharing(options: Options) {
     }
     return row;
   };
+  async function available(row: Preview) {
+    try { await options.authorize?.(row.taskId); }
+    catch { previews.delete(row.id); row.abort?.abort(); record('rejected'); return false; }
+    return !disposed && find(row.id) === row;
+  }
 
   return {
     async handle(request: Request): Promise<Response> {
@@ -63,7 +69,7 @@ export function createRsiSharing(options: Options) {
         const id = query.get('preview_id');
         if (id) {
           const row = find(id);
-          return row ? response(view(row)) : rejected('rsi_sharing_unavailable', 410);
+          return row && await available(row) ? response(view(row)) : rejected('rsi_sharing_unavailable', 410);
         }
         return response({defaults: PRIVATE_DEFAULTS, enabled: !!endpoint, target: endpoint ?? null,
           allowed_objects: ['tool_flow'], semantic_sharing: false});
@@ -86,13 +92,16 @@ export function createRsiSharing(options: Options) {
           if (previews.size + preparing >= 20) return rejected('rsi_sharing_unavailable', 429);
           preparing++;
           let payload: string;
-          try {payload = await options.prepare(body.task_id);} finally {preparing--;}
+          try {
+            payload = await options.prepare(body.task_id);
+            await options.authorize?.(body.task_id);
+          } finally {preparing--;}
           if (disposed || request.signal.aborted) return rejected('rsi_sharing_unavailable', 410);
           const value = JSON.parse(payload), bytes = Buffer.byteLength(payload);
           if (value.format !== 'geneloop.rsi-shared-object/v1' || value.kind !== 'tool_flow' ||
               !['geneloop.rsi-learning-trace/v2','geneloop.rsi-learning-trace/v4'].includes(value.trace?.format) || bytes > MAX_BYTES)
             throw Error('invalid_projected_sharing_object');
-          const row: Preview = {id: randomUUID(), body: payload, bytes,
+          const row: Preview = {id: randomUUID(), taskId: body.task_id, body: payload, bytes,
             sha256: createHash('sha256').update(payload).digest('hex'), expires: Date.now() + EXPIRY_MS, state: 'preview'};
           if (!record('preview')) return rejected('rsi_sharing_unavailable', 503);
           previews.set(row.id, row);
@@ -101,6 +110,7 @@ export function createRsiSharing(options: Options) {
         const row = find(body.preview_id);
         if (!row) return rejected('rsi_sharing_unavailable', 410);
         if (body.action === 'cancel') {
+          if (!(await available(row))) return rejected('rsi_sharing_unavailable', 410);
           if (row.state === 'preview') {row.state = 'cancelled'; record('cancelled');}
           else if (row.state === 'sending') {row.abort?.abort(); row.state = 'unknown'; record('unknown');}
           return response(view(row));
@@ -108,6 +118,8 @@ export function createRsiSharing(options: Options) {
         if (!endpoint) return rejected('rsi_sharing_disabled', 403);
         if (body.consent !== true || body.sha256 !== row.sha256 || row.state !== 'preview')
           return rejected('rsi_sharing_confirmation');
+        if (!(await available(row)) || request.signal.aborted) return rejected('rsi_sharing_unavailable', 410);
+        if (row.state !== 'preview') return rejected('rsi_sharing_confirmation');
         row.abort = new AbortController(); row.state = 'sending';
         if (!record('sending')) {row.state = 'cancelled'; return rejected('rsi_sharing_unavailable', 503);}
         try {

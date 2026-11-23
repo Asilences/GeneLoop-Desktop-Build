@@ -4,12 +4,11 @@ import hashlib,importlib.util,json,os,sys
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[3];sys.path.insert(0,str(ROOT))
-from src.adapters.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges
 from src.adapters.task_identity import load_trace_identity,require_distinct_decisions
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 HERE=Path(__file__).resolve().parent
 BASE=Path(os.environ['REMOTION_EXPERIMENT_ROOT']).resolve();EXP=BASE/'structured-v1'
@@ -90,8 +89,8 @@ def main():
     manifest=exporter.export_manifest(library,rows,{},
         {name:'source_version' for name in rows},source_dereferences=('mcp__remotion__probe_media',))
     lock_files=['scenarios/remotion_edit/structured/server.py','scenarios/remotion_edit/server.py',
-                'scenarios/remotion_edit/structured/contracts.json','src/adapters/dsh_online_motif.mjs',
-                'src/motif_core/online_skill_runtime.mjs','src/motif_core/source_dereference.generated.mjs','package-lock.json']
+                'scenarios/remotion_edit/structured/contracts.json','src/adapters/harness/motif/dsh_online_motif.mjs',
+                'src/motif_core/runtime/online_skill_runtime.mjs','src/motif_core/runtime/policies/source_dereference.generated.mjs','package-lock.json']
     manifest['scene_code_locks']={name:sha(ROOT/name) for name in lock_files}
     manifest['scene_runtime_locks']={name:sha(BASE/'runtime'/name) for name in
         ['package-lock.json','node_modules/@remotion/compositor-linux-x64-gnu/ffprobe']}

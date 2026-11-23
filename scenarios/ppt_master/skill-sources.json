@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "kind": "reviewed_ppt_skill_sources",
+  "sources": [
+    {
+      "id": "academic-template",
+      "repository": "https://github.com/M1n-n9/academic-ppt-master",
+      "commit": "6825d33f2931b8894435b9bd25c08cfce3476ff0",
+      "license": "MIT",
+      "upstream_path": "workflows/template-fill-pptx.md",
+      "upstream_sha256": "29c0f00fecfdd1383fb3589be56ac0b5bdbac4ec529b929338040aa87d385bf6",
+      "adapted_path": "scenarios/ppt_master/skill_sources/academic-template.md",
+      "base_engine": "hugohe3/ppt-master",
+      "learning_status": "reference_only_requires_observed_trace",
+      "scope": [
+        "template_content_mapping",
+        "native_template_preservation",
+        "local_revision"
+      ]
+    },
+    {
+      "id": "slide-maker-edit",
+      "repository": "https://github.com/addsumtech/slides_maker",
+      "commit": "98d5eb294dfeca841475af86248831ede8f551fc",
+      "license": "MIT",
+      "upstream_path": "skills/slide-maker/references/generated-template.md",
+      "upstream_sha256": "a848c35f4b6f19118f84b86ad6c7c940a4a126687026e1c98c303d46e04a3cda",
+      "adapted_path": "scenarios/ppt_master/skill_sources/slide-maker-edit.md",
+      "learning_status": "reference_only_requires_observed_trace",
+      "scope": [
+        "repeated_layout_reuse",
+        "local_revision",
+        "bounded_review"
+      ]
+    },
+    {
+      "id": "dsh-ppt-engine",
+      "repository": "https://github.com/STARDUSTLC666/dsh-ppt",
+      "commit": "f2263f5260cf9453d1ad5d3c9a85c55ee3999c70",
+      "license": "MIT",
+      "upstream_path": "skills/dsh-ppt/scripts/deck-advanced.mjs",
+      "upstream_sha256": "c757fd58086fc68cf2bf8766adeb3d6a2edb87a2eb8f0ec3bd7cc66f45d3dd7f",
+      "adapted_path": "scenarios/ppt_master/skill_sources/dsh-ppt-engine.md",
+      "learning_status": "reference_only_requires_observed_trace",
+      "scope": [
+        "source_to_page_binding",
+        "parameterized_revision",
+        "verified_failure_repair"
+      ]
+    }
+  ]
+}

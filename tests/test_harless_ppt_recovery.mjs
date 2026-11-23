@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPptRecovery} from '../src/adapters/harless_ppt_recovery.ts';
+import {createPptRecovery} from '../src/adapters/web/scenes/harless_ppt_recovery.ts';
 const exec=name=>({name:'mcp__ppt__'+name});
 const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
 const fail=code=>({...result({ok:false,code}),isError:true});

@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {scriptArgv} from '../src/adapters/script_motif_shell.ts';
 import {bindScript,scriptCommand,programIdentity,scriptCodeLocks,fixedInput,compatibleInput,witnessedOutputSchema,decodeScriptReceipt,scriptOutputLimit,scriptVirtualHost} from '../src/adapters/script_motif_runtime.ts';
 import {runCertifiedScript} from './run-certified-script.mjs';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const sha=b=>createHash('sha256').update(b).digest('hex');
 export function sandboxRun(workspace,command,cwd='/work'){

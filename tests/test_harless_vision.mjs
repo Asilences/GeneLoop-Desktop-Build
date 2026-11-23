@@ -10,9 +10,9 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 // Import during the test, so deployment wiring and the serializer are both checked.
 test('Web adapter retains the actual Harness durable image path under its budget provider',async()=>{
- const {WebDeepSeekAdapter,webAttachmentOptions}=await import('../src/adapters/harless_legacy_reasoning.ts');
- const deployment=readFileSync(new URL('../src/adapters/dsh_geneloop_tasks.ts',import.meta.url),'utf8');
- assert.match(deployment,/\.\.\.webAttachmentOptions\(ctx\)/);
+ const {WebDeepSeekAdapter}=await import('../src/adapters/web/tasks/harless_reasoning.ts');
+ const deployment=readFileSync(new URL('../src/adapters/web/dsh_web_tasks.ts',import.meta.url),'utf8');
+ assert.match(deployment,/resolveAttachments: \(\) => ctx\.attachments/);
  const home=mkdtempSync(join(tmpdir(),'harness-image-wire-')),requests=[];
  const store=new LocalAttachmentStore(new Context(),{dshHome:home});
  const ref=await store.saveImage({data:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGMUkdNgYGBgYgADAAROAF4By7ZWAAAAAElFTkSuQmCC','base64'),mediaType:'image/png',name:'diagnostic.png'});
@@ -24,7 +24,7 @@ test('Web adapter retains the actual Harness durable image path under its budget
  try{
   const options=resolveAdapterOptions({baseURL:`http://127.0.0.1:${server.address().port}`,reasoningEffort:'off',maxTokens:100});
   const adapter=new WebDeepSeekAdapter({options:()=>options,resolveApiKey:async()=>'offline-diagnostic',resolveUserId:()=> 'diagnostic',
-   ...webAttachmentOptions({get:name=>name==='attachments'?store:undefined}),
+   resolveAttachments:()=>store,
    resolveFiles:()=>({ensureUploaded:async()=>{throw Error('offline diagnostic uses inline fallback');}}),
    prepareExtensions:async()=>({fields:{},accept:async()=>{}})});
   const prepared=await adapter.prepareCall('deepseek-official','deepseek-flash');

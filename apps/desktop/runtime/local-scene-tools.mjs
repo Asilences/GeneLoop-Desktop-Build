@@ -18,7 +18,7 @@ function version(reader,path,expected,limit=16*1024*1024) {
 }
 async function fixedTool(tools,scratch,signal,action,source,plan) {
   const input=join(scratch,'request.json');writeFileSync(input,JSON.stringify(plan),{flag:'wx'});
-  const result=await pptPython(tools,scratch,signal,'src.adapters.desktop_scene_tools',[action,source,input]);
+  const result=await pptPython(tools,scratch,signal,'src.adapters.desktop.desktop_scene_tools',[action,source,input]);
   if(result.error)throw Error('本机工具无法处理该资料：'+result.error);
   return result;
 }

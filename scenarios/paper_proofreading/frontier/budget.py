@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 import time
 
-from src.adapters.capability_proposal import CumulativeProposalGate,append,sha
+from src.adapters.harness.capability.capability_proposal import CumulativeProposalGate,append,sha
 from src.adapters.deepseek_cost_gate import reservation,observed_peak_cost
 
 

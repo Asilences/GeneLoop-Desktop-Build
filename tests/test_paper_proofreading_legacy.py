@@ -11,7 +11,7 @@ import pytest
 from mcp import Client, StdioServerParameters
 
 from scenarios.paper_proofreading.server import PaperEvidence, PaperOutput, create_citation_evidence, create_server
-from src.adapters.paper_renderer import INPUT_SCHEMA, audit_pdf_content_coverage
+from scenarios.paper_proofreading.document_tools.paper_renderer import INPUT_SCHEMA, audit_pdf_content_coverage
 
 
 def make_paper(root: Path):
@@ -522,7 +522,7 @@ def test_original_directory_layout_in_approved_zip_is_read_without_flattening(tm
 
 
 def test_archive_rejects_traversal_and_ambiguous_source(tmp_path):
-    from src.adapters.paper_archive import materialize_approved_archive
+    from scenarios.paper_proofreading.document_tools.paper_archive import materialize_approved_archive
     work = tmp_path / 'work'
     inputs = work / 'inputs'
     inputs.mkdir(parents=True)
@@ -602,3 +602,71 @@ def test_pdf_export_receipt_can_check_literal_content_and_links_without_claiming
     report['notes'][0] = note
     report['references'][0]['explanation'] = 'Missing explanation'
     assert audit_pdf_content_coverage(pdf, report)['all_fields_present'] is False
+
+
+def test_native_citation_handle_resumes_across_exact_checker_relocation(tmp_path, monkeypatch):
+    from mcp.server.mcpserver.exceptions import UnexpectedToolError
+    from scenarios.native_scene_call import call
+    from scenarios.paper_proofreading import server as paper
+
+    checker = sys.modules[paper.CitationEvidence.__module__]
+    repo = Path(checker.__file__).resolve().parents[2]
+    project = tmp_path / 'project'
+    local_checker = project / 'scenarios/paper-submission/checks.py'
+    local_checker.parent.mkdir(parents=True)
+    local_checker.write_bytes(Path(checker.__file__).read_bytes())
+    for name in ('paper_bibliography.py', 'arxiv_metadata.py', 'crossref_metadata.py', 'paper_query_recovery.py'):
+        relative = Path('src/adapters') / name
+        (project / relative).parent.mkdir(parents=True, exist_ok=True)
+        (project / relative).write_bytes((repo / relative).read_bytes())
+    previous_sha = 'a' * 64
+    policy = project / 'config/rsi-privacy-code-compat.json'
+    policy.parent.mkdir()
+    policy.write_text(json.dumps({'paper_citation_checker_identity': {
+        'previous_sha256': previous_sha,
+        'current_sha256': hashlib.sha256(local_checker.read_bytes()).hexdigest(),
+        'static_checks_sha256': hashlib.sha256(Path(paper.paper_static_checks.__file__).read_bytes()).hexdigest(),
+    }}), encoding='utf-8')
+    monkeypatch.setattr(checker, '__file__', str(local_checker))
+
+    work = tmp_path / 'work'
+    inputs = work / 'inputs'
+    inputs.mkdir(parents=True)
+    archive = inputs / 'submission.zip'
+    with ZipFile(archive, 'w', ZIP_DEFLATED) as out:
+        out.writestr('main.tex', r'\input{sections/intro}\bibliography{references}\label{same}')
+        out.writestr('sections/intro.tex', r'\cite{alpha,missing}\label{same}\begin{figure}[!]')
+        out.writestr('references.bib', '@article{alpha, title={A}}\n@article{unused, title={One}}\n@misc{unused, title={Two}}')
+        out.writestr('main.log', 'Citation missing undefined\n')
+    approved = {'files': {'submission.zip': hashlib.sha256(archive.read_bytes()).hexdigest()}}
+    (work / 'approved-inputs.json').write_text(json.dumps(approved))
+    (work / 'paper-output-grant.json').write_text(json.dumps({'task_id': 'citation-relocation', 'allow_output': False}))
+
+    def invoke(name, arguments):
+        return asyncio.run(call({'scene': 'paper', 'workspace': str(work),
+                                 'tool': 'mcp__paper_checks__' + name, 'arguments': arguments}))
+
+    def contents(name, arguments):
+        result = invoke(name, arguments)
+        assert not result.get('isError'), result
+        return result['structuredContent']
+
+    with monkeypatch.context() as prior:
+        prior.setattr(checker, '_checker_code_identity', lambda: {'checker_sha256': previous_sha})
+        pin = contents('pin_paper_citations', {'case_id': 'current'})
+        batch = contents('read_pinned_paper_citations', {'source_id': pin['source_id']})
+    assert (work / '.native-paper-state.json').is_file()
+    records = contents('read_pinned_citation_records', {'citation_id': batch['citation_id']})
+    assert records['version_sha256'] == pin['version_sha256']
+    assert any(row['key'] == 'alpha' for row in records['records'])
+    general = contents('pin_paper_sources', {'main': 'main.tex'})
+    diagnostic = contents('read_pinned_paper_sources', {'source_id': general['source_id']})
+    assert diagnostic['diagnostic']['missing_cited_keys'] == batch['diagnostic']['missing_cited_keys'] == ['missing']
+    assert diagnostic['diagnostic']['active_files'] == ['main.tex', 'sections/intro.tex']
+    assert diagnostic['existing_logs'][0]['diagnostic']['counts']['undefined_citation'] == 1
+
+    local_checker.write_bytes(local_checker.read_bytes() + b'\n')
+    with pytest.raises(UnexpectedToolError, match='read_pinned_citation_records') as stale:
+        invoke('read_pinned_citation_records', {'citation_id': batch['citation_id']})
+    assert isinstance(stale.value.__cause__, ValueError)
+    assert 'version changed' in str(stale.value.__cause__)

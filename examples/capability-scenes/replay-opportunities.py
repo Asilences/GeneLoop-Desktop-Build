@@ -10,10 +10,10 @@ from pathlib import Path
 import sys
 
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT))
-from src.adapters.capability_improvement import evidence,read,save,run_improvement
-from src.adapters.capability_scene import CapabilityImprovementAdapter,reference
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import capability_ref,create_capability_snapshot,capability_digest
+from src.rsi.learning.capability_improvement import evidence,read,save,run_improvement
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter,reference
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import capability_ref,create_capability_snapshot,capability_digest
 from scenarios.paper_proofreading.frontier.adapter import FrontierAdapter
 
 

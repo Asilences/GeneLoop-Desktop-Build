@@ -1,8 +1,8 @@
 /** Offline replay bridge to the existing authoritative TS controllers; no model/provider. */
 import fs from 'node:fs';
 import readline from 'node:readline';
-import {createCollectionController} from '../src/motif_core/collection_read_policy.ts';
-import {createPlanController} from '../src/motif_core/authorized_plan_policy.ts';
+import {createCollectionController} from '../src/motif_core/runtime/policies/collection_read_policy.ts';
+import {createPlanController} from '../src/motif_core/runtime/policies/authorized_plan_policy.ts';
 const [kind,policyPath,taskPath,schemaPath]=process.argv.slice(2);
 if(!['collection','plan'].includes(kind))throw Error('unsupported fixed controller');
 const policy=JSON.parse(fs.readFileSync(policyPath,'utf8')),task=JSON.parse(fs.readFileSync(taskPath,'utf8'));

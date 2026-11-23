@@ -2,7 +2,7 @@
 import {readFileSync,writeFileSync,mkdirSync,lstatSync} from 'node:fs';
 import {createHash,randomUUID} from 'node:crypto';
 import {resolve,join,dirname} from 'node:path';
-import {runContainer} from '../../src/adapters/dsh_code_container.ts';
+import {runContainer} from '../../src/adapters/harness/dsh_code_container.ts';
 const sha=(b:any)=>createHash('sha256').update(b).digest('hex');
 let raw='';for await(const chunk of process.stdin)raw+=chunk;
 const q=JSON.parse(raw),work=resolve(q.workspace),manifest=JSON.parse(readFileSync(join(work,'approved-inputs.json'),'utf8')).files;

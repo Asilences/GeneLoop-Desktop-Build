@@ -1,7 +1,7 @@
 """New topology/name discovery, provenance, ambiguity and semantic boundaries."""
 import copy
-from src.motif_core.offline.operation_graph import discover_graphs,certify_graph,witnesses,catalog,CONTRACT
-from src.motif_core.offline.experience_registry import digest
+from src.motif_core.offline.compilation.operation_graph import discover_graphs,certify_graph,witnesses,catalog,CONTRACT
+from src.motif_core.reuse.experience_registry import digest
 
 def frames(branch=False):
     values=[]

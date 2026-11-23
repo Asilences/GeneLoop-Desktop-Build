@@ -6,8 +6,8 @@ from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'scenarios/file-management'))
 import workflow_holdout as h
 from common import sha,digest,save,PREFIX
-from src.adapters.file_scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 
 class UnusedProvider(BaseHTTPRequestHandler):
@@ -48,7 +48,7 @@ def check(exp,wid,repair=False):
         s=json.loads(Path(rec['path']).read_text());s['objective_sha256']=digest('controlled incompatible objective');del s['script_digest'];s['script_digest']=digest(s)
         save(out/'incompatible-free-script.json',s);rec={**rec,'path':str(out/'incompatible-free-script.json'),'sha256':sha(out/'incompatible-free-script.json')}
     b={'role':'free','script_file':rec['path'],'script_file_sha256':rec['sha256'],'task_file':str(out/'input.json'),'task_file_sha256':sha(out/'input.json'),
-       'runtime_sha256':sha(ROOT/'src/adapters/dsh_learned_script.ts'),'prompt_sha256':prepared['prompt_sha256'],'audit_file':str(out/'learned-script-audit.jsonl')};save(out/'binding.json',b)
+       'runtime_sha256':sha(ROOT/'src/adapters/harness/learning/dsh_learned_script.ts'),'prompt_sha256':prepared['prompt_sha256'],'audit_file':str(out/'learned-script-audit.jsonl')};save(out/'binding.json',b)
     server=ThreadingHTTPServer(('127.0.0.1',0),RepairProvider if repair else UnusedProvider);server.requests=0;server.bodies=[];worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
     env.update(DEEPSEEK_API_KEY='mock-no-key',DEEPSEEK_BASE_URL=f'http://127.0.0.1:{server.server_port}/v1',DSH_HOME=str(out/'dsh'),SSS_LEARNED_SCRIPT_BINDING=str(out/'binding.json'),
                SSS_SCENARIO_PRESENTATION='native',SSS_SCENARIO_TOOLS=json.dumps(prepared['allowed_tools']))

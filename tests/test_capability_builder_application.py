@@ -12,12 +12,12 @@ import sys
 
 import pytest
 
-from src.adapters.capability_builder_application import BuilderConstructionSession, builder_operation
-from src.adapters.capability_contract import capability_ref
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_improvement import save
-from src.adapters.capability_motif_learning import learn_capability_motifs
-from src.adapters.capability_source_authoring import prepare_capability_source_request
+from src.rsi.learning.capability_builder_application import BuilderConstructionSession, builder_operation
+from src.capability.graph.capability_contract import capability_ref
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_improvement import save
+from src.rsi.learning.capability_motif_learning import learn_capability_motifs
+from src.capability.builder.capability_source_authoring import prepare_capability_source_request
 from tests.test_capability_source_authoring import fixture
 
 ROOT = Path(__file__).resolve().parents[1]

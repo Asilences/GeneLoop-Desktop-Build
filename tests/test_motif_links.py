@@ -5,13 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.adapters.dsh_trajectory import DshTrace, ToolContract, ToolRecord
-from src.motif_core.controller import MotifController
-from src.motif_core.handoff import SemanticResolution
-from src.motif_core.offline.library_builder import (
+from src.adapters.harness.dsh_trajectory import DshTrace, ToolContract, ToolRecord
+from src.motif_core.runtime.controller import MotifController
+from src.motif_core.runtime.handoff import SemanticResolution
+from src.motif_core.offline.compilation.library_builder import (
     _digest, build_read_motif_library, library_from_certified,
 )
-from src.motif_core.offline.link_compiler import compile_read_links
+from src.motif_core.offline.compilation.link_compiler import compile_read_links
 
 
 CONTRACTS = {

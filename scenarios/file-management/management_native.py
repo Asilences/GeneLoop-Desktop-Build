@@ -24,6 +24,6 @@ def serve():
         call.__signature__=sig.replace(parameters=[p.replace(annotation=hints.get(p.name,p.annotation)) for p in list(sig.parameters.values())[1:]])
         call.__annotations__=hints
         return call
-    for n in TOOLS:server.tool(name=n,meta={'sss_learning':operator_contract(n)},annotations=ToolAnnotations(readOnlyHint=n not in ('execute_plan','restore_plan','submit_report','build_index','execute_tool_call'),destructiveHint=False,openWorldHint=False))(wrap(n))
+    for n in TOOLS:server.tool(name=n,meta={'sss_learning':operator_contract(n)},annotations=ToolAnnotations(readOnlyHint=n not in ('execute_plan','restore_plan','submit_report','build_index','execute_tool_call','run_script'),destructiveHint=False,openWorldHint=False))(wrap(n))
     server.run()
 if __name__=='__main__':serve()

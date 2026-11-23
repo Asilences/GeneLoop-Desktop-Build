@@ -13,9 +13,9 @@ from pdf_evidence_tools import continuation_policy
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.continuation_policy import valid_granted_record, same_grant
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.continuation_policy import valid_granted_record, same_grant
 
 spec = importlib.util.spec_from_file_location('review_evidence_origin', HERE / 'compare-evidence.py')
 origin = importlib.util.module_from_spec(spec)

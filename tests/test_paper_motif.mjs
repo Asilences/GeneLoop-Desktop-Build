@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apply as genericApply, createOnlineInterceptor } from '../src/adapters/dsh_online_motif.mjs';
-import { apply as paperApply, structuralOnlySimilarity, closedCitationBatchRead } from '../src/adapters/dsh_paper_motif.ts';
-import { compileLocalPrograms, digest } from '../src/motif_core/online_skill_runtime.mjs';
+import { apply as genericApply, createOnlineInterceptor } from '../src/adapters/harness/motif/dsh_online_motif.mjs';
+import { apply as paperApply, structuralOnlySimilarity, closedCitationBatchRead } from '../src/adapters/harness/paper/dsh_paper_motif.ts';
+import { compileLocalPrograms, digest } from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import './test_citation_shadow.mjs';
 import './test_paper_delivery_check.mjs';
-import { evidencePermission } from '../src/adapters/dsh_paper_evidence_policy.ts';
+import { evidencePermission } from '../src/adapters/harness/paper/dsh_paper_evidence_policy.ts';
 
 function fixture() {
   const pin='mcp__paper_checks__pin_paper_sources', read='mcp__paper_checks__read_pinned_paper_sources';

@@ -21,8 +21,8 @@ def lines(text):
  return result
 def code_snapshot():
  files=list(HERE.glob('*.py'))+list(HERE.glob('*.ts'))+list(HERE.glob('*.json'))
- files += [ROOT/p for p in ['src/motif_core/entry_read_policy.ts','src/motif_core/offline/entry_compiler.py',
-  'src/adapters/dsh_entry_motif.ts','src/adapters/scenario.py','scripts/run-scenario.py','src/motif_core/online_skill_runtime.mjs','package-lock.json']]
+ files += [ROOT/p for p in ['src/motif_core/runtime/policies/entry_read_policy.ts','src/motif_core/offline/compilation/entry_compiler.py',
+  'src/adapters/harness/motif/dsh_entry_motif.ts','src/adapters/scenario.py','scripts/run-scenario.py','src/motif_core/runtime/online_skill_runtime.mjs','package-lock.json']]
  return {str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
 
 def prepare(root):

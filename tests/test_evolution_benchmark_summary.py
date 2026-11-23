@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_feedback import file_ref
+from src.rsi.feedback.capability_feedback import file_ref
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/summarize-evolution-benchmark.py'

@@ -16,8 +16,8 @@ from file_tools import FileScene
 from collection_tools import CollectionScene,execution_version
 from experiment import run_one,accounting,outcomes
 sys.path.insert(0,str(ROOT))
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
 
 TOOLS=('read_task','list_files','select_files','pin_file','read_file','collect_reads','hash_files','build_index',
        'search_index','compare_snapshot','preview_actions','execute_plan','restore_plan','submit_report')
@@ -196,7 +196,7 @@ def learn(exp):
     policy=export_collection_policy(certified,protocol['execution_version_sha256'])
     save(destination/'policy.json',policy);save(destination/'artifact.json',certified)
     subprocess.run(['node','--input-type=module','-e',
-        "import fs from 'node:fs';import {validateCollectionPolicy} from './src/motif_core/collection_read_policy.ts';validateCollectionPolicy(JSON.parse(fs.readFileSync(process.argv[1])));",str(destination/'policy.json')],cwd=ROOT,check=True,capture_output=True)
+        "import fs from 'node:fs';import {validateCollectionPolicy} from './src/motif_core/runtime/policies/collection_read_policy.ts';validateCollectionPolicy(JSON.parse(fs.readFileSync(process.argv[1])));",str(destination/'policy.json')],cwd=ROOT,check=True,capture_output=True)
     result={'training_tasks':len(witnesses['explore']),'certification_witnesses':len(witnesses['certify']),
             'training_sizes':[w['target_count'] for w in witnesses['explore']],
             'training_families':sorted({w['family'] for w in witnesses['explore']}),'certification_family':certified['validation_witness']['family'],

@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT));sys.path.insert(0, str(ROOT / 'scenarios/file-mana
 import auto_rsi as rsi
 from common import sha, digest, snapshot, save, PREFIX
 from script_adaptation_learning import load_witness
-from src.adapters.file_cost_gate import observed_peak_cost
+from src.adapters.deepseek_cost_gate import observed_peak_cost
 
 
 def audit(exp, partial=False):

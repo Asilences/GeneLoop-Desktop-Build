@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_decision_evidence import (
+from src.adapters.web.learning.capability_decision_evidence import (
     CONTEXT_FORMAT, inspect_decision, record_web_decision, record_construction_decision,
 )
-from src.adapters.capability_trajectory import project_web_task
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_construction_history import capture
+from src.adapters.web.learning.capability_trajectory import project_web_task
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_construction_history import capture
 
 
 def put(path, value):

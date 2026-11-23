@@ -6,8 +6,8 @@ from pathlib import Path, PurePosixPath
 import pytest
 from jsonschema import Draft202012Validator
 
-from src.adapters.benchmark_capability_tools import benchmark_capability_tools, capability_trace_projection
-from src.adapters.capability_feedback import file_ref, verify
+from benchmarks.evolution.benchmark_capability_tools import benchmark_capability_tools, capability_trace_projection
+from src.rsi.feedback.capability_feedback import file_ref, verify
 from tests.test_capability_feedback import fixture
 from tests.test_capability_motif_learning import run_driver
 from tests.test_capability_motif_learning import corpus
@@ -239,7 +239,7 @@ def test_projected_real_diagnostic_runtime_calls_pass_original_capture(tmp_path)
     _, dispatch, receipts = benchmark_capability_tools(materials, trial, tmp_path / 'calls', 'real-runtime-task')
     dispatch('capability_call', {'capability_id': snapshot['roots'][0]['id'], 'value': 3})
     projection = capability_trace_projection(receipts)
-    from src.adapters.capability_motif_learning import capture_capability_trace
+    from src.rsi.learning.capability_motif_learning import capture_capability_trace
     trace = capture_capability_trace(projection['snapshot'], task_id=projection['task_id'],
         task_input=projection['trace_inputs'], task_fingerprint=projection['task_fingerprint'],
         calls=projection['calls'])
@@ -284,7 +284,7 @@ class RuntimeMaterials(Materials):
 
 
 def runtime_task(tmp_path, snapshot, task_id):
-    from src.adapters.capability_contract import capability_digest
+    from src.capability.graph.capability_contract import capability_digest
     class InputTrial(Trial):
         def manifest(self):
             return {**super().manifest(), 'input_fingerprint': capability_digest({'input': task_id})}
@@ -300,15 +300,15 @@ def result_binding(call_id):
 
 
 def actual_trace(receipts):
-    from src.adapters.capability_motif_learning import capture_capability_trace
+    from src.rsi.learning.capability_motif_learning import capture_capability_trace
     projected = capability_trace_projection(receipts)
     return capture_capability_trace(projected['snapshot'], task_id=projected['task_id'],
         task_input=projected['trace_inputs'], task_fingerprint=projected['task_fingerprint'], calls=projected['calls'])
 
 
 def test_explicit_runtime_binding_enters_original_miner_as_parameter_transfer(tmp_path, corpus):
-    from src.adapters.capability_contract import capability_ref
-    from src.adapters.capability_motif_learning import learn_capability_motifs
+    from src.capability.graph.capability_contract import capability_ref
+    from src.rsi.learning.capability_motif_learning import learn_capability_motifs
     _, snapshot, c_ref, operations, _ = corpus
     successor = capability_ref(operations['double'])
     traces = []
@@ -336,8 +336,8 @@ def test_explicit_runtime_binding_enters_original_miner_as_parameter_transfer(tm
 
 
 def test_equal_manually_copied_values_remain_external_inputs_without_edges(tmp_path, corpus):
-    from src.adapters.capability_contract import capability_ref
-    from src.adapters.capability_motif_learning import learn_capability_motifs
+    from src.capability.graph.capability_contract import capability_ref
+    from src.rsi.learning.capability_motif_learning import learn_capability_motifs
     _, snapshot, c_ref, operations, _ = corpus
     successor = capability_ref(operations['double'])
     traces = []
@@ -447,7 +447,7 @@ def test_dependent_slice_cannot_silently_turn_missing_parent_result_into_input(t
 
 
 def test_repaired_binding_error_does_not_block_real_dependent_calls(tmp_path, corpus):
-    from src.adapters.capability_contract import capability_ref
+    from src.capability.graph.capability_contract import capability_ref
     _, snapshot, c_ref, operations, _ = corpus
     _, _, _, dispatch, receipts = runtime_task(tmp_path, snapshot, 'repair-then-compose-task')
     with pytest.raises(ValueError, match='binding_step_unavailable'):
@@ -654,7 +654,7 @@ def test_export_does_not_copy_a_directory_back_as_the_requested_file(tmp_path):
 
 
 def test_export_receipt_write_failure_does_not_relabel_native_execution(tmp_path, monkeypatch):
-    import src.adapters.benchmark_capability_tools as bridge
+    import benchmarks.evolution.benchmark_capability_tools as bridge
     snapshot = run_driver({'action': 'seed', 'owner': 'export-audit-diagnostic'})
     materials = RuntimeMaterials(snapshot)
     trial = ExportTrial(tmp_path / 'trial')

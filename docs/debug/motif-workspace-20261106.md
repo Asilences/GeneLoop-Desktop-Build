@@ -86,3 +86,18 @@ Windows / Node 24.19.0 / Python 3.11.7。当前工程检查不调用模型，不
 无模型 `npm run smoke` 通过（`merge-smoke.log`）；`motif:check`仍在Windows临时目录清理时报WinError145（`merge-motif-check.log`），未算通过。GitHub CI 的检查注释为“account is locked due to a billing issue”，任务没有启动；本次不修改账单/Actions设置。
 
 源码已推送并创建 [Draft PR #161](https://github.com/jingyio/GeneLoop/pull/161)，不使用自动关闭 Issue 的关键词；#137–#140 用评论分别交付真实范围。没有真实模型请求、生产部署或安装包构建/上传。桌面开发在其独立分支合入后统一提交整合源码与安装包。
+
+
+## 2026-11-08 前后端缺口审计与接线
+
+本轮从现有分支继续，整合main `1d1e16f4`，未触碰原Windows/Mac工作树。完整页面/来源矩阵统一见[产品说明](../product/desktop/motif-workspace.md#前后端接线审计与修复2026-11-08)。主要修复三项实际阻断：原页面只能读取Coding快照；版本/工具流未消费主线产物；评估和右栏部分指标/入口缺少实际服务支撑。
+
+在原DSH插件增加两处接线，目录模块读取已准入scene及原learning resolver，调用原executeUnavailable，不重写认证规则。当前实际注册库PPT2/Paper1/Data10项直接进入前端；Data标旧格式已登记。公开v1 Schema保持字节不变，v2增加真实来源、工具参数流及原学习报告的兼容来源版本。零模型调用、不生成伪事件或收益，独立归因费用未知。运行库没有调用事件时复用次数显示未知，不能当作0次任务复用。
+
+工作区评估复用原tasks和comparisons。曾发现新近空会话遮住旧材料，改为优先关联当前实际任务的会话。界面加载对照用量是异步的；最初新断言在API回包前同步读取导致失败，保留日志，改为等待真实接口完成，未删除字段或数字检查。另一次因旧导航文案定位失败，更新到准确的只读入口后继续全部原回归。临时只输出绑定布尔值的诊断代码已移除。
+
+Paper86/PPT84通过原导出器重绑定完整精确代码锁，显式审阅main隐私/模型变化及本次目录；新增模块/v2 Schema/导出脚本进入闭包。原库、manifest、工具Schema、任务与来源证据逐字节不变；前代包保留，不做训练、原轨迹重放或质量/成本晋级。导出预览和结果为`catalog-compat-preview.json`、`catalog-compat-export.log`。原兼容表继续按精确旧/新摘要对工作；加载器未放宽。
+
+定向验证：`catalog-server-tests.log`40项、`catalog-runtime-final.log`实际DSH路由1项、`catalog-desktop-check.log`13项、`catalog-compat-tests.log`55项通过。Electron最终17组、控制台错误0；原PPT图像字节、翻页、下载、草稿和账号清理检查保持。来源库和证书真实读取，任务/对照用量是明确标注的协议夹具，不是新增真实模型行为或效率实验。截图/回执目录`apps/desktop/.local/validation/renderer-ffe75489-30ba-4244-8131-7eab31610ef3/`，公开文档只纳入不含私人材料的注册库页面。
+
+完整Node检查`catalog-full-node.log`：1622通过、59跳过、25失败；包括Windows符号链接EPERM、PDF准备/学习夹具等，未经同环境main对照不一概归为历史问题。Python完整回归`catalog-full-test.log`为2940通过、283跳过、56失败、30错误；主要涉及Windows符号链接权限、PDF/字体/OCR依赖及原学习测试夹具，未以相同环境的main对照逐一归因。`npm test`在Python阶段退出1，因此另行执行了上述完整Node检查。无模型`npm run smoke`通过（`catalog-smoke.log`）；`motif:check`在Windows临时目录清理报WinError145（`catalog-motif-check.log`），不计为通过。此前失败日志、临时诊断与界面中间失败均保留在私有目录，不提交。正式服务不部署，安装包不构建/上传。

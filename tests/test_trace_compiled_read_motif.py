@@ -7,19 +7,19 @@ import json
 import unittest
 from dataclasses import replace
 
-from src.adapters.dsh_trajectory import (
+from src.adapters.harness.dsh_trajectory import (
     DshTrace, ToolContract, ToolRecord, extract_dsh_trace, mine_dsh_traces,
 )
-from src.motif_core.handoff import SemanticResolution
-from src.motif_core.offline.trace_compiler import (
+from src.motif_core.runtime.handoff import SemanticResolution
+from src.motif_core.offline.compilation.trace_compiler import (
     certify_read_motif, compile_read_motif,
 )
-from src.motif_core.offline.failure_evolution import (
+from src.motif_core.reuse.failure_evolution import (
     guard_matches, propose_exact_failure_guard, validate_failure_guard_replays,
     promote_failure_guard, new_guard_registry, activate_guard_version,
     rollback_guard_version, current_active_guards,
 )
-from src.motif_core.read_executor import resume_read_motif, run_read_motif
+from src.motif_core.runtime.read_executor import resume_read_motif, run_read_motif
 
 
 def event_pair(index: int, tool: str, args: dict, observation: dict) -> list[dict]:

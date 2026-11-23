@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.ppt_component_learning import collect_source, install_component_library, prepare_candidate, propose_component, proposal_request, read_json, write_json
+from src.adapters.ppt.learning.ppt_component_learning import collect_source, install_component_library, prepare_candidate, propose_component, proposal_request, read_json, write_json
 
 
 def main():

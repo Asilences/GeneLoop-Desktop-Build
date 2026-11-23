@@ -9,7 +9,7 @@ import {createUserMessage,createAssistantMessage,createSystemMessage} from '@dee
 import {CommandRuntime} from '@deepseek-ai/dsh-commands';
 import {apply as nativeCompact} from '@deepseek-ai/dsh-command-compact';
 import {GeneLoopContextEngine,createContextAdmission,assertContextUserEnvelope,routeNativeCompact} from '../src/adapters/geneloop_context.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 
 function fixture({window=2000,active=true,summary='Verified sources retained. Continue the current request.',config={},failure,finish={kind:'stop'},executionAgent}={}){
  const ctx=new Context(),requests=[],calls=[],audit=[];new SessionProjectionRegistry(ctx);new TokenMeter(ctx);

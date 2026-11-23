@@ -1,0 +1,111 @@
+.header{height:96px}
+.header nav{font-size:15px;gap:28px}
+.nav-cta{font-size:14px}
+.design-trigger{border:0;padding:0;background:none;font-size:inherit}
+.design-trigger:hover{color:var(--accent)}
+.hero{min-height:max(820px,calc(100svh - 96px));grid-template-columns:.92fr 1.08fr;gap:0;padding-block:35px;position:relative;overflow:clip}
+.hero-copy{padding-top:0}
+.hero-copy h1{font-size:clamp(83px,8.8vw,148px);line-height:.97;letter-spacing:-6px;margin:0 0 32px}
+.hero-copy h1>span,.hero-copy h1>em{display:block}
+.hero-description{font-size:20px;line-height:1.6;max-width:420px}
+.hero-actions{gap:32px;margin-top:34px}
+.hero-actions .button{padding:19px 23px;font-size:15px}
+.hero-actions .text-link,.text-link{font-size:15px}
+.button{font-size:15px;padding:18px 22px}
+.artwork{width:100%;margin:0;position:relative}
+.canvas-frame{aspect-ratio:1;min-height:0}
+.canvas-frame canvas{position:absolute;inset:0;width:100%;height:100%}
+.art-fallback{font-size:350px}
+.artwork.canvas-ready .art-fallback{display:none}
+[data-art=sculpture] #recursive-grid,[data-theme=lattice] #recursive-grid{display:none}
+html:not([data-art=sculpture]) #intelligence{display:none}
+html:not([data-theme=lattice]) #lattice-scene{display:none}
+.motion-button{position:absolute;right:15px;bottom:15px;width:40px;height:40px;background:var(--paper);opacity:0;transition:opacity .2s;z-index:5}
+.artwork:hover .motion-button,.motion-button:focus-visible{opacity:1}
+.research{padding-block:70px;align-items:center}
+.research h2{font-size:clamp(38px,4vw,60px);margin:0}
+.research-body{padding:0}
+.research-body>p{font-size:20px;line-height:1.7}
+.loop-line{font-size:28px}
+.join{padding-block:80px}
+.join>div{margin:0}
+.join h2{font-size:clamp(56px,6vw,88px)}
+.join-copy{min-width:0}
+.footer{font-size:13px}
+.footer .brand{font-size:20px}
+#design-dialog{width:min(650px,calc(100% - 40px))}
+#design-dialog h2{font-size:44px}
+#design-dialog fieldset{border:0;padding:0;margin:30px 0 0}
+#design-dialog legend{font-size:16px;margin-bottom:12px}
+.design-options{display:flex;gap:10px;flex-wrap:wrap}
+.design-options button{background:none;border:1px solid var(--line);padding:12px 16px;font-size:14px}
+.design-options button[aria-pressed=true]{border-color:var(--accent);background:var(--accent);color:var(--paper)}
+@media(max-width:1100px){.wrap{width:calc(100% - 64px)}
+.hero{min-height:760px}
+.hero-copy h1{font-size:clamp(78px,9vw,110px);letter-spacing:-5px}
+.hero-description{font-size:18px}
+.hero-actions{gap:20px}
+.hero-actions .button{font-size:13px;padding:17px}
+.hero-actions .text-link{font-size:13px}
+.header nav{gap:20px;font-size:14px}
+.research-body>p{font-size:18px}
+.loop-line{font-size:23px}}
+@media(max-width:800px){.header{height:84px}
+.nav-cta{display:none}
+.hero{min-height:700px}
+.hero-copy h1{font-size:76px;letter-spacing:-4px}
+.hero-actions{flex-direction:column;align-items:flex-start;gap:16px}
+.hero-description{font-size:17px}
+.research{gap:30px}
+.research h2{font-size:38px}
+.loop-line{font-size:21px}}
+@media(max-width:580px){.wrap{width:calc(100% - 36px)}
+.header{height:76px;gap:10px}
+.header nav{gap:13px;font-size:12px}
+.brand{font-size:19px}
+.brand svg{width:27px}
+.hero{min-height:0;padding:48px 0 30px;gap:0}
+.hero-copy h1{font-size:clamp(66px,17vw,94px);letter-spacing:-3.5px;margin-bottom:24px}
+.hero-description{font-size:19px}
+.hero-actions{flex-direction:row;align-items:center;gap:22px;margin-top:27px}
+.hero-actions .button{font-size:13px;padding:17px}
+.hero-actions .text-link{font-size:14px}
+.artwork{margin-top:20px}
+.canvas-frame{aspect-ratio:1}
+.research{padding-block:45px}
+.research h2{font-size:39px}
+.research-body{margin-top:28px}
+.research-body>p{font-size:18px}
+.loop-line{font-size:19px;gap:10px;line-height:1.6}
+.join{padding-block:45px}
+.join h2{font-size:58px}
+.join-copy{margin-top:28px}
+.footer{font-size:12px}
+.footer .brand{font-size:18px}
+.footer>span:last-child{margin-left:0}
+.footer>a:first-child{width:100%}
+.motion-button{width:36px;height:36px}
+#design-dialog{padding:36px 22px}
+#design-dialog h2{font-size:36px}
+.design-options button{font-size:13px;padding:12px}}
+.journal .eyebrow{font-size:13px;line-height:1.8}
+@media(prefers-reduced-motion:reduce){.motion-button{opacity:1}}
+.header .brand svg{width:42px;height:42px;flex-shrink:0}
+.header .brand{gap:12px;font-weight:650;letter-spacing:-.9px}
+@media(max-width:580px){.header .brand svg{width:30px;height:30px}
+.header .brand{gap:7px}}
+.header .brand-mark{display:block;width:42px;height:42px;flex-shrink:0}
+@media(max-width:580px){.header .brand-mark{width:30px;height:30px}}
+.site-banner{width:100%;background:var(--banner,#e9e1d1);border-bottom:1px solid var(--line)}
+.site-banner .header.wrap{width:100%;max-width:none;height:auto;min-height:96px;padding:22px clamp(20px,4vw,76px);margin:0;border:0;gap:clamp(20px,3vw,64px);display:flex;justify-content:space-between;align-items:center;flex-wrap:nowrap}
+.site-banner .brand{flex:0 0 auto;white-space:nowrap}
+.site-banner nav{display:flex;align-items:center;justify-content:center;flex:1 1 auto;gap:clamp(20px,3vw,46px);min-width:0;white-space:nowrap}
+.site-banner .nav-cta{flex:0 0 auto;white-space:nowrap}
+@media(max-width:1050px){.site-banner .nav-cta{display:none}
+.site-banner nav{justify-content:flex-end;gap:24px}
+.site-banner .header.wrap{min-height:88px;gap:24px}}
+@media(max-width:580px){.site-banner .header.wrap{flex-wrap:wrap;min-height:112px;padding:17px 20px;row-gap:18px}
+.site-banner .brand{font-size:21px}
+.site-banner nav{flex-basis:100%;justify-content:space-between;gap:15px;font-size:14px}
+.site-banner .header .brand-mark{width:30px;height:30px}
+.site-banner .nav-cta{display:none}}

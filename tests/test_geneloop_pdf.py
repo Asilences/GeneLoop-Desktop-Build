@@ -6,7 +6,33 @@ import pymupdf as fitz
 import pytest
 
 from src.adapters.geneloop_pdf import read_pdf
-from src.adapters.harless_attachment_text import extract_attachment
+from src.adapters.web.attachments.harless_attachment_text import extract_attachment
+
+
+def test_long_pdf_index_defers_pixels_and_ocr_and_single_page_preview_is_bound(tmp_path):
+    from src.adapters.ppt.sources.ppt_preview_runner import source_preview
+    (tmp_path/'inputs').mkdir()
+    (tmp_path/'outputs').mkdir()
+    source=tmp_path/'inputs/source.pdf'
+    with fitz.open() as doc:
+        for i in range(14):
+            page=doc.new_page()
+            if i != 7:
+                page.insert_text((55,65),f'Figure {i + 1}. Original caption')
+            page.draw_rect((55,95,210,145),fill=(0,.4,.7))
+        doc.save(source)
+    version=hashlib.sha256(source.read_bytes()).hexdigest()
+    result=extract_attachment(source,pdf_visuals=True,ppt_pdf_index_over=12)
+    assert result['coverage']=='local_pdf_page_index' and result['page_count']==14
+    assert result['pages'][7]['ocr_status']=='on_demand'
+    assert 'Original caption' in result['pages'][12]['local_index_excerpt']
+    assert all('image' not in page and not page['visual_content_reviewed'] for page in result['pages'])
+    request={'path':'/work/inputs/source.pdf','output':'/work/outputs/ppt-source-one.jpg','page':13,'source_sha256':version}
+    proof=source_preview(request,workspace=tmp_path)
+    assert proof['page']==13 and proof['source_sha256']==version and proof['model_requests_inside']==0
+    assert (tmp_path/'outputs/ppt-source-one.jpg').read_bytes().startswith(b'\xff\xd8')
+    with pytest.raises(ValueError,match='version_changed'):
+        source_preview({**request,'source_sha256':'0'*64},workspace=tmp_path)
 
 
 def fixture_pdf():

@@ -4,8 +4,8 @@ import argparse,copy,hashlib,json,os,subprocess,sys,signal
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT))
-from src.adapters.capability_improvement import evidence,read,save,run_improvement,validate
-from src.adapters.capability_scene import CapabilityImprovementAdapter,reference,run_child
+from src.rsi.learning.capability_improvement import evidence,read,save,run_improvement,validate
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter,reference,run_child
 
 class SourceImprovementAdapter(CapabilityImprovementAdapter):
     withdrawal_reasons=CapabilityImprovementAdapter.withdrawal_reasons|{'source_capability_leaf_changed'}

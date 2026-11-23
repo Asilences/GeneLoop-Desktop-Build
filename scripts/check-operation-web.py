@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 sp=importlib.util.spec_from_file_location('web_checks',ROOT/'scripts/check-web-tasks.py');check=importlib.util.module_from_spec(sp);sp.loader.exec_module(check)
 from src.adapters.continuous_rsi import records,snapshot
-from src.motif_core.offline.experience_registry import read
+from src.motif_core.reuse.experience_registry import read
 
 def main():
     results=[]

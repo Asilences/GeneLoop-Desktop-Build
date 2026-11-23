@@ -1,4 +1,4 @@
-/** Existing learned audit/patch programs over a private Session copy. No Agent loop. */
+/** Published structural reference audit and edit programs over a private task copy. */
 import {createHash} from 'node:crypto';
 import {existsSync,readFileSync,writeFileSync,mkdirSync,lstatSync,readdirSync,realpathSync,renameSync} from 'node:fs';
 import {join,resolve,relative,isAbsolute,sep} from 'node:path';
@@ -10,18 +10,29 @@ import {digest} from '../../src/adapters/paper_rsi_program.ts';
 import {applyPublishedRevision,renderRevisionMarkdown} from '../../src/adapters/report_patch_protocol.ts';
 const sha=(v:Uint8Array)=>createHash('sha256').update(v).digest('hex');
 const ROOT=resolve(fileURLToPath(new URL('../../',import.meta.url)));
-export function revisionTools(work:string){
-  work=realpathSync(work);const scope=realpathSync(process.env.HARLESS_PRIVATE_ROOT??join(ROOT,'.local')),rel=relative(scope,work);
+const revisionSources={
+  'audit-program.json':'94fb613036b0450ec893853b929b12a782f1c5cd722d693add81c59f5bdf3407',
+  'patch-program.json':'0eb7527ba697c787ce2ebc1843f50ff339865e301f97a6349ce138db3760d333',
+  'tool-schemas.json':'97b95b1970a46363c6178918509e4caa9b01e8141a7691861605ca685b14c117',
+} as const;
+export function revisionTools(work:string,privateRoot?:string){
+  work=realpathSync(work);const scope=realpathSync(privateRoot??process.env.HARLESS_PRIVATE_ROOT??join(ROOT,'.local')),rel=relative(scope,work);
   if(!scope.split(sep).includes('.local')||isAbsolute(rel)||rel.startsWith('..')||!work.endsWith('/work')&& !work.endsWith('\\work'))throw Error('private_session_workspace_required');
-  const bundle=join(ROOT,'motif-libraries/paper'),pack=JSON.parse(readFileSync(join(bundle,'entry.json'),'utf8'));
-  const audit=JSON.parse(readFileSync(join(bundle,'audit-program.json'),'utf8')),patch=JSON.parse(readFileSync(join(bundle,'patch-program.json'),'utf8'));
+  const revision=join(ROOT,'scenarios/paper_proofreading/revision');
+  function revisionSource(name:keyof typeof revisionSources):Buffer {
+    const bytes=readFileSync(join(revision,name));
+    if(sha(bytes)!==revisionSources[name])throw Error('paper_program_changed');
+    return bytes;
+  }
+  const audit=JSON.parse(revisionSource('audit-program.json').toString('utf8'));
+  const patch=JSON.parse(revisionSource('patch-program.json').toString('utf8'));
+  const schemas=JSON.parse(revisionSource('tool-schemas.json').toString('utf8'));
   validateTraceCandidate(audit);validateTraceCandidate(patch);
-  const original=JSON.parse(readFileSync(join(bundle,'library.json'),'utf8'));
   const directory=join(work,'outputs/paper');mkdirSync(directory,{recursive:true,mode:0o700});
   const path=join(directory,'report-state.json');
   function save(v:any){writeFileSync(path+'.tmp',JSON.stringify(v),{mode:0o600});renameSync(path+'.tmp',path);}
   function guard(){
-    for(const [name,hash]of Object.entries(pack.files))if(sha(readFileSync(join(bundle,name)))!==hash)throw Error('paper_program_changed');
+    for(const name of Object.keys(revisionSources) as (keyof typeof revisionSources)[])revisionSource(name);
     const approved=JSON.parse(readFileSync(join(work,'approved-inputs.json'),'utf8')).files;
     if(JSON.stringify(Object.keys(approved).sort())!==JSON.stringify(readdirSync(join(work,'inputs')).sort()))throw Error('paper_source_set_changed');
     for(const [name,hash]of Object.entries(approved)){
@@ -79,7 +90,7 @@ export function revisionTools(work:string){
     }
     throw Error('unknown_tool');
   }
-  const tools=original.tools.map((row:any)=>({name:row.name.replace('mcp__paper_trace_rsi__',''),description:row.name.endsWith('read_task_state')?'Read the current private reference report and version. No authenticity claim.':
+  const tools=schemas.map((row:any)=>({name:row.name.replace('mcp__paper_trace_rsi__',''),description:row.name.endsWith('read_task_state')?'Read the current private reference report and version. No authenticity claim.':
     row.name.endsWith('apply_revision_plan')?'Apply the model-selected bounded reference plan to a new task copy; preserve other fields.':row.name.endsWith('triage_revision_audit')?'Run the existing learned audit program on the current versioned reference report.':'Export the current reviewed structural report as Markdown in this task only.',inputSchema:row.parameters}));
   return{tools,call};
 }

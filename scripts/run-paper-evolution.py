@@ -10,11 +10,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_improvement import save
-from src.adapters.capability_proposal import CumulativeProposalGate
-from src.adapters.evolution_cycle import run_evolution_cycle
-from src.adapters.research_harness import ResearchHarness
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_improvement import save
+from src.adapters.harness.capability.capability_proposal import CumulativeProposalGate
+from src.rsi.evolution.evolution_cycle import run_evolution_cycle
+from src.adapters.harness.research_harness import ResearchHarness
 from scenarios.paper_proofreading.evolution_adapter import PaperEvolutionAdapter, select_pilot_candidate
 
 

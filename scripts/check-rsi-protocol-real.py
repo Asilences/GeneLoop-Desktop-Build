@@ -20,9 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.dsh_client import call_bounded_prompt
+from src.adapters.harness.dsh_client import call_bounded_prompt
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.rsi_protocol import provider_ledger_record
+from src.rsi.protocol.rsi_protocol import provider_ledger_record
 
 
 def save(path, value):
@@ -74,7 +74,7 @@ def main():
         snapshot = {**preview, 'authorization_sha256': sha(args.authorization.read_bytes()),
                     'fixtures_sha256': sha(fixtures_file.read_bytes()), 'python': platform.python_version(),
                     'node': subprocess.check_output(['node', '--version'], text=True).strip(),
-                    'runtime_sha256': sha((ROOT / 'src/adapters/rsi_protocol.ts').read_bytes()),
+                    'runtime_sha256': sha((ROOT / 'src/rsi/protocol/rsi_protocol.ts').read_bytes()),
                     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                     'quality': 'synthetic diagnostic only; no blind research review'}
         save(run / 'config.json', snapshot)

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "gpt-6-luna",
+    "wire_id": "gpt-6-luna",
+    "label": "GPT-6 Luna (isolated research)",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "input_modalities": ["text", "image"],
+    "supported_reasoning_efforts": ["off"],
+    "input_usd_per_million": 0.10,
+    "cache_hit_usd_per_million": 0.01,
+    "output_usd_per_million": 0.50
+  }
+]

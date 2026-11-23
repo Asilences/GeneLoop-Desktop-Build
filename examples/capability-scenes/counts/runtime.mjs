@@ -5,8 +5,8 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../../src/adapters/capability_contract.ts';
-import {createCapabilityRuntime} from '../../../src/adapters/capability_runtime.ts';
+import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../../src/capability/graph/capability_contract.ts';
+import {createCapabilityRuntime} from '../../../src/capability/runtime/capability_runtime.ts';
 import {diagnosticHost} from '../../rsi-protocol-v1/host.mjs';
 
 const hash=x=>createHash('sha256').update(x).digest('hex');

@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import create_capability, create_capability_snapshot, capability_ref, capability_digest
-from src.adapters.capability_feedback import file_ref
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import create_capability, create_capability_snapshot, capability_ref, capability_digest
+from src.rsi.feedback.capability_feedback import file_ref
 from tests.test_capability_source_authoring import native, RECORD, DELTA, PROJECT, PAIR, envelope
 
 PATH = Path(__file__).resolve().parents[1] / 'scripts/validate-recursive-paper-candidate.py'

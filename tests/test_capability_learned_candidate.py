@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_contract import capability_ref
-from src.adapters.capability_improvement import evidence, run_improvement
-from src.adapters.capability_motif_learning import learn_capability_motifs
-from src.adapters.capability_scene import CapabilityImprovementAdapter
+from src.capability.graph.capability_contract import capability_ref
+from src.rsi.learning.capability_improvement import evidence, run_improvement
+from src.rsi.learning.capability_motif_learning import learn_capability_motifs
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter
 from tests.test_capability_motif_learning import corpus, put, run_driver
 
 

@@ -1,0 +1,30 @@
+{
+  "pii-summary.json": {
+    "sha256": "85233af13bc764a2307a483a68a65062127a7ae2be7d499e1cd44e31da90a3bd",
+    "bytes": 238539
+  },
+  "credential-summary.json": {
+    "sha256": "184d96a53b59738019bdbf086ad6b2879c0a54d00a9a41cf86efa5785fb626af",
+    "bytes": 4965
+  },
+  "semantic-summary.json": {
+    "sha256": "fc259d7764efddc891c9f885d2f8260675c239c7a15844171651b46886ad48ba",
+    "bytes": 5450
+  },
+  "entry-summary.json": {
+    "sha256": "b207513b9a9f58dbc95dbe158298752ab5d125b40a6403df21658e66e8376d4a",
+    "bytes": 5089
+  },
+  "verification.json": {
+    "sha256": "ad87e7d235910a0e13c8cb1b23b7c15a5b4c7322c6e869a5bae2ebbe95193011",
+    "bytes": 22593
+  },
+  "environment.json": {
+    "sha256": "4888e08642387b3ff86f5e5f66ce4f9140ee173cd3c280c95bebff5fb66ddd74",
+    "bytes": 2446
+  },
+  "transport-diagnostic.json": {
+    "sha256": "05ccc4a7d6bf51b39a8187eb08834753289d97b9dea934a7b2eac5265ff7da76",
+    "bytes": 370
+  }
+}

@@ -10,10 +10,10 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.adapters.capability_improvement import save
-from src.adapters.capability_proposal import CumulativeProposalGate
-from src.adapters.evolution_benchmark import BenchmarkHost, validation_dataset_splits
-from src.adapters.skill_infinity_baseline import (
+from src.rsi.learning.capability_improvement import save
+from src.adapters.harness.capability.capability_proposal import CumulativeProposalGate
+from benchmarks.evolution.evolution_benchmark import BenchmarkHost, validation_dataset_splits
+from benchmarks.evolution.skill_infinity_baseline import (
     create_seed_meta_skill, create_seed_task_skill, optimize_task_skill, refine_meta_skill,
 )
 
@@ -98,11 +98,11 @@ def main():
         with CumulativeProposalGate(args.ledger_root) as gate:
             materials = None
             if args.mode == 'geneloop':
-                from src.adapters.benchmark_script_materials import BenchmarkScriptMaterials
+                from benchmarks.evolution.benchmark_script_materials import BenchmarkScriptMaterials
                 materials = BenchmarkScriptMaterials(material_config['owner'], material_config['directory'],
                     publication_store=material_config['publication_store'])
                 if continuation.get('snapshot') is not None:
-                    from src.adapters.capability_contract import validate_capability_snapshot
+                    from src.capability.graph.capability_contract import validate_capability_snapshot
                     inherited = validate_capability_snapshot(continuation['snapshot'], material_config['owner'])
                     available = materials.catalog()['snapshot']
                     if (any(ref not in available['roots'] for ref in inherited['roots'])
@@ -116,7 +116,7 @@ def main():
             if args.mode == 'trial':
                 result = host.trial(args.task, split=args.split, evaluation_role=args.evaluation_role)
             elif args.mode == 'geneloop':
-                from src.adapters.evolution_benchmark_gene import run_gene_benchmark
+                from benchmarks.evolution.evolution_benchmark_gene import run_gene_benchmark
                 result = run_gene_benchmark(host, development_tasks=args.development_task,
                     validation_tasks=args.validation_task or [args.task], test_tasks=[args.task],
                     validation_splits=validation_splits,

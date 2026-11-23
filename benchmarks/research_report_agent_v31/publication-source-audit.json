@@ -599,13 +599,13 @@
           "byte_identical": true
         },
         {
-          "path": "src/adapters/tool_contract_loader.py",
+          "path": "src/motif_core/offline/compilation/tool_contracts.py",
           "experiment_sha256": "7e7ca1eec3bb649f2f05dcc937570fb3fe0d6afec44b01a36c3adbb96d3c58ac",
           "publication_sha256": "7e7ca1eec3bb649f2f05dcc937570fb3fe0d6afec44b01a36c3adbb96d3c58ac",
           "byte_identical": true
         },
         {
-          "path": "src/adapters/tool_schema_contracts.py",
+          "path": "src/motif_core/offline/compilation/tool_contracts.py",
           "experiment_sha256": "989ded17231e0ffb8e3038e429999e901ab87a779e8ab3f87ab43b3fd7b3be24",
           "publication_sha256": "989ded17231e0ffb8e3038e429999e901ab87a779e8ab3f87ab43b3fd7b3be24",
           "byte_identical": true

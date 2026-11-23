@@ -1,0 +1,14 @@
+[
+  {
+    "id": "gpt-4o-2024-11-20",
+    "wire_id": "gpt-4o-2024-11-20",
+    "label": "GPT-4o 2024-11-20 (isolated ChartMimic judge)",
+    "context_window": 128000,
+    "max_output_tokens": 16384,
+    "input_modalities": ["text", "image"],
+    "supported_reasoning_efforts": ["off"],
+    "input_usd_per_million": 2.50,
+    "cache_hit_usd_per_million": 1.25,
+    "output_usd_per_million": 10.00
+  }
+]

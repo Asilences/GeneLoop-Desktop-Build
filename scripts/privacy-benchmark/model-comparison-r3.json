@@ -1,0 +1,41 @@
+{
+  "comparison_id": "privacy-model-comparison-20261108-r3",
+  "baseline_config": "protocol-r2.json",
+  "policy": "policy-scope-v1.json",
+  "selection": {"seed": "privacy-candidate-selection-v1", "sort": "sha256(seed:dataset:id)", "per_dataset": 200, "development": 100, "confirmation": 100},
+  "data_already_seen_in_r1_r2": true,
+  "independent_unseen_evaluation": false,
+  "threshold": 0.4,
+  "model_inference_device": "cpu",
+  "torch_threads": 4,
+  "cloud_model_requests": 0,
+  "gold_passed_to_detector": false,
+  "truncation_or_silent_prefix_scoring": false,
+  "over_limit_action": "unknown evaluation_length_limit; report availability; never score a truncated prefix as complete",
+  "gliner": {
+    "repository": "urchade/gliner_multi-v2.1",
+    "revision": "443d26d654e0324125a96bebd8e796c14ff2efe6",
+    "backend_repository": "microsoft/mdeberta-v3-base",
+    "backend_revision": "a0484667b22365f84929a935b5e50a51f71f159d",
+    "license": "Apache-2.0",
+    "labels": {"person": "PERSON", "phone number": "PHONE_NUMBER", "email": "EMAIL_ADDRESS", "address": "LOCATION", "national identification number": "IDENTITY_NUMBER", "credit card number": "CREDIT_CARD", "bank account number": "FINANCIAL_ACCOUNT", "ip address": "IP_ADDRESS", "url": "PRIVATE_REFERENCE", "password": "CREDENTIAL"},
+    "word_splitter": "official GLiNER SpaCyTokenSplitter; zh spaCy ChineseTokenizer jieba; default checkpoint whitespace for English",
+    "max_words": 384,
+    "encoder_max_tokens": 512,
+    "flat_ner": true
+  },
+  "openmed": {
+    "repository": "OpenMed/OpenMed-PII-Chinese-ModernMed-Large-395M-v1",
+    "revision": "0a578e03767fbb0bbddef379ae08c2233137c66c",
+    "license": "Apache-2.0",
+    "architecture": "ModernBertForTokenClassification",
+    "load": "standard Transformers; safetensors; trust_remote_code=false; strict loading information",
+    "aggregation": "official Transformers token-classification pipeline simple",
+    "max_tokens": 8192,
+    "sdpa_cpu": true,
+    "labels": {"FIRSTNAME": "PERSON", "MIDDLENAME": "PERSON", "LASTNAME": "PERSON", "PHONE": "PHONE_NUMBER", "EMAIL": "EMAIL_ADDRESS", "SSN": "IDENTITY_NUMBER", "CREDITCARD": "CREDIT_CARD", "BANKACCOUNT": "FINANCIAL_ACCOUNT", "IBAN": "FINANCIAL_ACCOUNT", "BIC": "FINANCIAL_ACCOUNT", "IPADDRESS": "IP_ADDRESS", "URL": "PRIVATE_REFERENCE", "PASSWORD": "CREDENTIAL", "PIN": "CREDENTIAL", "CVV": "CREDENTIAL", "CITY": "LOCATION", "COUNTY": "LOCATION", "STATE": "LOCATION", "STREET": "LOCATION", "SECONDARYADDRESS": "LOCATION", "ZIPCODE": "LOCATION", "BUILDINGNUMBER": "LOCATION", "GPSCOORDINATES": "LOCATION"}
+  },
+  "training_overlap_audit": "model cards recorded; overlap with test corpora not established; no unseen or leaderboard reproduction claim",
+  "report": ["native model", "union with frozen R2 text detections", "per-type full coverage", "gold-complement masking", "semantic chunks", "latency", "loading/length failures and full input availability"],
+  "adoption": "research candidate only until common boundary controls, semantic regression and independent quality gates pass"
+}

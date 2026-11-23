@@ -1,0 +1,12 @@
+{
+  "study": "agentic-vbench-separated-program-v2",
+  "selection_basis": "same four output slots and twelve input clips, no scores or oracle answers used",
+  "tasks": {
+    "agentic-vbench-assembly-task2": "development_source_retest",
+    "agentic-vbench-assembly-task6": "certification",
+    "agentic-vbench-assembly-task13": "sealed_successor_paired",
+    "agentic-vbench-sequencing-task1": "sealed_applicability",
+    "agentic-vbench-sequencing-task2": "sealed_applicability"
+  },
+  "expansion": "only after a credible original-Runtime adoption and independently scored delivery"
+}

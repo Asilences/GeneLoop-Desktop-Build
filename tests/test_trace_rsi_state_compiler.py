@@ -4,10 +4,10 @@ import json
 from pathlib import Path
 import pytest
 
-from src.adapters.trace_rsi_state_compiler import (
+from src.motif_core.offline.compilation.trace.trace_rsi_state_compiler import (
     ADDITIONS, FEATURE, compile_stateful_trace_motifs, learn_binary_condition,
 )
-from src.adapters.trace_rsi_motif_compiler import file_sha256
+from src.motif_core.offline.compilation.trace.trace_rsi_motif_compiler import file_sha256
 from test_trace_rsi_motif_compiler import make_run, events, write_events, save
 
 

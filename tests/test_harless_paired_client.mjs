@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { createHash, webcrypto } from 'node:crypto';
 
-const source = readFileSync(new URL('../src/adapters/harless_web_client/client.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../src/adapters/web/client/client.js', import.meta.url), 'utf8');
 const fileBytes = Buffer.from('%PDF-1.7\nfixture');
 const artifact = { id: 'file-one', name: 'outputs/report/research_report.pdf', bytes: fileBytes.length,
   sha256: createHash('sha256').update(fileBytes).digest('hex') };

@@ -2,8 +2,8 @@
 import { stripTypeScriptTypes } from 'node:module';
 import { readFileSync, writeFileSync } from 'node:fs';
 for (const name of ['approved_plan_continuation', 'source_dereference']) {
-  const source = new URL(`../src/motif_core/${name}.ts`, import.meta.url);
-  const output = new URL(`../src/motif_core/${name}.generated.mjs`, import.meta.url);
+  const source = new URL(`../src/motif_core/runtime/policies/${name}.ts`, import.meta.url);
+  const output = new URL(`../src/motif_core/runtime/policies/${name}.generated.mjs`, import.meta.url);
   const generated = `// Generated from ${name}.ts; do not edit.\n` +
     stripTypeScriptTypes(readFileSync(source, 'utf8'), { mode: 'strip' }).replace(/[\t ]+$/gm, '');
   if (process.argv.includes('--check')) {

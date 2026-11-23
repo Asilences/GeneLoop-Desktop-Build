@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 
-from src.adapters.benchmark_dependency_profile import PROFILE, dependency_profile
-from src.adapters.capability_feedback import file_ref
+from benchmarks.evolution.benchmark_dependency_profile import PROFILE, dependency_profile
+from src.rsi.feedback.capability_feedback import file_ref
 
 
 def test_matching_original_verifier_gets_pinned_public_dependency_steps(tmp_path):

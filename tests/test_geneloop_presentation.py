@@ -6,7 +6,7 @@ import zipfile
 
 import pytest
 from src.adapters.geneloop_presentation import read_presentation
-from src.adapters.harless_attachment_text import extract_attachment, P, A, R, PACKAGE_R
+from src.adapters.web.attachments.harless_attachment_text import extract_attachment, P, A, R, PACKAGE_R
 
 
 def fixture_deck():

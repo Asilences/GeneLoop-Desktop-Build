@@ -1,6 +1,6 @@
 import copy
 import pytest
-from src.adapters.trace_rsi_schema_adaptation import adapt_required_fields
+from src.motif_core.offline.compilation.trace.trace_rsi_schema_adaptation import adapt_required_fields
 
 
 def schema():

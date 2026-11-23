@@ -1,7 +1,7 @@
 """Encoding diagnostics; fake native metadata never authorizes execution."""
 import copy,json
-from src.adapters.capability_program_encoding import encode_complete_script
-from src.adapters.capability_contract import create_capability,create_capability_snapshot,capability_ref
+from src.capability.builder.capability_program_encoding import encode_complete_script
+from src.capability.graph.capability_contract import create_capability,create_capability_snapshot,capability_ref
 from tests.test_capability_improvement import put
 
 

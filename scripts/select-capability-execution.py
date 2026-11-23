@@ -6,10 +6,10 @@ alone is never used to authorize substitution. No model requests.
 import argparse,json,os,subprocess,sys,signal
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref
-from src.adapters.capability_contract import capability_digest
-from src.adapters.capability_improvement import save
-from src.adapters.capability_scene import run_child
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref
+from src.capability.graph.capability_contract import capability_digest
+from src.rsi.learning.capability_improvement import save
+from src.adapters.harness.capability.capability_scene import run_child
 
 
 def select(plan):

@@ -6,17 +6,17 @@ import json
 from decimal import Decimal, localcontext
 from pathlib import Path
 
-from src.adapters.capability_contract import create_capability_snapshot
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref, verify
-from src.adapters.capability_improvement import save
-from src.adapters.capability_investigation import Investigation
-from src.adapters.capability_evolution_inputs import load_builder_input_manifest
-from src.adapters.capability_decision_evidence import inspect_decision
-from src.adapters.capability_evolution_agent import strategy_handler
-from src.adapters.evolution_benchmark import BenchmarkHost, inspect_benchmark
-from src.adapters.evolution_benchmark_gene import _skill
-from src.adapters.rsi_quality import compare_research_outcomes
-from src.adapters.skillsbench_trial import task_manifest
+from src.capability.graph.capability_contract import create_capability_snapshot
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref, verify
+from src.rsi.learning.capability_improvement import save
+from src.rsi.evolution.capability_investigation import Investigation
+from src.adapters.web.learning.capability_evolution_inputs import load_builder_input_manifest
+from src.adapters.web.learning.capability_decision_evidence import inspect_decision
+from src.rsi.evolution.capability_evolution_agent import strategy_handler
+from benchmarks.evolution.evolution_benchmark import BenchmarkHost, inspect_benchmark
+from benchmarks.evolution.evolution_benchmark_gene import _skill
+from src.rsi.feedback.rsi_quality import compare_research_outcomes
+from benchmarks.evolution.skillsbench_trial import task_manifest
 from .evolution_history import index_history, inspect_history, OWNER, SCOPE
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -65,7 +65,7 @@ def select_pilot_candidate(admitted, validations, policy_ref):
 
 
 def behavior_rollout(trial, owner):
-    from src.adapters.evolution_benchmark import inspect_benchmark
+    from benchmarks.evolution.evolution_benchmark import inspect_benchmark
     observation = inspect_benchmark(trial['observation'], owner)
     actions = [ref for ref in observation['evidence'] if Path(ref['path']).name in ('tool-calls.jsonl', 'events.jsonl')]
     return {'record': trial['record'], 'observation': trial['observation'],

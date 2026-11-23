@@ -5,7 +5,7 @@ import {mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync} from 'node:fs
 import {tmpdir} from 'node:os';
 import {join, resolve, sep} from 'node:path';
 import {createHash} from 'node:crypto';
-import {bindSceneInputs, scopeDigest} from '../src/adapters/harless_task_scope.ts';
+import {bindSceneInputs, scopeDigest} from '../src/adapters/web/attachments/harless_task_scope.ts';
 
 const scene={id:'research-data-analysis',adapter:'data-report'};
 function fixture(files){
@@ -62,7 +62,7 @@ test('PPT atomic execution is server-owned; a task option cannot override the sc
   await bindSceneInputs(ctx,{},f.root,{id:'ppt-atomic',adapter:'ppt',ppt_execution_strategy:'baseline_steps'},
    f.refs.map(ref=>({type:'file',receiptId:ref.receipt})),{allow_output:true},'Generate six slides','atomic-task');
   assert.equal(JSON.parse(readFileSync(join(f.root,'job.json'),'utf8')).execution_policy.strategy,'baseline_steps');
-  const {sceneOptions}=await import('../src/adapters/harless_task_scope.ts');
+  const {sceneOptions}=await import('../src/adapters/web/attachments/harless_task_scope.ts');
   assert.throws(()=>sceneOptions({execution_policy:{strategy:'baseline_steps'}},{id:'ppt',adapter:'ppt'}),/invalid_scene_options/);
  }finally{f.close();}
 });

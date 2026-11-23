@@ -13,10 +13,10 @@ import zipfile
 from defusedxml import ElementTree
 from lxml import etree
 
-from scenarios.ppt_master.windows_delivery import attach_render_job, validate_windows_deck
+from scenarios.ppt_master.windows_delivery import archive_previews, attach_render_job, validate_windows_deck
 from scenarios.research_ppt.documents import pptx_slide_paths, safe_zip
 from scenarios.research_ppt.validation import NS, _read_package
-from src.adapters.harless_attachment_text import extract_attachment
+from src.adapters.web.attachments.harless_attachment_text import extract_attachment
 
 FIELD = re.compile(r'\{\{([A-Z][A-Z0-9_]{0,39})\}\}')
 TEXT = '{' + NS['a'] + '}t'
@@ -121,7 +121,8 @@ def edit_template(template, edits, stage, renderer):
     return {'mechanical_status': 'passed', 'review_status': 'pending', 'pages': len(page_texts),
             'changed_slide_parts': sorted(changed), 'text_shapes_edited': len(used),
             'artifacts': [{'kind': 'pptx', 'path': deck.name, 'sha256': result['pptx_sha256']},
-                          {**pdf, 'path': 'presentation.pdf'}]}
+                          {**pdf, 'path': 'presentation.pdf'},
+                          archive_previews(result['artifacts'], stage, stage / 'presentation-previews.zip')]}
 
 
 def fill_template(template, values, stage, renderer):
@@ -175,7 +176,8 @@ def fill_template(template, values, stage, renderer):
             'libreoffice_version': result['dependencies']['libreoffice_version'],
             'warnings': result['warnings'],
             'artifacts': [{'kind': 'pptx', 'path': deck.name, 'sha256': result['pptx_sha256']},
-                          {**pdf, 'path': 'presentation.pdf'}]}
+                          {**pdf, 'path': 'presentation.pdf'},
+                          archive_previews(result['artifacts'], stage, stage / 'presentation-previews.zip')]}
 
 
 def main():

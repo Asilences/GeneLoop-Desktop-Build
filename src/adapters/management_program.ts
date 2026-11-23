@@ -1,5 +1,5 @@
 /** Certified bounded copy programs on the current workspace MCP. No code eval. */
-import {digest,observation} from '../motif_core/online_skill_runtime.mjs';
+import {digest,observation} from '../motif_core/runtime/online_skill_runtime.mjs';
 const prefix='mcp__file_management__';
 const unsigned=(v:any,k:string)=>Object.fromEntries(Object.entries(v).filter(([n])=>n!==k));
 const path=(v:any)=>typeof v==='string'&&v.length>0&&!v.startsWith('/')&&!v.includes('\\')&&!v.split('/').some((s:string)=>['','.','..'].includes(s));

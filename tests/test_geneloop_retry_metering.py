@@ -1,5 +1,4 @@
 """Local HTTP diagnostics: every retry remains separately metered and attributed."""
-import importlib
 import json
 import threading
 import urllib.error
@@ -7,12 +6,20 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
-from src.adapters.web_task_budget import TaskBudgetRegistry
+from src.adapters import deepseek_cost_gate
+from src.adapters.web.web_task_budget import FileTaskBudgetRegistry, TaskBudgetRegistry
 
 
-@pytest.mark.parametrize('module', ['deepseek_cost_gate', 'file_cost_gate'])
-def test_transient_attempts_keep_task_identity_unknown_usage_and_retry_after(tmp_path, module):
-    gate = importlib.import_module('src.adapters.' + module)
+@pytest.fixture(params=[
+    pytest.param((deepseek_cost_gate.State, deepseek_cost_gate.create_server, TaskBudgetRegistry), id='web'),
+    pytest.param((deepseek_cost_gate.FileState, deepseek_cost_gate.create_file_server, FileTaskBudgetRegistry), id='file-sdk'),
+])
+def gateway(request):
+    return request.param
+
+
+def test_transient_attempts_keep_task_identity_unknown_usage_and_retry_after(tmp_path, gateway):
+    state_type, create_server, registry_type = gateway
     calls = []
     statuses = [429, 503, 200]
     usage = {'prompt_tokens': 10, 'prompt_cache_hit_tokens': 0,
@@ -30,14 +37,14 @@ def test_transient_attempts_keep_task_identity_unknown_usage_and_retry_after(tmp
             if status != 200: self.send_header('Retry-After', '7')
             self.end_headers(); self.wfile.write(raw)
 
-    run = gate.State(cap_usd=None, output_cap=None, request_limit=None, record=tmp_path/'run.jsonl')
-    registry = TaskBudgetRegistry(run_state=run, tasks_root=tmp_path/'.local'/'tasks')
+    run = state_type(cap_usd=None, output_cap=None, request_limit=None, record=tmp_path/'run.jsonl')
+    registry = registry_type(run_state=run, tasks_root=tmp_path/'.local'/'tasks')
     registry.register('a'*32, 'retry-session', None)
     registry.activate('retry-session')
     # Use the public registry API, so each attempt must still belong to the
     # same active admitted task. No gate-internal generic retry is introduced.
     upstream = ThreadingHTTPServer(('127.0.0.1', 0), Upstream)
-    proxy = gate.create_server('127.0.0.1', 0, f'http://127.0.0.1:{upstream.server_port}', run,
+    proxy = create_server('127.0.0.1', 0, f'http://127.0.0.1:{upstream.server_port}', run,
                               state_selector=registry.state_for)
     threads = [threading.Thread(target=s.serve_forever, kwargs={'poll_interval': .01}, daemon=True) for s in (upstream, proxy)]
     for thread in threads: thread.start()
@@ -74,11 +81,10 @@ def test_transient_attempts_keep_task_identity_unknown_usage_and_retry_after(tmp
         for thread in threads: thread.join(timeout=2)
 
 
-@pytest.mark.parametrize('module', ['deepseek_cost_gate', 'file_cost_gate'])
-def test_actual_budget_denial_is_structured_quota_without_dispatch(tmp_path, module):
-    gate = importlib.import_module('src.adapters.' + module)
-    state = gate.State(cap_usd=0, output_cap=None, record=tmp_path/'run.jsonl')
-    proxy = gate.create_server('127.0.0.1', 0, 'http://127.0.0.1:1', state)
+def test_actual_budget_denial_is_structured_quota_without_dispatch(tmp_path, gateway):
+    state_type, create_server, _ = gateway
+    state = state_type(cap_usd=0, output_cap=None, record=tmp_path/'run.jsonl')
+    proxy = create_server('127.0.0.1', 0, 'http://127.0.0.1:1', state)
     thread = threading.Thread(target=proxy.serve_forever, kwargs={'poll_interval':.01}, daemon=True); thread.start()
     try:
         request = urllib.request.Request(f'http://127.0.0.1:{proxy.server_port}/v1/chat/completions',

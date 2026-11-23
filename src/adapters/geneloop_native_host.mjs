@@ -37,6 +37,9 @@ export function composeNativeHost(input,sourceDir,{member=false}={}){
    {id:'geneloop-native-work',name:source+'adapters/geneloop_native_work.ts'}]});
  const map=row=>{
   if(typeof row.name==='string'&&row.name.startsWith('file:')){
+   // Some supported Node builds preserve dot segments in long file URLs.
+   // Reject traversal syntax explicitly before trusting a source prefix.
+   if(/(?:^|\/)(?:\.|%2e){1,2}(?:\/|$)/i.test(row.name)||row.name.includes('\\'))throw Error('Invalid plugin source URI');
    const uri=new URL(row.name);
    if(uri.href!==row.name||uri.search||uri.hash||/%2f|%5c/i.test(row.name))throw Error('Invalid plugin source URI');
    if(!row.name.startsWith(source)&&!(member&&row.name.startsWith(sandbox)))throw Error('Plugin is outside source directory');

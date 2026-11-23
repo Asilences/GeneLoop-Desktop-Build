@@ -7,7 +7,7 @@ are discovered from traces. Semantic text and writes never become reusable code.
 from collections import defaultdict
 import json
 from pathlib import Path
-from .native_motif_compiler import digest, root_events
+from src.motif_core.offline.compilation.trace.native_motif_compiler import digest, root_events
 from .paper_shadow_compiler import file_hash, arguments, artifact_path
 
 P = 'mcp__paper_checks__'
@@ -115,7 +115,7 @@ def compile_flow_shadow(runs):
     for path,old in epoch.items():
         current=file_hash(root/path)
         if current==old:continue
-        if path not in {'src/adapters/paper_flow_shadow_compiler.py','src/adapters/dsh_paper_flow_shadow.ts'}:
+        if path not in {'src/adapters/paper_flow_shadow_compiler.py','src/adapters/harness/paper/dsh_paper_flow_shadow.ts'}:
             raise ValueError('baseline behavior changed; a new training epoch is required')
         expected[path]=current;migrations.append({'path':path,'training_sha256':old,'runtime_sha256':current,
             'reason':'offline mining/shadow-only observer; absent from baseline execution'})

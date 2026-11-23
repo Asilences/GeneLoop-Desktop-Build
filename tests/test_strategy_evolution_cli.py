@@ -3,9 +3,9 @@ import importlib.util
 import json
 from pathlib import Path
 
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_decision_evidence import record_web_decision
-from src.adapters.capability_trajectory import project_web_task
+from src.rsi.feedback.capability_feedback import file_ref
+from src.adapters.web.learning.capability_decision_evidence import record_web_decision
+from src.adapters.web.learning.capability_trajectory import project_web_task
 from tests.test_capability_decision_evidence import web_task, context, put
 from tests.test_capability_feedback import fixture
 
@@ -16,9 +16,9 @@ def test_preview_uses_decision_evidence_and_preserves_private_messages(tmp_path)
     cli = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cli)
     cli.ROOT = tmp_path
-    code = tmp_path / 'src/adapters/capability_evolution_agent.py'
+    code = tmp_path / 'src/rsi/evolution/capability_evolution_agent.py'
     code.parent.mkdir(parents=True)
-    code.write_bytes((root / 'src/adapters/capability_evolution_agent.py').read_bytes())
+    code.write_bytes((root / 'src/rsi/evolution/capability_evolution_agent.py').read_bytes())
     _, library, _, _ = fixture(tmp_path)
     snapshot = put(tmp_path / 'snapshot.json', library['snapshot'])
     entries = []

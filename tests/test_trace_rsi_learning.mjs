@@ -9,7 +9,7 @@ import { runInNewContext } from 'node:vm';
 import { assertSupportedJsonSchema } from '@deepseek-ai/dsh-tools';
 import { digest } from '../src/adapters/paper_rsi_program.ts';
 import { runTraceTool, validateTraceCandidate } from '../src/adapters/trace_rsi_program.ts';
-import { apply, createTraceLearning } from '../src/adapters/dsh_trace_rsi_learning.ts';
+import { apply, createTraceLearning } from '../src/adapters/harness/paper/dsh_trace_rsi_learning.ts';
 import { createTraceRsiTools } from '../scenarios/paper-submission/trace-rsi-server.ts';
 
 const learningNames = ['rsi_trace_list','rsi_trace_read','rsi_propose','rsi_test','rsi_trial'];

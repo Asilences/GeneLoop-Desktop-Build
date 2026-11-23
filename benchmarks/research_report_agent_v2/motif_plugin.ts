@@ -11,7 +11,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, sep } from 'node:path';
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
-import { observation } from '../../src/motif_core/online_skill_runtime.mjs';
+import { observation } from '../../src/motif_core/runtime/online_skill_runtime.mjs';
 
 export const name = 'research-report-v2-receipt-motif';
 export const inject = ['llm', 'agents'];

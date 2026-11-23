@@ -29,12 +29,12 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_wire_id, model_api_key
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.scenario import prepare_scenario
 from src.adapters.native_budget import NativeBudgetGuard
 from src.adapters.deepseek_cost_gate import response_usage
-from src.adapters.dsh_trajectory import _observation_digest
-from src.adapters.dsh_event_projection import is_original_tool_result
+from src.adapters.harness.dsh_trajectory import _observation_digest
+from src.adapters.harness.dsh_event_projection import is_original_tool_result
 
 
 def digest(value):

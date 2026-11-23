@@ -160,6 +160,7 @@ def create_server(inputs):
         server.tool(annotations=ToolAnnotations(readOnlyHint=fn in readers,destructiveHint=False))(wrapped(fn))
     server._video_programs=programs
     server._video_execute=render_program
+    server._native_scene=scene
     return server
 if __name__=='__main__':
     server=create_server(Path(sys.argv[1]))

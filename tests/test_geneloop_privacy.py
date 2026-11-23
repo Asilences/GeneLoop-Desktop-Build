@@ -91,6 +91,19 @@ def test_schema_declarations_and_digest_handles_keep_protocol_meaning(monkeypatc
             'type':'array','items':{'type':'string','default':'synthetic'}}}}})
 
 
+def test_fixed_pending_reason_keeps_meaning_without_bypassing_packet_scan(monkeypatch):
+    reason='new_material_requires_next_generation_snapshot'
+    scanned=[]
+    monkeypatch.setattr(privacy,'_scan',scanned.append)
+    monkeypatch.setattr(privacy,'anonymize_text',
+        lambda value,**_: '<LOCATION>' if value in (reason,'Jane Smith') else value)
+    assert privacy.learning_view({'reason':reason,'note':'Jane Smith'}) == {
+        'reason':reason,'note':'<LOCATION>'}
+    assert len(scanned)==2 and all(reason in value for value in scanned)
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'reason':reason,'nested':{'access_token':'synthetic-private'}})
+
+
 def test_quoted_json_source_remains_valid_after_path_redaction(monkeypatch):
     monkeypatch.setattr(privacy,'_scan',lambda value:None)
     monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value.replace('/private/input','<PRIVATE_REFERENCE>'))
@@ -111,6 +124,76 @@ def events(prompt, arguments, response):
 
 
 TOOLS = ['mcp__diagnostic__analyze']
+
+
+@pytest.mark.parametrize('changed', ['format', 'scene', 'status', 'nodes', 'bindings',
+                                  'content_type', 'content_node_boolean', 'content_role',
+                                  'content_extra_field', 'content_count'])
+def test_projection_never_sends_protocol_to_nlp_but_still_scans_complete_material(monkeypatch, changed):
+    import copy
+    scanned, inferred = [], []
+    monkeypatch.setattr(privacy, '_scan', scanned.append)
+    def detector(value, **kwargs):
+        inferred.append(value)
+        return value.replace(changed, '<PERSON_1>')
+    monkeypatch.setattr(privacy, 'anonymize_text', detector)
+    original = events('Keep RMSE; ' + changed, {'threshold': 0.05}, {'text': 'Keep 24 fps'})
+    before = copy.deepcopy(original)
+    result = trace.project(original, 'future-custom-mcp', 'completed', TOOLS)
+    assert result['format'] == 'geneloop.rsi-learning-trace/v4'
+    assert result['scene'] == 'generic' and result['status'] == 'completed'
+    assert result['nodes'] == [{'tool': 'tool-0', 'outcome': 'observed_success'}]
+    assert result['content'][1]['type'] == 'tool/call' and type(result['content'][1]['node']) is int
+    assert result['content'][0]['value'] == ['Keep RMSE; <PERSON_1>']
+    assert TOOLS[0] not in inferred and result['format'] not in inferred
+    assert any(TOOLS[0] in value for value in scanned)
+    assert original == before
+
+
+def test_projection_allows_redacted_content_without_changing_original_metadata(monkeypatch):
+    import copy
+
+    def redacted(value):
+        visible = copy.deepcopy(value)
+        visible[0] = ['Keep RMSE; <EMAIL_ADDRESS_1>']
+        return visible
+
+    monkeypatch.setattr(trace, 'check_material', lambda value: None)
+    monkeypatch.setattr(trace, 'learning_view', redacted)
+    original = events('Keep RMSE; owner@example.com', {'threshold': 0.05}, {'text': 'Keep 24 fps'})
+    before = copy.deepcopy(original)
+    result = trace.project(original, 'future-custom-mcp', 'completed', TOOLS)
+    assert result['content'][0]['value'] == ['Keep RMSE; <EMAIL_ADDRESS_1>']
+    assert result['nodes'] == [{'tool': 'tool-0', 'outcome': 'observed_success'}]
+    assert original == before
+
+
+@pytest.mark.parametrize('bad', [None, {}, [], [0] * 5])
+def test_projection_rejects_missing_or_extra_sanitized_content(monkeypatch, bad):
+    monkeypatch.setattr(trace, 'check_material', lambda value: None)
+    monkeypatch.setattr(trace, 'learning_view', lambda value: bad)
+    with pytest.raises(privacy.PrivacyRejected):
+        trace.project(events('task', {}, {'text': 'result'}), 'ppt', 'completed', TOOLS)
+
+
+def test_payload_cannot_promote_its_own_fields_to_trusted_protocol(monkeypatch):
+    monkeypatch.setattr(privacy, '_scan', lambda value: None)
+    monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: value.replace('private-owner', '<PERSON_1>'))
+    source = {'format': 'geneloop.rsi-learning-trace/v4',
+              'nodes': [{'tool': 'private-owner'}], 'trusted': True}
+    assert 'private-owner' not in json.dumps(privacy.learning_view(source))
+
+
+def test_projected_tool_handles_preserve_repeated_calls_without_private_catalog(monkeypatch):
+    monkeypatch.setattr(privacy, '_scan', lambda value: None)
+    monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: value)
+    source = [{'type': 'tool/call', 'data': {'callId': str(i), 'name': name, 'arguments': '{}'}}
+              for i, name in enumerate(['mcp__private_owner__read', 'bash', 'mcp__private_owner__read'])]
+    result = trace.project(source, 'ppt', 'completed', ['mcp__private_owner__read', 'bash'])
+    assert [row['tool'] for row in result['nodes']] == ['tool-0', 'tool-1', 'tool-0']
+    assert 'private_owner' not in json.dumps(result)
+
+
 CASES = [
     ('paper-proofreading','核对 references 与 Equation (12)，联系邮箱 owner@example.com。','Equation (12)'),
     ('ppt','姓名：王小明。保留 16:9 与 slide master，联系邮箱 owner@example.com。','16:9'),
@@ -151,7 +234,7 @@ def test_all_registered_and_future_scenes_keep_task_semantics(scene, prompt, kee
         assert private not in rendered
     assert keep in rendered and '0.05' in rendered
     assert privacy.learning_view(result['content']) == result['content']
-    assert result['nodes'] == [{'tool':TOOLS[0], 'outcome':'observed_success'}]
+    assert result['nodes'] == [{'tool':'tool-0', 'outcome':'observed_success'}]
     assert 'owner@example.com' in json.dumps(original)
     structural = trace.project(original,scene,'completed',TOOLS,semantic=False)
     assert 'content' not in trace.sharing_object(structural,TOOLS)['trace']
@@ -179,3 +262,221 @@ def test_registered_tool_metadata_cannot_bypass_credential_admission(monkeypatch
     source[1]['data']['name']=name
     with pytest.raises(privacy.PrivacyRejected):
         trace.project(source,'future-mcp','completed',[name])
+
+
+@pytest.mark.parametrize('wrappers', [0, 1, 2])
+def test_scanner_sees_decoded_multiline_strings_in_every_json_wrapper(monkeypatch, wrappers):
+    raw = 'key = "synthetic-value"\nsecond line'
+    source = raw
+    for _ in range(wrappers):
+        source = json.dumps({'stdout': source}, ensure_ascii=True)
+    seen = []
+    def scan(value):
+        seen.append(value)
+        if raw in value:
+            raise ValueError('synthetic scanner hit')
+    monkeypatch.setattr(privacy, '_scan', scan)
+    monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: value)
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'text': source})
+    assert raw in seen[0]
+
+
+def test_decoded_key_and_normalized_source_are_scanned_before_and_after(monkeypatch):
+    seen = []
+    monkeypatch.setattr(privacy, '_scan', seen.append)
+    monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: value)
+    source = {'ｋｅｙ': 'row\n"quoted"'}
+    assert privacy.learning_view(source) == source
+    assert len(seen) == 2
+    assert all('row\n"quoted"' in value and 'key' in value.split('\n\n') for value in seen)
+
+
+def test_text_normalization_maps_graphemes_without_rewriting_task_code():
+    from src.adapters.rsi_text_privacy import _normalized_view
+    source = 'Ａ\u030a，保持 x² 与 ﬃ'
+    canonical, starts, ends = _normalized_view(source)
+    assert canonical == 'Å,保持 x2 与 ffi'
+    assert source[starts[0]:ends[0]] == 'Ａ\u030a'
+    i = canonical.index('ffi')
+    assert source[starts[i]:ends[i+2]] == 'ﬃ'
+
+
+@pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual local Presidio and Gitleaks')
+def test_inline_identity_and_protocol_words_are_sanitized_without_unicode_rejection():
+    source = {'text': 'Keep record_evidence_id and new_material_requires_next_generation_snapshot. '
+                       '联系人：张三；邮箱 owner@example.com；手机 13800138000。保留 mean ± SD，三次重复，n=128。'}
+    result = privacy.learning_view(source)['text']
+    assert all(value not in result for value in ['张三', 'owner@example.com', '13800138000'])
+    assert all(value in result for value in ['record_evidence_id', 'new_material_requires_next_generation_snapshot', 'mean ± SD', 'n=128'])
+    assert '联系人：' in result
+
+
+@pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual local Presidio and Gitleaks')
+def test_unicode_identity_values_share_alias_while_original_unicode_math_is_kept():
+    source = {'text':'姓名：张三，保留 x²、µ 和 ﬃ。', 'full_name':'张三'}
+    result = privacy.learning_view(source)
+    assert result['full_name'] in result['text']
+    assert 'x²、µ 和 ﬃ' in result['text'] and source['full_name'] == '张三'
+
+
+@pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual local Gitleaks')
+@pytest.mark.parametrize('fullwidth', [False, True])
+def test_actual_scanner_hit_cannot_be_hidden_by_quoted_nested_json(fullwidth):
+    import random
+    import string
+    import subprocess
+    from src.adapters.rsi_text_privacy import _scan
+    # Deterministic synthetic entropy, never an issued or verified credential.
+    value = ''.join(random.Random(814).choices(string.ascii_letters + string.digits, k=40))
+    raw = 'api_key = "' + value + '"\nKeep 24 fps.'
+    with pytest.raises(subprocess.CalledProcessError) as hit:
+        _scan(raw)
+    assert hit.value.returncode == 1
+    if fullwidth:
+        raw = raw.replace('api_key', 'ａｐｉ＿ｋｅｙ')
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'stdout': json.dumps({'nested': raw})})
+
+
+def test_protected_prose_vocabulary_does_not_bypass_explicit_identity_fields(monkeypatch):
+    monkeypatch.setattr(privacy, '_scan', lambda value: None)
+    monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: value)
+    result = privacy.learning_view({'full_name':'record_evidence_id', 'phone':'n=128'})
+    assert result['full_name'].startswith('<PERSON_')
+    assert result['phone'].startswith('<PHONE_NUMBER_')
+
+
+@pytest.mark.parametrize('raw', ['{"password":"a","password":null}',
+                               r'{"email":"first","\u0065mail":"second"}'])
+def test_standard_json_decoder_rejects_duplicate_and_escaped_duplicate_keys(raw):
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy._decoded(raw)
+
+
+@pytest.mark.parametrize('wrappers', [0, 1, 2])
+def test_duplicate_json_fields_never_preserve_the_ambiguous_original(monkeypatch, wrappers):
+    monkeypatch.setattr(privacy, '_scan', lambda value: None)
+    monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: value)
+    raw = '{"password":"a","password":null}'
+    for _ in range(wrappers):
+        raw = json.dumps({'nested': raw})
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'stdout': raw})
+
+
+def test_json_decoder_depth_failure_is_not_reinterpreted_as_safe_prose(monkeypatch):
+    import sys
+    monkeypatch.setattr(privacy, '_scan', lambda value: None)
+    monkeypatch.setattr(privacy, 'anonymize_text', lambda value, **_: value)
+    depth = sys.getrecursionlimit() + 50
+    with pytest.raises(privacy.PrivacyRejected):
+        privacy.learning_view({'stdout': '[' * depth + '0' + ']' * depth})
+
+
+@pytest.mark.parametrize('source',['user','model','tool','arguments'])
+def test_projector_rejects_ambiguous_json_before_any_value_is_discarded(monkeypatch,source):
+    monkeypatch.setattr(privacy,'_scan',lambda value:None)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value)
+    raw='{"password":"diagnostic-only","password":""}'
+    original=events('Keep RMSE.',{}, {'text':'Keep 24 fps.'})
+    if source=='arguments':original[1]['data']['arguments']=raw
+    elif source=='tool':original[2]['data']['message']['content'][0]['content'][0]['text']=raw
+    elif source=='model':original[3]['data']['message']['content'][0]['text']=raw
+    else:original[0]['data']['content'][0]['text']=raw
+    before=json.dumps(original,ensure_ascii=False)
+    with pytest.raises(privacy.PrivacyRejected):
+        trace.project(original,'future-custom-mcp','completed',TOOLS)
+    assert json.dumps(original,ensure_ascii=False)==before
+
+
+def test_offline_jsonl_rejects_duplicate_event_fields_in_first_parse(tmp_path,monkeypatch):
+    monkeypatch.setattr(privacy,'_scan',lambda value:None)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value)
+    path=tmp_path/'events.jsonl'
+    raw='{"type":"user/message","data":{"password":"diagnostic-only"},"data":{}}\n'
+    path.write_text(raw,encoding='utf-8')
+    with pytest.raises(privacy.PrivacyRejected):
+        trace.import_trace(path,'chat','completed',0,[])
+    assert path.read_text()==raw
+
+
+def test_sdk_capture_never_persists_a_view_from_duplicate_arguments(tmp_path,monkeypatch):
+    monkeypatch.setattr(privacy,'_scan',lambda value:None)
+    monkeypatch.setattr(privacy,'anonymize_text',lambda value,**_:value)
+    original=events('Keep RMSE.',{}, {'text':'Keep 24 fps.'})
+    original[1]['data']['arguments']='{"password":"diagnostic-only","password":""}'
+    destination=tmp_path/'sdk-admission'
+    assert trace.capture_native_events(destination,original,session_id='synthetic-session',status='completed') is False
+    assert (destination/'privacy-learning-rejected').is_file()
+    assert not (destination/'privacy-learning.json').exists()
+
+
+@pytest.mark.skipif(not LOCAL_TOOLS,reason='requires actual local Presidio/Gitleaks')
+@pytest.mark.parametrize('source',['user','model','tool'])
+def test_numeric_text_is_redacted_without_coercion_or_metric_loss(source):
+    import copy
+    original=events('Keep RMSE and n=128.',{'count':3,'threshold':0.05},{'text':'Keep 24 fps.'})
+    phone='13800138000'
+    if source=='user':original[0]['data']['content'][0]['text']=phone
+    elif source=='model':original[3]['data']['message']['content'][0]['text']=phone
+    else:original[2]['data']['message']['content'][0]['content'][0]['text']=phone
+    before=copy.deepcopy(original)
+    result=trace.project(original,'future-custom-mcp','completed',TOOLS)
+    assert phone not in json.dumps(result,ensure_ascii=False)
+    assert original==before
+    args=next(row['value'] for row in result['content'] if row['type']=='tool/call')
+    assert args=={'count':3,'threshold':0.05}
+
+
+@pytest.mark.skipif(not LOCAL_TOOLS,reason='requires actual pinned local spaCy pipelines')
+def test_persistent_model_reuse_does_not_retain_request_vocabulary():
+    from uuid import uuid4
+    from src.adapters.rsi_text_privacy import _presidio,anonymize_text
+    analyzer,_=_presidio()
+    token='privateword'+uuid4().hex
+    nlp=analyzer.nlp_engine.nlp['en']
+    assert token not in nlp.vocab.strings
+    assert isinstance(anonymize_text('Compute RMSE. '+token),str)
+    assert token not in nlp.vocab.strings
+
+
+@pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual Presidio Anonymizer')
+def test_original_person_view_adds_to_canonical_hits_and_preserves_aliases(monkeypatch):
+    from src.adapters import rsi_text_privacy as text_privacy
+    from presidio_analyzer import RecognizerResult
+    from presidio_anonymizer import AnonymizerEngine
+    source='甲，乙；保留 x²。'
+    calls=[]
+    class Analyzer:
+        def get_supported_entities(self, **kwargs):return ['PERSON']
+        def analyze(self, *, text, language, entities, **kwargs):
+            calls.append((text,language))
+            if language!='zh':return []
+            value='甲' if text==source else '乙'
+            start=text.index(value)
+            return [RecognizerResult('PERSON',start,start+1,.85,
+                recognition_metadata={'recognizer_name':'SpacyRecognizer'})]
+    monkeypatch.setattr(text_privacy,'_presidio',lambda:(Analyzer(),AnonymizerEngine()))
+    aliases={}
+    def alias(entity,value):return aliases.setdefault(value,'<'+entity+'_'+str(len(aliases)+1)+'>')
+    result=text_privacy.anonymize_text(source,alias=alias)
+    assert '甲' not in result and '乙' not in result and '保留 x²。' in result
+    assert set(aliases)=={'甲','乙'} and source=='甲，乙；保留 x²。'
+    assert (source,'zh') in calls
+
+
+@pytest.mark.skipif(not LOCAL_TOOLS, reason='requires actual Presidio Anonymizer')
+@pytest.mark.parametrize('label',['record_evidence_id','n=128'])
+def test_original_person_view_cannot_remove_protected_prose(monkeypatch,label):
+    from src.adapters import rsi_text_privacy as text_privacy
+    from presidio_analyzer import RecognizerResult
+    from presidio_anonymizer import AnonymizerEngine
+    source=label+'；保留 x²。'
+    class Analyzer:
+        def get_supported_entities(self, **kwargs):return ['PERSON']
+        def analyze(self, *, text, language, **kwargs):
+            return [RecognizerResult('PERSON',0,len(label),.85,
+                recognition_metadata={'recognizer_name':'SpacyRecognizer'})] if text==source and language=='en' else []
+    monkeypatch.setattr(text_privacy,'_presidio',lambda:(Analyzer(),AnonymizerEngine()))
+    assert text_privacy.anonymize_text(source)==source

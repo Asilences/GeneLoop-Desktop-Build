@@ -1,7 +1,7 @@
 """Metadata-only correction keeps rendered geometry and visible text intact."""
 import pytest
 
-from src.adapters.ppt_annotation_repair import annotation_signature, repair_module_annotations
+from src.adapters.ppt.learning.ppt_annotation_repair import annotation_signature, repair_module_annotations
 
 
 SVG = b'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">

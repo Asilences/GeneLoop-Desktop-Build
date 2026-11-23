@@ -5,7 +5,8 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'scenarios/file-management'))
 from src.adapters.continuous_rsi import records,source_map,snapshot,ledger_accounting
-from src.motif_core.offline.experience_registry import read,sha,digest,check_motif_certificate
+from src.adapters.file_management.experience_certification import check_motif_certificate
+from src.motif_core.reuse.experience_registry import read, sha, digest
 from src.adapters.continuous_motif_learning import frame
 from report_study import verify_report
 

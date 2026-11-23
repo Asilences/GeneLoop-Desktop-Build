@@ -5,10 +5,10 @@ import importlib.util
 import json
 from pathlib import Path
 import pytest
-from src.adapters.capability_feedback import CapabilityFeedback, execution_cost, file_ref
-from src.adapters.capability_contract import capability_ref, create_capability_snapshot
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_authoring import authoring_context, aliases
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, execution_cost, file_ref
+from src.capability.graph.capability_contract import capability_ref, create_capability_snapshot
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.builder.capability_authoring import authoring_context, aliases
 from tests.test_capability_builder import setup
 from src.adapters.file_lock import exclusive_lock
 
@@ -194,7 +194,7 @@ def test_feedback_import_does_not_require_posix_fcntl(monkeypatch):
         return original(name,*args,**kwargs)
     monkeypatch.setattr(builtins,'__import__',portable_import)
     spec=importlib.util.spec_from_file_location('src.adapters.feedback_portability_diagnostic',
-        Path(__file__).resolve().parents[1]/'src/adapters/capability_feedback.py')
+        Path(__file__).resolve().parents[1]/'src/rsi/feedback/capability_feedback.py')
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
     assert module.CapabilityFeedback
 

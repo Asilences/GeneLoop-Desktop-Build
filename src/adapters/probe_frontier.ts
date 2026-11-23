@@ -1,6 +1,6 @@
 /** Bounded subset diagnosis. Observed failure witnesses, never a causal proof.
  * Caller owns schema/effect/source guards and the native tool lifecycle. */
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 const clone=(x:any)=>JSON.parse(JSON.stringify(x));
 export function probeOutcome(contract:any,result:any){
  if(!result||typeof result!=='object'||result.error||result.validation_error)return 'other';

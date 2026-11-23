@@ -1,0 +1,8 @@
+{
+  "study": "agentic-vbench-reuse-choice-development-20261110-v1",
+  "evaluation_role": "development_retest_previously_exposed_task_not_unseen_evaluation",
+  "tasks": {"agentic-vbench-assembly-task13": "sealed_successor_paired"},
+  "selection_basis": "Same already-exposed Task13 after a completed frozen normal pair; inspect applicability and revise conflicting implementation instructions, without changing the program, library or oracle.",
+  "learning_allowed": false,
+  "expansion": "One optional-adoption development retest using the same certified C. No learning from this successor and no claim of independent unseen gains."
+}

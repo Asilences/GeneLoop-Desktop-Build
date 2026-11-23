@@ -22,7 +22,7 @@ from uuid import uuid4
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State,create_server
 def module(name,path):
     spec=importlib.util.spec_from_file_location(name,path);mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod);return mod
@@ -31,9 +31,9 @@ save,sha=rsi.save,rsi.sha
 EXP=ROOT/'.local/paper-reference/paper-rsi-tool-learning-20261011-v1'
 AUTH=ROOT/'.local/paper-reference/paper-rsi-overnight-20261011-v1/authorized-budget.json'
 FILES=['scripts/paper-rsi-tool-learning.py','scripts/paper-rsi-program-check.mjs',
- 'src/adapters/paper_rsi_program.ts','src/adapters/dsh_paper_rsi_learning.ts','src/adapters/dsh_paper_rsi_shadow.ts',
+ 'src/adapters/paper_rsi_program.ts','src/adapters/harness/paper/dsh_paper_rsi_learning.ts','src/adapters/harness/paper/dsh_paper_rsi_shadow.ts',
  'scenarios/paper-submission/rsi-server.ts','scenarios/paper-submission/rsi-learning.prompt.md',
- 'src/adapters/paper_triage_validation.ts','src/adapters/dsh_online_motif.mjs']
+ 'src/adapters/paper_triage_validation.ts','src/adapters/harness/motif/dsh_online_motif.mjs']
 def digest(v):return hashlib.sha256(json.dumps(v,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def fixtures():
     def case(label,expected,rows,scope='cited_arxiv_version_triage',current='source-A',version='source-A'):
@@ -138,7 +138,7 @@ def paid(label,prompt,policy,config,env_extra):
 def learn(label):
     train,_=setup();template=(ROOT/'scenarios/paper-submission/rsi-learning.prompt.md').read_text()
     prompt=template.replace('{{TRAINING}}',json.dumps(train,ensure_ascii=False))
-    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-cordis-host-runner"\n      config:\n        vmTimeoutMs: 5000\n    - name: "@deepseek-ai/dsh-tool-cordis"\n    - name: '+json.dumps((ROOT/'src/adapters/dsh_paper_rsi_learning.ts').as_uri())+'\n'
+    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-cordis-host-runner"\n      config:\n        vmTimeoutMs: 5000\n    - name: "@deepseek-ai/dsh-tool-cordis"\n    - name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_paper_rsi_learning.ts').as_uri())+'\n'
     return paid(label,prompt,policy,{'mode':'learning','training':train},['SSS_PAPER_RSI_LEARNING'])
 def events(run):
     return [r['event'] for line in (run/'events.jsonl').read_text().splitlines()
@@ -179,7 +179,7 @@ def task(case,mode,label):
       'code_files':{str(ROOT/p):sha(ROOT/p) for p in FILES},
       'source_version':rsi.checks.PaperEvidence(inputs,ROOT/'.local').version(case),'seed_report':report}
     if mode=='shadow':config['shadow_library']=str(EXP/'shadow-library.json')
-    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_rsi\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/rsi-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_PAPER_RSI_CONFIG: '+json.dumps(str(EXP/'runs'/label/'config.json'))+'\n    - name: '+json.dumps((ROOT/'src/adapters/dsh_paper_rsi_shadow.ts').as_uri())+'\n'
+    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_rsi\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/rsi-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_PAPER_RSI_CONFIG: '+json.dumps(str(EXP/'runs'/label/'config.json'))+'\n    - name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_paper_rsi_shadow.ts').as_uri())+'\n'
     run=paid(label,prompt,policy,config,['SSS_PAPER_RSI_CONFIG'])
     print(node(ROOT/'scripts/check-paper-rsi-task.mjs',run/'config.json').stdout)
     return run

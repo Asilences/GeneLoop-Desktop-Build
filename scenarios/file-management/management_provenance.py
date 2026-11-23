@@ -17,12 +17,35 @@ class ReadReplayPath:
 def lineage_history(spec,state):
     expected=copy.deepcopy(spec['initial_tree'])
     origins={k+'/'+n:k+'/'+n for k,t in expected.items() for n in t['files']}
-    history=[];cursor=[]
+    history=[];cursor=[];saved={}
     def remember():history.append({'tree':copy.deepcopy(expected),'origins':dict(origins),'cursor':copy.deepcopy(cursor)})
     remember()
-    for pid,j in state.get('journals',{}).items():
+    events=state.get('operation_history')
+    if events is None:
+        events=[{'plan_id':pid,'direction':direction} for pid,j in state.get('journals',{}).items()
+            for direction in (['execute','restore'] if j['status']=='restored_verified' else ['execute'])]
+    seen=set()
+    for event in events:
+        pid=event['plan_id'];j=state['journals'][pid];direction=event['direction']
+        if (pid,direction) in seen:raise ValueError('source lineage repeats an operation')
+        seen.add((pid,direction))
+        if direction=='restore':
+            if pid not in saved or j['status']!='restored_verified':raise ValueError('source lineage restoration lacks original execution')
+            before_tree,before_origins=saved[pid];chain=j['restore_before']
+            if chain!=expected:raise ValueError('source lineage restoration starts elsewhere')
+            if j.get('restore_boundaries',[])!=[{'before':b['after'],'after':b['before']} for b in reversed(j['boundaries'])]:
+                raise ValueError('source lineage restoration is not inverse effects')
+            for b in j.get('restore_boundaries',[]):
+                if b['before']!=chain:raise ValueError('source lineage restoration chain differs')
+                chain=b['after']
+            if chain!=before_tree:raise ValueError('source lineage restoration did not restore the original tree')
+            expected=copy.deepcopy(before_tree);origins=dict(before_origins)
+            cursor[next(i for i,c in enumerate(cursor) if c[0]==pid)]=[pid,'restored_verified',len(j['completed']),j['restored_count']]
+            remember();continue
+        if direction!='execute':raise ValueError('source lineage unknown operation direction')
         if j['before']!=expected:raise ValueError('source lineage journal chain differs')
         plan=state['plans'][pid];before_origins=dict(origins);before_tree=copy.deepcopy(expected)
+        saved[pid]=(before_tree,before_origins)
         if plan['before']!=expected or plan['task_sha256']!=digest(spec):raise ValueError('source lineage original plan differs')
         writes={}
         for a in plan['actions']:
@@ -45,16 +68,7 @@ def lineage_history(spec,state):
             expected=legal
         complete=len(j['completed'])==len(j['effects'])
         cursor.append([pid,'executed_verified' if complete else 'executing',len(j['completed']),0]);remember()
-        if j['status']=='restored_verified':
-            chain=j['restore_before']
-            if chain!=expected:raise ValueError('source lineage restoration starts elsewhere')
-            for b in j.get('restore_boundaries',[]):
-                if b['before']!=chain:raise ValueError('source lineage restoration chain differs')
-                chain=b['after']
-            if chain!=before_tree:raise ValueError('source lineage restoration did not restore the original tree')
-            expected=before_tree;origins=before_origins
-            cursor[-1]=[pid,'restored_verified',len(j['completed']),j['restored_count']];remember()
-        elif j['status']!='executed_verified':
+        if j['status'] not in ('executed_verified','restored_verified'):
             raise ValueError('source lineage needs the original unfinished plan recovered first')
     if expected!=state['expected_tree']:raise ValueError('source lineage current tree differs')
     return history

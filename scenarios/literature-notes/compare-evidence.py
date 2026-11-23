@@ -48,8 +48,8 @@ def code_version():
 
 def approved_origin(run, directory, cache, delivery):
     """The plan must come from native successful paid events, not a typed approval flag."""
-    from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
-    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
     run = Path(run).resolve()
     if not run.is_relative_to(ROOT / '.local/runs'):
         raise ValueError('plan origin must be a private shared-run directory')

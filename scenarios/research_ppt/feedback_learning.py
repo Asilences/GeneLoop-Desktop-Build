@@ -480,8 +480,8 @@ class FeedbackStore:
         for item in receipt['files']:
             if not _sha(item.get('sha256')) or _hash(_private(item['path'], exists=True)) != item['sha256']:
                 raise ValueError('交付文件字节变化')
-        from src.adapters.dsh_event_projection import is_original_tool_result
-        from src.adapters.dsh_trajectory import _observation_digest
+        from src.adapters.harness.dsh_event_projection import is_original_tool_result
+        from src.adapters.harness.dsh_trajectory import _observation_digest
         names, call_args, observed_receipts, host_count = {}, {}, [], 0
         for line in (directory / 'agent-events.jsonl').read_text(encoding='utf-8').splitlines():
             if not line.strip():

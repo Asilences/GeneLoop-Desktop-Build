@@ -4,7 +4,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 from contextlib import contextmanager
 
-from src.adapters.capability_goal_proposal import propose
+from src.adapters.harness.capability.capability_goal_proposal import propose
 from tests.test_capability_proposal_loop import DiagnosticGate, fake_harness
 
 
@@ -36,7 +36,7 @@ def test_incomplete_goal_turn_retains_fees_and_does_not_retry(tmp_path,monkeypat
 
 
 def test_public_adapter_opens_and_closes_finite_gate_only_for_goal_turn(tmp_path,monkeypatch):
-    from src.adapters.capability_scene import CapabilityImprovementAdapter
+    from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter
     fake_harness(monkeypatch,json.dumps({'goals':[]}))
     adapter=CapabilityImprovementAdapter.__new__(CapabilityImprovementAdapter);events=[]
     @contextmanager

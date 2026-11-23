@@ -9,13 +9,13 @@ import json
 
 import pytest
 
-from src.adapters.benchmark_capability_publication import (
+from benchmarks.evolution.benchmark_capability_publication import (
     learning_dependency_snapshot, original_store_catalog, prepare_recursive_publication,
     prepare_witnessed_case, publish_recursive_candidate,
 )
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import capability_ref, create_capability_snapshot
-from src.adapters.capability_feedback import verify
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import capability_ref, create_capability_snapshot
+from src.rsi.feedback.capability_feedback import verify
 from tests.test_benchmark_script_materials import data, acquire
 from tests.test_capability_motif_learning import corpus, call_trace, put
 
@@ -150,7 +150,7 @@ def test_composition_slots_are_not_misclassified_as_leaf_paths(tmp_path, data):
 def test_mixed_snapshots_rebuild_original_candidate_before_native_backend_guard(tmp_path, corpus):
     """Synthetic artifact receipts prove validation order, not Script publication."""
     from types import SimpleNamespace
-    from src.adapters.capability_motif_learning import learn_capability_motifs
+    from src.rsi.learning.capability_motif_learning import learn_capability_motifs
     _, current, _, _, original = corpus
     closure = learning_dependency_snapshot(original, current)
     assert closure['digest'] != current['digest']

@@ -7,16 +7,18 @@ import argparse
 import hashlib
 import json
 import sys
-from pathlib import Path
+from pathlib import Path as BootstrapPath
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = BootstrapPath(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.filesystem_paths import Path
+ROOT = Path(ROOT).resolve()
 
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.library_builder import validate_read_motif_library
-from src.motif_core.read_executor import _validate_artifact
-from src.motif_core.offline.local_programs import compile_local_programs
-from src.motif_core.offline.continuation_policy import policy_digest
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.library_builder import validate_read_motif_library
+from src.motif_core.runtime.read_executor import _validate_artifact
+from src.motif_core.offline.compilation.local_programs import compile_local_programs
+from src.motif_core.offline.compilation.continuation_policy import policy_digest
 
 
 def digest(value: dict) -> str:

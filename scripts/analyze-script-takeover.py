@@ -14,8 +14,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.script_motif_compiler import observe, extract
-from src.adapters.script_negative_compiler import collect_negative
+from src.motif_core.offline.compilation.script_motif_compiler import observe, extract
+from src.motif_core.offline.compilation.script_negative_compiler import collect_negative
 from src.adapters.deepseek_cost_gate import PEAK_USD_PER_MILLION, CACHE_HIT_PEAK_USD_PER_MILLION
 
 spec = importlib.util.spec_from_file_location('script_cost', ROOT / 'scripts/analyze-script-motif-cost.py')

@@ -1,7 +1,7 @@
 export const TITLE_BAR_HEIGHT = 32;
 export type Appearance = { background: string; foreground: string; dark: boolean };
-export const LIGHT_APPEARANCE: Appearance = { background: '#f7f7f8', foreground: '#171719', dark: false };
-export const DARK_APPEARANCE: Appearance = { background: '#1b1b1b', foreground: '#f1f1f1', dark: true };
+export const LIGHT_APPEARANCE: Appearance = { background: '#f5f7f7', foreground: '#272b2e', dark: false };
+export const DARK_APPEARANCE: Appearance = { background: '#202527', foreground: '#edf0f0', dark: true };
 
 /** 渲染器只可报告两个颜色值，不接受CSS文本、URL或任何窗口操作。 */
 export function readAppearance(value: unknown): Appearance | undefined {

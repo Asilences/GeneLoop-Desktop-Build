@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from src.adapters.deepseek_cost_gate import State, cost_cap_argument, reservation
-from src.adapters.web_task_budget import TaskBudgetRegistry
+from src.adapters.web.web_task_budget import TaskBudgetRegistry
 
 ROOT = Path(__file__).resolve().parents[1]
 BODY = b'{"model":"deepseek-flash","max_tokens":1000,"messages":[]}'

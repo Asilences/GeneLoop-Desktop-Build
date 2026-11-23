@@ -5,10 +5,10 @@ import json
 
 import pytest
 
-from src.adapters.trace_rsi_motif_compiler import (
+from src.motif_core.offline.compilation.trace.trace_rsi_motif_compiler import (
     PREFIX, compile_trace_rsi_motifs, file_sha256, load_provider_tools,
 )
-from src.adapters.trace_tool_evidence import digest
+from src.motif_core.trajectory.trace_tool_evidence import digest
 
 
 def save(path, value):

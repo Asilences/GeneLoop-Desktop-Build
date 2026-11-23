@@ -69,7 +69,7 @@ def test_native_file_chat_file_keeps_started_parent_preset_and_private_copy():
                 {'id':'paper-proofreading','label':'Paper','preset':'sss-paper','adapter':'workspace','allowed_tools':[],'mcp_rows':[]}]}
         (output/'policy.json').write_text(json.dumps(policy))
         task_plugin=output/'native-tasks-fixture.mjs'
-        task_plugin.write_text("export {inject,name,apply} from '"+(ROOT/'src/adapters/dsh_web_tasks.ts').as_uri()+"';",encoding='utf-8')
+        task_plugin.write_text("export {inject,name,apply} from '"+(ROOT/'src/adapters/web/dsh_web_tasks.ts').as_uri()+"';",encoding='utf-8')
         plugin=output/'native-file-fixture.mjs'
         plugin.write_text("""
 import {EventEmitter} from 'node:events';
@@ -112,7 +112,7 @@ export function apply(ctx){
   }};return child;
  });
 }
-""".replace('TASKS_URI',(ROOT/'src/adapters/dsh_web_tasks.ts').as_uri()).replace('FILE_URI',(ROOT/'src/adapters/harless_file_scene.ts').as_uri()),encoding='utf-8')
+""".replace('TASKS_URI',(ROOT/'src/adapters/web/dsh_web_tasks.ts').as_uri()).replace('FILE_URI',(ROOT/'src/adapters/web/scenes/harless_file_scene.ts').as_uri()),encoding='utf-8')
         patch=[{'id':name,'disabled':True} for name in ('llm-deepseek','llm-pi-ai','session-title-llm','llm-retry','compaction-basic','command-compact','session-log-deepseek','goal','goal-round-driver')]
         patch += [{'id':'web-runtime','config':{'openBrowser':False,'printUrl':True,'surfaceContext':False,'trustedHosts':[]}},
             {'id':'agent-presets','config':{'default':'sss-task','includeShippedRoot':False,'includeUserRoot':False,'roots':[{'path':str(output/'presets'),'trust':'system'}]}},

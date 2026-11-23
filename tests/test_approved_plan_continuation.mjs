@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BlockAssembler } from '@deepseek-ai/dsh-llm';
-import { createOnlineInterceptor } from '../src/adapters/dsh_online_motif.mjs';
+import { createOnlineInterceptor } from '../src/adapters/harness/motif/dsh_online_motif.mjs';
 import { compileLocalPrograms, digest, validateOnlineManifest, parseStructuredTask, proposeReadyBatch }
-  from '../src/motif_core/online_skill_runtime.mjs';
+  from '../src/motif_core/runtime/online_skill_runtime.mjs';
 
 // Synthetic compiler-shaped fixture: tests authorization, not learning quality.
 function fixture() {

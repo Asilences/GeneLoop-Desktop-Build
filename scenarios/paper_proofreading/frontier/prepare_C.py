@@ -1,9 +1,9 @@
 """Pin actual primitive examples and the C job; no model or generated fixtures."""
 import argparse,json,subprocess
 from pathlib import Path
-from src.adapters.capability_scene import ROOT,reference
-from src.adapters.capability_improvement import evidence,save
-from src.adapters.capability_contract import create_capability_snapshot
+from src.adapters.harness.capability.capability_scene import ROOT,reference
+from src.rsi.learning.capability_improvement import evidence,save
+from src.capability.graph.capability_contract import create_capability_snapshot
 from scenarios.paper_proofreading.frontier.execute import execute
 from scenarios.paper_proofreading.frontier.oracle import evaluate,audit,canonical
 from scenarios.paper_proofreading.frontier.freeze import protocol_reference

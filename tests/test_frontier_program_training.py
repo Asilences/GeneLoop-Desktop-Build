@@ -10,10 +10,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters.capability_authoring import aliases
-from src.adapters.capability_contract import capability_ref,create_capability_snapshot
-from src.adapters.capability_program_encoding import freeze_program_composition
-from src.adapters.capability_scene import reference
+from src.capability.builder.capability_authoring import aliases
+from src.capability.graph.capability_contract import capability_ref,create_capability_snapshot
+from src.capability.builder.capability_program_encoding import freeze_program_composition
+from src.adapters.harness.capability.capability_scene import reference
 from scenarios.paper_proofreading.frontier import program_training
 from tests.test_capability_builder import setup as builder_setup,RECORD
 from tests.test_capability_improvement import put
@@ -260,8 +260,8 @@ def test_certified_prefix_native_probe_and_final_candidate_share_the_same_bound_
     """Real native execution, input certification and composition; no model call."""
     from scenarios.paper_proofreading.frontier.learn import learn
     from scenarios.paper_proofreading.frontier.execute import execute
-    from src.adapters.capability_program_encoding import encode_program_composition
-    from src.adapters.capability_source_authoring import compile_capability_source
+    from src.capability.builder.capability_program_encoding import encode_program_composition
+    from src.capability.builder.capability_source_authoring import compile_capability_source
     values=[];construction=[]
     for i,n in enumerate((2,8)):
         path=tmp_path/('old-'+str(i)+'.json');path.write_text(json.dumps({'n':n},sort_keys=True,separators=(',',':')))

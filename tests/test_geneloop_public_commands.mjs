@@ -22,8 +22,8 @@ import {SubagentRuntime} from '@deepseek-ai/dsh-subagent';
 import {apply as nativeSpawn} from '@deepseek-ai/dsh-subagent-spawn-in-process';
 import {ApiSessionNotFound} from '@deepseek-ai/dsh-api-session-controller';
 import {apply as nativeCompact} from '@deepseek-ai/dsh-command-compact';
-import * as taskPlugin from '../src/adapters/dsh_web_tasks.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import * as taskPlugin from '../src/adapters/web/dsh_web_tasks.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 
 async function fixture({restored=false}={}){
  const directory=mkdtempSync(join(tmpdir(),'geneloop-public-commands-')),ctx=new Context(),groups=new Map(),headers=new Map();

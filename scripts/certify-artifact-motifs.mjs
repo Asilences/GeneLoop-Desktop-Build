@@ -4,8 +4,8 @@ import {join,resolve,relative,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {artifactLocks,hash,identity,matchesArtifactInput,runArtifactProgram,loadArtifactLibrary} from '../src/adapters/artifact_motif_runtime.ts';
-import {assertComponentSchema,validateComponentParameters} from '../src/adapters/ppt_component_schema.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {assertComponentSchema,validateComponentParameters} from '../src/adapters/ppt/authoring/ppt_component_schema.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 /** Hash the representation that is actually persisted, including optional fields. */
 export function sealArtifactLibrary(body){
@@ -87,7 +87,7 @@ export function certifyArtifactRows(rows,resources={}){
    if(p.component){
     const reference=join(p.witness.original_output,'page.svg');
     if(hash(readFileSync(reference))!==p.component.historical_source_sha256)throw Error('historical_component_source_changed');
-    const classified=spawnSync(process.env.SSS_PYTHON??'python3',['-m','src.adapters.ppt_component_literals'],
+    const classified=spawnSync(process.env.SSS_PYTHON??'python3',['-m','src.adapters.ppt.learning.ppt_component_literals'],
      {cwd:root,encoding:'utf8',timeout:30000,input:JSON.stringify({source:p.source,reference})});
     if(classified.status!==0)throw Error('component_literal_classification_failed');
     const roles=JSON.parse(classified.stdout);
@@ -111,7 +111,7 @@ export function certifyArtifactRows(rows,resources={}){
       const rendered=runArtifactProgram({workspace:row.workspace,program:referenceProgram,
        bound:[{host:reference,data,sha256:hash(data)}],resources,certification:true,
        componentReferenceAllowDesignFindings:(p.component.certification_mode??'preserve')!=='preserve'});
-      const checked=spawnSync(process.env.SSS_PYTHON??'python3',['-m','src.adapters.ppt_component_equivalence',rendered.output,a.output,p.component.certification_mode??'preserve'],{cwd:root,encoding:'utf8',timeout:30000});
+      const checked=spawnSync(process.env.SSS_PYTHON??'python3',['-m','src.adapters.ppt.learning.ppt_component_equivalence',rendered.output,a.output,p.component.certification_mode??'preserve'],{cwd:root,encoding:'utf8',timeout:30000});
       if(checked.status!==0)throw Error('component_equivalence_checker_failed');
       componentEquivalence=JSON.parse(checked.stdout);
       componentEquivalence.reference_renderer='same_namespace_fonts_and_resources';
@@ -128,7 +128,10 @@ export function certifyArtifactRows(rows,resources={}){
    }
    if(digest(cases[0].files)===digest(cases[1].files))throw Error('input_dependency_not_demonstrated');
    const {witness,...program}=p;
-   programs.push({...program,output_profile:outputProfile(p.witness.original_output,sourceFiles),certification:{passed:true,distinct_inputs:2,source_equivalent:true,program_sha256:digest(identity(p)),
+   const trial=p.component?.certification_mode==='functional_trial_v1';
+   programs.push({...program,output_profile:outputProfile(p.witness.original_output,sourceFiles),certification:{passed:true,distinct_inputs:2,
+    source_equivalent:trial?componentEquivalence.source_preservation_passed:true,
+    ...(trial?{validation_scope:'functional_trial_v1',quality_deferred:true}:{}),program_sha256:digest(identity(p)),
     source_task_id:row.task_id,source_call_id:witness.call_id,events_sha256:witness.events_sha256,boundary_sha256:witness.boundary_sha256,
     ...(p.component?{component_source_equivalence:componentEquivalence,source_parameterization:{origin:witness.origin,historical_source:witness.historical_source,
       witness_sha256:witness.parameterization_witness_sha256}}:{}),
@@ -141,7 +144,7 @@ export function certifyArtifactRows(rows,resources={}){
  const observedCommon=Object.fromEntries(Object.entries(held.approved_inputs??{}).filter(([name,version])=>training.every(r=>r.approved_inputs?.[name]===version)));
  const body={version:1,kind:'witnessed_artifact_program_library',scene:held.scene,programs,observed_common_approved_inputs:observedCommon,code_locks:Object.fromEntries(artifactLocks.map(p=>[p,hash(readFileSync(join(root,p)))])),
   heldout_task_id:held.task_id,compilation_model_requests:0,
-  scope:programs.some(p=>p.component)?'parameterized_historical_svg_equivalence_and_distinct_material_execution':'native_program_source_equivalence_and_distinct_input_determinism_not_semantic_quality'};
+  scope:programs.some(p=>p.component?.certification_mode==='functional_trial_v1')?'functional_ppt_trials_quality_and_savings_pending':programs.some(p=>p.component)?'parameterized_historical_svg_equivalence_and_distinct_material_execution':'native_program_source_equivalence_and_distinct_input_determinism_not_semantic_quality'};
  return {library:sealArtifactLibrary(body),report:{published:programs.length,rejected,quality_cost_promoted:false}};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

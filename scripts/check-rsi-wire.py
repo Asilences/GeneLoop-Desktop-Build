@@ -5,7 +5,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.rsi_protocol import validate_record
+from src.rsi.protocol.rsi_protocol import validate_record
 
 value = json.loads((ROOT / 'examples/rsi-protocol-v1/fixtures.json').read_text(encoding='utf-8'))
 results = []

@@ -1,7 +1,7 @@
 """Admission persistence diagnostics; native trust is separately checked in TS."""
 import json
 import pytest
-from src.adapters.capability_materials import CapabilityMaterials
+from src.capability.runtime.capability_materials import CapabilityMaterials
 from tests.test_capability_improvement import put
 
 

@@ -7,6 +7,7 @@ import type { ShellExecRequest, ShellExecSpec } from '@deepseek-ai/dsh-shell';
 import {pptMasterInstallation} from './geneloop_skill_installation.mjs';
 import {rgPath} from '@vscode/ripgrep';
 import {resolveExecutionAgent} from './geneloop_delegation.ts';
+import {isExecutionSessionId} from './geneloop_session_id.ts';
 
 const inside = (root: string, path: string) => { const r = relative(root, path); return !r.startsWith('..') && !isAbsolute(r); };
 function fixedDirectory(path: string) {
@@ -28,7 +29,7 @@ function prepareMountPoints(layout: ReturnType<typeof commandLayout>) {
   }
 }
 export function commandLayout(output: string, session: string) {
-  if (!/^(?:session-[a-f0-9-]{36}|sss-[a-f0-9]{32})$/.test(session)) throw Error('command requires an owning Session');
+  if (!isExecutionSessionId(session)) throw Error('command requires an owning Session');
   const work = join(output, 'sessions', session, 'work');
   for (const suffix of ['inputs', 'code', 'outputs/code', 'command-tmp']) mkdirSync(join(work, suffix), { recursive: true, mode: 0o700 });
   return { work: fixedDirectory(work), scratch: fixedDirectory(join(work, 'code')),

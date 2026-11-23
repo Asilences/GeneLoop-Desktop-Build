@@ -3,7 +3,7 @@ import { readdirSync, realpathSync, statSync, existsSync, lstatSync, readlinkSyn
 import { createHash } from 'node:crypto';
 import { join, relative, dirname, basename, isAbsolute, sep, resolve, posix } from 'node:path';
 import {fixedVideoMotifStore} from './harless_video_motif_store.mjs';
-import {pptMasterInstallation} from '../src/adapters/geneloop_skill_installation.mjs';
+import {bundledPptRoot,pptMasterInstallation} from '../src/adapters/geneloop_skill_installation.mjs';
 
 const inside = (base, value) => value === base || (!relative(base, value).startsWith('..') && !isAbsolute(relative(base, value)));
 function fixedPath(value, kind, label) {
@@ -57,10 +57,9 @@ export function memberSceneDeployment(policy, deployment) {
     mappings.push({source,target:'/app/package-lock.json'});
   }
   const mounts = [...mappings, ...pythonRoots.map(source => ({ source, target: source }))];
-  const skill=pptMasterInstallation(deployment.pptMasterRoot,root);
+  const hasPpt=policy.scenes.some(s=>!s.unavailable_reason&&s.ppt_execution_strategy==='ppt_master');
+  const skill=hasPpt?pptMasterInstallation(bundledPptRoot(root),root):null;
   if(skill){mounts.push(skill);mappings.push(skill);}
-  if(policy.scenes.some(s=>!s.unavailable_reason&&s.ppt_execution_strategy==='ppt_master')&&!skill)
-    throw Error('PPT scene requires a pinned ppt-master installation');
   // Only the explicit public config files in memberProductProfile are mounted.
   // Translate their certification locks without mounting the whole config directory.
   mappings.push({source:join(root,'config'),target:'/app/config'});
@@ -174,7 +173,8 @@ export function memberSceneDeployment(policy, deployment) {
     if (!['ppt','workspace','files','literature','data-report','video'].includes(scene.adapter) || Object.keys(scene.environment_references ?? {}).length)
       throw Error('Member scene requires a local Session adapter without inherited credentials');
     const rows = structuredClone(scene.mcp_rows);
-    if (!Array.isArray(rows) || !rows.length) throw Error('Member scene has no MCP deployment');
+    if (!Array.isArray(rows) || (!rows.length && !['paper-proofreading','video-editing'].includes(scene.id)))
+      throw Error('Member scene has no tool deployment');
     for (const row of rows) {
       const cfg=row.config;
       if (row.name !== '@deepseek-ai/dsh-mcp-client' || cfg?.transport !== 'stdio' || cfg.cwd !== root ||
@@ -255,6 +255,22 @@ export function memberSceneDeployment(policy, deployment) {
       if(cfg.env.PATH && scene.adapter!=='literature')cfg.env.PATH=join(renderer,'program')+':/opt/node/bin:/usr/bin:/bin';
     }
     const next={...structuredClone(scene),mcp_rows:rows};
+    if(scene.id==='paper-proofreading'){
+      const env=next.native_environment??{};
+      const expected={GENELOOP_PDF_OCR_ROOT:deployment.pdfOcrRoot,
+        HARLESS_PDF_TOOLCHAIN_ROOT:pdf,HARLESS_ANTIWORD_BIN:antiwordBinary,
+        ANTIWORDHOME:antiwordMappings,HARLESS_REPORT_FONT:fonts?join(fonts,'wqy-microhei.ttc'):undefined};
+      if(Object.entries(env).some(([key,value])=>!(key in expected)||!expected[key]||value!==expected[key]))
+        throw Error('Member native paper dependencies differ from reviewed installations');
+      if(env.HARLESS_REPORT_FONT && (!existsSync(env.HARLESS_REPORT_FONT) ||
+         createHash('sha256').update(readFileSync(env.HARLESS_REPORT_FONT)).digest('hex')!==scene.report_font_sha256))
+        throw Error('Member native paper font changed');
+      next.native_environment=Object.fromEntries(Object.entries(env).map(([key,value])=>[key,translate(value)]));
+    }else if(next.native_environment)throw Error('Unexpected native scene environment');
+    if(next.paper_renderer_root){
+      if(!paperRenderer || next.paper_renderer_root!==paperRenderer)throw Error('Member paper renderer differs from the pinned deployment');
+      next.paper_renderer_root='/app/paper-renderer';
+    }
     if(next.pdf_toolchain_root)next.pdf_toolchain_root=translate(next.pdf_toolchain_root);
     if(next.antiword_root)next.antiword_root='/opt/harless/antiword';
     for(const key of ['manifest','task','tool_schemas','certification_path','runtime_library']) if(next[key]) {
@@ -273,6 +289,6 @@ export function memberSceneDeployment(policy, deployment) {
   // of the host paths retained by the gateway's command broker.
   const native_resources={projectRoot:'/app',...(skill?{pptMasterRoot:skill.target}:{}),
     ...(renderer?{rendererRoot:renderer}:{}),...(fonts?{fontRoot:fonts}:{})};
-  return {scenes,mounts,native_resources,allowed_tools:[...new Set(scenes.filter(s=>!s.unavailable_reason).flatMap(s=>s.allowed_tools))],
+  return {scenes,mounts,native_resources,pptResourceRoot:skill?.source,allowed_tools:[...new Set(scenes.filter(s=>!s.unavailable_reason).flatMap(s=>s.allowed_tools))],
     output:'/app/.local/web',python:executable,attachmentEnvironment};
 }

@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.benchmark_script_materials import BenchmarkScriptMaterials
-from src.adapters.capability_contract import (
+from benchmarks.evolution.benchmark_script_materials import BenchmarkScriptMaterials
+from src.capability.graph.capability_contract import (
     capability_digest, capability_ref, create_capability, create_capability_snapshot,
 )
-from src.adapters.capability_feedback import file_ref, verify
+from src.rsi.feedback.capability_feedback import file_ref, verify
 
 
 def put(path, value):
@@ -90,7 +90,7 @@ def test_invalid_runtime_input_is_located_before_native_dispatch(tmp_path, data)
 
 
 def test_json_file_wrapper_diagnostic_is_bounded_and_explains_text_input():
-    from src.adapters.benchmark_script_materials import _validate_execution_arguments
+    from benchmarks.evolution.benchmark_script_materials import _validate_execution_arguments
     capability = {'contract': {'input_schema': {'type': 'object', 'properties': {
         'value': {'type': 'object', 'properties': {'text': {'type': 'string'}},
                   'required': ['text'], 'additionalProperties': False}}, 'required': ['value']}}}
@@ -299,8 +299,8 @@ def test_unsafe_json_number_is_not_silently_rounded(tmp_path, data):
 
 
 def test_original_script_admission_location_is_preserved_and_exposed_compactly(tmp_path, data):
-    from src.adapters.capability_script_learning import executable_source
-    from src.adapters.script_motif_compiler import compile_script, file_contract
+    from src.adapters.harness.capability.capability_script_learning import executable_source
+    from src.motif_core.offline.compilation.script_motif_compiler import compile_script, file_contract
     service, _, examples, _, _ = data
     program = {'source': 'def run(value):\n    return "//' + 'header' * 100 + '" + str(value["data"]["items"])\n',
                'description': 'Synthetic comment-string admission diagnostic', 'mode': 'json', 'interface': 'function_v1'}

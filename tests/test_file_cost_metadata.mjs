@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 const enabled={skip:!process.features?.typescript};
 
 async function fixture(change=()=>{}){
- const {fileCostMetadata}=await import('../src/adapters/harless_file_scene.ts');
- const home=mkdtempSync(join(tmpdir(),'file-cost-metadata-')),session='original-file-run';
+ const {fileCostMetadata}=await import('../src/adapters/web/scenes/harless_file_scene.ts');
+ const home=realpathSync(mkdtempSync(join(tmpdir(),'file-cost-metadata-'))),session='original-file-run';
  const root=join(home,'state'),file=join(root,'records',session+'.json'),out=join(home,'runs',session);
  mkdirSync(join(root,'records'),{recursive:true});mkdirSync(out,{recursive:true});
  const metrics={upstream_requests:4,budget_accounted_usd:.125,session_id:session};

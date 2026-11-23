@@ -24,15 +24,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State, create_server, reservation
 from src.adapters.native_budget import NativeBudgetGuard
-from src.adapters.dsh_client import _usage
+from src.adapters.harness.dsh_client import _usage
 from src.adapters.scenario import prepare_scenario
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
-from src.motif_core.offline.library_builder import library_from_certified, _digest
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified, _digest
 
 PREFIX = 'mcp__paper_checks__'
 KINDS = ('sources', 'build', 'pdf')
@@ -231,7 +231,7 @@ def run(exp, inputs, case, mode, label):
               'input_version':version,'bindings':{PREFIX+f'pin_paper_{k}':{'case_id':case} for k in KINDS},
               'source_versions':{name:version for name in allowed}}
         save(out/'task.json',task)
-        patch='- insert:\n    - id: paper-motif\n      name: '+json.dumps((ROOT/'src/adapters/dsh_paper_motif.ts').as_uri())+'\n'
+        patch='- insert:\n    - id: paper-motif\n      name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_paper_motif.ts').as_uri())+'\n'
         save(out/'motif.patch.yml',patch);patches.append(str(out/'motif.patch.yml'))
         env.update(SSS_PAPER_MOTIF_DIAGNOSTIC='1',SSS_ONLINE_MOTIF_MANIFEST=str(exp/'online-manifest.json'),
                    SSS_ONLINE_MOTIF_TASK=str(out/'task.json'),SSS_ONLINE_MOTIF_MODE=mode,
@@ -247,7 +247,7 @@ def run(exp, inputs, case, mode, label):
               'dsh_version':load(ROOT/'node_modules/@deepseek-ai/dsh/package.json')['version'],
               'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
               'worktree_dirty':bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True)),
-              'code_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [Path(__file__),ROOT/'scenarios/paper-submission/checks.py',ROOT/'scenarios/paper-submission/server.py',ROOT/'src/adapters/dsh_paper_motif.ts',ROOT/'src/adapters/dsh_online_motif.mjs']},
+              'code_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [Path(__file__),ROOT/'scenarios/paper-submission/checks.py',ROOT/'scenarios/paper-submission/server.py',ROOT/'src/adapters/harness/paper/dsh_paper_motif.ts',ROOT/'src/adapters/harness/motif/dsh_online_motif.mjs']},
               'motif_manifest_sha256':sha(exp/'online-manifest.json') if mode!='baseline' else None}
     save(out/'manifest.json',snapshot)
     class RecordedState(State):

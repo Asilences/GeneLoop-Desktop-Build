@@ -1,0 +1,54 @@
+{
+  "nervaluate": {
+    "version": "1.2.1",
+    "filename": "nervaluate-1.2.1-py3-none-any.whl",
+    "sha256": "f7401943620ea312eb2253983f27b646f6d0cbfff3105037c3d7125317e522a3",
+    "requires_python": ">=3.11"
+  },
+  "duckdb": {
+    "version": "1.1.3",
+    "filename": "duckdb-1.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "sha256": "4ebf5f60ddbd65c13e77cddb85fe4af671d31b851f125a4d002a313696af43f1",
+    "requires_python": ">=3.7.0"
+  },
+  "tabulate": {
+    "version": "0.9.0",
+    "filename": "tabulate-0.9.0-py3-none-any.whl",
+    "sha256": "024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f",
+    "requires_python": ">=3.7"
+  },
+  "colorama": {
+    "version": "0.4.6",
+    "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+    "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+    "requires_python": "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
+  },
+  "pybase62": {
+    "version": "1.0.0",
+    "filename": "pybase62-1.0.0-py3-none-any.whl",
+    "sha256": "60539ad956ec9e9de091bc7ae88c9550bc2fa17f503050cf34d021b75e73cb27",
+    "requires_python": ""
+  },
+  "GitPython": {
+    "version": "3.1.45",
+    "filename": "gitpython-3.1.45-py3-none-any.whl",
+    "sha256": "8908cb2e02fb3b93b7eb0f2827125cb699869470432cc885f019b8fd0fccff77",
+    "requires_python": ">=3.7"
+  },
+  "gitdb": {
+    "version": "4.0.12",
+    "filename": "gitdb-4.0.12-py3-none-any.whl",
+    "sha256": "67073e15955400952c6565cc3e707c554a4eea2e428946f7a4c162fab9bd9bcf",
+    "requires_python": ">=3.7"
+  },
+  "smmap": {
+    "version": "5.0.2",
+    "filename": "smmap-5.0.2-py3-none-any.whl",
+    "sha256": "b30115f0def7d7531d22a0fb6502488d879e75b260a9db4d0819cfb25403af5e",
+    "requires_python": ">=3.7"
+  },
+  "gretel_test": {
+    "sha256": "c89a6bffa838edb0f2fc6686bf35da4930944519ac97308b0b6e32298594b5b1",
+    "bytes": 2029143
+  }
+}

@@ -1,7 +1,7 @@
 import unittest
 
-from src.adapters.dsh_trajectory import ToolContract
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
+from src.adapters.harness.dsh_trajectory import ToolContract
+from src.motif_core.offline.compilation.tool_contracts import bind_mcp_descriptions
 
 
 class ToolSchemaContractTests(unittest.TestCase):

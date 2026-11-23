@@ -3,7 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import pytest
-from src.adapters import harless_video_program_bundle as bundle
+from src.adapters.web.scenes import harless_video_program_bundle as bundle
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -62,19 +62,21 @@ def test_loader_records_byte_locks_and_original_policy(monkeypatch,tmp_path):
         name='reuse_fixture';description='fixture tool';input_schema={'type':'object','properties':{}}
     monkeypatch.setattr(bundle,'PublishedPrograms',Fake)
     monkeypatch.setattr(bundle,'learned_tool_definitions',lambda *args:[Tool()])
-    scene={'allowed_tools':['native'],'mcp_rows':[{'config':{'serverName':'remotion'}}],'config_sha256':'before'}
+    scene={'allowed_tools':['native'],'mcp_rows':[],'config_sha256':'before'}
     bundle.configure_video_programs(ROOT,scene,str(store),'owner')
     assert scene['runtime_kind']=='video_program_v1' and len(scene['certified_tool_schemas'])==12
     assert scene['video_program_tools']==['mcp__remotion__reuse_fixture']
     assert [r['name'] for r in scene['certified_tool_schemas']]==sorted(r['name'] for r in scene['certified_tool_schemas'])
     assert scene['runtime_library_sha256']==hashlib.sha256(b'{}').hexdigest()
     assert len(scene['video_program_file_locks'])==5
-    assert scene['mcp_rows'][0]['config']['env']['GENELOOP_VIDEO_MOTIF_STORE']==str(store)
+    assert scene['video_program_store']==str(store)
+    assert scene['video_program_owner']=='owner'
+    assert scene['mcp_rows']==[]
     assert scene['video_program_agent_instruction']=='same both arms'
 
 
 def test_video_runtime_locks_own_code_and_original_protocol():
     locks=bundle.runtime_code_locks(ROOT)
     assert len(locks)==len(bundle.VIDEO_RUNTIME_CODE)
-    for name in ('src/adapters/harless_video_program_bundle.py','src/adapters/source_program_runtime.ts','schemas/rsi-protocol-v1.schema.json'):
+    for name in ('src/adapters/web/scenes/harless_video_program_bundle.py','src/capability/runtime/source_program_runtime.ts','schemas/rsi-protocol-v1.schema.json'):
         assert locks[str(ROOT/name)]==hashlib.sha256((ROOT/name).read_bytes()).hexdigest()

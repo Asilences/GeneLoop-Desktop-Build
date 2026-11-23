@@ -1,0 +1,254 @@
+{
+  "source": "final frozen regression JUnit plus separately recorded supplemental boundary checks",
+  "groups": {
+    "web_host": {
+      "total": 9,
+      "passed": 9,
+      "cases": [
+        {
+          "scene": "ppt",
+          "passed": true
+        },
+        {
+          "scene": "paper-proofreading",
+          "passed": true
+        },
+        {
+          "scene": "research-data-analysis",
+          "passed": true
+        },
+        {
+          "scene": "files",
+          "passed": true
+        },
+        {
+          "scene": "new-scene",
+          "passed": true
+        },
+        {
+          "scene": "video-editing",
+          "passed": true
+        },
+        {
+          "scene": "chat",
+          "passed": true
+        },
+        {
+          "scene": "coding",
+          "passed": true
+        },
+        {
+          "scene": "future-custom-mcp",
+          "passed": true
+        }
+      ],
+      "real_privacy_tools": true,
+      "model_provider": "diagnostic fixtures"
+    },
+    "geneloop_host": {
+      "total": 9,
+      "passed": 9,
+      "cases": [
+        {
+          "scene": "ppt",
+          "passed": true
+        },
+        {
+          "scene": "paper-proofreading",
+          "passed": true
+        },
+        {
+          "scene": "research-data-analysis",
+          "passed": true
+        },
+        {
+          "scene": "files",
+          "passed": true
+        },
+        {
+          "scene": "new-scene",
+          "passed": true
+        },
+        {
+          "scene": "video-editing",
+          "passed": true
+        },
+        {
+          "scene": "chat",
+          "passed": true
+        },
+        {
+          "scene": "coding",
+          "passed": true
+        },
+        {
+          "scene": "future-custom-mcp",
+          "passed": true
+        }
+      ],
+      "real_privacy_tools": true,
+      "model_provider": "diagnostic fixtures"
+    },
+    "web_offline_share": {
+      "total": 9,
+      "passed": 9,
+      "cases": [
+        {
+          "scene": "ppt",
+          "passed": true
+        },
+        {
+          "scene": "paper-proofreading",
+          "passed": true
+        },
+        {
+          "scene": "research-data-analysis",
+          "passed": true
+        },
+        {
+          "scene": "files",
+          "passed": true
+        },
+        {
+          "scene": "new-scene",
+          "passed": true
+        },
+        {
+          "scene": "video-editing",
+          "passed": true
+        },
+        {
+          "scene": "chat",
+          "passed": true
+        },
+        {
+          "scene": "coding",
+          "passed": true
+        },
+        {
+          "scene": "future-custom-mcp",
+          "passed": true
+        }
+      ],
+      "real_privacy_tools": true,
+      "model_provider": "diagnostic fixtures"
+    },
+    "scene_projection": {
+      "total": 9,
+      "passed": 9,
+      "real_privacy_tools": true,
+      "model_provider": "unit fixtures"
+    },
+    "sdk_native": {
+      "total": 1,
+      "passed": 1,
+      "real_privacy_tools": true,
+      "model_provider": "local fake Provider"
+    },
+    "sdk_shutdown": {
+      "total": 3,
+      "passed": 3,
+      "real_privacy_tools": false,
+      "model_provider": "unit fixtures"
+    }
+  },
+  "supplement": {
+    "total": 9,
+    "passed": 9,
+    "rows": [
+      {
+        "id": "builder-semantic",
+        "passed": true,
+        "test_doubles": [],
+        "seconds": 55.53025993704796
+      },
+      {
+        "id": "builder-reject",
+        "passed": true,
+        "test_doubles": [],
+        "seconds": 1.7321401135995984
+      },
+      {
+        "id": "goal-semantic",
+        "passed": true,
+        "test_doubles": [
+          "model Provider",
+          "budget gate"
+        ],
+        "seconds": 3.6444578422233462
+      },
+      {
+        "id": "goal-reject",
+        "passed": true,
+        "test_doubles": [
+          "model Provider",
+          "budget gate"
+        ],
+        "seconds": 1.8426963072270155
+      },
+      {
+        "id": "construction-history",
+        "passed": true,
+        "test_doubles": [],
+        "seconds": 4.1712892428040504
+      },
+      {
+        "id": "evolution-request-and-tool-result",
+        "passed": true,
+        "test_doubles": [
+          "model callback"
+        ],
+        "seconds": 20.273899395018816
+      },
+      {
+        "id": "online-manifest-public-gate",
+        "passed": true,
+        "test_doubles": [
+          "certified artifact assembly"
+        ],
+        "seconds": 3.4413865534588695
+      },
+      {
+        "id": "efficiency-registry-public-gate",
+        "passed": true,
+        "test_doubles": [
+          "prepared registry assembly"
+        ],
+        "seconds": 1.8308145105838776
+      },
+      {
+        "id": "operation-library-export-before-write",
+        "passed": true,
+        "test_doubles": [
+          "synthetic registry and workspace root"
+        ],
+        "seconds": 3.788260105997324
+      }
+    ],
+    "source_sha256": "428b5d883ad53206940f46d0239ac8b397a4b684f8a2894ce2f7942fa662b2c6",
+    "scope": "supplemental entry wiring; real privacy kernel; synthetic inputs and declared test doubles",
+    "benchmark_records_added": 0,
+    "cloud_requests": 0,
+    "production_service_touched": false
+  },
+  "construction_export": {
+    "total": 1,
+    "passed": 1,
+    "id": "construction-library-private-read-and-public-reject",
+    "scope": "real construction export CLI; synthetic trusted seed and empty private Store; no quality certification claim",
+    "original_unchanged": true,
+    "public_bytes_written": 0,
+    "cloud_requests": 0,
+    "production_service_touched": false,
+    "source_sha256": "66ad480ebbf2ed23222dbaedb9550ef7dfc0b4dde35968e1f3552de21c4ee89f"
+  },
+  "remaining_limits": [
+    "All benchmark samples run through common kernel, not every host multiplied by every benchmark record.",
+    "Paper/PPT 14-case same-benchmark entry check is separate.",
+    "Export checks use synthetic upstream assembly or trusted seed/registry; they verify gates, not independently certified real libraries.",
+    "Mac real Coding, real RSI successor quality and production receiver not accepted."
+  ],
+  "cloud_requests": 0,
+  "production_service_touched": false,
+  "audit_source_sha256": "1ba751db4561d6d937da9d74384d6d59ceccb6199655d71dd770395f1bee3698"
+}

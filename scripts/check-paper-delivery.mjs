@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDeliveryChecker } from '../src/adapters/dsh_paper_delivery_check.ts';
+import { createDeliveryChecker } from '../src/adapters/harness/paper/dsh_paper_delivery_check.ts';
 import { snapshotSource, sha256 } from '../src/adapters/paper_triage_validation.ts';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url))), privateRoot=join(root,'.local');

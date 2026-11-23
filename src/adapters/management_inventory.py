@@ -1,7 +1,7 @@
 """Read-only inventory; historical experience is never equated with current admission."""
 from collections import Counter
 from pathlib import Path
-from src.motif_core.offline.experience_registry import ExperienceRegistry,read,sha
+from src.motif_core.reuse.experience_registry import ExperienceRegistry,read,sha
 
 def inventory(project):
     project=Path(project).resolve();profiles=[];unique=set();historical=set()

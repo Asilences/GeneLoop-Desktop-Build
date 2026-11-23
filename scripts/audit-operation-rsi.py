@@ -4,8 +4,9 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'scenarios/file-management'))
 from src.adapters.continuous_rsi import records,source_map,snapshot,ledger_accounting
 from src.adapters.continuous_motif_learning import operation_observations,frame
-from src.motif_core.offline.operation_graph import catalog,witnesses
-from src.motif_core.offline.experience_registry import read,sha,digest,check_motif_certificate
+from src.motif_core.offline.compilation.operation_graph import catalog,witnesses
+from src.adapters.file_management.experience_certification import check_motif_certificate
+from src.motif_core.reuse.experience_registry import read, sha, digest
 from operation_contract import verify_operations
 
 def need(value,reason):

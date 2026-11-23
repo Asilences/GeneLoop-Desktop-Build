@@ -8,12 +8,12 @@ import time
 from uuid import uuid4
 
 from deepseek_harness.api import final_response,finish_reason
-from src.adapters import capability_proposal as pilot
-from src.adapters.capability_authoring import authoring_context,expand_draft,diagnose
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_program_encoding import freeze_program_composition
-from src.adapters.capability_improvement import evidence
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.capability import capability_proposal as pilot
+from src.capability.builder.capability_authoring import authoring_context,expand_draft,diagnose
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.builder.capability_program_encoding import freeze_program_composition
+from src.rsi.learning.capability_improvement import evidence
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 
 SYSTEM='''Construct a reusable capability for the frozen task. Return ONE complete JSON object, no markdown.
@@ -142,7 +142,7 @@ def expand_source_request(draft):
     if 'composition_source' not in draft:return draft
     if set(draft) not in ({'composition_source'},{'program','composition_source'}):
         raise ValueError('frontier_composition_source_shape_invalid')
-    from src.adapters.capability_composition_source import compile_composition_source
+    from src.capability.builder.capability_composition_source import compile_composition_source
     composition=compile_composition_source(draft['composition_source'])
     return {'program':draft['program'],'composition':composition} if 'program' in draft else composition
 
@@ -150,7 +150,7 @@ def expand_source_request(draft):
 def expand_capability_source_request(draft,task,snapshot):
     """Extract the model's helper and static bindings; never run build source."""
     if set(draft)!={'capability_source'}:raise ValueError('frontier_capability_source_shape_invalid')
-    from src.adapters.capability_source_authoring import compile_capability_source
+    from src.capability.builder.capability_source_authoring import compile_capability_source
     encoded=compile_capability_source(draft['capability_source'],task,snapshot)
     value=({'program':encoded['program'],'composition':encoded['composition']}
         if encoded['program'] is not None else encoded['composition'])
@@ -163,7 +163,7 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
                                      output=output,repair_from=parent,feedback=feedback)
     context=authoring_context(task,library['snapshot'],{'source_catalog':library['source_catalog'],
         'preferred_roots':library.get('selection',{}).get('construction',[])})
-    from src.adapters.capability_source_authoring import source_callable_interfaces
+    from src.capability.builder.capability_source_authoring import source_callable_interfaces
     context['source_callable_interfaces']=source_callable_interfaces(library['snapshot'])
     context['reference_interfaces']=copy.deepcopy(library['source_catalog'].get('reference_interfaces',[]))
     context['program_examples']=library.get('program_examples',[])
@@ -189,7 +189,7 @@ def propose(*,task,library,output,gate,parent=None,feedback=None,owner_id):
         effective['authoring_context_audit']={'path':str(output/'authoring-context-audit.json'),
             'sha256':pilot.sha((output/'authoring-context-audit.json').read_bytes())}
         context=source_primary_context(context);system=SOURCE_PRIMARY_SYSTEM;authoring_view='source_primary_v1'
-    from src.adapters.capability_construction_history import model_context,unwrap_strategy
+    from src.rsi.learning.capability_construction_history import model_context,unwrap_strategy
     construction=model_context(library['source_catalog'],task,library['snapshot'])
     if construction is not None:
         context['construction_feedback']=construction

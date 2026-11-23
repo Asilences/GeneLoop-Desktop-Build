@@ -5,16 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_contract import create_capability_snapshot
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.capability_investigation import Investigation
-from src.adapters.evolution_benchmark import inspect_benchmark
-from src.adapters.evolution_benchmark_gene import OWNER, run_gene_benchmark
+from src.capability.graph.capability_contract import create_capability_snapshot
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from src.rsi.evolution.capability_investigation import Investigation
+from benchmarks.evolution.evolution_benchmark import inspect_benchmark
+from benchmarks.evolution.evolution_benchmark_gene import OWNER, run_gene_benchmark
 from tests.test_capability_motif_learning import corpus
 
 
 def test_native_helper_draft_only_requires_model_decisions():
-    from src.adapters.evolution_benchmark_gene import _native_helper_proposal
+    from benchmarks.evolution.evolution_benchmark_gene import _native_helper_proposal
     draft = {'source': 'def run(value):\n    return value\n',
              'description': 'Synthetic identity diagnostic', 'example_evidence_ids': ['file-a', 'file-b']}
     result = _native_helper_proposal(draft)
@@ -25,7 +25,7 @@ def test_native_helper_draft_only_requires_model_decisions():
 
 
 def test_native_helper_old_protocol_is_preserved_without_overwriting_decisions():
-    from src.adapters.evolution_benchmark_gene import _native_helper_proposal
+    from benchmarks.evolution.evolution_benchmark_gene import _native_helper_proposal
     program = {'source': 'def run(value): return value', 'description': 'Diagnostic'}
     old = {'program': program, 'example_evidence_ids': ['file-a', 'file-b']}
     result = _native_helper_proposal(old)
@@ -36,7 +36,7 @@ def test_native_helper_old_protocol_is_preserved_without_overwriting_decisions()
 
 
 def test_native_helper_shape_error_describes_required_model_fields():
-    from src.adapters.evolution_benchmark_gene import _native_helper_proposal
+    from benchmarks.evolution.evolution_benchmark_gene import _native_helper_proposal
     with pytest.raises(ValueError, match='source, description, example_evidence_ids'):
         _native_helper_proposal({'program': {}, 'unrelated': True})
 
@@ -246,7 +246,7 @@ def test_quality_threshold_is_explicit_and_recorded(tmp_path):
 
 def test_verifier_reward_alone_does_not_qualify_failed_model_trial():
     from decimal import Decimal
-    from src.adapters.evolution_benchmark_gene import _quality
+    from benchmarks.evolution.evolution_benchmark_gene import _quality
     quality = _quality({'evaluation': {'status': 'evaluated', 'reward': 1},
                         'score': None, 'model': {'status': 'failed'}}, Decimal('1'))
     assert quality['verifier_succeeded'] is True
@@ -327,7 +327,7 @@ def test_duplicate_source_identity_cannot_start_cross_task_evolution(tmp_path):
 def test_unknown_cost_stays_unknown_in_original_feedback(tmp_path):
     result = run(tmp_path, Host(tmp_path / 'trials'))
     continuation = json.loads(verify(result['continuation']))
-    from src.adapters.capability_feedback import CapabilityFeedback
+    from src.rsi.feedback.capability_feedback import CapabilityFeedback
     feedback = CapabilityFeedback(continuation['feedback_directory'], OWNER).read()
     assert all(fact['cost'] is None for fact in feedback['facts'].values())
 
@@ -359,7 +359,7 @@ class NativePool:
     def catalog(self):
         return {'snapshot': self.snapshot, 'catalog': []}
     def acquire(self, program, examples, source_evidence, opportunity):
-        from src.adapters.capability_contract import capability_ref, create_capability
+        from src.capability.graph.capability_contract import capability_ref, create_capability
         from tests.test_capability_contract import leaf
         definition = leaf('diagnostic-native-helper', OWNER)
         definition = {key: definition[key] for key in ('owner', 'contract', 'implementation', 'dependencies')}
@@ -462,7 +462,7 @@ def test_new_capability_reference_keeps_original_strategy_snapshot_frozen(tmp_pa
 
 
 def test_original_miner_consumes_two_training_and_one_heldout_actual_runtime_trace(tmp_path, corpus):
-    from src.adapters.evolution_benchmark_gene import _recursive_learning
+    from benchmarks.evolution.evolution_benchmark_gene import _recursive_learning
     _, _, _, _, traces = corpus
     runs = [{'split': 'training' if index < 2 else 'test',
              'capability_trajectory': put(tmp_path / ('actual-trace-' + str(index) + '.json'), trace)}
@@ -475,7 +475,7 @@ def test_original_miner_consumes_two_training_and_one_heldout_actual_runtime_tra
 
 
 def test_canonical_validation_trace_is_development_feedback_not_heldout(tmp_path, corpus):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, _, _, _, traces = corpus
     runs = [{'split': 'training' if index < 2 else 'test',
              'evaluation_role': 'development' if index < 2 else 'validation',
@@ -487,7 +487,7 @@ def test_canonical_validation_trace_is_development_feedback_not_heldout(tmp_path
 
 
 def test_recursive_input_identity_does_not_count_same_bytes_twice(tmp_path, corpus):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, _, _, _, traces = corpus
     runs = [{'split': 'training' if index < 2 else 'test',
              'evaluation_role': 'development' if index < 2 else 'final',
@@ -502,7 +502,7 @@ def test_recursive_input_identity_does_not_count_same_bytes_twice(tmp_path, corp
 
 
 def test_same_family_distinct_inputs_remain_distinct_recursive_samples(tmp_path, corpus):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, _, _, _, traces = corpus
     runs = [{'split': 'training' if index < 2 else 'test',
              'evaluation_role': 'development' if index < 2 else 'final',
@@ -514,7 +514,7 @@ def test_same_family_distinct_inputs_remain_distinct_recursive_samples(tmp_path,
 
 def test_only_the_first_two_native_certification_examples_establish_independence(tmp_path):
     from types import SimpleNamespace
-    from src.adapters.evolution_benchmark_gene import _example_files
+    from benchmarks.evolution.evolution_benchmark_gene import _example_files
     first = put(tmp_path / 'first.json', {'value': 1})
     second = put(tmp_path / 'second.json', {'value': 2})
     third = put(tmp_path / 'third.json', {'value': 3})
@@ -538,7 +538,7 @@ def test_only_the_first_two_native_certification_examples_establish_independence
 
 @pytest.mark.parametrize('status', ['published', 'pending', 'failed'])
 def test_original_store_publication_receives_original_learning_sources(tmp_path, corpus, status):
-    from src.adapters.evolution_benchmark_gene import _recursive_learning
+    from benchmarks.evolution.evolution_benchmark_gene import _recursive_learning
     _, _, _, _, traces = corpus
     runs = [{'split': 'training' if index < 2 else 'test',
              'capability_trajectory': put(tmp_path / ('trace-' + str(index) + '.json'), trace)}
@@ -630,7 +630,7 @@ def prior_runtime_observation(tmp_path, trace, split, *, source=None, name=None)
 
 
 def test_recursive_learning_accumulates_original_traces_across_generations(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
     prior = [prior_runtime_observation(tmp_path / 'past', traces[0], 'training'),
@@ -648,7 +648,7 @@ def test_recursive_learning_accumulates_original_traces_across_generations(tmp_p
 
 
 def test_prior_canonical_validation_role_is_retained_as_development_feedback(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
     prior = [prior_runtime_observation(tmp_path / 'past', trace, 'training' if index < 2 else 'test')
@@ -662,7 +662,7 @@ def test_prior_canonical_validation_role_is_retained_as_development_feedback(tmp
 
 
 def test_repeated_history_does_not_increase_independent_training_count(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
     one = prior_runtime_observation(tmp_path / 'past', traces[0], 'training')
@@ -674,7 +674,7 @@ def test_repeated_history_does_not_increase_independent_training_count(tmp_path,
 
 
 def test_canonical_source_is_heldout_and_never_also_training(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     from tests.test_capability_motif_learning import call_trace
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
@@ -696,7 +696,7 @@ def test_canonical_source_is_heldout_and_never_also_training(tmp_path, corpus, m
 
 
 def test_changed_original_history_reference_is_retained_as_failure(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
     original = prior_runtime_observation(tmp_path / 'past', traces[0], 'training')
@@ -709,7 +709,7 @@ def test_changed_original_history_reference_is_retained_as_failure(tmp_path, cor
 
 
 def test_changed_history_projection_cannot_replace_runtime_arguments(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
     original = prior_runtime_observation(tmp_path / 'past', traces[0], 'training')
@@ -726,7 +726,7 @@ def test_changed_history_projection_cannot_replace_runtime_arguments(tmp_path, c
 
 
 def test_unrelated_snapshot_changes_share_executed_closure_without_rebinding(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     from tests.test_capability_motif_learning import call_trace
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
@@ -778,9 +778,9 @@ def test_unrelated_snapshot_changes_share_executed_closure_without_rebinding(tmp
 
 
 def test_distinct_executed_versions_do_not_complete_each_others_learning_group(tmp_path, corpus):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     from tests.test_capability_motif_learning import call_trace
-    from src.adapters.capability_contract import capability_ref
+    from src.capability.graph.capability_contract import capability_ref
     _, snapshot, _, operations, traces = corpus
     different = call_trace(tmp_path / 'different', snapshot,
         [capability_ref(operations['subtract']), capability_ref(operations['double'])], 'other-version', 30)
@@ -795,7 +795,7 @@ def test_distinct_executed_versions_do_not_complete_each_others_learning_group(t
 @pytest.mark.parametrize('state', ['removed', 'archived'])
 def test_recursive_learning_checks_current_catalog_admission(tmp_path, corpus, state):
     import copy
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     from types import SimpleNamespace
     _, snapshot, c_ref, _, traces = corpus
     if state == 'removed':
@@ -815,7 +815,7 @@ def test_recursive_learning_checks_current_catalog_admission(tmp_path, corpus, s
 
 
 def test_r3_history_recovers_only_already_indexed_original_projection(tmp_path, corpus, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     _, snapshot, _, _, traces = corpus
     monkeypatch.setattr(gene, 'OWNER', snapshot['owner'])
     prior = []
@@ -830,7 +830,7 @@ def test_r3_history_recovers_only_already_indexed_original_projection(tmp_path, 
 
 
 def test_later_generation_passes_original_history_to_recursive_learning_without_rerunning(tmp_path, monkeypatch):
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     first = run(tmp_path, Host(tmp_path / 'trials', action='no_change'))
     continuation = json.loads(verify(first['continuation']))
     prior = [entry['evidence'] for entry in continuation['entries']]
@@ -964,7 +964,7 @@ def test_native_example_lookup_pages_only_admissible_files_with_original_provena
             assert 'value' in json.loads(raw['content'])
         unmatched = dispatch('evolution_example_files', {'query': 'result.json'})
         assert unmatched['total'] == 0 and unmatched['available_files'] == 2
-        import src.adapters.evolution_benchmark_gene as gene
+        import benchmarks.evolution.evolution_benchmark_gene as gene
         with monkeypatch.context() as patcher:
             def unavailable(*args, **kwargs):
                 raise FileNotFoundError('/home/synthetic-owner@example.com/private/data.json')
@@ -1023,7 +1023,7 @@ def test_invalid_native_proposal_metadata_does_not_consume_actual_candidate_eval
 
 def test_native_example_lookup_does_not_expose_unselected_or_post_verifier_files(tmp_path):
     from types import SimpleNamespace
-    from src.adapters.evolution_benchmark_gene import _example_file_cards
+    from benchmarks.evolution.evolution_benchmark_gene import _example_file_cards
     good = put(tmp_path / 'actual.json', {'actual': 1})
     hidden = put(tmp_path / 'not-indexed.json', {'hidden': 1})
     gold = put(tmp_path / 'gold.json', {'gold': 1})

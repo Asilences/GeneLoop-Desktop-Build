@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {resolveScriptLearningSettings} from '../src/adapters/script_learning_store.ts';
 
 function fixture(t){

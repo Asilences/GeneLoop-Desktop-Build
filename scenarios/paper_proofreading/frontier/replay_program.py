@@ -1,10 +1,10 @@
 """Zero-model diagnosis of a saved program and its mechanical task wrapper."""
 import argparse,copy,json,subprocess
 from pathlib import Path
-from src.adapters.capability_scene import ROOT,reference
-from src.adapters.capability_improvement import evidence,save
-from src.adapters.capability_contract import create_capability_snapshot
-from src.adapters.capability_program_encoding import encode_complete_script
+from src.adapters.harness.capability.capability_scene import ROOT,reference
+from src.rsi.learning.capability_improvement import evidence,save
+from src.capability.graph.capability_contract import create_capability_snapshot
+from src.capability.builder.capability_program_encoding import encode_complete_script
 from scenarios.paper_proofreading.frontier.learn import learn
 from scenarios.paper_proofreading.frontier.adapter import FrontierAdapter
 

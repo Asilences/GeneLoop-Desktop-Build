@@ -90,7 +90,9 @@ def main():
     p.add_argument('--delivery-root',type=Path,required=True);p.add_argument('--archive-root',type=Path,required=True);p.add_argument('--round',type=int,required=True)
     a=p.parse_args()
     try:
-        if not 0<=a.round<=2:raise ValueError('acceptance round limit')
+        # The original durable job/launcher owns repair limits, including null.
+        # This read-only verifier must not impose a second hidden two-repair cap.
+        if a.round<0:raise ValueError('acceptance round must be non-negative')
         raw=sys.stdin.read(16*1024*1024+1)
         if len(raw)>16*1024*1024:raise ValueError('acceptance events too large')
         print(json.dumps(check(a.task_file,a.task_sha256,a.delivery_root,a.archive_root,a.round,json.loads(raw)),ensure_ascii=False))

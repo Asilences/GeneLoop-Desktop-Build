@@ -13,9 +13,9 @@ from pdf_dependencies import private_file
 from pdf_incremental_tools import IncrementalScene
 from incremental_entry import entry_task, execution_version, SOURCE, PREPARE, HERE
 sys.path.insert(0, str(ROOT))
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.entry_compiler import inventory_witness, compile_inventory_motif, certify_entry_motif, navigation_projection
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.entry_compiler import inventory_witness, compile_inventory_motif, certify_entry_motif, navigation_projection
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 
 def load_witness(directory):
@@ -76,7 +76,7 @@ def learn(output, split):
     policy = {'schema_version': 1, 'format': 'sss-entry-incremental-v1', 'source_library_digest': library['library_digest'],
         'execution_version_sha256': execution_version(), 'artifact': artifact}
     policy['policy_digest'] = digest(policy)
-    verifier = "import fs from 'node:fs';import {validateEntryPolicy} from './src/motif_core/entry_read_policy.ts';validateEntryPolicy(JSON.parse(fs.readFileSync(0,'utf8')));"
+    verifier = "import fs from 'node:fs';import {validateEntryPolicy} from './src/motif_core/runtime/policies/entry_read_policy.ts';validateEntryPolicy(JSON.parse(fs.readFileSync(0,'utf8')));"
     subprocess.run(['node', '--input-type=module', '-e', verifier], input=json.dumps(policy), text=True, cwd=ROOT, check=True, capture_output=True)
     for name, value in [('entry-policy.json', policy), ('library.json', library), ('witnesses.json', [c[0] for c in cases]), ('schemas.json', actual)]:
         save_private(output / name, value)

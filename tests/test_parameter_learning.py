@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from src.adapters.parameter_learning import advance_round, latest_round
-from src.adapters.parameter_motif_compiler import crossref_payload, compile_parameter_runs
+from src.motif_core.offline.compilation.trace.parameter_motif_compiler import crossref_payload, compile_parameter_runs
 
 
 def trace(base, name, *, crossref=False, query_field='query.bibliographic', mode='baseline', failed=False):

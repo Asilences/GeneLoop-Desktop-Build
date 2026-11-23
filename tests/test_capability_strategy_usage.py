@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_strategy import create_strategy, admit_strategy, strategy_context, strategy_ref
-from src.adapters.capability_strategy_usage import inspect_task_strategy_usage, ingest_task_strategy_usage
-from src.adapters.capability_trajectory import project_web_task
-from src.adapters.capability_decision_evidence import _web, record_web_decision, inspect_decision
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.evolution.capability_strategy import create_strategy, admit_strategy, strategy_context, strategy_ref
+from src.adapters.web.learning.capability_strategy_usage import inspect_task_strategy_usage, ingest_task_strategy_usage
+from src.adapters.web.learning.capability_trajectory import project_web_task
+from src.adapters.web.learning.capability_decision_evidence import _web, record_web_decision, inspect_decision
 from tests.test_capability_feedback import fixture
 from tests.test_capability_decision_evidence import web_task, context
 
@@ -126,7 +126,7 @@ def test_mutable_ui_state_does_not_duplicate_the_same_receipt_fact(used):
 
 
 def test_missing_original_host_admission_cannot_be_recreated_from_exposure(used, tmp_path):
-    from src.adapters.capability_feedback import CapabilityFeedback
+    from src.rsi.feedback.capability_feedback import CapabilityFeedback
     task, _, _, _ = used
     with pytest.raises(ValueError, match='host_admission_required'):
         ingest_task_strategy_usage(task, 'owner', CapabilityFeedback(tmp_path / 'empty-feedback', 'owner'))

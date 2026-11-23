@@ -19,10 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.parameter_motif_compiler import compile_parameter_library
-from src.adapters.native_motif_compiler import digest
+from src.motif_core.offline.compilation.trace.parameter_motif_compiler import compile_parameter_library
+from src.motif_core.offline.compilation.trace.native_motif_compiler import digest
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 
 spec = importlib.util.spec_from_file_location('reference', ROOT / 'scripts/paper-reference-experiment.py')
 reference = importlib.util.module_from_spec(spec); spec.loader.exec_module(reference)
@@ -124,7 +124,7 @@ items 中的相对路径均相对当前工作区。必须覆盖全部 item，独
         import hashlib
         config['prompt_sha256'] = hashlib.sha256(prompt.encode()).hexdigest()
         save(out / 'parameter-config.json', config)
-        save(out / 'motif.patch.yml', '- insert:\n    - id: parameter-motif\n      name: ' + json.dumps((ROOT / 'src/adapters/dsh_parameter_motif.ts').as_uri()) + '\n')
+        save(out / 'motif.patch.yml', '- insert:\n    - id: parameter-motif\n      name: ' + json.dumps((ROOT / 'src/adapters/harness/motif/dsh_parameter_motif.ts').as_uri()) + '\n')
         patches.append(str(out / 'motif.patch.yml'))
         env['SSS_PARAMETER_CONFIG'] = str(out / 'parameter-config.json')
     rows, prior, ledgers = reference.budget.account(exp)
@@ -155,7 +155,7 @@ items 中的相对路径均相对当前工作区。必须覆盖全部 item，独
          'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
          'dirty': bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True)),
          'patch_sha256': {str(Path(p).relative_to(ROOT)): sha(p) for p in patches},
-         'code_sha256': {str(p.relative_to(ROOT)): sha(p) for p in [Path(__file__), ROOT / 'src/adapters/parameter_motif_compiler.py', ROOT / 'src/adapters/dsh_parameter_motif.ts', ROOT / 'src/adapters/dsh_online_motif.mjs', ROOT / 'src/adapters/harness_runtime.py', ROOT / 'src/adapters/deepseek_cost_gate.py', ROOT / 'src/motif_core/online_skill_runtime.mjs', ROOT / 'package-lock.json', *([Path(scenario.__file__), ROOT / 'scenarios/paper-submission/checks.py', ROOT / 'schemas/parameter-motif-selection.schema.json'] if scenario is not None else [])]},
+         'code_sha256': {str(p.relative_to(ROOT)): sha(p) for p in [Path(__file__), ROOT / 'src/motif_core/offline/compilation/trace/parameter_motif_compiler.py', ROOT / 'src/adapters/harness/motif/dsh_parameter_motif.ts', ROOT / 'src/adapters/harness/motif/dsh_online_motif.mjs', ROOT / 'src/adapters/harness/harness_runtime.py', ROOT / 'src/adapters/deepseek_cost_gate.py', ROOT / 'src/motif_core/runtime/online_skill_runtime.mjs', ROOT / 'package-lock.json', *([Path(scenario.__file__), ROOT / 'scenarios/paper-submission/checks.py', ROOT / 'schemas/parameter-motif-selection.schema.json'] if scenario is not None else [])]},
          'scope': 'selected_input_probe_not_full_audit' if scenario is None else 'cited_arxiv_version_triage', 'quality_review': 'not_reviewed'})
     calls = []
     def observe(n):

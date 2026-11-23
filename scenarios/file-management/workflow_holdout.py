@@ -21,9 +21,9 @@ from src.adapters.file_job_budget import job_command
 sp=importlib.util.spec_from_file_location('holdout_mcp_helpers',ROOT/'scripts/check-file-workflows.py');mcp=importlib.util.module_from_spec(sp);sp.loader.exec_module(mcp)
 LIMITS={'budget_usd':5,'max_requests':96,'max_steps':96,'max_output':4000,'max_repairs':2}
 ZERO_MODEL={'FM05','FM17','FM38'}
-EXTRA=['src/adapters/dsh_workflow_experiment.ts','src/adapters/dsh_job_plan_gate.ts','src/adapters/file_workflow_job.ts','src/adapters/file_job_budget.py','src/adapters/file_acceptance_guard.ts',
-       'src/adapters/file_scenario.py','src/adapters/file_cost_gate.py','src/adapters/harness_runtime.py','src/adapters/native_budget.py','src/motif_core/authorized_plan_policy.ts',
-       'src/motif_core/collection_batch_script.ts','scripts/run-file-scenario.py','scripts/validate-file-delivery.py','scripts/check-file-workflows.py','scripts/check-file-workflow-holdout-sdk.py','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt']
+EXTRA=['src/adapters/harness/learning/dsh_workflow_experiment.ts','src/adapters/harness/dsh_job_plan_gate.ts','src/adapters/file_workflow_job.ts','src/adapters/file_job_budget.py','src/adapters/file_acceptance_guard.ts',
+       'src/adapters/scenario.py','src/adapters/deepseek_cost_gate.py','src/adapters/harness/harness_runtime.py','src/adapters/native_budget.py','src/motif_core/runtime/policies/authorized_plan_policy.ts',
+       'src/motif_core/runtime/policies/collection_batch_script.ts','scripts/run-file-scenario.py','scripts/validate-file-delivery.py','scripts/check-file-workflows.py','scripts/check-file-workflow-holdout-sdk.py','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt']
 
 def fresh(work,wid,condition,tag,assets,pdf):
     c,o,ops,_=fixture(work,wid,'N' if condition=='V' else condition,tag,assets,pdf)
@@ -117,7 +117,7 @@ def prepare():
                         taskdir=Path(entry['task_dir']);taskdir.mkdir(parents=True);shutil.copyfile(td/'input-template.json',taskdir/'input-template.json');shutil.copyfile(td/'oracle.json',taskdir/'oracle.json')
                         # All arms refer to the same frozen pair prompt and oracle; neither is exposed as an answer.
                         shutil.copyfile(td/'scenario.json',taskdir/'scenario.json');entry['oracle_sha256']=sha(td/'oracle.json');tasks.append(entry)
-    patch=exp/'control.patch.yml';patch.write_text(json.dumps([{'insert':[{'id':'sss-workflow-experiment','name':(ROOT/'src/adapters/dsh_workflow_experiment.ts').as_uri()}]}]))
+    patch=exp/'control.patch.yml';patch.write_text(json.dumps([{'insert':[{'id':'sss-workflow-experiment','name':(ROOT/'src/adapters/harness/learning/dsh_workflow_experiment.ts').as_uri()}]}]))
     launcher=exp/'launcher.py';launcher.write_text("import importlib.util\ns=importlib.util.spec_from_file_location('public_runner',"+repr(str(ROOT/'scripts/run-file-scenario.py'))+");m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\noriginal=m.create_harness\ndef wrapped(**kwargs):\n kwargs['patches']=tuple(kwargs['patches'])+("+repr(str(patch))+",)\n return original(**kwargs)\nm.create_harness=wrapped\nraise SystemExit(m.main())\n")
     paths=sorted(set(source_code())|set(EXTRA))
     for n in paths:q=exp/'frozen-source'/n;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/n,q)

@@ -11,11 +11,11 @@ import time
 from uuid import uuid4
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.probe_motif_compiler import collect as collect_probes
-from src.adapters.reuse_compiler import collect as collect_reuse, compile_library as compile_reuse
+from src.motif_core.offline.compilation.trace.probe_motif_compiler import collect as collect_probes
+from src.motif_core.offline.compilation.reuse_compiler import collect as collect_reuse, compile_library as compile_reuse
 from src.adapters.script_description_learning import learn_descriptions, retain_previous_descriptions, save
 from src.adapters.script_negative_learning import learn_negatives, certify_library
-from src.adapters.script_motif_compiler import digest
+from src.motif_core.offline.compilation.script_motif_compiler import digest
 
 def read(path):return json.loads(path.read_text())
 

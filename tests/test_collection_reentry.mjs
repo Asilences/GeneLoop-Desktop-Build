@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {validateReentryPolicy,createReentryController} from '../src/motif_core/collection_reentry_policy.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validateReentryPolicy,createReentryController} from '../src/motif_core/runtime/policies/collection_reentry_policy.ts';
 const names=['select','pin','read','gather'].map(n=>'mcp__test__'+n),obs=v=>({value:{structuredContent:v}});
 function fixture(){
  const [s,p,r,g]=names,tools=names.map(name=>({name,parameters:{}}));const graph={source_tool:s,pin_tool:p,read_tool:r,gather_tool:g,selection:'actual_model_selected_members',array_field:'files',identity_field:'file_id',pin_param:'file_id',read_param:'source_id',gather_param:'source_ids',max_targets:32,max_batch:8,stop:'semantic_handoff_after_complete_gather'};

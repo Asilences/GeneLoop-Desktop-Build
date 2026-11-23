@@ -4,7 +4,7 @@ import io
 import json
 import pytest
 from scenarios.data_analysis.report_intake import ReportIntake
-from src.adapters.harless_attachment_text import extract_attachment
+from src.adapters.web.attachments.harless_attachment_text import extract_attachment
 
 def image_file(path, kind='PNG'):
     Image=pytest.importorskip('PIL.Image')

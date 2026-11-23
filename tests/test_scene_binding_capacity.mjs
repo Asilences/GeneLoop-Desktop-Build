@@ -4,7 +4,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
-import {bindUploadedSourceTask,bindUploadedPptTask,bindApprovedUploadedReadTask} from '../src/adapters/harless_rsi_binding.ts';
+import {bindUploadedSourceTask,bindUploadedPptTask,bindApprovedUploadedReadTask} from '../src/adapters/web/learning/harless_rsi_binding.ts';
 test('all scene source binders admit 36 approved files while still rejecting changed bytes',()=>{
  const root=realpathSync(mkdtempSync(join(tmpdir(),'scene-binding-capacity-')));mkdirSync(join(root,'inputs'));
  try{

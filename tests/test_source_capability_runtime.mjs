@@ -5,10 +5,10 @@ import {mkdtempSync,writeFileSync,rmSync,realpathSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {capabilityDigest} from '../src/adapters/capability_contract.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {capabilityDigest} from '../src/capability/graph/capability_contract.ts';
 import {buildSourceCapabilities,runSourceCapability,sourceCapabilityOutputSchema} from '../src/adapters/source_capability_runtime.ts';
-import {extendCapabilitySeed} from '../src/adapters/capability_materials.ts';
+import {extendCapabilitySeed} from '../src/adapters/harness/capability/capability_materials.ts';
 import {createHash} from 'node:crypto';
 
 function library(){

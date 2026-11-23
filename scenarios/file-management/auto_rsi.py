@@ -18,11 +18,13 @@ import script_adaptation_study as fixtures
 from script_adaptation_learning import load_witness, RUNTIME_FILES
 from script_reuse_study import arms
 from experiment import accounting
-from src.motif_core.offline.experience_registry import ExperienceRegistry, durable
+from src.motif_core.reuse.experience_registry import ExperienceRegistry, durable
+from src.adapters.file_management.experience_certification import check_script_certificate
 
-EXTRA = ['src/adapters/dsh_experience.ts', 'src/motif_core/offline/experience_registry.py',
-         'src/adapters/dsh_learned_script.ts', *RUNTIME_FILES]
-CORE = ['src/motif_core/online_skill_runtime.mjs', 'src/motif_core/terminal_receipt_policy.ts']
+EXTRA = ['src/adapters/harness/learning/dsh_experience.ts', 'src/motif_core/reuse/experience_registry.py',
+         'src/adapters/file_management/experience_certification.py',
+         'src/adapters/harness/learning/dsh_learned_script.ts', *RUNTIME_FILES]
+CORE = ['src/motif_core/runtime/online_skill_runtime.mjs', 'src/motif_core/runtime/policies/terminal_receipt_policy.ts']
 
 
 def read(p):
@@ -49,11 +51,11 @@ def make(exp, role, business_case, layout, size, label, arm_order):
 
 
 def runtime_source(kind, protocol):
-    names = set(CORE + ['src/adapters/dsh_learned_script.ts'] if kind == 'script_v1' else RUNTIME_FILES)
+    names = set(CORE + ['src/adapters/harness/learning/dsh_learned_script.ts'] if kind == 'script_v1' else RUNTIME_FILES)
     if not kind.startswith('script_'):
         names = set(read(Path(protocol['library']) / 'library-lock.json')['groups']['workflow14']['dependencies'])
-        names.update(['src/motif_core/collection_read_policy.ts', 'src/motif_core/collection_reentry_policy.ts',
-                      'src/motif_core/authorized_plan_policy.ts', 'src/motif_core/online_skill_runtime.mjs'])
+        names.update(['src/motif_core/runtime/policies/collection_read_policy.ts', 'src/motif_core/runtime/policies/collection_reentry_policy.ts',
+                      'src/motif_core/runtime/policies/authorized_plan_policy.ts', 'src/motif_core/runtime/online_skill_runtime.mjs'])
     return {n: sha(ROOT / n) for n in sorted(names)}
 
 
@@ -62,14 +64,15 @@ def seed_registry(exp, p):
     seed = Path(p['seed_experiment'])
     entries = []
     for r in read(seed / 'candidate-lock.json')['scripts']:
-        entries.append(registry.entry('script_v1', r['path'], runtime_source('script_v1', p), seed / 'certificate.json'))
+        entries.append(registry.entry('script_v1', r['path'], runtime_source('script_v1', p), seed / 'certificate.json',
+                                      verify_certificate=check_script_certificate))
     library = Path(p['library'])
     for kind, name in [('read_library', 'workflow14/edge-library.json'), ('collection', 'workflow14/collection-policy.json')]:
         entries.append(registry.entry(kind, library / 'libraries' / name, runtime_source(kind, p)))
     # The plan is preserved, with its outer service/job dependencies; no autonomous restore certificate.
     lock = read(library / 'library-lock.json')
     plan_source = {n: sha(ROOT / n) for n in lock['groups']['recovery15']['dependencies']}
-    plan_source.update({n: sha(ROOT / n) for n in ['src/motif_core/authorized_plan_policy.ts', 'src/motif_core/online_skill_runtime.mjs']})
+    plan_source.update({n: sha(ROOT / n) for n in ['src/motif_core/runtime/policies/authorized_plan_policy.ts', 'src/motif_core/runtime/online_skill_runtime.mjs']})
     entries.append(registry.entry('plan', library / 'libraries/recovery15/plan-policy.json', plan_source))
     file = registry.publish(entries, reason='same historical certified seed for frozen and RSI arms', expected=0)
     durable(exp / 'seed-lock.json', {'registry_file': str(file), 'registry_sha256': sha(file),
@@ -94,8 +97,8 @@ def prepare(continuation=None):
         (probes if role == 'probe' else observations).extend(tasks)
     patch = exp / 'control.patch.yml'
     patch.write_text(json.dumps([{'insert': [
-        {'id': 'sss-workflow-experiment', 'name': (ROOT / 'src/adapters/dsh_workflow_experiment.ts').as_uri()},
-        {'id': 'sss-experience', 'name': (ROOT / 'src/adapters/dsh_experience.ts').as_uri()}]}]))
+        {'id': 'sss-workflow-experiment', 'name': (ROOT / 'src/adapters/harness/learning/dsh_workflow_experiment.ts').as_uri()},
+        {'id': 'sss-experience', 'name': (ROOT / 'src/adapters/harness/learning/dsh_experience.ts').as_uri()}]}]))
     launcher = exp / 'launcher.py'
     launcher.write_text("import importlib.util\ns=importlib.util.spec_from_file_location('public_runner'," + repr(str(ROOT / 'scripts/run-file-scenario.py')) + ");m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\noriginal=m.create_harness\ndef wrapped(**kwargs):\n kwargs['patches']=tuple(kwargs['patches'])+(" + repr(str(patch)) + ",)\n return original(**kwargs)\nm.create_harness=wrapped\nraise SystemExit(m.main())\n")
     paths = sorted(set(n for n in source_code() if not n.endswith('.md')) | set(h.EXTRA) | set(EXTRA))
@@ -181,7 +184,7 @@ def experience_binding(exp, c, p, out, spec, env, registry_file):
     b = {'role': 'certify' if c['arm'] == 'C' else c['role'], 'registry_root': str(root),
          'registry_file': str(registry_file), 'registry_sha256': sha(registry_file),
          'task_file': str(out / 'input.json'), 'task_sha256': sha(out / 'input.json'),
-         'prompt_sha256': c['prompt_sha256'], 'runtime_sha256': sha(ROOT / 'src/adapters/dsh_experience.ts'),
+         'prompt_sha256': c['prompt_sha256'], 'runtime_sha256': sha(ROOT / 'src/adapters/harness/learning/dsh_experience.ts'),
          'audit_file': str(out / 'experience-audit.jsonl')}
     if c['workflow_id'] == 'FM38':
         b.update(plan_binding=str(out / 'binding.json'), plan_policy=str(Path(p['library']) / 'libraries/recovery15/plan-policy.json'))
@@ -348,7 +351,7 @@ def learn_candidate(exp, p, round_id, exploration, attempt=1):
         script['script_digest'] = digest(script)
         f = destination / ('program-' + key[:16] + '.json')
         durable(f, script, exclusive=True)
-        subprocess.run(['node', '--input-type=module', '-e', "import fs from 'node:fs';import {validateScript} from './src/adapters/dsh_learned_script_v2.ts';validateScript(JSON.parse(fs.readFileSync(process.argv[1],'utf8')));", str(f)], cwd=ROOT, check=True, capture_output=True)
+        subprocess.run(['node', '--input-type=module', '-e', "import fs from 'node:fs';import {validateScript} from './src/adapters/harness/learning/dsh_learned_script.ts';validateScript(JSON.parse(fs.readFileSync(process.argv[1],'utf8')));", str(f)], cwd=ROOT, check=True, capture_output=True)
         scripts.append({'script_digest': script['script_digest'], 'path': str(f), 'sha256': sha(f)})
     result = {'scripts': scripts, 'excluded': excluded, 'training_roles': ['explore'], 'holdout_used': False, 'certification_used': False,
               'induction': 'existing relational compiler; group actual inferred instructions, never profile_id',
@@ -449,7 +452,8 @@ def cycle(exp, p, number, cases):
     if read(cert)['status'] != 'certified_v2':
         state_event(exp, 'candidate_rejected', {'round': number, 'certificate_sha256': sha(cert)})
         raise ValueError('failed independent certification; candidate stays inactive')
-    entries = [registry.entry('script_v2', r['path'], runtime_source('script_v2', p), cert) for r in lock['scripts']]
+    entries = [registry.entry('script_v2', r['path'], runtime_source('script_v2', p), cert,
+                              verify_certificate=check_script_certificate) for r in lock['scripts']]
     file = registry.publish(entries, reason='autonomous round ' + str(number) + '; frozen independent acceptance passed')
     result = {'round': number, 'registry_file': str(file), 'registry_sha256': sha(file), 'new_entries': [e['entry_id'] for e in entries],
               'trigger': trigger, 'certificate_sha256': sha(cert), 'automatic': True, 'holdout_used': False}

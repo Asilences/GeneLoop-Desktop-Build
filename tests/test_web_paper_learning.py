@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 from tests.test_trace_compiled_read_motif import event_pair
-from src.adapters.harless_rsi_bundle import load_product_bundle
+from src.adapters.web.learning.harless_rsi_bundle import load_product_bundle
 
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('auto_paper',ROOT/'scripts/learn-web-paper-tasks.py')
@@ -53,7 +53,7 @@ def task(owned,index,*,mode='baseline',user='diagnostic-user',old_only=False,que
 
 
 def test_capability_projection_preserves_calls_failures_and_unknown_dependencies(owned):
-    from src.adapters.capability_trajectory import project_web_task
+    from src.adapters.web.learning.capability_trajectory import project_web_task
     out,store,request=owned;directory=task(owned,1,mode='execute')
     state=json.loads((directory/'task-state.json').read_text());state['status']='failed';save(directory/'task-state.json',state)
     before={str(p):worker.sha(p) for p in directory.iterdir() if p.is_file()}
@@ -70,7 +70,7 @@ def test_capability_projection_preserves_calls_failures_and_unknown_dependencies
 
 
 def test_projection_rejects_false_boundary_and_only_reads_current_turn(owned):
-    from src.adapters.capability_trajectory import project_web_task
+    from src.adapters.web.learning.capability_trajectory import project_web_task
     directory=task(owned,1,old_only=True)
     assert project_web_task(directory,'diagnostic-user')['steps']==[]
     effective=json.loads((directory/'effective-config.json').read_text());effective['trace_start_index']=0;save(directory/'effective-config.json',effective)
@@ -125,3 +125,64 @@ def test_private_release_cannot_be_read_as_another_store_or_as_another_scene(own
     other=owned[0]/'other-store';other.mkdir()
     with pytest.raises(ValueError):load_product_bundle(ROOT,release,'paper-proofreading',private_root=other)
     with pytest.raises(ValueError):load_product_bundle(ROOT,release,'ppt',private_root=owned[1])
+
+
+def test_private_document_release_accepts_only_exact_reviewed_source_relocation(owned, tmp_path):
+    from src.adapters.web.learning.harless_rsi_bundle import load_uploaded_bundle
+
+    for index in range(1, 4):
+        task(owned, index)
+    worker.advance(owned[2])
+    root = tmp_path / 'project'
+    store = root / '.local/paper-owner'
+    release = store / 'release'
+    shutil.copytree(owned[1] / 'round-0001/release', release)
+    certificate_file = release / 'certification.json'
+    entry_file = release / 'entry.json'
+    cert = json.loads(certificate_file.read_text())
+    entry = json.loads(entry_file.read_text())
+    locks = cert['code_locks']
+    for name in {*locks, 'scenarios/paper_proofreading/scenario.json'}:
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, root / name)
+
+    old = 'src/adapters/paper_renderer.py'
+    current = 'scenarios/paper_proofreading/document_tools/paper_renderer.py'
+    expected = locks.pop(current)
+    server = 'scenarios/paper_proofreading/server.py'
+    server_current = locks[server]
+    legacy_server = '1' * 64
+    locks.update({old: expected, server: legacy_server})
+
+    def seal_fixture():
+        save(certificate_file, cert)
+        entry['files']['certification.json'] = worker.sha(certificate_file)
+        save(entry_file, entry)
+
+    seal_fixture()
+    before = {p: p.read_bytes() for p in release.iterdir()}
+    policy = root / 'config/rsi-privacy-code-compat.json'
+    policy.parent.mkdir(parents=True, exist_ok=True)
+    save(policy, {'private_paper_document_relocations': {
+        old: {'path': current, 'from_sha256': expected, 'to_sha256': expected},
+        server: {'path': server, 'from_sha256': legacy_server, 'to_sha256': server_current},
+    }})
+
+    admitted = load_product_bundle(root, release, 'paper-proofreading', private_root=store)
+    admitted_locks = admitted['certified_code_locks']
+    assert admitted_locks[str(root / current)] == expected
+    assert admitted_locks[str(root / server)] == server_current
+    assert str(root / old) not in admitted_locks
+    assert {p: p.read_bytes() for p in release.iterdir()} == before
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_uploaded_bundle(root, release, 'paper-proofreading', approved_read=True)
+
+    locks[old] = '2' * 64
+    seal_fixture()
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_product_bundle(root, release, 'paper-proofreading', private_root=store)
+    for p, raw in before.items():
+        p.write_bytes(raw)
+    (root / current).write_bytes(b'changed relocated source')
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_product_bundle(root, release, 'paper-proofreading', private_root=store)

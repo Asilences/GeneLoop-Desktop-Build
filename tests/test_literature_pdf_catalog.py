@@ -49,7 +49,7 @@ def test_catalog_delivers_all_records_and_existing_bib_parser_checked(setup):
     assert digest(envelope)==result['artifact_sha256']
     # Exercise the actual shared completion verifier, not a mirror of its hashing rule.
     import subprocess
-    check="import fs from 'node:fs';import {verifyReceipt} from './src/adapters/dsh_completion_guard.ts';const r=JSON.parse(fs.readFileSync(0,'utf8'));if(!verifyReceipt(r,process.argv[1]))process.exit(1);"
+    check="import fs from 'node:fs';import {verifyReceipt} from './src/adapters/harness/dsh_completion_guard.ts';const r=JSON.parse(fs.readFileSync(0,'utf8'));if(!verifyReceipt(r,process.argv[1]))process.exit(1);"
     subprocess.run(['node','--input-type=module','-e',check,str(ROOT/'.local')],input=json.dumps(result),text=True,cwd=ROOT,check=True)
     assert s.publish(entries,persist=False)==value
     assert Path(result['bibtex']).read_text()==value['bibliography']

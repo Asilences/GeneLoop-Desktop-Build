@@ -13,14 +13,14 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from src.adapters.session_files import SessionFiles
 from src.adapters.file_lock import exclusive_lock
-from src.adapters import paper_static_checks
-from src.adapters.harless_attachment_text import extract_attachment
+from scenarios.paper_proofreading.document_tools import paper_static_checks
+from src.adapters.web.attachments.harless_attachment_text import extract_attachment
 from src.adapters.session_report import SessionReport
 from scenarios.data_analysis.table_inputs import summarize_tables
-from src.adapters.paper_archive import materialize_approved_archive
+from scenarios.paper_proofreading.document_tools.paper_archive import materialize_approved_archive
 from src.adapters.paper_bibliography import title_query
 from src.adapters.paper_query_recovery import validate_queries
-from src.adapters.paper_renderer import (INPUT_SCHEMA, audit_pdf_content_coverage,
+from scenarios.paper_proofreading.document_tools.paper_renderer import (INPUT_SCHEMA, audit_pdf_content_coverage,
                                          control_character_fields, render_renderer, validate_audit)
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
@@ -347,6 +347,10 @@ def create_server(directory, renderer_root=None, *, native_renderer=None):
         """Export a new task PDF from the approved or finalized report SHA and reviewed renderer."""
         return output.export(report_sha256)
 
+    # The native Harness adapter invokes one bounded process per call. Keep
+    # only issued handles and source-bound packets between calls; the business
+    # functions and their version checks remain the same as the MCP path.
+    server._native_state = (files, citation_state, citations)
     return server
 
 

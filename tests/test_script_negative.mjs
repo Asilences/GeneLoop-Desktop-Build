@@ -8,9 +8,9 @@ import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {Context} from '@deepseek-ai/cordis';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {createNegativeRuntime} from '../src/adapters/script_negative_runtime.ts';
-import {evaluateFieldGuard,validateFieldGuard} from '../src/adapters/negative_field_runtime.ts';
+import {evaluateFieldGuard,validateFieldGuard} from '../src/motif_core/runtime/policies/negative_field_runtime.ts';
 const hash=v=>createHash('sha256').update(v).digest('hex');
 function fixture(t,mode='enforce',fieldGuard=null,document=null,toolScoped=false){
  const workspace=realpathSync(mkdtempSync(join(tmpdir(),'negative-motif-')));

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { ApiSessionNotFound } from '@deepseek-ai/dsh-api-session-controller';
-import { createSessionTrash, protectDeletedSessions, protectDeletedSessionFiles, protectDeletedSessionQuery, protectWorkspaceArchiveProjection, registerSessionTrashRoute } from '../src/adapters/harless_session_trash.ts';
+import { createSessionTrash, protectDeletedSessions, protectDeletedSessionFiles, protectDeletedSessionQuery, protectWorkspaceArchiveProjection, registerSessionTrashRoute } from '../src/adapters/web/sessions/harless_session_trash.ts';
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'geneloop-trash-')), path = join(dir, 'trash.json');

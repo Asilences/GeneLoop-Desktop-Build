@@ -4,12 +4,44 @@ import os
 import re
 import tempfile
 import threading
+import pytest
 from uuid import uuid4
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.scenario import ROOT, prepare_scenario
+
+
+def test_file_sdk_resume_restores_native_model_history_without_resending_original_goal(tmp_path):
+    """Real upstream SDK/persistence, local fake provider; not a quality benchmark."""
+    Provider.calls=[];prepared=prepare_scenario(ROOT/'scenarios/example/scenario.json')
+    session='offline-native-resume-'+uuid4().hex
+    patch=tmp_path/'resume.json';patch.write_text(json.dumps([{'id':'sdk-jsonrpc-server','disabled':True},
+        {'insert':[{'id':'file-native-resume-server',
+        'name':(ROOT/'src/adapters/harness/learning/dsh_file_resume.ts').as_uri(),'config':{'session_id':session}}]}]))
+    with ThreadingHTTPServer(('127.0.0.1',0),Provider) as provider:
+        thread=threading.Thread(target=provider.serve_forever,daemon=True);thread.start()
+        env={'DSH_HOME':str(tmp_path/'original-dsh'),'DEEPSEEK_BASE_URL':f'http://127.0.0.1:{provider.server_port}/v1',
+            'DEEPSEEK_API_KEY':'local-test-only','SSS_SCENARIO_TOOLS':json.dumps(prepared['allowed_tools'])}
+        def stop(n):
+            if n.method=='session.event' and n.payload.get('event',{}).get('type')=='tool/result':
+                raise KeyboardInterrupt('controlled interruption after durable tool result')
+        try:
+            with pytest.raises(KeyboardInterrupt),create_harness(root=ROOT,patches=(prepared['patch'],),env=env,
+                    cwd=str(tmp_path),runtime_cwd=str(tmp_path),provider='deepseek-official',model='deepseek-flash',request_timeout_seconds=20)as h:
+                h.run(prepared['prompt'],session_id=session,on_notification=stop)
+            with create_harness(root=ROOT,patches=(prepared['patch'],str(patch)),env=env,
+                    cwd=str(tmp_path),runtime_cwd=str(tmp_path),provider='deepseek-official',model='deepseek-flash',request_timeout_seconds=20)as h:
+                result=h.run('Continue the same task using its saved tool results.',session_id=session)
+            assert 'replication'in result.final_response
+            assert len(Provider.calls)==3
+            body=Provider.calls[1][1]
+            messages=body['messages']
+            assert sum(prepared['prompt']in str(m.get('content'))for m in messages if m['role']=='user')==1
+            assert any('source-'in str(m)for m in messages if m['role']=='tool')
+        finally:
+            provider.shutdown();thread.join(timeout=5)
 
 
 class Provider(BaseHTTPRequestHandler):
@@ -59,6 +91,7 @@ def test_native_harness_loop_executes_only_demo_mcp_through_budget_proxy():
         for thread in threads: thread.start()
         try:
             with create_harness(root=ROOT,patches=(prepared['patch'],),cwd=temp,runtime_cwd=temp,
+                                privacy_diagnostic=bool(os.environ.get('SSS_RSI_GITLEAKS')),
                                 provider='deepseek-official',model='deepseek-flash',max_tokens=1000,
                                 request_timeout_seconds=20,
                                 env={'DEEPSEEK_BASE_URL':f'http://127.0.0.1:{gate.server_port}/v1',
@@ -77,6 +110,7 @@ def test_native_harness_loop_executes_only_demo_mcp_through_budget_proxy():
             assert state.request_count == 3
             if os.environ.get('SSS_RSI_GITLEAKS'):
                 # Actual pinned SDK notifications, not hand-built trace rows.
+                assert harness.wait_for_privacy(timeout=120)
                 assert len(harness.privacy_views) == 1
                 view = json.loads((harness.privacy_views[0]/'privacy-learning.json').read_text())
                 assert view['format'] == 'geneloop.rsi-learning-trace/v4'

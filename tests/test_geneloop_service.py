@@ -17,6 +17,9 @@ sys.path.insert(0, str(SCRIPTS))
 SPEC = importlib.util.spec_from_file_location('geneloop_service', SCRIPTS / 'geneloop_service.py')
 service = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(service)
+DESKTOP_SPEC = importlib.util.spec_from_file_location('prepare_desktop_accounts', SCRIPTS / 'prepare-desktop-accounts.py')
+desktop = importlib.util.module_from_spec(DESKTOP_SPEC)
+DESKTOP_SPEC.loader.exec_module(desktop)
 
 FIXTURE = r'''
 import os,sys,json
@@ -82,6 +85,28 @@ class PlanTests(unittest.TestCase):
         service.save(self.policy, value)
         with self.assertRaises(RuntimeError):
             service.load_plan(self.plan_file)
+
+    def test_desktop_candidate_reuses_accounts_and_budget_controller(self):
+        config = service.read(self.config)
+        config.update(apiKey='fixture', upstreamControlPort=port(), upstreamBrokerPort=port(),
+                      memberPolicy={'control_token': 'fixture', 'budget_usd': .15},
+                      desktopLocalModel={'accountIds': ['previous'], 'videoRendering': True})
+        service.save(self.config, config)
+        database = Path(config['dataDir']) / 'accounts.json'
+        database.parent.mkdir()
+        service.save(database, {'version': 1, 'users': [{'id': 'previous', 'role': 'owner'},
+                                                       {'id': 'existing', 'role': 'member'}]})
+        output = self.root / 'new-desktop-plan'
+        with self.assertRaisesRegex(RuntimeError, 'existing GeneLoop account IDs'):
+            desktop.prepare(self.plan_file, output, ['unknown'])
+        self.assertFalse(output.exists())
+        path = desktop.prepare(self.plan_file, output, ['existing', 'previous'])
+        candidate = service.load_plan(path)
+        new_config = service.read(candidate['gateway_config'])
+        self.assertEqual(new_config, {**config, 'desktopLocalModel': {
+            'accountIds': ['previous', 'existing'], 'videoRendering': True}})
+        self.assertEqual(service.read(self.config), config)
+        self.assertEqual(service.load_plan(self.plan_file), self.plan)
 
     def test_snapshot_keeps_digest_and_is_independent_of_original_files(self):
         lifecycle = service.Lifecycle(self.plan)

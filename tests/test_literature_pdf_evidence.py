@@ -235,10 +235,10 @@ def test_long_approved_plan_has_short_bound_handle_and_identical_packet(evidence
 @POPPLER
 @pytest.mark.parametrize('frozen', [False, True])
 def test_actual_mcp_harness_two_verified_skips_with_compiler_certified_fixture(evidence_corpus, frozen):
-    from src.adapters.dsh_trajectory import DshTrace, ToolRecord, mine_witnessed_parameter_edges
-    from src.adapters.tool_contract_loader import parse_tool_contracts
-    from src.motif_core.offline.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
-    from src.motif_core.offline.library_builder import library_from_certified
+    from src.adapters.harness.dsh_trajectory import DshTrace, ToolRecord, mine_witnessed_parameter_edges
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+    from src.motif_core.offline.compilation.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
+    from src.motif_core.offline.compilation.library_builder import library_from_certified
     contracts_raw = json.loads((HERE / 'pdf-evidence-contracts.json').read_text())
     contracts = parse_tool_contracts(contracts_raw)
     policy = tools.continuation_policy()

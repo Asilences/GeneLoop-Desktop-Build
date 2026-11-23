@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from src.adapters.harless_rsi_bundle import load_product_bundle
+from src.adapters.web.learning.harless_rsi_bundle import load_product_bundle
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = json.loads((ROOT / 'config/harless-scenes.json').read_text(encoding='utf-8'))
@@ -26,8 +26,10 @@ def copy_release(tmp_path):
     root = tmp_path / 'repo'
     bundle = root / 'motif-libraries' / RELEASE.name
     shutil.copytree(RELEASE, bundle)
-    paths = set(read(RELEASE / 'certification.json')['code_locks'])
-    paths.add('scenarios/paper_proofreading/scenario.json')
+    policy = ROOT / 'config/rsi-privacy-code-compat.json'
+    reviewed = read(policy)
+    paths = {reviewed.get(name, {}).get('path', name) for name in read(RELEASE / 'certification.json')['code_locks']}
+    paths.update(['scenarios/paper_proofreading/scenario.json', str(policy.relative_to(ROOT))])
     for name in paths:
         target = root / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -62,6 +64,11 @@ def test_real_paper_product_bundle_admits_independent_traces_and_complete_unchan
     assert sorted(row['name'] for row in admitted['certified_tool_schemas']) == sorted(allowed)
     for name, expected in entry['files'].items():
         assert sha(RELEASE / name) == expected, name
+
+
+def test_paper_web_has_one_current_release():
+    assert RELEASE == ROOT / 'motif-libraries' / 'paper-web'
+    assert not any(path.is_dir() for path in RELEASE.parent.rglob('paper-web-*'))
 
 
 def test_three_product_defaults_select_execute_releases_with_exact_registered_capabilities():
@@ -118,83 +125,12 @@ def test_real_paper_release_rejects_changed_runtime_and_wrong_scene(tmp_path):
         load_product_bundle(root, bundle, 'research-data-analysis')
 
 
-def test_original_paper_shadow_release_stays_shadow_and_cannot_be_relabelled_as_new_training(tmp_path):
-    original = ROOT / 'motif-libraries/paper'
-    admitted = load_product_bundle(ROOT, original, 'paper-proofreading')
-    assert admitted['runtime_kind'] == 'paper_shadow_v1'
-    assert admitted['runtime_mode'] == 'shadow'
-    bundle = tmp_path / 'motif-libraries/paper-web-v1'
-    shutil.copytree(original, bundle)
-    entry = read(bundle / 'entry.json')
-    entry.update(runtime_kind='paper_document_read_v1', mode='execute')
-    (bundle / 'entry.json').write_text(json.dumps(entry), encoding='utf-8')
-    with pytest.raises(ValueError, match='invalid existing product library'):
-        load_product_bundle(tmp_path, bundle, 'paper-proofreading')
-
-
-@pytest.mark.parametrize('before,after,scene,record', [
-    ('paper-web-v12','paper-web-v13','paper-proofreading','delivery_compatibility'),
-    ('ppt-master-v7','ppt-master-v8','ppt','delivery_compatibility'),
-    ('paper-web-v13','paper-web-v14','paper-proofreading','attachment_context_compatibility'),
-    ('ppt-master-v8','ppt-master-v9','ppt','attachment_context_compatibility'),
-    ('paper-web-v14','paper-web-v15','paper-proofreading','attachment_surface_compatibility'),
-    ('ppt-master-v9','ppt-master-v10','ppt','attachment_surface_compatibility'),
-    ('paper-web-v15','paper-web-v16','paper-proofreading','attachment_evidence_consumption_compatibility'),
-    ('ppt-master-v10','ppt-master-v11','ppt','attachment_evidence_consumption_compatibility'),
-    ('paper-web-v16','paper-web-v17','paper-proofreading','ppt_learning_compatibility'),
-    ('ppt-master-v11','ppt-master-v12','ppt','ppt_learning_compatibility'),
-    ('paper-web-v79','paper-web-v80','paper-proofreading','native_capabilities_compatibility'),
-    ('ppt-master-v77','ppt-master-v78','ppt','native_capabilities_compatibility'),
-    ('paper-web-v80','paper-web-v81','paper-proofreading','native_capabilities_compatibility'),
-    ('ppt-master-v78','ppt-master-v79','ppt','native_capabilities_compatibility'),
-    ('paper-web-v81','paper-web-v82','paper-proofreading','native_capabilities_compatibility'),
-    ('ppt-master-v79','ppt-master-v80','ppt','native_capabilities_compatibility'),
-    ('paper-web-v82','paper-web-v83','paper-proofreading','native_capabilities_compatibility'),
-    ('ppt-master-v80','ppt-master-v81','ppt','native_capabilities_compatibility'),
-    ('paper-web-v83','paper-web-v84','paper-proofreading','native_capabilities_compatibility'),
-    ('ppt-master-v81','ppt-master-v82','ppt','native_capabilities_compatibility'),
-])
-def test_compatibility_reuses_validated_program_without_rewriting_previous_release(before,after,scene,record):
-    original=ROOT/'motif-libraries'/before
-    candidate=ROOT/'motif-libraries'/after
-    report=read(candidate/'learning-report.json')[record]
-    assert report['previous_certification_sha256']==sha(original/'certification.json')
-    assert report['method']=='reexport_certified_serialized_library'
-    assert report['model_requests']==0 and report['new_training_tasks']==0
-    assert report['raw_traces_replayed'] is False
-    for name in ('library.json','source-evidence.json','task.json','tool-schemas.json','online-manifest.json'):
-        assert (candidate/name).read_bytes()==(original/name).read_bytes()
-    assert read(candidate/'online-manifest.json')==read(original/'online-manifest.json')
-    if record=='attachment_evidence_consumption_compatibility':
-        assert report['changed_code_locks']==['src/adapters/harless_attachment_context.ts']
-        assert set(report['additional_code_locks'])=={'src/adapters/harless_attachment_reading.ts',
-                                                    'scripts/reexport-attachment-reading-compat.py'}
-    if record in ('attachment_context_compatibility','attachment_surface_compatibility',
-                  'attachment_evidence_consumption_compatibility'):
-        # New certificate hashes must describe the LF bytes Git will commit,
-        # including when this release is exported on Windows.
-        for path in candidate.iterdir():
-            if path.is_file():
-                assert b'\r\n' not in path.read_bytes(),path.name
-    current=next(row for row in read(ROOT/'config/harless-scenes.json')['scenes'] if row['id']==scene)['rsi']['runtime_bundle']
-    if candidate==ROOT/current:
-        assert load_product_bundle(ROOT,candidate,scene)['quality_cost_promoted'] is False
-    else:
-        # Historical release bytes stay valid for their original runtime, and
-        # must fail closed against today's changed attachment implementation.
-        with pytest.raises(ValueError,match='code changed'):
-            load_product_bundle(ROOT,candidate,scene)
-
-
 @pytest.mark.parametrize('name',[
-    'src/adapters/harless_attachment_context.ts',
+    'src/adapters/web/attachments/harless_attachment_context.ts',
     'src/adapters/geneloop_attachment_cache.ts',
-    'src/adapters/harless_public_output.ts',
-    'src/adapters/harless_task_progress.ts',
-    'scripts/reexport-attachment-context-compat.py',
-    'scripts/reexport-surface-context-compat.py',
-    'src/adapters/harless_attachment_reading.ts',
-    'scripts/reexport-attachment-reading-compat.py',
+    'src/adapters/web/tasks/harless_public_output.ts',
+    'src/adapters/web/tasks/harless_task_progress.ts',
+    'src/adapters/web/attachments/harless_attachment_reading.ts',
 ])
 def test_attachment_compatibility_locks_each_new_context_and_evidence_boundary(tmp_path,name):
     root,bundle=copy_release(tmp_path)

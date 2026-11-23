@@ -8,7 +8,7 @@ from collection_study import task_scope,verify_collection,GRAPH_TOOLS
 from collection_tools import execution_version
 from experiment import run_one,outcomes,accounting
 
-def code():return {**source_code(),'scripts/file-batch-study.py':sha(__file__),'src/motif_core/collection_batch_script.ts':sha(ROOT/'src/motif_core/collection_batch_script.ts')}
+def code():return {**source_code(),'scripts/file-batch-study.py':sha(__file__),'src/motif_core/runtime/policies/collection_batch_script.ts':sha(ROOT/'src/motif_core/runtime/policies/collection_batch_script.ts')}
 def prepare(parent):
  old=json.loads((parent/'protocol.json').read_text());name='fm-batch-20261013-'+uuid4().hex[:8]
  exp=ROOT/'.local/file-management'/name;data=DATA/name;exp.mkdir(parents=True,mode=0o700)

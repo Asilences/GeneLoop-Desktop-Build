@@ -10,7 +10,7 @@ from .model_api import model_api_root, model_sdk_key
 import hashlib,json,os,re,threading,urllib.request,urllib.error
 from pathlib import Path
 from .deepseek_cost_gate import State,create_server
-from src.motif_core.offline.experience_registry import durable
+from src.motif_core.reuse.experience_registry import durable
 
 
 def image_content(value,file_ids=(),file_labels=None):

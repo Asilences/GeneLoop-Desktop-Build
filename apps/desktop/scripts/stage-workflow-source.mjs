@@ -1,17 +1,21 @@
 import {execFileSync} from 'node:child_process';
 import {cpSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
-import {dirname,join,basename} from 'node:path';
+import {dirname,join,basename,isAbsolute,relative,resolve} from 'node:path';
 import {stripTypeScriptTypes} from 'node:module';
+import {createHash} from 'node:crypto';
 
+const certifiedDesktopFiles=new Set(['apps/desktop/runtime/local-ppt-deck.mjs','apps/desktop/scripts/stage-ppt-deck.mjs',
+  'package.json','package-lock.json']);
 // Only tracked public implementation/configuration files. Never glob .local,
 // source materials, benchmark cases, generated reports, credentials or caches.
 export function stageWorkflowSource(repo,destination) {
-  const areas=['src/adapters','scenarios/data_analysis','scenarios/paper_proofreading',
+  const compatibility=JSON.parse(readFileSync(join(repo,'config/rsi-privacy-code-compat.json'),'utf8'));
+  const areas=['src/adapters','src/motif_core','src/capability','src/rsi','src/semantic_inputs.py','scenarios/data_analysis','scenarios/paper_proofreading',
     'scenarios/paper-submission','scenarios/ppt_master','scenarios/research_ppt',
     'scenarios/file-management','scenarios/general','benchmarks/research_report_agent_v1','benchmarks/research_report_agent_v2','benchmarks/research_report_agent_v3'];
   const files=execFileSync('git',['ls-files','--',...areas],{cwd:repo,encoding:'utf8',windowsHide:true}).trim().split(/\r?\n/)
-    .filter(path=>/\.(?:py|json|ts|md)$/.test(path)&&!/(?:^|\/)(?:tests?|cases|fixtures)(?:\/|\.)/.test(path));
-  for(const extra of ['src/adapters/desktop_workflow_server.py','src/adapters/desktop_general.py'])if(!files.includes(extra))files.push(extra);
+    .filter(path=>/\.(?:py|json|ts|mjs|md|txt)$/.test(path)&&!/(?:^|\/)(?:tests?|cases|fixtures)(?:\/|\.)/.test(path));
+  for(const extra of ['src/motif_core/LICENSE','src/motif_core/PROVENANCE.md','src/adapters/desktop/desktop_rsi_catalog.py'])if(!files.includes(extra))files.push(extra);
   for(const path of files) {
     const target=join(destination,path);mkdirSync(dirname(target),{recursive:true});cpSync(join(repo,path),target);
     if(path.startsWith('scenarios/research_ppt/ts/')&&path.endsWith('.ts')) {
@@ -19,5 +23,38 @@ export function stageWorkflowSource(repo,destination) {
       writeFileSync(js,stripTypeScriptTypes(readFileSync(join(repo,path),'utf8'),{mode:'transform'}));
     }
   }
+  const scenes=JSON.parse(readFileSync(join(repo,'config/harless-scenes.json'),'utf8')).scenes;
+  for(const scene of scenes){
+    const selected=scene.rsi?.runtime_bundle;if(!selected)continue;
+    if(!/^motif-libraries\/[a-zA-Z0-9_-]+$/.test(selected))throw Error('Invalid registered library path');
+    const release=join(repo,selected),registered=JSON.parse(readFileSync(join(release,'entry.json'),'utf8'));
+    for(const name of ['entry.json',...Object.keys(registered.files)]){
+      if(name!==basename(name))throw Error('Invalid registered library member');
+      const to=join(destination,selected,name);mkdirSync(dirname(to),{recursive:true});cpSync(join(release,name),to);
+    }
+    if(registered.files['certification.json']){
+      const certificate=JSON.parse(readFileSync(join(release,'certification.json'),'utf8'));
+      for(const [recorded,expected] of Object.entries(certificate.code_locks??{})){
+        const migration=compatibility[recorded];
+        const relocated=migration?.path&&[migration.certified,...(migration.additional_certified??[])].includes(expected);
+        const name=relocated?migration.path:recorded;
+        const local=relative(repo,resolve(repo,name));
+        if(isAbsolute(name)||local==='..'||local.startsWith('..\\')||local.startsWith('../')||
+          (!/^(?:src|scripts|scenarios|config|schemas|benchmarks)\//.test(name)&&!certifiedDesktopFiles.has(name)))
+          throw Error('Invalid public code dependency: '+name);
+        if(relocated&&createHash('sha256').update(readFileSync(join(repo,name))).digest('hex')!==migration.current)
+          throw Error('Relocated public code dependency changed: '+name);
+        const to=join(destination,name);mkdirSync(dirname(to),{recursive:true});cpSync(join(repo,name),to);
+      }
+    }
+  }
+  for(const name of ['config/geneloop-capabilities.json','config/general-tools.json','config/harless-scenes.json',
+    'config/geneloop-privacy-policy-v1.json','config/rsi-privacy-tools.json','config/rsi-privacy-candidate-tools.json',
+    'config/rsi-privacy-code-compat.json','config/file-management-runtime-compatibility.json',
+    'config/script-runtime-compatibility.json','config/motif-evidence-v1.schema.json','config/motif-evidence-v2.schema.json',
+    'schemas/geneloop-privacy-policy.schema.json','schemas/rsi-shared-tool-flow.schema.json','requirements-rsi-privacy.txt']){
+    const target=join(destination,name);mkdirSync(dirname(target),{recursive:true});cpSync(join(repo,name),target);
+  }
+  cpSync(join(repo,'src/adapters/desktop/desktop_sitecustomize.py'),join(destination,'sitecustomize.py'));
   return files.length;
 }

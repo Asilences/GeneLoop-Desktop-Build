@@ -1,0 +1,17 @@
+{
+  "samples": 1,
+  "seed": "privacy-r4-warm-unknown-v1",
+  "original_status": "evaluation_timeout",
+  "diagnostic_status": "evaluation_timeout",
+  "source_sha256": "edb2daa2db77dd8e2b8e8bc33aaedaa9d8c10fbfac60c2737de6e32de59c3b54",
+  "bytes": 372495,
+  "outcome": {},
+  "deadline_seconds": 120,
+  "sampling_interval_seconds": 15,
+  "warm_init_completed_before_call": true,
+  "wall_seconds_including_initialization": 129.48509689606726,
+  "source_sha256_of_probe": "66cb5343919eb11f96f680f4e97c86ef7e4a2e26e6cc5b4d98bef2568ee9577c",
+  "scope": "single retrospective timeout diagnostic on shared server; no corpus causality or production SLA claim",
+  "original_full_run_overwritten": false,
+  "cloud_requests": 0
+}

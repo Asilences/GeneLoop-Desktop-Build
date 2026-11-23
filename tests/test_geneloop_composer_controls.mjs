@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const source = readFileSync(new URL('../src/adapters/harless_web_client/client.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../src/adapters/web/client/client.js', import.meta.url), 'utf8');
 const start = source.indexOf('      // Adapt public seats/stores only:');
 const end = source.indexOf('      // The pinned native tab roster', start);
 const code = source.slice(start, end);

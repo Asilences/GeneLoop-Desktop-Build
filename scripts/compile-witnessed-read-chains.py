@@ -11,22 +11,24 @@ import argparse
 import hashlib
 import json
 import sys
-from pathlib import Path
+from pathlib import Path as BootstrapPath
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = BootstrapPath(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from src.adapters.filesystem_paths import Path
+ROOT = Path(ROOT).resolve()
 
-from src.adapters.dsh_trajectory import (  # noqa: E402
+from src.adapters.harness.dsh_trajectory import (  # noqa: E402
     ToolContract, extract_dsh_trace, infer_dsh_provenance,
     mine_witnessed_parameter_edges,
 )
 from src.adapters.task_identity import (  # noqa: E402
     load_trace_identity, require_distinct_decisions,
 )
-from src.motif_core.offline.chain_compiler import (  # noqa: E402
+from src.motif_core.offline.compilation.chain_compiler import (  # noqa: E402
     certify_witnessed_chain_motif, compile_witnessed_chain_motif,
 )
-from src.motif_core.offline.edge_compiler import (  # noqa: E402
+from src.motif_core.offline.compilation.edge_compiler import (  # noqa: E402
     certify_witnessed_edge_motif, compile_witnessed_edge_motif,
 )
 
@@ -42,7 +44,7 @@ def _contracts(paths: list[Path]) -> dict[str, ToolContract]:
         specs.update(incoming)
     # Use the same validated loader as the full library compiler so optional
     # page/line ranges and structured measure shapes are not silently lost.
-    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
     return parse_tool_contracts(specs)
 
 

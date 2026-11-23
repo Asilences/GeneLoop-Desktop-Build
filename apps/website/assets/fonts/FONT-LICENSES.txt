@@ -1,0 +1,5 @@
+Included fonts are distributed under SIL Open Font License 1.1 and may be used commercially. Preserve the accompanying OFL notices when redistributing fonts.
+
+IBM Plex Sans / IBM Plex Mono — IBM Corp.
+Space Grotesk — Florian Karsten
+Noto Sans SC — Google / Adobe

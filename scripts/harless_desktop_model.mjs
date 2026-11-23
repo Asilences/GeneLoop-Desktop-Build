@@ -1,18 +1,33 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { localSceneTools } from '../apps/desktop/runtime/local-scenes.mjs';
-import { desktopVideoInput, desktopVideoRequestLimit, desktopVideoSandbox, renderDesktopVideo } from '../src/adapters/geneloop_desktop_video.ts';
+import {createDesktopDecisions} from './harless_desktop_decisions.mjs';
+import { desktopVideoInput, desktopVideoRequestLimit, desktopVideoSandbox, renderDesktopVideo } from '../src/adapters/desktop/geneloop_desktop_video.ts';
 
 export const DESKTOP_MODEL_PATH = '/api/harless/desktop-model';
 const leaseMs = 10 * 60_000;
 const requestFields = new Set(['model', 'messages', 'stream', 'stream_options', 'thinking', 'tools', 'temperature', 'max_tokens', 'stop']);
 const roles = new Set(['system', 'user', 'assistant', 'tool']);
+// DSH sends tool-result images as a user message after the textual tool result.
+// Keep images inline: this relay does not grant remote URL fetching or file IDs.
+function validContent(message) {
+  if (typeof message.content === 'string') return true;
+  return message.role === 'user' && Array.isArray(message.content) && message.content.length > 0 &&
+    message.content.every(part => {
+      if (part?.type === 'text') return typeof part.text === 'string' && Object.keys(part).every(key => ['type','text'].includes(key));
+      if (part?.type !== 'image_url' || Object.keys(part).some(key => !['type','image_url'].includes(key))) return false;
+      const image = part.image_url;
+      if (!image || Object.keys(image).some(key => key !== 'url') || typeof image.url !== 'string') return false;
+      const match = /^data:image\/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/]+={0,2})$/.exec(image.url);
+      return !!match && match[2].length % 4 === 0 && Buffer.from(match[2], 'base64').toString('base64') === match[2];
+    });
+}
 const validPayload = (value, model, tools) => {
   const localFunction = entry => entry?.type === 'function' && tools.has(entry.function?.name);
   return value?.model === model && value.stream === true &&
   Object.keys(value).every(key => requestFields.has(key)) &&
   (value.thinking === undefined || value.thinking?.type === 'disabled') &&
   Array.isArray(value.messages) && value.messages.every(message =>
-    roles.has(message?.role) && typeof message.content === 'string' &&
+    roles.has(message?.role) && validContent(message) &&
     (message.tool_calls === undefined || (Array.isArray(message.tool_calls) && message.tool_calls.every(localFunction)))) &&
   (value.tools === undefined || (Array.isArray(value.tools) && value.tools.every(localFunction)));
 };
@@ -31,10 +46,12 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
   }
 
   const model = 'deepseek-flash';
+  const outputLimit = config.memberPolicy.max_output_tokens;
   const video = config.desktopLocalModel.videoRendering === true
     ? config.desktopLocalModel.videoSandbox ? desktopVideoSandbox(config.desktopLocalModel.videoSandbox) : videoRenderer
     : undefined;
   if (config.desktopLocalModel.videoRendering === true && !video) throw Error('Desktop video requires the configured Remotion renderer');
+  const decisions=createDesktopDecisions(config.desktopLocalModel.jev);
   const byToken = new Map(), byAccount = new Map();
   let stopping = false, rendering = false;
 
@@ -52,7 +69,8 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
     if (lease.settlement) return lease.settlement;
     clearTimeout(lease.timer);
     byToken.delete(lease.tokenHash);
-    lease.abort?.();
+    for (const abort of lease.streams) abort();
+    lease.streams.clear();
     lease.render?.abort();
     lease.settlement = (async () => {
       await lease.admission.catch(() => {});
@@ -71,6 +89,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
   const valid = lease => lease && !lease.settlement && lease.expiresAt > Date.now() && isSessionActive(lease.session, lease.userId);
 
   async function issue(req, res, user, tools) {
+    tools.add('local_motif_list');tools.add('local_motif_run');
     const session = sessionHash(req);
     const existing = byAccount.get(user.id);
     if (existing && !valid(existing)) await close(existing);
@@ -80,7 +99,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
     const token = randomBytes(32).toString('base64url');
     const task = hash(user.id).slice(0, 8) + randomBytes(12).toString('hex');
     const lease = {
-      tokenHash: hash(token), task, session, userId: user.id, tools, expiresAt: Date.now() + leaseMs,
+      tokenHash: hash(token), task, session, userId: user.id, tools, scene: tools.has('local_files_export') ? 'files' : 'other', expiresAt: Date.now() + leaseMs, streams: new Set(),
       binding: { session_id: 'session-' + randomUUID(), budget_session_id: 'turn-' + task },
     };
     byAccount.set(user.id, lease);
@@ -103,7 +122,9 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       }
       byToken.set(lease.tokenHash, lease);
       lease.timer = setTimeout(() => void close(lease), lease.expiresAt - Date.now()).unref();
-      return json(res, 200, { token, model, expiresAt: lease.expiresAt, toolsetVersion:3,
+      return json(res, 200, { token, model, expiresAt: lease.expiresAt, toolsetVersion:4, localRsiTools:true,
+        ...(tools.has('build_ppt') ? { nativePptDeck: true } : {}),
+        ...(lease.scene==='files' && decisions.available(user.id) ? { fileJev:true, fileJevAccount:hash(user.id) } : {}),
         ...(video && tools.has('hybrid_video_render') ? { videoRendering: true } : {}),
       });
     } catch {
@@ -120,7 +141,7 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
         let input;
         try { input = JSON.parse(body.toString('utf8')); } catch { return json(res, 400, { error: '无效的本机任务授权请求。' }); }
         const tools = input && !Array.isArray(input) && typeof input === 'object' &&
-          Object.keys(input).every(key => key === 'scene') && localSceneTools(Object.hasOwn(input, 'scene') ? input.scene : 'files');
+          Object.keys(input).every(key => key === 'scene') && localSceneTools(Object.hasOwn(input, 'scene') ? input.scene : 'files',false,true,true);
         if (!tools) return json(res, 400, { error: '无效的本机场景授权请求。' });
         return issue(req, res, user, new Set(tools));
       }
@@ -130,6 +151,19 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       if (path === DESKTOP_MODEL_PATH + '/lease' && req.method === 'DELETE') {
         if (lease) await close(lease);
         return json(res, 200, { ok: true });
+      }
+      if (path === DESKTOP_MODEL_PATH + '/v1/systemone' && req.method === 'POST') {
+        if (!valid(lease) || lease.scene!=='files' || !decisions.available(lease.userId)) return json(res,403,{error:'当前任务未开放文件 JEV 判断。'});
+        const abort=new AbortController(),cancel=()=>abort.abort();
+        lease.streams.add(cancel);res.once('close',cancel);
+        try{
+          const input=JSON.parse((await readBounded(req)).toString('utf8'));
+          const result=await decisions.judge(lease.userId,input,abort.signal);
+          if(!res.destroyed)json(res,200,result);
+        }catch(error){
+          if(!res.destroyed)json(res,error?.status===409?409:503,{error:error?.status===409?'原判断结果待核对，未重复调用。':'文件判断暂不可用，请使用主模型继续核对。'});
+        }finally{res.off('close',cancel);lease.streams.delete(cancel);}
+        return;
       }
       if (path === DESKTOP_MODEL_PATH + '/video/render' && req.method === 'POST') {
         if (!video) return json(res, 404, { error: '服务器未启用桌面 Remotion 渲染。' });
@@ -166,17 +200,28 @@ export function createDesktopModelRoute({ config, json, requireOrigin, sessionHa
       }
       const body = await readBounded(req, undefined, true);
       if (!valid(lease)) return json(res, 401, { error: '本机任务授权已结束。' });
-      if (lease.abort) return json(res, 409, { error: '该任务已有模型请求。' });
+      // Child agents share this task's original budget binding. Allow their
+      // parallel turns while retaining a bound on simultaneous HTTP streams.
+      if (lease.streams.size >= 8) return json(res, 429, { error: '该任务的并行模型请求繁忙，请稍后重试。' });
       let payload;
       try { payload = JSON.parse(body.toString('utf8')); } catch { return json(res, 400, { error: '模型请求格式无效。' }); }
       if (!validPayload(payload, model, lease.tools)) return json(res, 400, { error: '模型请求超出本机场景授权。' });
+      const requested = payload.max_tokens;
+      if (requested !== undefined && (!Number.isSafeInteger(requested) || requested < 1)) {
+        return json(res, 400, { error: '模型输出上限无效。' });
+      }
+      const forwardedBody = Number.isSafeInteger(outputLimit) && outputLimit > 0 &&
+        (requested === undefined || requested > outputLimit)
+        ? Buffer.from(JSON.stringify({ ...payload, max_tokens: outputLimit }))
+        : body;
       const upstream = forward(config.upstreamBrokerPort, '/v1/chat/completions', 'POST', {
         'content-type': 'application/json', authorization: 'Bearer ' + config.apiKey,
         'x-api-key': config.apiKey, 'x-deepseek-harness-session-id': lease.binding.session_id,
-      }, body, res);
-      lease.abort = () => { upstream.destroy(); res.destroy(); };
+      }, forwardedBody, res);
+      const abort = () => { upstream.destroy(); res.destroy(); };
+      lease.streams.add(abort);
       upstream.once('timeout', () => upstream.destroy(Error('Desktop model relay timed out')));
-      res.once('close', () => { lease.abort = undefined; });
+      res.once('close', () => { lease.streams.delete(abort); });
     },
     revokeSession(session) {
       for (const lease of byAccount.values()) if (lease.session === session) void close(lease);

@@ -1,9 +1,9 @@
 """Final-review counterexamples reach existing root selection, without models."""
 import json
 import pytest
-from src.adapters.capability_contract import capability_ref,create_capability_snapshot
-from src.adapters.capability_feedback import CapabilityFeedback
-from src.adapters.capability_scene import reference
+from src.capability.graph.capability_contract import capability_ref,create_capability_snapshot
+from src.rsi.feedback.capability_feedback import CapabilityFeedback
+from src.adapters.harness.capability.capability_scene import reference
 from scenarios.paper_proofreading.frontier.feedback import record_final_feedback
 from tests.test_capability_contract import leaf,compose
 

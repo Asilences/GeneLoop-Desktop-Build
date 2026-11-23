@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const source=readFileSync(new URL('../src/adapters/harless_web_client/client.js',import.meta.url),'utf8');
+const source=readFileSync(new URL('../src/adapters/web/client/client.js',import.meta.url),'utf8');
 const code=source.slice(source.indexOf('    function installLargeFileUpload(ctx)'),source.indexOf('    function apply(ctx)'));
 function setup(fetch){
  const effects=[],native=[];

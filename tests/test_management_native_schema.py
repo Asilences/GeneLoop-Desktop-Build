@@ -6,9 +6,9 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scenarios/f
 from management_prepare import prepare
 from management_tools import TOOLS
 from common import save
-from src.adapters.file_scenario import prepare_scenario
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
 from src.adapters.continuous_rsi import actual_schemas
-from src.motif_core.offline.operation_graph import catalog
+from src.motif_core.offline.compilation.operation_graph import catalog
 
 def test_native_wrapper_preserves_exact_sdk_catalog_and_array_constraints():
     home=ROOT/'.local/management-schema-tests'/uuid4().hex;work=home/'work';work.mkdir(parents=True)

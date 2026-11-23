@@ -5,7 +5,7 @@ import {createAssistantMessage,createUserMessage,createToolResultMessage} from '
 import {compactCheckpointSource} from '@deepseek-ai/dsh-compaction';
 const options={skip:!process.features?.typescript};
 test('file SDK display preserves native step, surface and call dependencies after parent history',options,async()=>{
- const {fileEventProjection}=await import('../src/adapters/file_event_projection.ts');
+ const {fileEventProjection}=await import('../src/adapters/file_management/file_event_projection.ts');
  const sdk=new Session('file-sdk'),parent=new Session('native-parent');
  parent.append('turn/start',{turn:1});parent.append('turn/end',{turn:1,reason:{kind:'completed'}});
  parent.append('turn/start',{turn:2});parent.append('user/message',createUserMessage({content:[{type:'text',text:'/file 盘点'}],source:{kind:'user',rpcId:'request'}}),{surfaceOp:'append'});
@@ -45,7 +45,7 @@ function assistant(sdk,text){
 }
 
 test('native todo and request recovery preserve order, dependencies and incomplete status',options,async()=>{
- const {fileEventProjection}=await import('../src/adapters/file_event_projection.ts');const {sdk,parent}=fixture();
+ const {fileEventProjection}=await import('../src/adapters/file_management/file_event_projection.ts');const {sdk,parent}=fixture();
  sdk.append('step/start',{turn:1,step:1});
  sdk.append('todo/write',{todos:[{content:'核实文件版本',status:'in_progress'},{content:'交付结果',status:'pending'}]});
  sdk.append('assistant/attempt',{turn:1,step:1,stream:[],error:{code:'RATE_LIMIT'}});
@@ -61,7 +61,7 @@ test('native todo and request recovery preserve order, dependencies and incomple
 });
 
 test('SDK compaction never replaces the different parent user prompt or unmapped contract',options,async()=>{
- const {fileEventProjection}=await import('../src/adapters/file_event_projection.ts');const {sdk,parent}=fixture();
+ const {fileEventProjection}=await import('../src/adapters/file_management/file_event_projection.ts');const {sdk,parent}=fixture();
  const user=sdk.append('user/message',createUserMessage({content:[{type:'text',text:'generated SDK task contract and private references'}],source:{kind:'user'}}),{surfaceOp:'append'});
  const reply=assistant(sdk,'读取文件完成');checkpoint(sdk,[user.seq,reply.seq]);
  const audit=[],project=fileEventProjection(parent,1,event=>audit.push(event));sdk.snapshotEvents().forEach(project);
@@ -75,7 +75,7 @@ test('SDK compaction never replaces the different parent user prompt or unmapped
 });
 
 test('only an exactly mapped contiguous history span receives the native checkpoint',options,async()=>{
- const {fileEventProjection}=await import('../src/adapters/file_event_projection.ts');
+ const {fileEventProjection}=await import('../src/adapters/file_management/file_event_projection.ts');
  for(const interfering of [false,true]){
   const {sdk,parent}=fixture(),audit=[],project=fileEventProjection(parent,1,event=>audit.push(event));
   const first=assistant(sdk,'已确认原件 SHA256 abc'),firstEvents=sdk.snapshotEvents();firstEvents.forEach(project);

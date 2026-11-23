@@ -4,18 +4,18 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {capabilityDigest,capabilityRef} from '../../src/adapters/capability_contract.ts';
-import {bytesSha256} from '../../src/adapters/rsi_protocol.ts';
+import {capabilityDigest,capabilityRef} from '../../src/capability/graph/capability_contract.ts';
+import {bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
 import {runArtifactCapability} from '../../src/adapters/artifact_capability_runtime.ts';
-import {completeCapabilityCycle} from '../../src/adapters/capability_cycle.ts';
+import {completeCapabilityCycle} from '../../src/rsi/learning/capability_cycle.ts';
 const root=fileURLToPath(new URL('../../',import.meta.url)),exec=promisify(execFile);
 const read=path=>JSON.parse(readFileSync(path,'utf8'));
 const save=(path,value)=>writeFileSync(path,JSON.stringify(value,null,2),{flag:'wx',mode:0o600});
 const plan=read(process.argv[2]),candidate=read(plan.candidate),selected=capabilityRef(candidate.capability),output=plan.output;
 mkdirSync(output,{mode:0o700});save(join(output,'plan.json'),plan);
 const controller=new AbortController();process.on('SIGINT',()=>controller.abort());process.on('SIGTERM',()=>controller.abort());
-const checker=join(root,'src/adapters/ppt_component_equivalence.py');
-const checkerDigest=()=>capabilityDigest(['src/adapters/ppt_component_equivalence.py','src/adapters/ppt_design_preflight.py']
+const checker=join(root,'src/adapters/ppt/learning/ppt_component_equivalence.py');
+const checkerDigest=()=>capabilityDigest(['src/adapters/ppt/learning/ppt_component_equivalence.py','src/adapters/ppt/authoring/ppt_design_preflight.py']
  .map(path=>({path,sha256:bytesSha256(readFileSync(join(root,path)))})));
 const code=checkerDigest();
 function fixed(ref){const bytes=readFileSync(ref.path);if(bytesSha256(bytes)!==ref.sha256)throw Error('ppt_capability_reference_changed');return bytes;}

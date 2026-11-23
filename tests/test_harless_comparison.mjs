@@ -5,8 +5,8 @@ import {mkdtempSync,rmSync,readFileSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {createHash} from 'node:crypto';
-import {createComparisonService} from '../src/adapters/harless_comparison.ts';
-import {REPORT_ANSWER_BINDING} from '../src/adapters/harless_report_answer.ts';
+import {createComparisonService} from '../src/adapters/web/tasks/harless_comparison.ts';
+import {REPORT_ANSWER_BINDING} from '../src/adapters/web/scenes/harless_report_answer.ts';
 const context={scene:'ppt',options:{slides:2},model:{model:'fixture'},input_sha256:'a'.repeat(64)};
 
 test('Data exposes verified generic code files without exposing uncertified report drafts',async()=>{

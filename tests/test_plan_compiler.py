@@ -2,7 +2,7 @@
 import copy
 import pytest
 from tests.test_authorized_plan import scene,mod,fm,common
-from src.motif_core.offline.plan_compiler import plan_witness,compile_plan,certify_plan
+from src.motif_core.offline.compilation.plan_compiler import plan_witness,compile_plan,certify_plan
 TOOLS=['mcp__file_management__'+n for n in ('preview_actions','authorize_plan','execute_plan')]
 def fixture(s,count=1):
  rows=s.list_files()['files'];actions=[fm.Action(op='copy',file_ids=[r['file_id']],destination='processed/'+r['path']).model_dump() for r in rows[:count]]

@@ -5,8 +5,8 @@ quarantined, never an inferred child. Immutable publications remain untouched.
 """
 import json
 from pathlib import Path
-from src.adapters.capability_feedback import CapabilityFeedback
-from src.adapters.capability_improvement import evidence
+from src.rsi.feedback.capability_feedback import CapabilityFeedback
+from src.rsi.learning.capability_improvement import evidence
 
 
 def record_final_feedback(plan,cell,artifact_ref,scope):

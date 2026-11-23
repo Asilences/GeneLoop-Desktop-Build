@@ -1,9 +1,9 @@
 /** Synthetic no-provider protocol checks; not learned traces or quality evidence. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createOnlineInterceptor} from '../src/adapters/dsh_online_motif.mjs';
-import {compileLocalPrograms,digest} from '../src/adapters/online_motif_frontier.mjs';
-import {closedPaperDocumentFirstPage} from '../src/adapters/harless_rsi_binding.ts';
+import {createOnlineInterceptor} from '../src/adapters/harness/motif/dsh_online_motif.mjs';
+import {compileLocalPrograms,digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {closedPaperDocumentFirstPage} from '../src/adapters/web/learning/harless_rsi_binding.ts';
 
 const pin='mcp__paper_checks__pin_document',read='mcp__paper_checks__read_pinned_document';
 const version='a'.repeat(64),source='source-'+'b'.repeat(32);

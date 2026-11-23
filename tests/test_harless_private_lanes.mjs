@@ -6,7 +6,7 @@ import { join } from 'node:path';
 const options = { skip: !process.features?.typescript };
 
 test('private lane identity exists before the first list frame and survives restart without title matching', options, async () => {
-  const { registerPrivateLanes } = await import('../src/adapters/harless_private_lanes.ts');
+  const { registerPrivateLanes } = await import('../src/adapters/web/account/harless_private_lanes.ts');
   const directory = mkdtempSync(join(tmpdir(), 'private-lanes-'));
   try {
     let projection;

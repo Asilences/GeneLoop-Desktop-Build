@@ -6,7 +6,10 @@ through msvcrt, so previews/imports do not depend on an unavailable Unix module.
 from contextlib import contextmanager
 import errno
 import os
-from pathlib import Path
+try:
+    from .filesystem_paths import Path
+except ImportError:
+    from filesystem_paths import Path
 import sys
 
 

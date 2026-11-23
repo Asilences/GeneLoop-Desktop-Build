@@ -1,11 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {hash} from '../src/adapters/artifact_motif_runtime.ts';
+import {hash,identity,artifactLocks,loadArtifactLibrary} from '../src/adapters/artifact_motif_runtime.ts';
 import {witnessedHeldoutInputs,sealArtifactLibrary,certifyArtifactRows} from '../scripts/certify-artifact-motifs.mjs';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+
+test('PPT functional trials remain explicit and cannot waive source checks in other scenes',()=>{
+ const source='import sys\nprint(sys.argv[1])\n';
+ const program={version:1,source,source_sha256:hash(source),inputs:[{format:'json'}],dependencies:{},
+  input_argument_indices:[0],output_argument_index:1,argument_count:2,language:'python',execution_policy:'fresh_output_network_disabled_v1'};
+ const version=digest(identity(program));program.id='artifact_'+version.slice(0,24);
+ program.component={version:1,render_mode:'svg_png_v1',cache_policy:'bound_page_output_v1',certification_mode:'functional_trial_v1',
+  parameters_schema:{type:'object',properties:{title:{type:'string'}},required:['title'],additionalProperties:false}};
+ program.certification={passed:true,distinct_inputs:2,source_equivalent:false,program_sha256:version,
+  validation_scope:'functional_trial_v1',quality_deferred:true,
+  component_source_equivalence:{passed:true,mode:'functional_trial_v1',source_preservation_passed:false}};
+ const root=new URL('../',import.meta.url);
+ const body={version:1,kind:'witnessed_artifact_program_library',scene:'ppt',programs:[program],
+  code_locks:Object.fromEntries(artifactLocks.map(name=>[name,hash(readFileSync(new URL(name,root)))]))};
+ const path=join(mkdtempSync(join(tmpdir(),'ppt-trial-library-')),'library.json');
+ const put=value=>writeFileSync(path,JSON.stringify(sealArtifactLibrary(value)));
+ put(body);assert.equal(loadArtifactLibrary(path).programs[0].certification.source_equivalent,false);
+ put({...body,scene:'other'});assert.throws(()=>loadArtifactLibrary(path),/uncertified_artifact_program/);
+ delete program.certification.quality_deferred;
+ put(body);assert.throws(()=>loadArtifactLibrary(path),/uncertified_artifact_program/);
+});
 
 test('optional non-SVG profile cannot invalidate the persisted library digest',()=>{
  const library=sealArtifactLibrary({version:1,programs:[{id:'non-svg',output_profile:undefined,interface:'中文完整接口'}]});

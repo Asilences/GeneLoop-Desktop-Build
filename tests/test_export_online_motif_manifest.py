@@ -5,11 +5,11 @@ from pathlib import Path
 import unittest
 
 from tests.test_motif_controller import library
-from src.motif_core.offline.trace_compiler import artifact_signature
-from src.motif_core.offline.library_builder import _digest as library_digest
-from src.motif_core.offline.library_builder import build_read_motif_library
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+from src.motif_core.offline.compilation.trace_compiler import artifact_signature
+from src.motif_core.offline.compilation.library_builder import _digest as library_digest
+from src.motif_core.offline.compilation.library_builder import build_read_motif_library
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
 from tests.test_trace_compiled_read_motif import event_pair
 
 

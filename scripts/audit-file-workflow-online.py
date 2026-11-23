@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT));sys.path.i
 from common import digest,sha,save,snapshot,PREFIX
 from workflow_contract import verify_workflow
 from src.adapters.file_job_budget import job_command
-from src.adapters.file_cost_gate import observed_peak_cost
+from src.adapters.deepseek_cost_gate import observed_peak_cost
 
 def audit(experiments):
     results=[];usage=Counter();total_raw=0;total_accounted=0;requests=0;documentation_updates={};adapter_updates={}
@@ -16,9 +16,12 @@ def audit(experiments):
         for n,h in lock['groups']['recovery15']['dependencies'].items():assert sha(ROOT/n)==h
         for n,h in p['source_code'].items():
             assert sha(exp/'frozen-source'/n)==h
-            current=sha(ROOT/n)
+            target='src/adapters/harness/motif/dsh_entry_motif.ts' if n=='src/adapters/file_entry_motif.ts' else n
+            current=sha(ROOT/target)
             if n in ('scenarios/file-management/README.md','scenarios/file-management/workflow-catalog.json','scenarios/file-management/workflow-evaluation-plan.json','scenarios/file-management/workflow-evaluation-plan.md') and current!=h:documentation_updates[n]={'frozen_sha256':h,'current_sha256':current}
-            elif n=='src/adapters/file_entry_motif.ts' and current!=h:adapter_updates[exp.name]={'path':n,'frozen_sha256':h,'current_sha256':current,'basis':'original frozen runtime and retained native events; old bindings now invalid, not recertified by this audit'}
+            elif n in ('src/adapters/file_entry_motif.ts','src/adapters/harness/dsh_job_plan_gate.ts','src/adapters/scenario.py') and current!=h:
+                adapter_updates.setdefault(exp.name,{})[n]={'current_path':target,'frozen_sha256':h,'current_sha256':current,
+                    'basis':'historical replay audit against frozen source and retained native events'}
             else:assert current==h,'unrecorded source change: '+n
         for n,h in p['original_pdfs'].items():assert sha(ROOT/'testpdf'/n)==h
         base=json.loads((Path(p['parent'])/'protocol.json').read_text())

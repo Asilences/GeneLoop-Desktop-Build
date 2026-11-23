@@ -1,5 +1,5 @@
 import json
-from src.adapters.parameter_motif_compiler import compile_parameter_library
+from src.motif_core.offline.compilation.trace.parameter_motif_compiler import compile_parameter_library
 
 
 def test_parameter_prototypes_ignore_directory_and_output_bytes_but_keep_provenance(tmp_path):

@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 from uuid import uuid4
-from src.motif_core.offline.experience_registry import ExperienceRegistry, digest, durable, read, sha
+from src.motif_core.reuse.experience_registry import ExperienceRegistry, digest, durable, read, sha
 
 ROOT = Path(__file__).resolve().parents[2]
 PRIVATE_HOME = Path(os.environ.get('HARLESS_MANAGEMENT_PRIVATE_ROOT', ROOT / '.local')).absolute()
@@ -25,47 +25,65 @@ if not PRIVATE_HOME.is_relative_to((ROOT/'.local').absolute()) or any(p.is_symli
 STATE_HOME = PRIVATE_HOME / 'rsi'
 DATA = ROOT / 'testpdf/file-management-experiment'
 FORMAT = 'sss-continuous-rsi-v1'
-RUNTIME = ['src/adapters/dsh_experience.ts', 'src/motif_core/collection_read_policy.ts',
-           'src/motif_core/collection_reentry_policy.ts', 'src/motif_core/collection_read_policy_v2.ts',
-           'src/motif_core/collection_reentry_policy_v2.ts', 'src/motif_core/online_skill_runtime.mjs',
+RUNTIME = ['src/adapters/harness/learning/dsh_experience.ts', 'src/motif_core/runtime/policies/collection_read_policy.ts',
+           'src/motif_core/runtime/policies/collection_reentry_policy.ts', 'src/motif_core/runtime/policies/collection_read_policy_v2.ts',
+           'src/motif_core/runtime/online_skill_runtime.mjs',
            'scenarios/file-management/common.py', 'scenarios/file-management/file_tools.py',
            'scenarios/file-management/collection_tools.py', 'scenarios/file-management/report_tools.py']
 LEARNER = [*RUNTIME, 'src/adapters/continuous_rsi.py', 'src/adapters/continuous_motif_learning.py',
-           'src/adapters/dsh_continuous_rsi.ts', 'scripts/run-file-scenario.py', 'scripts/rsi-worker.py',
-           'src/motif_core/offline/experience_registry.py', 'src/motif_core/offline/collection_compiler.py',
-           'src/motif_core/offline/reentry_compiler.py', 'scenarios/file-management/workflow_learning.py',
+           'src/adapters/harness/learning/dsh_continuous_rsi.ts', 'scripts/run-file-scenario.py', 'scripts/rsi-worker.py',
+           'src/motif_core/reuse/experience_registry.py',
+           'src/adapters/file_management/experience_certification.py', 'src/motif_core/offline/compilation/collection_compiler.py',
+           'src/motif_core/offline/compilation/reentry_compiler.py', 'scenarios/file-management/workflow_learning.py',
            'scripts/validate-file-delivery.py','src/adapters/mcp_learning.py',
-           'src/motif_core/offline/operation_graph.py','src/motif_core/operation_graph_policy.ts',
-           'src/adapters/dsh_operation_motif.ts','scenarios/file-management/operation_tools.py',
+           'src/motif_core/offline/compilation/operation_graph.py','src/motif_core/runtime/policies/operation_graph_policy.ts',
+           'src/adapters/harness/motif/dsh_operation_motif.ts','scenarios/file-management/operation_tools.py',
            'scenarios/file-management/operation_contract.py','scenarios/file-management/operation_prepare.py',
-           'src/adapters/file_cost_gate.py','src/adapters/file_web_task_budget.py',
-           'src/adapters/dsh_web_tasks.ts','scripts/harness-web.py','scenarios/file-management/operation_web_binding.py',
-           'scenarios/file-management/operation_web_binding.ts']
-LEARNER += ['src/motif_core/offline/operation_graph_v1.py','src/motif_core/operation_graph_policy_v1.ts',
+           'src/adapters/deepseek_cost_gate.py','src/adapters/web/web_task_budget.py',
+           'src/adapters/web/dsh_web_tasks.ts','scripts/harness-web.py','scenarios/file-management/operation_evidence.py']
+LEARNER += ['src/motif_core/offline/compilation/operation_graph_v1.py','src/motif_core/runtime/policies/operation_graph_policy_v1.ts',
     'scenarios/file-management/operation_tools_v2.py','scenarios/file-management/operation_contract_v2.py',
     'scenarios/file-management/operation_prepare_v2.py','src/adapters/operation_job.ts','src/adapters/file_workflow_job.ts',
-    'src/adapters/operation_budget.py','src/adapters/operation_runner.py','src/adapters/persistent_file_rsi.py',
-    'src/adapters/persistent_web_budget.py','src/adapters/process_state.py','src/adapters/file_acceptance_guard.ts','src/adapters/file_scenario.py']
+    'src/adapters/operation_budget.py','src/adapters/file_job_budget.py','src/adapters/operation_runner.py','src/adapters/persistent_file_rsi.py',
+    'src/adapters/harness/learning/dsh_file_resume.ts','src/adapters/file_management/file_recovery_state.ts','src/adapters/file_management/file_decision_checkpoint.ts',
+    'src/adapters/persistent_web_budget.py','src/adapters/process_state.py','src/adapters/file_acceptance_guard.ts','src/adapters/scenario.py']
 LEARNER += ['scenarios/file-management/management_tools.py','scenarios/file-management/management_contract.py',
-    'scenarios/file-management/management_prepare.py','src/adapters/dsh_web_tasks_legacy.ts','src/adapters/dsh_geneloop_tasks.ts',
-    'scripts/harness-web-legacy.py','scripts/harness-geneloop.py']
+    'scenarios/file-management/management_prepare.py','scripts/harness-geneloop.py']
 LEARNER += ['scenarios/file-management/management_web.py','scenarios/file-management/management_native.py',
-    'src/adapters/harless_management.ts','src/adapters/file_task_scope.ts','src/adapters/harless_web_client/client.js','scenarios/file-management/management_study.py']
+    'src/adapters/web/client/client.js','scenarios/file-management/management_study.py']
 LEARNER += ['src/adapters/management_backup.py','scenarios/file-management/experiment.py','scenarios/file-management/management_goals.py']
 LEARNER += ['src/adapters/experience_library.py','src/adapters/management_recertification.py']
 LEARNER += ['src/adapters/management_legacy.py','src/adapters/management_program.ts']
 LEARNER += ['scenarios/file-management/management_provenance.py']
 LEARNER += ['scenarios/file-management/management_reading.py']
 LEARNER += ['src/adapters/general_tools.py','scenarios/file-management/general-tools.json','scenarios/general/runtime.py','scenarios/general/runtime_code.ts']
-LEARNER += ['scenarios/general/server.py','src/adapters/file_settings.ts','src/adapters/file_scenarios.py']
-LEARNER += ['src/adapters/harless_reasoning.ts','src/adapters/harless_legacy_reasoning.ts']
-LEARNER += ['src/adapters/harless_status_cache.ts']
-LEARNER += ['src/motif_core/offline/control_flow.py','src/motif_core/control_flow_policy.ts','src/adapters/general_tool_replay.py']
-LEARNER += ['scenarios/file-management/management_temporal.py','src/adapters/management_temporal.ts','src/adapters/management_model_gate.py','src/adapters/management_model_gate.ts','src/adapters/management_platform_budget.py','src/adapters/management_seed.py','src/adapters/management_seed.ts']
+LEARNER += ['scenarios/general/server.py','src/adapters/web/scenes/harless_scenarios.py']
+LEARNER += ['src/adapters/web/tasks/harless_reasoning.ts',
+            'src/adapters/web/tasks/harless_task.ts', 'src/adapters/web/tasks/harless_native_deliveries.ts']
+LEARNER += ['src/adapters/web/sessions/harless_status_cache.ts']
+LEARNER += ['src/motif_core/offline/compilation/control_flow.py','src/motif_core/runtime/policies/control_flow_policy.ts','src/adapters/general_tool_replay.py']
+LEARNER += ['scenarios/file-management/management_temporal.py','src/adapters/management_temporal.ts','src/adapters/management_platform_budget.py','src/adapters/management_seed.py','src/adapters/management_seed.ts']
 
-LEARNER += ['src/adapters/file_event_projection.ts','scenarios/file-management/semantic-sdk.patch.yml','src/adapters/harless_file_scene.ts','src/adapters/file_approval_bridge.ts','scenarios/file-management/file_scene_worker.py','scenarios/file-management/general-tools.json','src/adapters/file_scenario.py','src/adapters/file_cost_gate.py','src/adapters/file_acceptance_guard.ts','src/adapters/file_entry_motif.ts']
+LEARNER += ['src/adapters/file_management/file_event_projection.ts','scenarios/file-management/semantic-sdk.patch.yml','src/adapters/web/scenes/harless_file_scene.ts','src/adapters/file_management/file_approval_bridge.ts','scenarios/file-management/file_scene_worker.py','scenarios/file-management/general-tools.json','src/adapters/scenario.py','src/adapters/deepseek_cost_gate.py','src/adapters/file_acceptance_guard.ts','src/adapters/harness/motif/dsh_entry_motif.ts']
 
 LEARNER += ['src/adapters/geneloop_task_trace.ts','src/adapters/model_transport.py','config/geneloop-transport.json']
+LEARNER += ['src/adapters/file_script_tools.py','src/adapters/file_script_runtime.ts','src/adapters/file_script_learning.py']
+LEARNER += ['scenarios/file-management/management_delivery.py']
+LEARNER += ['src/adapters/file_provider.py']
+LEARNER += ['scripts/file-provider-web.py','scripts/project.mjs']
+LEARNER += ['src/adapters/harness/dsh_code_container.ts','src/adapters/harness/dsh_code_container_runner.mjs',
+            'src/adapters/source_program_compiler.py','src/motif_core/offline/compilation/script_motif_compiler.py']
+LEARNER += ['src/adapters/file_learning_repair.py']
+LEARNER += ['src/adapters/file_script_quality.py']
+LEARNER += ['src/adapters/file_cost_evidence.py']
+LEARNER += ['src/adapters/daily_decision_learning.py']
+LEARNER += ['src/adapters/learned_decision_learning.py','src/adapters/learned_decision_certificate.py',
+            'src/adapters/empirical_decision_certificate.py','src/motif_core/offline/compilation/decision_program_lowering.py',
+            'src/motif_core/offline/compilation/decision_program_construction.py',
+            'src/motif_core/offline/compilation/decision_program_revision.py',
+            'src/motif_core/offline/compilation/tool_contracts.py',
+            'src/adapters/decision_source_equivalence.py',
+            'src/adapters/file_management/decision_trial_judge.py']
 
 def private(path):
     p = Path(path).absolute()
@@ -87,6 +105,18 @@ def snapshot(path):
 
 def source_map(names=LEARNER):
     return {n: sha(ROOT / n) for n in names}
+
+
+def reviewed_source_relocation(before, after):
+    """Match an exact enrolled source pair reviewed for ordinary use and recovery."""
+    path = ROOT / 'config/file-management-runtime-compatibility.json'
+    if not path.is_file():
+        return None
+    pair = {'before_sha256': digest(before), 'after_sha256': digest(after)}
+    config = read(path)
+    if config.get('schema_version') == 1 and pair in config.get('enrollment_source_relocations', []):
+        return {**pair, 'scope': 'reviewed_adapter_relocation'}
+    return None
 
 
 def ledger_accounting(ledger, metrics):
@@ -121,12 +151,21 @@ def load_config(path):
     path = private(path); cfg = read(path)
     allowed = {'schema_version','format','state_root','workspace_roots','mode','provider_mode',
                'series_cap_usd','learning_cap_usd','limits','auto_worker','allow_material_copy',
-               'role','registry_file','candidate_job','adapter'}
+               'role','registry_file','candidate_job','adapter','accounting_policy','decision_programs'}
     if set(cfg) - allowed or cfg.get('schema_version') != 1 or cfg.get('format') != FORMAT:
         raise ValueError('invalid continuous RSI configuration')
     cfg = {'mode':'learn','provider_mode':'real','auto_worker':True,'allow_material_copy':False,
            'role':'ordinary', **cfg}
     state = private(cfg['state_root'])
+    authorization=state/'cost-accounting-policy.json'
+    if authorization.exists():
+        if authorization.is_symlink():raise ValueError('cost authorization symlink refused')
+        grant=read(authorization)
+        from .file_cost_evidence import POLICY
+        if grant.get('format')!=POLICY or grant.get('digest')!=digest({k:v for k,v in grant.items() if k!='digest'}):
+            raise ValueError('cost authorization changed')
+        cfg.setdefault('accounting_policy',POLICY)
+    if cfg.get('accounting_policy') not in (None,'sss-file-conservative-cost-v1'):raise ValueError('unknown File cost evidence policy')
     if state.parent != STATE_HOME.resolve(): raise ValueError('state_root must be a direct .local/rsi child')
     if cfg['mode'] not in ('observe','learn') or cfg['provider_mode'] not in ('real','mock'):
         raise ValueError('unknown RSI mode/provider')
@@ -134,6 +173,8 @@ def load_config(path):
         raise ValueError('invalid RSI evidence role')
     if any(type(cfg[k]) is not bool for k in ('auto_worker','allow_material_copy')):
         raise ValueError('RSI switches must be booleans')
+    if 'decision_programs' in cfg and type(cfg['decision_programs']) is not bool:
+        raise ValueError('decision_programs must be a boolean')
     if cfg['provider_mode']=='mock' and cfg['mode']=='learn': raise ValueError('mock evidence cannot learn')
     def number(value, minimum=0):
         return value is None or type(value) in (int,float) and math.isfinite(value) and value >= minimum
@@ -379,23 +420,29 @@ def enroll(config_file, prepared, session, out, args, env):
     experience={'role':'ordinary' if cfg['role']=='ordinary' else 'certify','registry_root':str(root/'registry'),
                 'registry_file':str(registry_file),'registry_sha256':sha(registry_file),'task_file':str(task_file),
                 'task_sha256':sha(task_file),'prompt_sha256':prepared['prompt_sha256'],
-                'runtime_sha256':sha(ROOT/'src/adapters/dsh_experience.ts'),'audit_file':str(out/'experience-audit.jsonl')}
+                'runtime_sha256':sha(ROOT/'src/adapters/harness/learning/dsh_experience.ts'),'audit_file':str(out/'experience-audit.jsonl')}
     durable(out/'experience-binding.json',experience,exclusive=True)
     actual_session=env.get('SSS_RSI_ACTUAL_SESSION',session)
-    binding={'session_id':actual_session,'task_file':str(task_file),'task_sha256':sha(task_file),'observer_sha256':sha(ROOT/'src/adapters/dsh_continuous_rsi.ts'),
+    binding={'session_id':actual_session,'task_file':str(task_file),'task_sha256':sha(task_file),'observer_sha256':sha(ROOT/'src/adapters/harness/learning/dsh_continuous_rsi.ts'),
              'allowed_tools':prepared['allowed_tools'],'event_file':str(out/'rsi-lifecycle.jsonl'),'schema_file':str(out/'rsi-runtime-schemas.json')}
     durable(out/'rsi-binding.json',binding,exclusive=True)
     if scene:
-        from src.motif_core.offline.operation_graph import catalog
+        from src.motif_core.offline.compilation.operation_graph import catalog
         operation={**experience,'scope':scene.scope(spec),'catalog':catalog(schemas),'runtime_source':source_map(scene.runtime_sources()),
                    'adapter':cfg.get('adapter'),
                    'session_id':actual_session,'allowed_tools':prepared['allowed_tools'],
                    **({'job_file':env['FM_JOB_FILE']} if cfg.get('adapter') in ('file_operations_v2','management_v3') else {})}
         durable(out/'operation-binding.json',operation,exclusive=True)
         env['SSS_OPERATION_BINDING']=str(out/'operation-binding.json')
-    gate='dsh_operation_motif.ts' if scene else 'dsh_experience.ts'
-    patch=[{'insert':[{'id':'sss-operation-motif' if scene else 'sss-experience','name':(ROOT/'src/adapters'/gate).as_uri()},
-                       {'id':'sss-continuous-rsi-events','name':(ROOT/'src/adapters/dsh_continuous_rsi.ts').as_uri()}]}]
+        if cfg.get('adapter')=='management_v3':
+            durable(delivery/'file-script-binding.json',{**operation,'task_sha256':digest(spec)},exclusive=True)
+    gate=ROOT / ('src/adapters/harness/motif/dsh_operation_motif.ts' if scene
+                 else 'src/adapters/harness/learning/dsh_experience.ts')
+    patch=[{'insert':[{'id':'sss-operation-motif' if scene else 'sss-experience','name':gate.as_uri()},
+                       {'id':'sss-continuous-rsi-events','name':(ROOT/'src/adapters/harness/learning/dsh_continuous_rsi.ts').as_uri()}]}]
+    from .daily_decision_learning import enabled as decisions_enabled, run_plugin as decision_plugin
+    if (decisions_enabled(cfg) and cfg['role']=='ordinary') or prepared.get('decision_candidate'):
+        patch[0]['insert'].append(decision_plugin(cfg, spec, out, task_budget_usd=args.budget_usd, candidate=prepared.get('decision_candidate')))
     durable(out/'rsi.patch.yml',patch,exclusive=True)
     env.update(SSS_EXPERIENCE_BINDING=str(out/'experience-binding.json'),SSS_CONTINUOUS_RSI_BINDING=str(out/'rsi-binding.json'))
     context={'config':cfg,'origin':str(origin),'out':str(out),'spec':spec,'delivery':str(delivery),'task_file':str(task_file),
@@ -404,6 +451,10 @@ def enroll(config_file, prepared, session, out, args, env):
              'prompt':prepared['prompt'],'source_sha256':digest(source_map()),'arguments':{'model':args.model,'budget_usd':args.budget_usd,
                'max_steps':args.max_steps,'max_output':args.max_output},'candidate_job':cfg.get('candidate_job'),
              **({'job_file':env['FM_JOB_FILE']} if cfg.get('adapter') in ('file_operations_v2','management_v3') else {})}
+    if cfg['provider_mode']=='real':
+        from .file_provider import configured
+        provider=configured()
+        if provider:context['provider_binding']=provider['provider_binding']
     durable(origin/'enrollment.json',context,exclusive=True)
     return context,str(out/'rsi.patch.yml')
 
@@ -426,6 +477,7 @@ def seal(context, metrics):
     selected=[r for r in audit if r['kind']=='experience_selected']
     policy_digest=selected[0]['entry_id'] if selected else None
     steps=[r for r in audit if r['kind'] in ('collection_model_request_bypassed_verified','operation_model_request_bypassed_verified')]
+    script_runs=[r for r in audit if r['kind']=='file_script_complete' and r.get('entry_id')]
     actual_schemas_ok=False
     signal_ok=len(signals)==1 or cfg.get('adapter') in ('file_operations_v2','management_v3') and len(signals)>=1
     if (out/'rsi-runtime-schemas.json').exists() and signal_ok:
@@ -446,8 +498,10 @@ def seal(context, metrics):
             'events_sha256':sha(out/'agent-events.jsonl') if (out/'agent-events.jsonl').exists() else None,
             'source_sha256':context['source_sha256'],'schemas_sha256':sha(origin/'tool-schemas.json'),
             'selected':selected,'deferred':[r for r in audit if r['kind']=='experience_deferred'],
-            'policy_digest':policy_digest,'verified_motif_batches':len(steps),'candidate_job':context['candidate_job'],
-            'registry_file':context['registry_file'],'registry_sha256':context['registry_sha256'],'adapter':cfg.get('adapter')}
+            'policy_digest':policy_digest,'verified_motif_batches':len(steps)+len(script_runs),
+            'verified_file_script_runs':len(script_runs),'verified_model_bypass_events':len(steps),'candidate_job':context['candidate_job'],
+            'registry_file':context['registry_file'],'registry_sha256':context['registry_sha256'],'adapter':cfg.get('adapter'),
+            **({'provider_binding':context['provider_binding']} if context.get('provider_binding') else {})}
     file=root/'records'/(session+'.json')
     if file.exists():
         if read(file)!=record:raise ValueError('existing task seal differs; preserve original record')
@@ -471,4 +525,12 @@ def launch_worker(config_file, root, environment=None):
         process=subprocess.Popen([sys.executable,str(ROOT/'scripts/rsi-worker.py'),'--config',str(config_file),'--drain'],
                                  cwd=ROOT,stdout=stream,stderr=subprocess.STDOUT,start_new_session=True,env=environment)
     log.chmod(0o600)
-    return {'pid':process.pid,'log':str(log)}
+    result={'pid':process.pid,'log':str(log)}
+    from .daily_decision_learning import enabled
+    if enabled(load_config(config_file)):
+        program_log=directory/(uuid4().hex+'-programs.log')
+        with program_log.open('xb') as stream:
+            child=subprocess.Popen([sys.executable,str(ROOT/'scripts/rsi-worker.py'),'--config',str(config_file),'--programs'],
+                cwd=ROOT,stdout=stream,stderr=subprocess.STDOUT,start_new_session=True,env=environment)
+        program_log.chmod(0o600);result['decision_programs']={'pid':child.pid,'log':str(program_log)}
+    return result

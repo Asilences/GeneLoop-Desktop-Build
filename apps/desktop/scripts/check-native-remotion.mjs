@@ -40,12 +40,21 @@ try {
   wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);
   for(let i=0;i<samples;i++)wav.writeInt16LE(Math.round(16384*Math.sin(2*Math.PI*440*i/16000)),44+i*2);
   writeFileSync(join(root,'workspace/tone.wav'),wav);
-  const videoTools=nativeVideoTools(ctx,reader,writer,tools,AbortSignal.timeout(180000));
+  // This check exercises v4 media contracts. Official shell composition is
+  // exercised by check-native-common; this fixture grants only project paths.
+  const common={resolvePath:path=>join(root,'video-project',path)};
+  const videoTools=nativeVideoTools(ctx,reader,writer,tools,AbortSignal.timeout(180000),undefined,common);
   const invoke=(name,args)=>videoTools.find(t=>t.name==='mcp__native_video__'+name).execute(args);
-  const asset=await invoke('pin_asset',{path:'tone.wav'});
-  const audio=await invoke('run_command',{command:JSON.stringify({operation:'audio_stats',asset_id:asset.asset_id,duration:0.25})});
-  assert.ok(Math.abs(audio.rms-Math.sqrt(0.125))<0.005);assert.equal(audio.samples,4000);
-  await assert.rejects(invoke('run_command',{command:'powershell Get-ChildItem'}));
+  const asset=await invoke('pin_asset',{name:'tone.wav'});
+  const audio=await invoke('probe_media',{source_id:asset.source_id});
+  assert.ok(audio.streams.some(stream=>stream.codec_type==='audio'&&Number(stream.sample_rate)===16000));
+  const legacy=nativeVideoTools(ctx,reader,writer,tools,AbortSignal.timeout(180000));
+  const invokeLegacy=(name,args)=>legacy.find(tool=>tool.name==='mcp__native_video__'+name).execute(args);
+  const legacyAsset=await invokeLegacy('pin_asset',{path:'tone.wav',sha256:asset.source_version});
+  const legacyAudio=await invokeLegacy('run_command',{command:JSON.stringify({operation:'audio_stats',asset_id:legacyAsset.asset_id,duration:0.5})});
+  assert.equal(legacyAudio.sample_rate,16000);
+  assert.equal(legacyAudio.samples,samples);
+  await assert.rejects(invokeLegacy('run_command',{command:'powershell Get-ChildItem'}));
   // A generated entry must never become a Node-side webpack inline loader.
   const marker=join(root,'forbidden-loader-marker');
   // A mislabeled image is still untrusted input and must not execute in Node.
@@ -53,7 +62,12 @@ try {
   const loaderSource=`import '!!./public/asset-1.png!react';`;
   await assert.rejects(renderNativeRemotion(ctx,reader,writer,tools,loaderSource,'["loader.png"]',AbortSignal.timeout(30_000)));
   assert.equal(existsSync(marker),false,'生成的视频代码不得作为 Node 加载器执行');
-  const receipt = await renderNativeRemotion(ctx,reader,writer,tools,source,'[]',AbortSignal.timeout(180_000));
+  const receipt = await invoke('render_source',{text:source});
+  const preview=await videoTools.find(t=>t.name==='mcp__native_video__inspect_render').execute({seconds:[0,0.5]},{signal:AbortSignal.timeout(90000)});
+  assert.equal(preview.content.filter(block=>block.type==='image').length,2);
+  assert.equal(preview.result.preview_width,640);assert.equal(preview.result.preview_height,360);
+  await invoke('write_source',{text:source+'\n'});
+  await assert.rejects(videoTools.find(t=>t.name==='mcp__native_video__inspect_render').execute({seconds:[0]},{signal:AbortSignal.timeout(90000)}));
   assert.equal(receipt.execution,process.platform+'-local-remotion');
   assert.equal(receipt.output.width,640);assert.equal(receipt.output.height,360);
   assert.equal(receipt.output.fullyDecoded,true);assert.equal(receipt.artifacts.length,3);
@@ -66,7 +80,7 @@ try {
   ]),AbortSignal.timeout(180_000),undefined,ctx);
   assert.equal(clip.output?.width??clip.width,1280);assert.equal(clip.output?.height??clip.height,720);
   assert.ok(Math.abs((clip.output?.duration??clip.duration)-0.5)<0.12);
-  console.log(JSON.stringify({diagnostic:true,inlineLoaderRejected:true,timelineTrimAndConcat:true,nativeAudioAnalysis:true,...receipt}));
+  console.log(JSON.stringify({diagnostic:true,inlineLoaderRejected:true,timelineTrimAndConcat:true,nativeAudioProbe:true,actualFrameInspection:true,...receipt}));
 } finally {
   reader.close();writer.close();await ctx.fiber.dispose();process.chdir(app);
   assert.ok(root.startsWith(realpathSync(tmpdir())));

@@ -1,0 +1,71 @@
+{
+  "commit": "dcd1a99097ed831fe64408d3e1a5697fe7ced06d",
+  "canonical_npm_test_exit_code": 0,
+  "expected_python_cases": 3390,
+  "results": {
+    "python": {
+      "cases": 3390,
+      "unique_identifiers": 3390,
+      "failed": 0,
+      "skipped": 214,
+      "passed": 3176,
+      "junit_sha256": "7e8216dd0ab6695661e7d6f85176c9f37dba7455570593f7d4664f80d7924137"
+    },
+    "node": {
+      "cases": 1739,
+      "unique_identifiers": 1643,
+      "failed": 0,
+      "skipped": 9,
+      "passed": 1730,
+      "junit_sha256": "97ad53dbf8b8ebf72eba7cb6ff5b6523bb24b849a3e644502f69932d0627b819"
+    }
+  },
+  "node_tap": {
+    "tests": 1741,
+    "suites": 0,
+    "pass": 1732,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 9,
+    "todo": 0,
+    "duration_ms": 394080.920839
+  },
+  "commands": [
+    {
+      "name": "collect",
+      "exit_code": 0,
+      "started": "2026-11-08T00:20:51.051403+00:00",
+      "finished": "2026-11-08T00:21:11.291706+00:00"
+    },
+    {
+      "name": "npm-test",
+      "exit_code": 0,
+      "started": "2026-11-08T00:21:11.317537+00:00",
+      "finished": "2026-11-08T01:29:19.991880+00:00"
+    },
+    {
+      "name": "smoke",
+      "exit_code": 0,
+      "started": "2026-11-08T01:29:19.992967+00:00",
+      "finished": "2026-11-08T01:29:58.054416+00:00"
+    },
+    {
+      "name": "motif",
+      "exit_code": 1,
+      "started": "2026-11-08T01:29:58.055426+00:00",
+      "finished": "2026-11-08T01:30:21.904659+00:00"
+    }
+  ],
+  "all_required_checks_passed": false,
+  "failed_stage": "motif",
+  "failure": {
+    "type": "OSError",
+    "errno": 39,
+    "cause": "temporary workspace cleanup raced SDK background admission"
+  },
+  "raw_summary_sha256": "39bdc90d6eed7143b6e8a621304623bf89768b163abcb107dfb506e212857cc9",
+  "motif_log_sha256": "3b2afcffbd3393500dd1ef1165fd163387c133aeced4f2b3100511b77e1c6674",
+  "raw_receipts_preserved": true,
+  "cloud_requests": 0,
+  "production_service_touched": false
+}

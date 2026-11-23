@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from src.adapters.source_program_bridge import FrozenSourceLibrary, ROOT
-from src.adapters.script_motif_compiler import digest
+from src.motif_core.offline.compilation.script_motif_compiler import digest
 
 
 def library(path, suffix='old'):

@@ -1,32 +1,24 @@
 """Versioned batch handles and journaled, resumable effects in the original grant."""
 import copy,csv,json,os,shutil,zipfile,sys
 from pathlib import Path
-from typing import Annotated
 from uuid import uuid4
-from pydantic import Field
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from mcp.server.mcpserver.exceptions import ToolError
 from common import ROOT,HERE,digest,sha,snapshot
 sys.path.insert(0,str(ROOT))
 from plan_tools import atomic
-from operation_tools import OperationScene,TOOLS as OLD_TOOLS,operator_contract as old_contract,operation_version as old_version
+from operation_tools import OperationScene,operation_version as old_version
+from operation_evidence import (BATCH_OPERATION_TOOLS as TOOLS, DurableOperationEvidence,
+                                batch_operator_contract as operator_contract, reviewed_execution_version)
 from file_tools import Action
 
-TOOLS=[*OLD_TOOLS,'pin_files','read_files']
-Handles=Annotated[list[str],Field(min_length=1,max_length=40)]
 def operation_version():
-    return digest({'service':sha(__file__),'parent':old_version(),'quality':sha(HERE/'operation_contract_v2.py'),'job':sha(ROOT/'src/adapters/operation_job.ts')})
-def operator_contract(name):
-    c=old_contract(name)
-    if name=='inspect_plan_result':c={**c,'exports':['primary_file_id','files[].file_id']}
-    if name in ('pin_files','read_files'):
-        c={'format':'sss-mcp-learning-v1','effect':'read','auto_continue':True,'exports':['source_ids'] if name=='pin_files' else [],
-           'statuses':['pinned_batch'] if name=='pin_files' else ['read_batch_complete']}
-    return c
+    return reviewed_execution_version(digest({'service':sha(__file__),'parent':old_version(),
+        'operation_evidence.py':sha(HERE/'operation_evidence.py'),'quality':sha(HERE/'operation_contract_v2.py'),
+        'job':sha(ROOT/'src/adapters/operation_job.ts')}))
 
-class OperationSceneV2(OperationScene):
-    fields=('plans','receipts','result_handles','handles','reads','index','collections','collection_results','search_receipts')
+class OperationSceneV2(DurableOperationEvidence, OperationScene):
     def __init__(self,spec,output):
         self.state_file=Path(output)/'operation-state-v2.json';state=json.loads(self.state_file.read_text()) if self.state_file.exists() else None
         original=copy.deepcopy(spec)
@@ -64,21 +56,6 @@ class OperationSceneV2(OperationScene):
           'batch_instruction':'For several produced files, use pin_files with actual inspect_plan_result.files file_id values, then read_files with its actual source_ids. Individual pin_file/read_file remain available.'}
     def preview_actions(self,actions:list[Action]):
         v=super().preview_actions(actions);self.persist();return v
-    def pin_file(self,file_id:str):
-        v=super().pin_file(file_id);self.persist();return v
-    def read_file(self,source_id:str):
-        v=super().read_file(source_id);self.persist();return v
-    def pin_files(self,file_ids:Handles):
-        self.active()
-        if len(file_ids)!=len(set(file_ids)):raise ToolError('unique current file handles required')
-        for fid in file_ids:self.file(fid)
-        rows=[self.pin_file(fid) for fid in file_ids]
-        return self.stamp({'status':'pinned_batch','file_ids':file_ids,'source_ids':[r['source_id'] for r in rows],'count':len(rows)})
-    def read_files(self,source_ids:Handles):
-        self.active()
-        if len(source_ids)!=len(set(source_ids)) or any(s not in self.handles for s in source_ids):raise ToolError('unique actual pinned handles required')
-        rows=[self.read_file(s) for s in source_ids]
-        return self.stamp({'status':'read_batch_complete','reads':rows,'count':len(rows)})
     def stage(self,a,source):
         staged=self.output/'effect-staging'/uuid4().hex;staged.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
         if a['op'] in ('copy','move','quarantine'):shutil.copyfile(source,staged)
@@ -138,10 +115,6 @@ class OperationSceneV2(OperationScene):
         self.receipts[plan_id]={'plan_id':plan_id,'status':'executed_verified','operation_count':len(j['completed']),
              'journal_sha256':digest(j),'snapshot_sha256':digest(self.expected)}
         return self.receipt(plan_id)
-    def receipt(self,plan_id):
-        rid=next((r for r,p in self.result_handles.items() if p==plan_id),None) or 'receipt-'+uuid4().hex
-        self.result_handles[rid]=plan_id;self.persist();value={**self.receipts[plan_id],'receipt_id':rid}
-        atomic(self.output/'operation-receipts'/f'{rid}.json',value);return self.stamp(value,True)
     def restore_plan(self,plan_id:str):
         # Original scope and exact current snapshot remain required by the parent.
         v=super().restore_plan(plan_id)

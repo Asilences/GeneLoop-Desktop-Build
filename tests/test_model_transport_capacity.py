@@ -7,11 +7,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from src.adapters import deepseek_cost_gate, file_cost_gate
+from src.adapters import deepseek_cost_gate
 from src.adapters.model_transport import MODEL_REQUEST_MAX_BYTES, MODEL_REQUEST_TOO_LARGE
 
 
-@pytest.fixture(params=[deepseek_cost_gate, file_cost_gate], ids=['web', 'file-sdk'])
+@pytest.fixture(params=[
+    pytest.param((deepseek_cost_gate.State, deepseek_cost_gate.create_server), id='web'),
+    pytest.param((deepseek_cost_gate.FileState, deepseek_cost_gate.create_file_server), id='file-sdk'),
+])
 def transport(request, tmp_path):
     received = []
 
@@ -36,9 +39,9 @@ def transport(request, tmp_path):
             self.wfile.write(raw)
 
     provider = ThreadingHTTPServer(('127.0.0.1', 0), Provider)
-    module = request.param
-    state = module.State(cap_usd=None, output_cap=None, record=tmp_path/'ledger.jsonl')
-    gate = module.create_server('127.0.0.1', 0,
+    state_type, create_server = request.param
+    state = state_type(cap_usd=None, output_cap=None, record=tmp_path/'ledger.jsonl')
+    gate = create_server('127.0.0.1', 0,
         f'http://127.0.0.1:{provider.server_port}', state, allow_vision=True)
     threads = [threading.Thread(target=s.serve_forever, daemon=True) for s in [provider, gate]]
     for thread in threads:

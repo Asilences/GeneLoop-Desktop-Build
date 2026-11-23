@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.adapters import script_description_learning as learner
-from src.adapters.script_motif_compiler import compile_script, digest
+from src.motif_core.offline.compilation.script_motif_compiler import compile_script, digest
 
 
 def fixture(tmp_path):

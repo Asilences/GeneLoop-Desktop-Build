@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from src.adapters.versioned_evidence_guard import (
+from src.adapters.harness.learning.versioned_evidence_guard import (
     _formal_simpson_reversal, audit_versioned_seed_claims,
 )
 

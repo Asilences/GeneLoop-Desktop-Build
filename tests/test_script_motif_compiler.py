@@ -1,6 +1,6 @@
 """Deterministic admission diagnostics; not paid task quality evidence."""
 import pytest
-from src.adapters.script_motif_compiler import compile_script,extract,file_contract
+from src.motif_core.offline.compilation.script_motif_compiler import compile_script,extract,file_contract
 
 def test_parameterizes_current_file_names(tmp_path):
     a=tmp_path/'first.json';b=tmp_path/'renamed.json'

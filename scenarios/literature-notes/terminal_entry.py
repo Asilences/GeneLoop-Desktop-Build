@@ -11,7 +11,7 @@ TOOL = 'mcp__literature_pdf_repair__submit_claim_repair'
 VERSION_PATHS = ['scenarios/literature-notes/' + n for n in
     ['pdf_tools.py', 'pdf_layout.py', 'pdf_read_plan.py', 'pdf_review_tools.py', 'pdf_repair_tools.py', 'claim_coverage.py', 'pdf_dependencies.py',
      'pdf-repair-task.md', 'repair-pdf.py', 'terminal_entry.py']]
-VERSION_PATHS += ['src/motif_core/terminal_receipt_policy.ts', 'src/adapters/dsh_entry_motif.ts', 'scripts/run-scenario.py']
+VERSION_PATHS += ['src/motif_core/runtime/policies/terminal_receipt_policy.ts', 'src/adapters/harness/motif/dsh_entry_motif.ts', 'scripts/run-scenario.py']
 
 
 def version_files():

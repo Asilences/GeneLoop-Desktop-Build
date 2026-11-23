@@ -5,10 +5,10 @@ import {createHash,randomUUID} from 'node:crypto';
 import {readFileSync,readdirSync,lstatSync,realpathSync} from 'node:fs';
 import {resolve,relative,isAbsolute,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {digest,observation} from '../motif_core/online_skill_runtime.mjs';
-import {validateFieldGuard,evaluateFieldGuard} from './negative_field_runtime.ts';
-import {negativeOutcome} from './negative_outcome.ts';
-import {currentShapeIssues,validateCurrentConstraint} from './negative_constraint_runtime.ts';
+import {digest,observation} from '../motif_core/runtime/online_skill_runtime.mjs';
+import {validateFieldGuard,evaluateFieldGuard} from '../motif_core/runtime/policies/negative_field_runtime.ts';
+import {negativeOutcome} from '../motif_core/trajectory/negative_outcome.ts';
+import {currentShapeIssues,validateCurrentConstraint} from '../motif_core/runtime/policies/negative_constraint_runtime.ts';
 const sha=(b:any)=>createHash('sha256').update(b).digest('hex');
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const at=(v:any,path:string[])=>path.reduce((v,k)=>v?.[k],v);
@@ -17,7 +17,7 @@ export function loadNegativeLibrary(path:string){
  const library=JSON.parse(readFileSync(path,'utf8'));const {digest:claimed,...body}=library;
  if(library.kind!=='negative_tool_motif_library'||library.version!==1||digest(body)!==claimed||
   !Array.isArray(library.rules)||library.rules.length>32||!Object.keys(library.implementation_locks??{}).length||
-   !['src/adapters/script_negative_compiler.py','src/adapters/script_negative_runtime.ts','src/adapters/script_motif_web.ts','src/adapters/negative_field_compiler.py','src/adapters/negative_field_runtime.ts','src/adapters/negative_outcome.py','src/adapters/negative_outcome.ts','src/adapters/negative_constraint_compiler.py','src/adapters/negative_constraint_runtime.ts'].every(k=>library.runtime_locks?.[k]))throw Error('invalid_negative_library');
+   !['src/motif_core/offline/compilation/script_negative_compiler.py','src/adapters/script_negative_runtime.ts','src/adapters/script_motif_web.ts','src/motif_core/offline/compilation/negative_field_compiler.py','src/motif_core/runtime/policies/negative_field_runtime.ts','src/motif_core/trajectory/negative_outcome.py','src/motif_core/trajectory/negative_outcome.ts','src/motif_core/offline/compilation/negative_constraint_compiler.py','src/motif_core/runtime/policies/negative_constraint_runtime.ts','src/adapters/paper_constraint_evidence.py'].every(k=>library.runtime_locks?.[k]))throw Error('invalid_negative_library');
  for(const [name,hash] of Object.entries({...library.implementation_locks,...library.runtime_locks})){
   const p=resolve(root,name);if(!safe(root,p)||sha(readFileSync(p))!==hash)throw Error('negative_implementation_changed');
  }

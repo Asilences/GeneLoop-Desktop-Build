@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-const html=readFileSync(new URL('../src/adapters/harless_account.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/adapters/web/account/harless_account.html',import.meta.url),'utf8');
 const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const flush=async()=>{for(let n=0;n<8;n++)await new Promise(resolve=>setImmediate(resolve));};
 function fixture(fetcher, clipboard){

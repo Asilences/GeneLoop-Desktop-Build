@@ -3,36 +3,59 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { openReportWriter, openWorkspaceReader } from './local-files.mjs';
 import { registerLocalFileTools } from './local-file-tools.mjs';
 import {ensureNativeFonts} from './local-fonts.mjs';
+import {openCommonCapabilities} from './local-common.mjs';
+import {openNativePptDeck} from './local-ppt-native.mjs';
+import {registerLocalRsi} from './local-rsi.mjs';
+import {openFileDecisions} from './local-file-decisions.mjs';
 
 // Constructed by the trusted desktop worker after native directory approval.
-export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false, fullWorkflows = false, approveFilePlan }) {
+export async function openLocalFileAgent(ctx, { directory, model, signal, onReport, sessionId = randomUUID(), resume = false, scene = 'files', media, approveVideo, onVideoPhase, ppt, legacyTools = false, fullWorkflows = false, commonCapabilities = false, nativePptDeck = false, approveFilePlan, askUser, prompt, fileJev = false, fileJevAccount, fileHome, rsiRoot }) {
   if (ppt) ppt = {...ppt,nativeContext:ctx};
   const reader = openWorkspaceReader(directory);
-  let writer, handle, sceneTools;
+  let writer, handle, sceneTools, common;
   try {
     writer = openReportWriter(directory);
     await ensureNativeFonts(ctx,ppt,directory,signal);
+    if(commonCapabilities&&ppt)common=await openCommonCapabilities(ctx,{reader,writer,tools:ppt,media,sessionId,signal,onReport,askUser,sourceDirectory:directory});
+    const deck=scene==='ppt'&&common&&ppt.deck&&nativePptDeck?await openNativePptDeck(common,ppt,sessionId,signal):[];
+    const fileDecision=scene==='files'&&fileJev?openFileDecisions({reader,home:process.env.DSH_HOME,
+      sessionId,prompt,signal,enabled:true,account:fileJevAccount,endpoint:process.env.DEEPSEEK_BASE_URL,token:process.env.DEEPSEEK_API_KEY}):undefined;
     const options = {
       agentOptions: model,
       signal,
       setup(scope) {
-        sceneTools=registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx,legacyTools,fullWorkflows,approveFilePlan);
+        sceneTools=registerLocalFileTools(scope, reader, writer, onReport, scene, signal, media, approveVideo, ppt, onVideoPhase, ctx,legacyTools,fullWorkflows,approveFilePlan,common,fileDecision,fileHome);
+        registerLocalRsi(scope,{root:rsiRoot,tools:ppt,scene,readTools:sceneTools.readTools,signal});
+        for(const tool of deck)scope.tools.register(tool);
+        if(common)scope.systemPrompt.section({name:'geneloop:native-common',order:10240,text:
+          '当前公共工具来自官方DSH，本机命令使用'+(process.platform==='win32'?'PowerShell（pwsh），不能写Linux Bash语法':'Bash')+'。本轮可写目录：'+common.directory+
+          '。用户原件通过local_list/local_read/local_document_pin读取，用local_import_sources将实际SHA256固定的资料复制到inputs/，不要猜测路径。技能只读入口：'+ppt.skill+
+          '。任务代码和中间文件留在本轮目录。local_save_report、local_files_export、local_ppt_create、local_ppt_fill_template、local_ppt_edit_template、local_video_render返回的GeneLoop输出产物已经直接交付给用户，不要再用present重复交付，也不要仅为交付确认而搜索或读取这些文件。继续完成尚未满足的用户要求；全部完成后直接回复。只有你在本轮可写目录outputs/自行制作的文件才调用present，它会复制到工作区GeneLoop输出。node/python/python3、Office和媒体工具已在命令PATH中。禁止写用户原件、安装系统软件或提权。联网搜索使用公开检索，不共享模型密钥；不可用时如实报告。'});
         if(fullWorkflows&&scene!=='video')scope.systemPrompt.section({name:'geneloop:desktop-full-workflows',order:10230,
           text:'完整场景任务优先使用 local_workflow_open 返回的实际MCP目录，再直接调用加入当前Agent的mcp__native_*工具，不用基础工具冒充完整流程。数据报告的统计设计、选图、正文仍由你基于实际证据判断；论文保留引用与外部元数据核验、审校草稿与PDF；PPT保留原图、模板、局部修订、真实PDF核验和交付。PPT官方技能和PDF转换还可用workflow=skill。文件整理先预览副本的具体动作、请求用户确认，再执行和交付整理包，不声称已修改原文件。每个工作流只操作其明确固定的材料快照；材料变化时重新打开。'});
         if(legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-compatibility',order:10200,
           text:'当前网关尚未声明新版场景工具协议，本轮只提供旧版本工具。若任务需要Excel、多文件静态核验或普通PPT模板编辑，请说明需要更新GeneLoop网关；不要声称已使用这些未提供的工具。现有本机工具仍可使用，不转为云端执行。'});
         if(ppt&&!legacyTools)scope.systemPrompt.section({name:'geneloop:desktop-documents',order:10200,
           text:'Office/PDF等材料先用 local_document_pin 固定版本，再用 local_document_read 分页核对。所有资料与工具在本机处理，模型通过网络调用。数据用 local_data_inspect/analyze 读取显式表格；文件整理用 local_files_export 交付副本。论文可用 local_paper_audit_sources 复用静态检查。只使用当前场景实际提供的工具，不把文本抽取称为视觉检查或把静态核验称为真实编译。'});
+        if (common) scope.systemPrompt.section({name:'geneloop:desktop-native-cli',order:10212,
+          text:'执行Skill脚本使用本机已配置的python或python3命令；它们绑定当前任务私有目录和转换器，不改用系统Python或临时下载依赖。PPT只制作和编辑演示文稿，不生成旁白音频、配音、演示视频或字幕，不调用notes_to_audio、narration_sync、powerpoint_video、video_motion_plan、video_sound_mix、video_subtitles，不安装Torch、Whisper、stable-ts或edge-tts。独立视频剪辑属于video场景。'});
         if (scene === 'video' && media?.remotion) scope.systemPrompt.section({
           name:'geneloop:desktop-video',order:10210,
           text:'视频使用 local_video_render 在本机执行。复杂合成的 plan 为 {source,assets}，source 是 Remotion TSX，assets 为授权素材路径数组；简单剪辑的 plan 为时间线数组。用户未明确要求服务器执行时，不调用 hybrid_video_render。不引用外部网络素材。',
         });
+        if(fileDecision)scope.systemPrompt.section({name:'geneloop:file-judgement',order:10215,
+          text:'文件内容分类等有限语义问题可使用 local_file_judge。先核对来源相对路径与实际 SHA256，再提供 choice/noul 问题。工具返回当前任务的 JEV 原始判断、概率和验收结果，恢复会复用已付回执。拒绝或不确定时用当前主模型继续判断。判断不能授权修改文件，整理仍须预览并请求用户确认。'});
         if (scene === 'chat') scope.systemPrompt.section({
           name: 'geneloop:desktop-chat', order: 10210,
           text: '你是 GeneLoop。直接回复一般问题，只在任务确实需要文件时调用已授权的本机工具。'
             + '只引用实际读取的来源，不编造文件内容，也不将用户原文件写入或移动到其他位置。',
         });
-        if (scene === 'ppt' && ppt) scope.systemPrompt.section({
+        if (scene === 'ppt' && common) scope.systemPrompt.section({
+          name:'geneloop:desktop-ppt-master',order:10210,
+          text:(deck.length?'新建常规稿优先用 build_ppt 一次提交完整页计划，沿用回执的 project、slide_id 和 revision 调用 patch_ppt 局部修改或恢复导出。先用 local_import_sources 固定所需图件。':'先读 local_ppt_master_guide 或 workflow=skill 的入口。')+
+            '复杂 SVG 页面使用随包模板和脚本，工程放当前会话 projects 内，先 prepare_ppt 测量实际字体，再 finalize_ppt。已有 PPTX 用 local_ppt_read_material 和 local_ppt_edit_template 修改副本。保留可编辑文字、原生图表、资料来源和备注。工具已经发布 PPTX、PDF 和逐页预览时，直接引用交付结果；当前稿导出失败时先修复并重新验收。Windows 命令使用 PowerShell。',
+        });
+        if (scene === 'ppt' && ppt && !common) scope.systemPrompt.section({
           name: 'geneloop:desktop-ppt-master', order: 10210,
           text: '使用 local_ppt_master_guide 读取锁定版技能入口和 Generate 工作流。'
             + '用户给出来源时先用 local_ppt_read_material 核对实际内容和版本，将所用材料摘要放进交付计划。'
@@ -46,9 +69,12 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
     };
     handle = resume
       ? await ctx.agents.resume({ ...options, resumeSessionId: sessionId })
-      : await ctx.agents.create({ ...options, sessionId, meta: { cwd: directory } });
+      : await ctx.agents.create({ ...options, sessionId, meta: { cwd: common?.directory??directory } });
+    await sceneTools?.restore?.();
   } catch (error) {
     await sceneTools?.close();
+    await handle?.dispose();
+    await common?.close();
     writer?.close();
     reader.close();
     throw error;
@@ -63,6 +89,11 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
       if (typeof text !== 'string' || !text.trim()) throw Error('请输入本机会话消息。');
       agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }));
     },
+    recover() {
+      if(closing||agent.status!=='idle')throw Error('原任务暂不可恢复。');
+      agent.steer(createUserMessage({source:{kind:'local-task-recovery'},
+        content:[{type:'text',text:'继续此会话中尚未完成的原任务。先核对原生历史中的已完成工具回执和现存产物，沿原工作流及已付判断继续，不重复执行已经完成的文件操作。保留原用户要求和授权。'}]}));
+    },
     async cancel() {
       agent.cancel({ kind: 'user' });
       await agent.whenIdle();
@@ -72,7 +103,7 @@ export async function openLocalFileAgent(ctx, { directory, model, signal, onRepo
       if (!closing) {
         writer?.close();
         reader.close();
-        closing = Promise.resolve().then(async () => {await sceneTools?.close();await handle.dispose();});
+        closing = Promise.resolve().then(async () => {await sceneTools?.close();await handle.dispose();await common?.close();});
       }
       return closing;
     },

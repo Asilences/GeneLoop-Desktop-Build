@@ -1,6 +1,8 @@
 """Native desktop delivery for a prepared, self-contained ppt-master project."""
-from pathlib import Path
+from src.adapters.filesystem_paths import Path
 import argparse
+import base64
+import io
 import hashlib
 import json
 import os
@@ -10,23 +12,26 @@ import stat
 import subprocess
 import sys
 import tempfile
+import zipfile
 import xml.etree.ElementTree as ET
 
-from scenarios.ppt_master.package import verify_installation
-from scenarios.research_ppt.validation import MAX_SLIDES, validate_delivery
+from src.adapters.desktop.desktop_skill_runtime import verify_desktop_skill
+from src.adapters.filesystem_paths import windows_io_path
+from scenarios.research_ppt.validation import validate_delivery
 from scenarios.research_ppt.web_scope import configure_web_scope
-from src.adapters.ppt_delivery_runner import fixed_file
-from src.adapters.ppt_design_preflight import inspect_svg
+from src.adapters.ppt.delivery.ppt_delivery_runner import fixed_file
+from src.adapters.ppt.authoring.ppt_design_preflight import inspect_svg
 
-MAX_PAGE_BYTES = 512 * 1024
+MAX_PAGE_BYTES = 30 * 1024 * 1024
+MAX_SLIDES = 200  # Match the PPT Master Generate manifest, not structured-plan limits.
 MAX_NOTES_BYTES = 64 * 1024
-MAX_DECK_BYTES = 16 * 1024 * 1024
+MAX_DECK_BYTES = 200 * 1024 * 1024
 PAGE_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,79}\.svg')
 SVG = '{http://www.w3.org/2000/svg}'
 FRAGMENT_URL = re.compile(r'url\(\s*#[A-Za-z_][\w.-]*\s*\)', re.ASCII)
 STATIC_ELEMENTS = frozenset(
     'svg g defs rect circle ellipse line polyline polygon path text tspan title desc '
-    'linearGradient radialGradient stop clipPath'.split()
+    'linearGradient radialGradient stop clipPath image use symbol mask pattern'.split()
 )
 
 def attach_render_job():
@@ -112,6 +117,23 @@ def validate_static_svg(raw):
         for name, value in element.attrib.items():
             if name == '{http://www.w3.org/XML/1998/namespace}space' and value in ('default', 'preserve'):
                 continue
+            if name in ('href', '{http://www.w3.org/1999/xlink}href'):
+                if element.tag == SVG + 'use' and re.fullmatch(r'#[A-Za-z_][\w.-]*', value):
+                    continue
+                if element.tag == SVG + 'image':
+                    match = re.fullmatch(r'data:image/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/=\r\n]+)', value)
+                    if not match:
+                        raise ValueError('图片必须为自包含PNG/JPEG/WebP/GIF；不读取外部路径或URL。')
+                    raw_image = base64.b64decode(match[2], validate=True)
+                    if len(raw_image) > 20 * 1024 * 1024:
+                        raise ValueError('单张图片超过20MiB。')
+                    from PIL import Image
+                    with Image.open(io.BytesIO(raw_image)) as image:
+                        if image.format.lower() != match[1] or image.width * image.height > 64 * 1024 * 1024:
+                            raise ValueError('图片声明、格式或尺寸无效。')
+                        image.verify()
+                    continue
+                raise ValueError('不接受外部SVG引用。')
             if ('{' in name or name.lower().startswith('on') or name.lower() in ('href', 'src') or
                     re.search(r'[\\@]|/\*', value) or
                     re.search(r'url\s*\(', FRAGMENT_URL.sub('', value), re.I)):
@@ -155,10 +177,13 @@ def render_project(stage, snapshot, pages, skill, renderer):
     env = desktop_environment(stage, renderer)
     python = [sys.executable, '-E', '-s', '-B', '-X', 'utf8']
     scripts = skill / 'scripts'
+    # The vendored converter creates an additional .pptx-build tree beside
+    # the output. Windows needs the extended path before that tree exists.
+    native_output = windows_io_path(str(pptx)) if sys.platform == 'win32' else str(pptx)
     for label, argv in [
         ('official-quality', [*python, str(scripts / 'svg_quality_checker.py'), str(snapshot), '--stage', 'final',
                               '--canonical-authoring', '--json']),
-        ('pptx-export', [*python, str(scripts / 'svg_to_pptx.py'), str(snapshot), '-o', str(pptx),
+        ('pptx-export', [*python, str(scripts / 'svg_to_pptx.py'), str(snapshot), '-o', native_output,
                          '--with-notes', '--no-animations']),
     ]:
         result = subprocess.run(argv, cwd=stage, env=env, capture_output=True, timeout=240,
@@ -167,11 +192,12 @@ def render_project(stage, snapshot, pages, skill, renderer):
             detail = (result.stderr or result.stdout).decode('utf-8', errors='replace')[-1600:]
             return {'passed': False, 'errors': [{'rule': label, 'detail': detail}], 'artifacts': []}
 
-    return validate_windows_deck(stage, pptx, texts, renderer, env)
+    return validate_windows_deck(stage, pptx, texts, renderer, env, max_slides=MAX_SLIDES)
 
 
 def desktop_environment(stage, renderer):
-    env = {name: os.environ[name] for name in ('SystemRoot', 'SystemDrive', 'WINDIR', 'LANG', 'LC_ALL') if name in os.environ}
+    env = {name: os.environ[name] for name in ('SystemRoot', 'SystemDrive', 'WINDIR', 'LANG', 'LC_ALL', 'GENELOOP_OFFICE_NODE') if name in os.environ}
+    env['ELECTRON_RUN_AS_NODE'] = '1'
     env.update(TEMP=str(stage), TMP=str(stage), TMPDIR=str(stage), HOME=str(stage),
                USERPROFILE=str(stage), APPDATA=str(stage), LOCALAPPDATA=str(stage),
                PATH=str(renderer.parent), PATHEXT='.COM', NoDefaultCurrentDirectoryInExePath='1')
@@ -187,7 +213,7 @@ def desktop_environment(stage, renderer):
     return env
 
 
-def validate_windows_deck(stage, pptx, texts, renderer, env=None, *, require_notes=True):
+def validate_windows_deck(stage, pptx, texts, renderer, env=None, *, require_notes=True, max_slides=30):
     job = stage / 'job.json'
     job.write_text('{"kind":"desktop-ppt-export"}', encoding='utf-8')
     configure_web_scope(job, stage)
@@ -201,13 +227,26 @@ def validate_windows_deck(stage, pptx, texts, renderer, env=None, *, require_not
         if not discovered or Path(discovered).resolve(strict=True) != renderer:
             raise ValueError('无法从显式 LibreOffice 目录定位渲染器。')
         report = validate_delivery(pptx, len(texts), expected_texts=texts,
-                                   validation_root=stage / 'validation', require_notes=require_notes)
+                                   validation_root=stage / 'validation', require_notes=require_notes,max_slides=max_slides)
     finally:
         os.environ.clear()
         os.environ.update(original)
     if report['passed']:
         report['artifacts'].insert(0, {'kind': 'pptx', 'path': str(pptx), 'sha256': report['pptx_sha256']})
     return report
+
+
+def archive_previews(rows, root, target):
+    pages = [row for row in rows if row['kind'] == 'preview']
+    if not pages:
+        raise ValueError('PPT 交付缺少逐页预览。')
+    with zipfile.ZipFile(target, 'x') as archive:
+        for number, row in enumerate(pages, 1):
+            page = fixed_file(row['path'], root).read_bytes()
+            if row['page'] != number or hashlib.sha256(page).hexdigest() != row['sha256']:
+                raise ValueError('PPT 预览顺序或摘要已变化。')
+            archive.writestr(f'page-{number:03d}.png', page)
+    return {'kind': 'zip', 'path': target.name, 'sha256': hashlib.sha256(target.read_bytes()).hexdigest()}
 
 
 def export_project(project, output, skill, renderer):
@@ -223,7 +262,7 @@ def export_project(project, output, skill, renderer):
         raise ValueError('请使用当前平台的 LibreOffice 渲染器。')
     if output.exists() or output.is_symlink() or output.is_relative_to(project) or output.is_relative_to(skill):
         raise ValueError('输出必须是位于输入项目与工具目录之外的新文件夹。')
-    locked = verify_installation(skill)
+    locked = verify_desktop_skill(skill)
     with tempfile.TemporaryDirectory(prefix='.geneloop-ppt-', dir=parent, ignore_cleanup_errors=True) as temp:
         stage = Path(temp)
         snapshot = stage / 'project'

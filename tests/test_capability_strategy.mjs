@@ -6,8 +6,8 @@ import {mkdtempSync, realpathSync, readFileSync, writeFileSync, rmSync} from 'no
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {capabilityDigest, createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
-import {validateStrategy, strategyContext} from '../src/adapters/capability_strategy.ts';
+import {capabilityDigest, createCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
+import {validateStrategy, strategyContext} from '../src/rsi/evolution/capability_strategy.ts';
 
 const python = process.env.SSS_PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
 function fixture(t) {
@@ -16,9 +16,9 @@ function fixture(t) {
   const run = spawnSync(python, ['-c', `import json,sys
 from pathlib import Path
 from tests.test_capability_contract import leaf,compose
-from src.adapters.capability_contract import capability_ref,create_capability_snapshot
-from src.adapters.capability_feedback import CapabilityFeedback,file_ref
-from src.adapters.capability_strategy import create_strategy,admit_strategy,strategy_context
+from src.capability.graph.capability_contract import capability_ref,create_capability_snapshot
+from src.rsi.feedback.capability_feedback import CapabilityFeedback,file_ref
+from src.rsi.evolution.capability_strategy import create_strategy,admit_strategy,strategy_context
 root=Path(sys.argv[1])
 def put(name,value):
  p=root/name;p.write_text(json.dumps(value),encoding='utf-8');return file_ref(p)

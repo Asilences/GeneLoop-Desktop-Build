@@ -3,8 +3,8 @@ import copy
 import json
 import pytest
 from src.adapters.management_recertification import native_view, rebuild, verify_read_checks
-from src.motif_core.offline.operation_graph import discover_graphs, certify_graph
-from src.motif_core.offline.experience_registry import digest, read, sha
+from src.motif_core.offline.compilation.operation_graph import discover_graphs, certify_graph
+from src.motif_core.reuse.experience_registry import digest, read, sha
 from test_operation_graph import frames
 
 

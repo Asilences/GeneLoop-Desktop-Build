@@ -18,17 +18,17 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from mcp import Client, StdioServerParameters
-from src.adapters.dsh_trajectory import (
+from src.adapters.harness.dsh_trajectory import (
     extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges,
 )
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.scenario import prepare_scenario
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.edge_compiler import (
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.edge_compiler import (
     compile_witnessed_edge_motif, certify_witnessed_edge_motif,
 )
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 BUNDLE = ROOT / 'examples/motif-library/research-portfolio-v1'
 CORPUS = ROOT / 'benchmarks/research_decision_portfolio_v1'
@@ -238,10 +238,17 @@ def acceptance_run(mode, *, stale=False):
                         SSS_MOTIF_EMBEDDING_MODEL='fixture-vectors-not-a-semantic-model',
                         SSS_MOTIF_MIN_SIMILARITY='0.8', SSS_MOTIF_MIN_MARGIN='0.1',
                         SSS_ONLINE_MOTIF_PROMPT_SHA256=prepared['prompt_sha256'])
-                with create_harness(root=ROOT, patches=tuple(patches), env=env, cwd=temporary,
+                harness = create_harness(root=ROOT, patches=tuple(patches), env=env, cwd=temporary,
                     runtime_cwd=temporary, provider='deepseek-official', model='deepseek-flash',
-                    max_tokens=1000, request_timeout_seconds=20) as harness:
-                    result = harness.run(prepared['prompt'], session_id=task['session_id'])
+                    max_tokens=1000, request_timeout_seconds=20)
+                try:
+                    with harness:
+                        result = harness.run(prepared['prompt'], session_id=task['session_id'])
+                finally:
+                    # This example owns a temporary workspace. The SDK closes
+                    # before background admission; drain it before deleting its
+                    # files, including when the original task raised an error.
+                    harness.wait_for_privacy()
                 if handler.failures or result.finish_reason != 'completed':
                     raise ValueError('local Harness loop failed: ' + str(handler.failures))
                 calls = [event for event in result.events if event.get('type') == 'tool/call']

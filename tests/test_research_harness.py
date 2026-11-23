@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import anyio
 import pytest
 
-from src.adapters import research_harness as research
+from src.adapters.harness import research_harness as research
 
 
 TOOLS = [{'name': 'read_skill', 'description': 'Read a selected skill resource.',
@@ -236,13 +236,27 @@ def test_total_deadline_cancels_public_session_and_preserves_costs(tmp_path, inj
     assert stored['status'] == 'timeout' and stored['provider_requests'] == 2
 
 
-def test_completed_session_stops_deadline_before_next_session(tmp_path, injected):
+def test_completed_session_stops_deadline_before_next_session(tmp_path, injected, monkeypatch):
+    timers = []
+    class Timer:
+        def __init__(self, interval, callback):
+            self.callback = callback
+            self.cancelled = False
+            timers.append(self)
+        def start(self):
+            pass
+        def cancel(self):
+            self.cancelled = True
+        def join(self):
+            pass
+    monkeypatch.setattr(research.threading, 'Timer', Timer)
     gate = Gate(tmp_path / 'prior')
     harness = research.ResearchHarness(gate, tmp_path / 'sessions')
     call = request()
-    call['timeout_seconds'] = 0.05
+    call['timeout_seconds'] = 10
     assert harness(call, lambda *_: {})['status'] == 'completed'
-    time.sleep(0.08)
+    assert timers and timers[0].cancelled
+    timers[0].callback()  # A delayed callback cannot cancel a finished session.
     assert not injected['cancellations']
     assert harness(request(), lambda *_: {})['status'] == 'completed'
     assert not injected['cancellations']
@@ -323,10 +337,10 @@ def test_fee_owner_restored_when_final_result_write_fails(tmp_path, injected, mo
     assert gate.current == prior
 
 
-@pytest.mark.parametrize('timeout_seconds,baseline_tools', [(None, False), (3, False), (None, True)])
+@pytest.mark.parametrize('timeout_seconds,baseline_tools', [(None, False), (10, False), (None, True)])
 def test_original_harness_native_skill_and_callback_mcp_use_original_request_ledger(tmp_path, monkeypatch, timeout_seconds, baseline_tools):
     """Full local SDK round trip with synthetic SSE responses and actual tools."""
-    from src.adapters import capability_proposal as proposal
+    from src.adapters.harness.capability import capability_proposal as proposal
 
     provider_calls = []
 
@@ -338,7 +352,9 @@ def test_original_harness_native_skill_and_callback_mcp_use_original_request_led
             body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             provider_calls.append(body)
             if timeout_seconds:
-                time.sleep(4)
+                # Leave startup time for the installed SDK on the old Linux
+                # runtime, then keep the actual provider request in flight.
+                time.sleep(timeout_seconds + 1)
             number = len(provider_calls)
             tool = None
             arguments = None
@@ -388,7 +404,7 @@ def test_original_harness_native_skill_and_callback_mcp_use_original_request_led
             with proposal.CumulativeProposalGate(ledger) as gate:
                 call = request('Complete the diagnostic workflow.')
                 if baseline_tools:
-                    from src.adapters.skill_infinity_baseline import SkillInfinityRun, create_seed_task_skill
+                    from benchmarks.evolution.skill_infinity_baseline import SkillInfinityRun, create_seed_task_skill
                     seed = create_seed_task_skill(tmp_path / 'baseline-seed', 'diagnostic-task', 'Diagnostic task')
                     optimizer = SkillInfinityRun(seed, tmp_path / 'baseline-archive',
                         optimization_target='task_skill', context={}, call_agent=lambda *_: {},
@@ -408,7 +424,7 @@ def test_original_harness_native_skill_and_callback_mcp_use_original_request_led
                     evidence = json.loads(Path(result['cancel_evidence']['path']).read_text())
                     assert evidence.get('accepted') is True or evidence.get('runtime_closed') is True
                     assert result['request_ids'] == [6] and result['provider_requests'] == 1
-                    assert result['elapsed_seconds'] < 6
+                    assert result['elapsed_seconds'] < timeout_seconds + 3
                     assert gate.current is None
                     assert gate.state.request_count == 6
                     return

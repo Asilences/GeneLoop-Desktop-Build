@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {validateCollectionScript,scriptGraph,createCollectionScriptController} from '../src/motif_core/collection_batch_script.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validateCollectionScript,scriptGraph,createCollectionScriptController} from '../src/motif_core/runtime/policies/collection_batch_script.ts';
 function f(){const tools=[scriptGraph.source_tool,scriptGraph.pin_tool,scriptGraph.read_tool,scriptGraph.gather_tool];
  const s={schema_version:1,format:'sss-collection-script-v1',origin:'handwritten_no_library',graph:scriptGraph,tools,
  execution_version_sha256:'a'.repeat(64),tool_schema_sha256:Object.fromEntries(tools.map(t=>[t,digest({})]))};s.script_digest=digest(s);

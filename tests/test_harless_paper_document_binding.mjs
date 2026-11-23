@@ -33,7 +33,7 @@ function fixture(){
 }
 
 test('generic Paper pin/read binds current approved mixed-format uploads without guessing source handles',options,async()=>{
-  const {bindApprovedUploadedReadTask}=await import('../src/adapters/harless_rsi_binding.ts');
+  const {bindApprovedUploadedReadTask}=await import('../src/adapters/web/learning/harless_rsi_binding.ts');
   const f=fixture();try{
     const bound=bindApprovedUploadedReadTask(f.root,f.inputs,f.request,manifest(),'paper-proofreading');
     assert.equal(bound.task_id,f.request.task_id);assert.equal(bound.session_id,f.request.session_id);
@@ -47,7 +47,7 @@ test('generic Paper pin/read binds current approved mixed-format uploads without
 });
 
 test('generic Paper binding rejects changed bytes, foreign approvals and invalid versions',options,async()=>{
-  const {bindApprovedUploadedReadTask:bind}=await import('../src/adapters/harless_rsi_binding.ts');
+  const {bindApprovedUploadedReadTask:bind}=await import('../src/adapters/web/learning/harless_rsi_binding.ts');
   const f=fixture();try{
     assert.throws(()=>bind(f.root,[{...f.inputs[0],file:'../study.docx'},...f.inputs.slice(1)],f.request,manifest(),'paper-proofreading'),/source_scope/);
     assert.throws(()=>bind(f.root,[{...f.inputs[0],version_sha256:'not-a-version'},...f.inputs.slice(1)],f.request,manifest(),'paper-proofreading'),/source_scope/);
@@ -62,7 +62,7 @@ test('generic Paper binding rejects changed bytes, foreign approvals and invalid
 });
 
 test('generic Paper binding keeps the new read family separate from legacy edges and rejects unknown or incomplete tools',options,async()=>{
-  const {bindApprovedUploadedReadTask:bind}=await import('../src/adapters/harless_rsi_binding.ts');
+  const {bindApprovedUploadedReadTask:bind}=await import('../src/adapters/web/learning/harless_rsi_binding.ts');
   const f=fixture();try{
     const check=value=>bind(f.root,f.inputs,f.request,value,'paper-proofreading');
     assert.deepEqual(check(manifest([edge(legacyPin,legacyRead)])).source_versions,
@@ -85,7 +85,7 @@ test('generic Paper binding keeps the new read family separate from legacy edges
 });
 
 test('closed Paper first-page guard refuses semantic, write and source-binding extensions',options,async()=>{
-  const {closedPaperDocumentFirstPage:closed}=await import('../src/adapters/harless_rsi_binding.ts');
+  const {closedPaperDocumentFirstPage:closed}=await import('../src/adapters/web/learning/harless_rsi_binding.ts');
   const base=manifest();base.artifacts[0].motif_id='protocol-motif';
   const row={tool:read,motif_id:'protocol-motif',version_relation:'same_source',code_node_ids:[],
     arguments:{source_id:'source-'+'b'.repeat(32),page:1}};

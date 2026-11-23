@@ -13,20 +13,22 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path as BootstrapPath
 import re
 import shutil
 import subprocess
 import sys
 import time
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+ROOT = BootstrapPath(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from src.adapters.filesystem_paths import Path
+ROOT = Path(ROOT).resolve()
 from scenarios.research_ppt.motif_v6 import learn, schema_tools, validate_compilation
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
 from src.adapters.rsi_learning_trace import import_trace, compilation_trace, export_projected_identity
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.adapters.tool_contract_loader import parse_tool_contracts
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
 
 SCENE = ROOT / 'scenarios/paper_proofreading'
 CONTRACTS = SCENE / 'document-read-contracts.json'
@@ -228,18 +230,21 @@ def code_paths():
     paths = [Path(__file__).resolve(), CONTRACTS, VERSIONS, SCENE / 'scenario.json',
              ROOT / 'src/adapters/rsi_learning_trace.py', ROOT / 'docs/schemas/rsi-learning-trace.schema.json']
     paths += [ROOT / value for value in (
-        'src/adapters/dsh_web_tasks.ts', 'src/adapters/ppt_master_recovery.ts', 'src/adapters/harless_scenarios.py', 'src/adapters/harless_task_scope.ts',
-        'src/adapters/harless_rsi_binding.ts', 'src/adapters/harless_rsi_bundle.py', 'src/adapters/harless_legacy_motif.ts',
-        'src/adapters/dsh_online_motif.mjs', 'src/adapters/dsh_trajectory.py', 'src/adapters/dsh_event_projection.py',
-        'src/adapters/task_identity.py', 'src/adapters/tool_contract_loader.py', 'src/adapters/tool_schema_contracts.py',
-        'src/adapters/session_files.py', 'src/adapters/harless_attachment_text.py', 'src/adapters/session_report.py',
+        'src/adapters/web/dsh_web_tasks.ts', 'src/adapters/ppt/delivery/ppt_master_recovery.ts', 'src/adapters/web/scenes/harless_scenarios.py', 'src/adapters/web/attachments/harless_task_scope.ts',
+        'src/adapters/web/learning/harless_rsi_binding.ts', 'src/adapters/web/learning/harless_rsi_bundle.py', 'src/adapters/web/learning/harless_legacy_motif.ts',
+        'src/adapters/harness/motif/dsh_online_motif.mjs', 'src/adapters/harness/dsh_trajectory.py', 'src/adapters/harness/dsh_event_projection.py',
+        'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+        'src/motif_core/offline/mining/motif_miner.py',
+        'src/adapters/task_identity.py', 'src/motif_core/offline/compilation/tool_contracts.py',
+        'src/adapters/session_files.py', 'src/adapters/web/attachments/harless_attachment_text.py', 'src/adapters/session_report.py',
         'src/adapters/geneloop_pdf.py','src/adapters/geneloop_pdf_vision.ts','config/pdf-ocr-assets.json',
         'src/adapters/geneloop_presentation.py','src/adapters/geneloop_presentation.ts','src/adapters/geneloop_presentation_render.py',
-        'src/adapters/file_lock.py', 'src/adapters/harless_paper_learning.ts', 'scripts/learn-web-paper-tasks.py', 'src/adapters/web_task_budget.py', 'src/adapters/paper_static_checks.py', 'src/adapters/paper_archive.py',
-        'src/adapters/paper_bibliography.py', 'src/adapters/paper_query_recovery.py', 'src/adapters/paper_renderer.py',
-        'src/adapters/harless_paper_renderer.py', 'src/adapters/harless_paper_recovery.ts',
+        'src/adapters/file_lock.py', 'src/adapters/web/learning/harless_paper_learning.ts', 'src/adapters/web/learning/private_source_locks.ts', 'scripts/learn-web-paper-tasks.py', 'src/adapters/web/web_task_budget.py', 'scenarios/paper_proofreading/document_tools/paper_static_checks.py', 'scenarios/paper_proofreading/document_tools/paper_archive.py',
+        'src/adapters/paper_bibliography.py', 'src/adapters/paper_query_recovery.py', 'scenarios/paper_proofreading/document_tools/paper_renderer.py',
+        'src/adapters/web/scenes/harless_paper_renderer.py', 'src/adapters/web/scenes/harless_paper_recovery.ts',
         'scenarios/data_analysis/table_inputs.py', 'benchmarks/research_report_agent_v2/document_engine.py',
-        'src/motif_core/online_skill_runtime.mjs',
+        'src/motif_core/runtime/online_skill_runtime.mjs',
+        'src/capability/runtime/evidence.py', 'src/capability/graph/source_program_contract.ts',
         # Native common tools are separately admitted, never learned/replayed by
         # this document-read artifact. Freeze their policy, adapters and wiring
         # so the additive runtime change still requires compatibility review.
@@ -249,7 +254,7 @@ def code_paths():
         'src/adapters/geneloop_command_client.mjs', 'src/adapters/deepseek_cost_gate.py',
         'scripts/harness-web.py', 'scripts/harless_gateway.mjs', 'scripts/harless_member_scenes.mjs',
         'scripts/web_budget_broker.mjs', 'scripts/serve-web-budget.py',
-        'scripts/check-common-capabilities.py', 'scripts/recompile-ppt-common-capabilities.py')]
+        'scripts/check-common-capabilities.py')]
     for directory in (SCENE, ROOT / 'scenarios/paper-submission'):
         paths.extend(path for path in directory.rglob('*') if path.is_file()
                      and path.suffix in ('.py', '.ts', '.mjs', '.js', '.json', '.md')
@@ -400,7 +405,7 @@ def main(argv=None, *, private_publish_root=None, reuse_task_files=False, privac
                     'runtime_kind': 'paper_document_read_v1', 'mode': 'execute', 'new_training': True,
                     'files': {path.name: sha(path) for path in sorted(target.iterdir())},
                     'scientific_quality_reviewed': False, 'quality_cost_promoted': False})
-        from src.adapters.harless_rsi_bundle import load_product_bundle
+        from src.adapters.web.learning.harless_rsi_bundle import load_product_bundle
         load_product_bundle(ROOT, target, 'paper-proofreading', private_root=private_publish_root)
     print(json.dumps({'compiled_manifest': str(manifest_path), 'published': str(args.publish) if args.publish else None,
                       **report}, ensure_ascii=False))

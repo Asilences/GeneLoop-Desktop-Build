@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {attachmentEvidenceDirectory,cachedAttachmentEvidence} from '../src/adapters/geneloop_attachment_cache.ts';
-import {sceneAttachmentContext} from '../src/adapters/harless_task_scope.ts';
+import {sceneAttachmentContext} from '../src/adapters/web/attachments/harless_task_scope.ts';
 import {officeEvidenceVersion} from '../src/adapters/geneloop_presentation.ts';
 
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');

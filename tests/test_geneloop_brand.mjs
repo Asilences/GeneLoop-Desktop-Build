@@ -16,13 +16,13 @@ test('GeneLoop uses public brand slots without replacing provider or conversatio
       : selector === 'body > a[href="/paper-revision"]' ? [legacyLink] : [], createElement: tag => ({ tag }) };
   let observe;
   const window = {};
-  vm.runInNewContext(readFileSync(new URL('../src/adapters/geneloop_brand.js', import.meta.url), 'utf8'), {
+  vm.runInNewContext(readFileSync(new URL('../src/adapters/web/geneloop_brand.js', import.meta.url), 'utf8'), {
     window, document, MutationObserver: class { constructor(fn) { observe = fn; } observe() {} },
   });
   const ctx = { slots: { inject(_name, fn) { const output = fn(); if (output?.next) [...output]; },
     register(options, component) { records.push({ options, component }); } } };
   const React = { createElement: (type, props, ...children) => ({ type, props, children }),
-    useLayoutEffect: effect => effects.push(effect) };
+    useLayoutEffect: effect => effects.push(effect), useRef: current => ({ current }) };
   window.__installGeneLoopBrand(ctx, React);
   window.__installGeneLoopBrand(ctx, React);
   assert.equal(records.length, 6);
@@ -33,14 +33,14 @@ test('GeneLoop uses public brand slots without replacing provider or conversatio
   assert.equal(mark.props['aria-label'], 'GeneLoop');
   assert.equal(mark.props.style.width, 24); assert.equal(mark.props.style.height, 24);
   assert.equal(mark.props.style.background, undefined, 'transparent mark has no white disc');
-  assert.equal(mark.children[0].props.src, '/assets/geneloop-spiral.svg?v=1');
+  assert.equal(mark.children[0].props.src, '/assets/geneloop-spiral.svg?v=3');
   assert.equal(mark.children[0].props.style.objectFit, 'contain', 'ribbon is not cropped');
   assert.equal(records[1].component().children[0], 'GeneLoop');
   assert.equal(document.title, '当前会话 · GeneLoop');
   document.title = 'DeepSeek Flash 模型测试'; observe();
   assert.equal(document.title, 'DeepSeek Flash 模型测试');
   assert.equal(oldIcon.removed, true);
-  assert.equal(head[0].href, '/assets/geneloop-spiral.svg?v=1');
+  assert.equal(head[0].href, '/assets/geneloop-spiral.svg?v=3');
   assert.equal(head[0].type, 'image/svg+xml');
   assert.equal(legacyLink.removed, true);
   assert.equal(head[1].textContent, 'body > a[href="/paper-revision"]{display:none!important}');
@@ -67,7 +67,7 @@ test('legacy paper entry cleanup waits for parsed body and does not select conve
       queries.push(selector);
       return selector === 'body > a[href="/paper-revision"]' ? [{ remove: () => removed.push('legacy') }] : [];
     } };
-  vm.runInNewContext(readFileSync(new URL('../src/adapters/geneloop_brand.js', import.meta.url), 'utf8'), {
+  vm.runInNewContext(readFileSync(new URL('../src/adapters/web/geneloop_brand.js', import.meta.url), 'utf8'), {
     window: {}, document, MutationObserver: class { observe() {} },
   });
   assert.deepEqual(removed, []);
@@ -80,15 +80,15 @@ test('legacy paper entry cleanup waits for parsed body and does not select conve
 
 test('transparent spiral logo is public and static while account data stays protected', async t => {
   const directory = mkdtempSync(join(tmpdir(), 'geneloop-brand-'));
-  const accountHtml = new URL('../src/adapters/harless_account.html', import.meta.url);
+  const accountHtml = new URL('../src/adapters/web/account/harless_account.html', import.meta.url);
   const gateway = createGateway({ dataDir: directory, publicOrigin: 'https://app.example.test', accountHtml });
   t.after(() => { gateway.close(); rmSync(directory, { force: true, recursive: true }); });
   gateway.server.listen(0, '127.0.0.1'); await once(gateway.server, 'listening');
   const url = `http://127.0.0.1:${gateway.server.address().port}`;
-  const spiral = await fetch(url + '/assets/geneloop-spiral.svg?v=1');
+  const spiral = await fetch(url + '/assets/geneloop-spiral.svg?v=3');
   assert.equal(spiral.status, 200); assert.equal(spiral.headers.get('content-type'), 'image/svg+xml');
   const svg = await spiral.text();
-  assert.equal(svg, readFileSync(new URL('../src/adapters/brand/geneloop-spiral.svg', import.meta.url), 'utf8'));
+  assert.equal(svg, readFileSync(new URL('../src/adapters/web/brand/geneloop-spiral.svg', import.meta.url), 'utf8'));
   assert.match(svg, /<linearGradient/); assert.match(svg, /<path/);
   assert.doesNotMatch(svg, /<text|<script|<foreignObject|<image|<rect|(?:href|onload)=/i,
     'the mark has no words, background, executable content or external dependencies');
@@ -106,7 +106,7 @@ test('transparent spiral logo is public and static while account data stays prot
   const login = await fetch(url + '/login');
   assert.equal(login.status, 200); assert.match(login.headers.get('content-security-policy'), /img-src 'self' data:/);
   const html = await login.text();
-  assert.match(html, /\/assets\/geneloop-spiral\.svg\?v=1/);
+  assert.match(html, /\/assets\/geneloop-spiral\.svg\?v=3/);
   assert.doesNotMatch(html, /geneloop\.jpg|216\.21%|background:#fff;flex:none/);
   assert.match(html, /GeneLoop/); assert.doesNotMatch(html, /DeepSeek Harless|deepseek <|HARNESS|我的对话/);
   const protectedPage = await fetch(url + '/', { redirect: 'manual' });

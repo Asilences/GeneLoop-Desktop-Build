@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import {execFileSync} from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, utimesSync, realpathSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 import { randomUUID, createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -11,9 +12,9 @@ import { join } from 'node:path';
 import { markAgentLoopRequest,createUserMessage } from '@deepseek-ai/dsh-llm';
 import { Session } from '@deepseek-ai/dsh-session';
 import { ApiSessionNotFound } from '@deepseek-ai/dsh-api-session-controller';
-import {comparisonArtifacts} from '../src/adapters/harless_comparison_artifacts.ts';
-import {attachmentEvidence,ATTACHMENT_CONTEXT_PLUGIN} from '../src/adapters/harless_attachment_context.ts';
-import { digest } from '../src/motif_core/online_skill_runtime.mjs';
+import {comparisonArtifacts} from '../src/adapters/web/tasks/harless_comparison_artifacts.ts';
+import {attachmentEvidence,ATTACHMENT_CONTEXT_PLUGIN} from '../src/adapters/web/attachments/harless_attachment_context.ts';
+import { digest } from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {renderPrompt} from '@deepseek-ai/dsh-system-prompt';
 import { Context, Service } from '@deepseek-ai/cordis';
 import { apply as mountNativeConnection } from '@deepseek-ai/dsh-client-connection';
@@ -24,7 +25,9 @@ import {SessionProjectionRegistry} from '@deepseek-ai/dsh-session-projection';
 import {SystemPrompt} from '@deepseek-ai/dsh-system-prompt';
 import {SkillRegistry} from '@deepseek-ai/dsh-skill';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
-import {pptDeliveryTool,pptPreparationTool} from '../src/adapters/ppt_delivery_pipeline.ts';
+import {pptDeliveryTool,pptPreparationTool,pptPreviewTool,pptNativeEditTool,pptAssetTool} from '../src/adapters/ppt/delivery/ppt_delivery_pipeline.ts';
+import {pptDesignTool,pptStartTool,pptPageTool} from '../src/adapters/ppt/authoring/ppt_design.ts';
+import {pptDeckBuildTool,pptDeckPatchTool} from '../src/adapters/ppt/authoring/ppt_deck_contract.ts';
 import {SubagentRuntime} from '@deepseek-ai/dsh-subagent';
 import {apply as nativeSpawn} from '@deepseek-ai/dsh-subagent-spawn-in-process';
 import {CommandRuntime} from '@deepseek-ai/dsh-commands';
@@ -42,7 +45,8 @@ const toolSchemas = [{ name: 'mcp__demo__read_note', description: 'Read a versio
 
 async function fixture({ broker = false, dshHome = false, visionReply, statsReply, nativeImageAdmission = false, realSessions=false, fixtureSchemas: schemaOverride, fixture_schemas, strictMountedTools = false, ...overrides } = {}) {
   const fixtureSchemas = schemaOverride ?? fixture_schemas ?? toolSchemas;
-  const directory = mkdtempSync(join(tmpdir(), 'sss-web-tasks-'));
+  const tempRoot = realpathSync.native(tmpdir());
+  const directory = realpathSync.native(mkdtempSync(join(tempRoot, 'sss-web-tasks-')));
   const registrations = new Map(), controlCalls = [];
   const token = 'fixture-control-authority';
   const server = createServer(async (req, res) => {
@@ -172,7 +176,7 @@ async function fixture({ broker = false, dshHome = false, visionReply, statsRepl
             get seq(){return events.length;}, eventAt(seq){return events[seq]&&{seq,...events[seq]};},
             snapshotEvents:(start=0,end=events.length)=>events.slice(start,end).map((event,index)=>({seq:start+index,...event})),
             append(type,data,extra={}) { const event={type,data,seq:events.length,time:Date.now(),...extra};events.push(event);emit('session/event',agent.session,event);return event;} }, guards: guardFns, events, ctx: {
-            tools: { restrict(value) {
+            tools: { get(name,scope) { return ctx.tools.get(name,scope); }, restrict(value) {
                 if(strictMountedTools){const unknown=value.allow.filter(name=>!agent.mountedTools.includes(name));if(unknown.length)throw Error('tools.restrict() unknown global tools: '+unknown.join(', '));}
                 agent.allow = value; return () => {}; },
               guard(fn) { guardFns.push(fn); return () => guardFns.splice(guardFns.indexOf(fn), 1); },
@@ -227,7 +231,7 @@ async function fixture({ broker = false, dshHome = false, visionReply, statsRepl
     const agent=agents.get(result.sessionId);agent.events.push(...structuredClone(request.seed));Object.assign(storedHeaders.get(result.sessionId),request.meta);
     await request.setup(agent.ctx,agent);return agent; } };
   try {
-    const { apply } = await import('../src/adapters/dsh_web_tasks.ts'); apply(ctx);
+    const { apply } = await import('../src/adapters/web/dsh_web_tasks.ts'); apply(ctx);
   } catch (error) {
     await ctx.fiber.dispose();
     if (previous === undefined) delete process.env.SSS_WEB_POLICY; else process.env.SSS_WEB_POLICY = previous;
@@ -269,7 +273,7 @@ async function fixture({ broker = false, dshHome = false, visionReply, statsRepl
       await ctx.fiber.dispose();
       listeners.clear(); routes.clear(); webRoutes.clear(); agents.clear();
       ctx=Object.assign(nativeHost(),ports);
-      const { apply } = await import('../src/adapters/dsh_web_tasks.ts'); apply(ctx);
+      const { apply } = await import('../src/adapters/web/dsh_web_tasks.ts'); apply(ctx);
     },
     stream(request, next) {
       // Run the whole installed middleware chain, as the native host does.
@@ -284,7 +288,8 @@ async function fixture({ broker = false, dshHome = false, visionReply, statsRepl
       if (previousHome === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = previousHome;
       server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
       if (brokerServer) { brokerServer.closeAllConnections(); await new Promise(resolve => brokerServer.close(resolve)); }
-      rmSync(directory, { recursive: true, maxRetries:3, retryDelay:100 });
+      // Keep the event loop available while Windows releases background writes.
+      await rm(directory, { recursive: true, maxRetries: 20, retryDelay: 50 });
     },
   };
 }
@@ -407,9 +412,9 @@ function assertProductPresentationOnly(ctx) {
   assert.equal(typeof ctx.indexTransform, 'function');
   const body = '<main id="native-harness-root"></main><script type="module" src="/native-client.js"></script>';
   const html = ctx.indexTransform('<!doctype html><html><head><title>DeepSeek Harness</title></head><body>' + body + '</body></html>');
-  const brand = '<script>' + readFileSync(new URL('../src/adapters/geneloop_brand.js', import.meta.url), 'utf8') + '</script>';
+  const brand = '<script>' + readFileSync(new URL('../src/adapters/web/geneloop_brand.js', import.meta.url), 'utf8') + '</script>';
   const account = process.env.HARLESS_GATEWAY_ENABLED === '1' ?
-    '<script>' + readFileSync(new URL('../src/adapters/harless_account_link.js', import.meta.url), 'utf8') + '</script>' : '';
+    '<script>' + readFileSync(new URL('../src/adapters/web/account/harless_account_link.js', import.meta.url), 'utf8') + '</script>' : '';
   // Product branding must be ready before the native client boots. It may not
   // reintroduce the separate workbench or intercept sending with a dialog.
   assert.ok(html.indexOf(brand) > html.indexOf('<head>'));
@@ -478,6 +483,27 @@ test('Dynamic preview creates independent tasks, binds resource versions, and is
       [{ instruction: '任务', inputs: [{ resource_id: 'source:one', version: 'v2' }] }, 'resource_version_changed'],
     ]) { const result = await f.api({ action: 'preview', request }); assert.equal(result.value.error.code, code); }
     const list = await f.api(); assert.equal(list.value.tasks.length, 2); assert.equal(list.value.aggregate.tasks, 2);
+  } finally { await f.close(); }
+});
+
+test('Task learning opt-out survives upload and restart and cannot change under the same request ID', options, async () => {
+  const f = await fixture();
+  try {
+    const input = { instruction: 'Independent held-out presentation', request_id: 'learning-opt-out', learning_eligible: false };
+    const task = await f.preview(input);
+    const path = join(f.directory, 'tasks', task.task_id, 'task.json');
+    assert.equal(JSON.parse(readFileSync(path)).learning_eligible, false);
+    const conflict = await f.api({ action: 'preview', request: { ...input, learning_eligible: true } });
+    assert.equal(conflict.status, 409);
+    assert.equal(conflict.value.error.code, 'request_id_conflict');
+    const uploaded = await f.api({ action: 'upload', task_id: task.task_id,
+      name: 'brief.txt', data: Buffer.from('Held-out source material').toString('base64') });
+    assert.equal(uploaded.status, 200, JSON.stringify(uploaded.value));
+    assert.equal(JSON.parse(readFileSync(path)).learning_eligible, false);
+    await f.restart();
+    const restored = await f.api(undefined, '?task_id=' + task.task_id);
+    assert.equal(restored.status, 200);
+    assert.equal(JSON.parse(readFileSync(path)).learning_eligible, false);
   } finally { await f.close(); }
 });
 
@@ -1283,12 +1309,13 @@ const productScenes = [
 
 test('PPT scene binding publishes its approved Skill only to its execution agents',options,async()=>{
  const root=realpathSync(mkdtempSync(join(tmpdir(),'sss-scoped-skill-'))),skillRoot=join(root,'skill');
- mkdirSync(skillRoot);mkdirSync(join(root,'scenarios/ppt_master'),{recursive:true});
+ const assets=join(root,'scenarios/ppt_master/third_party/ppt-master-desktop');
+ mkdirSync(skillRoot);mkdirSync(assets,{recursive:true});
  const skill='---\nname: ppt-master\ndescription: Build presentations\n---\n# Locked instructions\n';
  writeFileSync(join(skillRoot,'SKILL.md'),skill);
  const files={'SKILL.md':createHash('sha256').update(skill).digest('hex')};
- writeFileSync(join(root,'scenarios/ppt_master/skill-lock.json'),JSON.stringify({schema_version:1,version:'6.6.0',files,
-  package_sha256:createHash('sha256').update(JSON.stringify(files)).digest('hex')}));
+ writeFileSync(join(assets,'PROVENANCE.json'),JSON.stringify({schema_version:1,file_count:1,
+  bundle_sha256:createHash('sha256').update(JSON.stringify(files)).digest('hex')}));
  const scenes=[{...multiScenes[0],id:'new-scene',adapter:'workspace',mcp_rows:[]},
   {...multiScenes[0],id:'ppt',preset:'sss-ppt',adapter:'workspace',mcp_rows:[],ppt_execution_strategy:'ppt_master'}];
  let f;
@@ -1389,7 +1416,7 @@ test('real Paper product manifest mounts the page-one continuation only on Motif
  const base=join(root,sceneRegistry.scenes.find(row=>row.id==='paper-proofreading').rsi.runtime_bundle);
  const python=process.env.SSS_PYTHON??(process.platform==='win32'?'python':'python3');
  const runtime=JSON.parse(execFileSync(python,['-c',
-  'import json,sys; from pathlib import Path; from src.adapters.harless_rsi_bundle import load_product_bundle; print(json.dumps(load_product_bundle(Path.cwd(), Path(sys.argv[1]), "paper-proofreading")))',
+  'import json,sys; from pathlib import Path; from src.adapters.web.learning.harless_rsi_bundle import load_product_bundle; print(json.dumps(load_product_bundle(Path.cwd(), Path(sys.argv[1]), "paper-proofreading")))',
   base],{cwd:root,encoding:'utf8'}));
  const schemas=runtime.certified_tool_schemas;
  const common=JSON.parse(readFileSync(join(root,'config/geneloop-capabilities.json'),'utf8')).tools;
@@ -1788,6 +1815,29 @@ test('PPT shortcut selects the scene, strips only its control token, and preserv
     assert.equal(f.registrations.size,3);
   } finally { await f.close(); }
 });
+
+test('PPT Master cancelled conversation retains its real delivery tool surface and page options after restart',options,async()=>{
+ const ppt={...multiScenes[0],id:'ppt',label:'PPT',adapter:'ppt',ppt_execution_strategy:'ppt_master',mcp_rows:[]};
+ const f=await fixture({broker:true,provider_mode:'real',scenes:[ppt],capability_profile:'ppt',
+  fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool,pptPreviewTool,pptNativeEditTool,pptAssetTool,pptDesignTool,pptStartTool,pptPageTool,pptDeckBuildTool,pptDeckPatchTool]});
+ try{
+  const first=await f.preview({instruction:'Diagnostic deck task, no model request',scene_options:{slides:2,allow_output:true}});
+  await f.submit(first);await f.api({action:'cancel',task_id:first.task_id});await f.complete(first);
+  const before=(await f.api(undefined,'?task_id='+first.task_id)).value;
+  assert.equal(before.status,'cancelled');
+  const job=join(f.directory,'sessions',first.session_id,'work/job.json'),bytes=readFileSync(job,'utf8');
+  await f.restart();
+  const next=await f.api({action:'preview',session_id:first.session_id,request:{instruction:'Continue editing page 2',request_id:'after-cancel-restart',
+   scene_options:{slides:2,allow_output:true}}});
+  assert.equal(next.status,200,JSON.stringify(next.value));
+  assert.deepEqual(next.value.scene_options,{slides:2,allow_output:true});
+  const resumed=f.agents.get(first.session_id);
+  for(const tool of ['build_ppt','patch_ppt']){assert.ok(resumed.allow.allow.includes(tool));assert.equal(resumed.ctx.tools.get(tool,resumed).name,tool);}
+  assert.equal(readFileSync(job,'utf8'),bytes,'restoring admission must preserve the existing project');
+  assert.equal((await f.api(undefined,'?task_id='+first.task_id)).value.status,'cancelled','failure evidence is immutable');
+ }finally{await f.close();}
+});
+
 test('PPT menu options are scoped, model-free, persisted, and cannot modify a preview',options,async()=>{
   const rows=[{id:'ppt',label:'PPT',preset:'sss-task',allowed_tools:toolSchemas.map(t=>t.name),adapter:'ppt',mcp_rows:[]},
     {id:'new-scene',label:'New Scene',preset:'sss-general',allowed_tools:toolSchemas.map(t=>t.name)}];
@@ -3055,6 +3105,53 @@ test('native command deliveries pin private bytes, survive restart, and reject a
  } finally {await f.close();}
 });
 
+test('native video delivery admits only the verified MP4 and source for the owning task',options,async()=>{
+ const scenes=[...attachmentScenes(),{...multiScenes[0],id:'video-editing',label:'Video',
+  preset:'sss-video',adapter:'video',mcp_rows:[]}];
+ const f=await fixture({broker:true,scenes,capability_profile:'new-scene'});
+ try{
+  const selected=await f.settings({action:'new_session',selection:{scene:'video-editing',mode:'baseline',rsi:false}});
+  assert.equal(selected.status,200);
+  const sessionId=selected.value.session_id;
+  const draft=(await f.api({action:'preview',session_id:sessionId,request:{
+   instruction:'Render the example',scene_options:{allow_output:true}}})).value;
+  assert.equal(draft.scene,'video-editing');
+  assert.equal((await f.submit(draft)).status,200);
+  const task=(await f.api()).value.tasks.find(row=>row.task_id===draft.task_id);
+  const output=join(f.directory,'sessions',sessionId,'work','outputs/video',task.task_id);
+  mkdirSync(output,{recursive:true});
+  const files=['video.mp4','source.tsx'].map(name=>{
+   const content=Buffer.from('verified '+name);
+   writeFileSync(join(output,name),content);
+   return {name:'outputs/video/'+task.task_id+'/'+name,bytes:content.length,
+    sha256:createHash('sha256').update(content).digest('hex')};
+  });
+  writeFileSync(join(output,'draft.mp4'),'unverified');
+  writeFileSync(join(output,'delivery.json'),JSON.stringify({schema_version:1,kind:'video-delivery-v1',
+   task_id:task.task_id,full_video_decode:true,source_version:files[1].sha256,files}));
+  await f.complete(task);
+  const read=async(query,authorized=true)=>{
+   const request=new Request('http://localhost/api/harless/deliveries?'+query);
+   request.authorized=authorized;
+   return f.routes.get('/api/harless/deliveries').fetch(request);
+  };
+  const query='session_id='+sessionId+'&id=native-'+task.task_id;
+  assert.equal((await read(query,false)).status,401);
+  const result=await read(query);assert.equal(result.status,200);
+  const rows=(await result.json()).lanes.baseline.artifacts;
+  assert.deepEqual(rows.map(row=>row.name).sort(),files.map(row=>row.name).sort());
+  const file=rows.find(row=>row.name.endsWith('/video.mp4'));
+  assert.equal(file.verification,'video-delivery-v1');
+  const download=query+'&lane=baseline&file='+file.id;
+  assert.equal(await (await read(download)).text(),'verified video.mp4');
+  assert.equal((await read(download.replace('lane=baseline','lane=motif'))).status,404);
+  const other=await f.ctx.sessionController.create({});
+  assert.equal((await read(download.replace(sessionId,other.sessionId))).status,404);
+  writeFileSync(join(output,'video.mp4'),'later edit');
+  assert.equal((await read(download)).status,404);
+ }finally{await f.close();}
+});
+
 // Regression: a valid image larger than the former 576 KiB ceiling passes both paired lanes.
 test('large native images pass paired task preview without base64 or scene quotas',options,async()=>{
  const f=await fixture({broker:true,scenes:attachmentScenes(),capability_profile:'new-scene',comparison_scenes:['paper-proofreading']});
@@ -3120,6 +3217,14 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
     await f.complete(task);
     const output = join(f.directory, 'tasks', task.task_id);
     const samplePath = join(output, 'rsi-learning-trace.json');
+    // PPT projection runs after user completion. Its semantic worker can take
+    // up to 45 seconds, so wait for its output or rejection before comparing.
+    const rejectedPath = join(output, 'rsi-learning-trace-rejected');
+    const projectionDeadline = Date.now() + 60000;
+    while(scene==='ppt'&&!existsSync(samplePath)&&!existsSync(rejectedPath)&&Date.now()<projectionDeadline)
+      await new Promise(resolve=>setTimeout(resolve,50));
+    assert.ok(existsSync(samplePath), existsSync(rejectedPath)
+      ? 'Web learning projection was rejected' : 'Web learning projection did not finish');
     const web = readFileSync(samplePath, 'utf8');
     const eventsPath = join(output, 'events.jsonl');
     const start = JSON.parse(readFileSync(join(output, 'effective-config.json'), 'utf8')).trace_start_index;
@@ -3168,6 +3273,23 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
     assert.equal((await share({action:'send',preview_id:preview.preview_id,sha256:preview.sha256,consent:true})).status,200);
     assert.deepEqual(received,[preview.payload]);
     for(const raw of [secret,source,converted,'/private/secret',task.task_id])assert.ok(!received[0].includes(raw));
+    if (!semantic && scene === 'paper-proofreading') {
+      const old = await (await share({action:'preview',task_id:task.task_id})).json();
+      assert.ok(old.preview_id);
+      assert.equal((await f.trash({action:'delete',session_id:task.session_id})).status,200);
+      const {revision}=(await f.trash()).value;
+      assert.equal((await f.trash({action:'clear',revision})).status,200);
+      assert.equal(existsSync(eventsPath),false);
+      assert.equal(existsSync(samplePath),false);
+      assert.equal(existsSync(join(output,'task.json')),false);
+      assert.equal((await share({action:'send',preview_id:old.preview_id,sha256:old.sha256,consent:true})).status,410);
+      const stale = new Request('http://local/api/harless/rsi-sharing?preview_id='+old.preview_id);
+      stale.authorized=true;
+      assert.equal((await f.routes.get('/api/harless/rsi-sharing').fetch(stale)).status,410);
+      assert.equal(received.length,1);
+      await f.restart();
+      assert.equal((await f.api(undefined,'?task_id='+task.task_id)).status,404);
+    }
   } finally {
     await f.close();
     receiver.closeAllConnections();
@@ -3179,11 +3301,60 @@ for (const semantic of [false, true]) for (const [scene, tools] of [
   }
 });
 
+test('native PPT format incidents reuse the same task and require a fresh tool result', options, async()=>{
+ const scenes=[{...multiScenes[0],id:'ppt',label:'PPT',adapter:'ppt',ppt_execution_strategy:'ppt_master',mcp_rows:[]}];
+ const f=await fixture({scenes,capability_profile:'ppt',fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool,pptPreviewTool,pptNativeEditTool,pptAssetTool,pptDesignTool,pptStartTool,pptPageTool,pptDeckBuildTool,pptDeckPatchTool]});
+ try{
+  const task=await f.preview({instruction:'Synthetic format recovery diagnostic, no cloud call',scene_options:{allow_output:true}});
+  await f.submit(task);const agent=f.agents.get(task.session_id),signal=new AbortController().signal;
+  agent.session.append('tool/call',{callId:'begun-page',name:'compose_ppt_page',arguments:'{}'});
+  const malformed=async()=>{
+   for await(const chunk of f.stream(f.modelRequest(task,{tools:agent.ctx.tools.schemas()}),async function*(){
+    yield {type:'text-delta',index:0,text:'<｜DSML｜ invoke name="compose_ppt_page">'};
+    yield {type:'finish',reason:{kind:'stop'}};
+   })){}
+   agent.hooks.get('agent/turn-stopping')({signal});
+  };
+  await malformed();assert.equal(agent.steered.length,1);
+  await malformed();assert.equal(agent.steered.length,1,'no tool result means no new recovery');
+  agent.hooks.get('tools/result')({name:'compose_ppt_page',callId:'native-capacity-error'},
+   {isError:true,content:[{type:'text',text:'page_body_capacity_exceeded'}]});
+  await malformed();assert.equal(agent.steered.length,2,'a correctable native tool error separates incidents');
+  assert.ok(agent.steered.every(row=>row.source.task_id===task.task_id&&row.source.kind==='ppt-provider-tool-format-recovery'));
+  assert.equal(f.registrations.size,1);assert.equal(f.promptCalls.length,1,'steering never resubmits a task');
+  const current=(await f.api(undefined,'?task_id='+task.task_id)).value;
+  assert.equal(current.stats.provider_tool_format_recoveries,2);assert.equal(current.status,'running');
+ }finally{await f.close();}
+});
+
+test('native PPT completion rejects a started deck without exported artifacts and preserves the failed record',
+ {skip:!process.env.SSS_PYTHON},async()=>{
+ const scenes=[{...multiScenes[0],id:'ppt',label:'PPT',adapter:'ppt',ppt_execution_strategy:'ppt_master',mcp_rows:[]}];
+ const f=await fixture({scenes,provider_mode:'real',capability_profile:'ppt',fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool,pptPreviewTool,pptNativeEditTool,pptAssetTool,pptDesignTool,pptStartTool,pptPageTool,pptDeckBuildTool,pptDeckPatchTool]});
+ try{
+  const task=await f.preview({instruction:'Synthetic draft completion diagnostic, no cloud call',scene_options:{allow_output:true}});await f.submit(task);
+  const project=join(f.directory,'sessions',task.session_id,'work/code/projects/incomplete');
+  mkdirSync(join(project,'svg_output'),{recursive:true});writeFileSync(join(project,'svg_output/one.svg'),'<svg/>');
+  await f.complete(task);
+  const ended=(await f.api(undefined,'?task_id='+task.task_id)).value;
+  const effective=JSON.parse(readFileSync(join(f.directory,'tasks',task.task_id,'effective-config.json'),'utf8'));
+  assert.equal(ended.status,'failed',JSON.stringify({scene:ended.scene,options:ended.scene_options,source_pending:ended.source_pending,
+   initial_sources:effective.ppt_initial_sources,strategy:effective.ppt_execution_strategy,acceptance:ended.stats.ppt_delivery_acceptance}));
+  assert.equal(ended.failure,'ppt_delivery_not_delivered');
+  assert.equal(ended.stats.ppt_delivery_acceptance.required,true);
+  assert.equal(existsSync(join(f.directory,'tasks',task.task_id,'ppt-learning-delivery.json')),false);
+ }finally{await f.close();}
+});
+
 test('actual PPT adapter completion freezes single-learning evidence before another message edits outputs',
  {skip:!process.env.SSS_PYTHON},async()=>{
  const scenes=[{...multiScenes[0],id:'ppt',label:'PPT',adapter:'ppt',ppt_execution_strategy:'ppt_master',mcp_rows:[]}];
- const f=await fixture({scenes,provider_mode:'real',capability_profile:'ppt',fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool]});
+ const f=await fixture({scenes,provider_mode:'real',capability_profile:'ppt',fixtureSchemas:[...toolSchemas,pptPreparationTool,pptDeliveryTool,pptPreviewTool,pptNativeEditTool,pptAssetTool,pptDesignTool,pptStartTool,pptPageTool,pptDeckBuildTool,pptDeckPatchTool]});
  try{
+  const consent=new Request('http://127.0.0.1/api/harless/rsi-learning',{method:'POST',
+   headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:true})});
+  consent.authorized=true;
+  assert.equal((await f.routes.get('/api/harless/rsi-learning').fetch(consent)).status,200);
   const task=await f.preview('Synthetic completion-boundary diagnostic; no cloud model call');
   await f.submit(task);
   const output=join(f.directory,'sessions',task.session_id,'work/outputs/code');mkdirSync(output,{recursive:true});
@@ -3197,6 +3368,11 @@ test('actual PPT adapter completion freezes single-learning evidence before anot
   assert.equal(receipt.kind,'ppt_single_delivery_v1');assert.equal(receipt.mode,'baseline');
   assert.equal(receipt.task_id,task.task_id);assert.equal(receipt.artifacts.length,1);
   const row=receipt.artifacts[0],frozen=join(f.directory,'comparison-artifacts','native-'+task.task_id,'baseline/0',row.id);
+  const list=new Request('http://127.0.0.1/api/harless/deliveries?session_id='+task.session_id+'&id=native-'+task.task_id);
+  list.authorized=true;
+  const published=await f.routes.get('/api/harless/deliveries').fetch(list);
+  assert.equal(published.status,200);
+  assert.deepEqual((await published.json()).lanes.baseline.artifacts,[],'a learning snapshot cannot grant PPT download');
   writeFileSync(path,'later turn');assert.equal(readFileSync(frozen,'utf8'),'synthetic bytes, not an authored deck');
   assert.equal(existsSync(join(f.directory,'comparisons.json')),false);
   // This fixture records model-selection RPCs in modelCalls; those are not
@@ -3207,12 +3383,22 @@ test('actual PPT adapter completion freezes single-learning evidence before anot
 const platformPrivacyScenes=[...new Set([...JSON.parse(readFileSync(new URL('../config/harless-scenes.json',import.meta.url))).scenes.map(row=>row.id),
  'chat','coding','future-custom-mcp'])];
 for(const scene of platformPrivacyScenes)test('platform privacy native task settlement: '+scene,{
- skip:!process.env.SSS_PYTHON||!process.env.SSS_RSI_GITLEAKS,timeout:120000,
+ skip:!process.env.SSS_PYTHON,timeout:45000,
 },async()=>{
- const prior=process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;process.env.SSS_RSI_PRIVACY_DIAGNOSTIC='1';
  const python=process.env.SSS_PYTHON;
  const f=await fixture({scenes:[{...multiScenes[0],id:scene,label:scene}],capability_profile:scene,learning_python:python});
  try{
+  const route=f.routes.get('/api/harless/rsi-learning');
+  const settings=async (body,authorized=true)=>{
+   const request=new Request('http://127.0.0.1/api/harless/rsi-learning',body===undefined?{}:
+     {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+   request.authorized=authorized;
+   return route.fetch(request);
+  };
+  assert.equal((await settings({enabled:true},false)).status,401);
+  assert.equal((await (await settings()).json()).enabled,false);
+  assert.equal((await settings({enabled:true,account:'other'})).status,400);
+  assert.equal((await (await settings({enabled:true})).json()).enabled,true);
   const task=await f.preview({instruction:'Keep RMSE and 24 fps; contact owner@example.com.'});
   await f.submit(task);
   const session=f.agents.get(task.session_id).session;
@@ -3222,22 +3408,52 @@ for(const scene of platformPrivacyScenes)test('platform privacy native task sett
    {type:'tool-result',toolCallId:'private-person@example.com',isError:false,content:[{type:'text',
     text:JSON.stringify({text:'Keep RMSE and 24 fps',path:'/home/private-owner/results.csv'})}]}]}});
   await f.complete(task);
-  const directory=join(f.directory,'tasks',task.task_id),sample=join(directory,'privacy-learning.json');
-  const deadline=Date.now()+90000;
-  while(!existsSync(sample)&&!existsSync(join(directory,'privacy-learning-rejected'))&&Date.now()<deadline)
+  const directory=join(f.directory,'tasks',task.task_id),sample=join(directory,'rsi-structure.json');
+  const deadline=Date.now()+30000;
+  while(!existsSync(sample)&&Date.now()<deadline)
    await new Promise(resolve=>setTimeout(resolve,50));
   assert.equal(existsSync(sample),true,'native task privacy view must be admitted');
   const config=JSON.parse(readFileSync(join(directory,'effective-config.json')));
   const offline=execFileSync(python,['-m','src.adapters.geneloop_learning_trace','--authorized',
    '--input',join(directory,'events.jsonl'),'--catalog',join(directory,'effective-config.json'),
-   '--scene',scene,'--status','completed','--start',String(config.trace_start_index)],{encoding:'utf8'});
+   '--scene',scene,'--status','completed','--start',String(config.trace_start_index),
+   '--account-structure-policy',join(f.directory,readdirSync(f.directory).find(name=>name.endsWith('-rsi-learning.json')))],{encoding:'utf8'});
   assert.deepEqual(JSON.parse(readFileSync(sample)),JSON.parse(offline));
   const safe=readFileSync(sample,'utf8');
   assert.doesNotMatch(safe,/owner@example.com|private-person@example.com|\/home\/private-owner/);
-  assert.match(safe,/RMSE/);assert.match(safe,/24 fps/);
+  assert.doesNotMatch(safe,/RMSE|24 fps|mcp__demo__read_note/);
+  assert.equal(JSON.parse(safe).nodes[0].outcome,'observed_success');
+  assert.match(JSON.parse(safe).nodes[0].tool,/^tool-[a-f0-9]{64}$/);
   assert.match(readFileSync(join(directory,'events.jsonl'),'utf8'),/owner@example.com/);
+  assert.equal((await (await settings({enabled:false})).json()).enabled,false);
+  assert.equal(existsSync(sample),false);
+  assert.equal(existsSync(join(directory,'events.jsonl')),true);
+  if(scene==='future-custom-mcp'){
+   assert.equal((await f.trash({action:'delete',session_id:task.session_id})).status,200);
+   assert.equal(existsSync(join(directory,'events.jsonl')),true);
+   const {revision}=(await f.trash()).value;
+   assert.equal((await f.trash({action:'clear',revision})).status,200);
+   assert.equal(existsSync(join(directory,'events.jsonl')),false);
+  }
  }finally{
   await f.close();
-  if(prior===undefined)delete process.env.SSS_RSI_PRIVACY_DIAGNOSTIC;else process.env.SSS_RSI_PRIVACY_DIAGNOSTIC=prior;
  }
+});
+
+test('Motif读取端点复用原加载器和真实Runtime准入，拒绝未登录与路径参数', options, async()=>{
+ const {loadedProductMotifScenes}=await import('./helpers/product_motif_scenes.mjs');
+ const products=loadedProductMotifScenes();
+ const f=await fixture({scenes:products,capability_profile:'paper-proofreading'});
+ try{
+  const route=f.routes.get('/api/harless/motif-catalog');assert.ok(route);
+  const request=suffix=>{const r=new Request('http://127.0.0.1/api/harless/motif-catalog'+suffix);r.authorized=true;return r;};
+  assert.equal((await route.fetch(new Request('http://127.0.0.1/api/harless/motif-catalog'))).status,401);
+  assert.equal((await route.fetch(request('?account=foreign'))).status,400);
+  const result=await(await route.fetch(request(''))).json();
+  assert.equal(result.format,'geneloop-runtime-motif-catalog-v1');
+  assert.deepEqual(result.libraries.map(r=>[r.scene,r.status,r.evidence?.capabilities.length]),[['ppt','ready',2],['paper-proofreading','ready',1],['research-data-analysis','ready',10]]);
+  assert.ok(result.libraries.every(r=>r.evidence.source.compatibility==='available'));
+  assert.equal(result.libraries[2].evidence.library.certified_count,0);
+  assert.equal(f.modelCalls.length,0);
+ }finally{await f.close();}
 });

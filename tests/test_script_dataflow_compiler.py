@@ -1,7 +1,7 @@
 """AST dependency diagnostics, not model/cost experiments."""
 import ast
 import json
-from src.adapters.script_dataflow_compiler import slices, observe_slices, literal_result_fields
+from src.motif_core.offline.compilation.script_dataflow_compiler import slices, observe_slices, literal_result_fields
 
 
 def test_literal_default_fields_are_not_presented_as_completed_computation():

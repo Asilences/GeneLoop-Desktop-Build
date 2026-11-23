@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from src.adapters import capability_proposal as pilot
-from src.adapters.capability_construction_history import capture, build_history
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_strategy import create_strategy, admit_strategy, strategy_ref
+from src.adapters.harness.capability import capability_proposal as pilot
+from src.rsi.learning.capability_construction_history import capture, build_history
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.evolution.capability_strategy import create_strategy, admit_strategy, strategy_ref
 from tests.test_capability_feedback import fixture
 from tests.test_capability_proposal_loop import DiagnosticGate, fake_harness
 

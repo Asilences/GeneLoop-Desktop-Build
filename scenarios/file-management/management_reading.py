@@ -68,11 +68,20 @@ def page_count(path):
             if getattr(image,'n_frames',1)!=1:raise ValueError('multi-frame images need an explicit frame provider')
             image.verify()
         return 1
-    raise ValueError('open_document supports PDF or single-frame images')
+    if path.suffix.lower() in ('.txt','.md','.csv','.tsv','.json','.docx','.xlsx'):
+        return 1  # Logical text stream; not a claim about Office physical pages.
+    raise ValueError('open_document supports PDF, text/Office streams or single-frame images')
 
 def extract_page(path,page,mode,cache):
     """Text layer or explicitly selected OCR; never silent OCR or visual reasoning."""
     if mode=='text':
+        if path.suffix.lower() in ('.txt','.md','.csv','.tsv','.json','.docx','.xlsx'):
+            if page!=1:raise ValueError('text stream has one logical page')
+            from file_tools import FileScene
+            parser=FileScene.__new__(FileScene);parser.spec={}
+            status,text,_=parser.parse(path)
+            if status!='readable':raise ValueError('source has no admitted text parser')
+            return text,'complete-text-stream'
         if path.suffix.lower()!='.pdf':raise ValueError('images require mode=ocr')
         tool=executable('FM_PDFTOTEXT','pdftotext')
         if tool:return run([tool,'-f',str(page),'-l',str(page),'-layout',str(path),'-']).rstrip('\f'),'text_layer'
@@ -172,7 +181,8 @@ class DocumentReading:
         return CallToolResult(content=[TextContent(type='text',text=json.dumps(value,ensure_ascii=False)),
             ImageContent(type='image',mimeType='image/png',data=base64.b64encode(rendered.read_bytes()).decode())],structuredContent=value)
     def open_document(self,source_id:str,mode:Literal['text','ocr']='text'):
-        """Open a pinned PDF for ALL pages, or an image for OCR. Opening is not reading.
+        """Open ALL PDF pages, a full Office/text stream, or an image for OCR.
+        Office/text use a logical text stream, not physical page numbers. Opening is not reading.
         Follow request_id through read_document_chunk until next_request_id is null.
         Text-layer coverage does not establish OCR/figure understanding.
         """
@@ -188,7 +198,7 @@ class DocumentReading:
         if did not in self.documents:
             try:count=page_count(path)
             except (ValueError,OSError,subprocess.SubprocessError) as e:raise ToolError(str(e)) from e
-            if mode=='text' and path.suffix.lower()!='.pdf':raise ToolError('images require mode=ocr')
+            if mode=='text' and path.suffix.lower() not in ('.pdf','.txt','.md','.csv','.tsv','.json','.docx','.xlsx'):raise ToolError('images require mode=ocr')
             from management_provenance import read_provenance
             anchor={**h,'source_id':source_id,'status':'document_opened','text':'','truncated':True}
             anchor['provenance']=read_provenance(self.spec,json.loads(self.state_file.read_text()),anchor)

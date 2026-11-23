@@ -1,0 +1,25 @@
+{
+  "r2_baseline_rule_commit": "d832be12fabc76fc995b358e15a110a506ba4711",
+  "r3_rule_commit": "ea819fc6ecb1f32d69d61a3f5619419e181f947e",
+  "transport_runtime_commit": "4f6adedbc1f854f9f9bbd9e323fb3f460bd65afa",
+  "public_aggregates_only": true,
+  "raw_data_and_predictions_published": false,
+  "independent_unseen_evaluation": false,
+  "files_sha256": {
+    "pii-summary.json": "724ae2bf201f178b0090598a11022301340030b62bd12fae1dfb6f679b9c96eb",
+    "credential-summary.json": "ee4233542932e0587537981492369e8901f8722f10b363ae9222a4c5f3a84808",
+    "native-scan.json": "b0e6c3d0b81b87ae864baa961917833cf6ff34349e4dec41595329f55de3f233",
+    "revision-comparison.json": "fff03600cee6b4a5e7806122ed31caa04bc084f306a050400add094ac0944ab9",
+    "semantic-summary.json": "4a27ca2b4aaa3c5870193bbdd1564003c5e691ebfb826a4a7a4dba697aa1bac8",
+    "entry-summary.json": "cd787842469923f83be36389fa21cb281c89ccb91d2bc3a96db70017eaf3dc9a",
+    "entry-coverage.json": "a7659c0829d7bd47d5f0c6ead25c7c045e0483d1563af630e2a032aebe655795",
+    "regression-summary.json": "83343f1b26bf3608d1dd55af46f7c19f2fec39ae9f56e44420c43743e056f195",
+    "regression-coverage.json": "aceb43792aacea3396114edee2440294264ee7f4b3b98e5df4566c4adcfca425",
+    "rule-regression-summary.json": "9c131b3d958ffe7c688d83a38aa0034f435cca1817d0157c43f0293a982dadb8",
+    "stress-regression-summary.json": "6a1d120656f8e44a6b06a09a7880591466540834f3b3d64d407099e1dcfe07ae",
+    "stress-entry-summary.json": "e6e5770207e1db51a37ed40a4260d785351dcb0997dd5263d5a920279f0f77db",
+    "detector-source-equivalence.json": "d5a1e4d91e53fbe2007f101b9e9c7b139d43652ee3e39e8eeccb981f4801aa4d",
+    "worker-environment-probe.json": "3ad09d2206db3b3479430d1db6054968caafeb156e01ae67f59ff780fc4feeee",
+    "verification.json": "87f1c373d0e308540cd3c63a727f670610737fa51633fe1e317b7a4f9f1f8660"
+  }
+}

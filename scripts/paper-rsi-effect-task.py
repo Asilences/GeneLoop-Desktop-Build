@@ -10,8 +10,8 @@ task=importlib.util.module_from_spec(spec);spec.loader.exec_module(task)
 EXP=ROOT/'.local/paper-reference/paper-rsi-effect-task-20261012-v5'
 LEARN=ROOT/'.local/paper-reference/paper-rsi-effect-guards-20261012-v1'
 task.AUDIT=LEARN/'adapted-frozen-tool.json'
-task.FILES.extend(['src/adapters/dsh_trace_rsi_effect_guard.ts','src/adapters/trace_rsi_effect_guards.py',
- 'src/adapters/trace_rsi_schema_adaptation.py','scripts/paper-rsi-effect-task.py',str(LEARN/'guard-library.json')])
+task.FILES.extend(['src/adapters/harness/paper/dsh_trace_rsi_effect_guard.ts','src/motif_core/offline/compilation/trace/trace_rsi_effect_guards.py',
+ 'src/motif_core/offline/compilation/trace/trace_rsi_schema_adaptation.py','scripts/paper-rsi-effect-task.py',str(LEARN/'guard-library.json')])
 original_prepare=task.prepare
 def prepare(case,protocol):
     alias=case in ('t11_already_covered','t12_id_only_no_add')
@@ -41,7 +41,7 @@ def paid(label,prompt,policy,config,*args):
     mode=config['mode']
     if mode in ('shadow','execute'):
         old=(ROOT/f'src/adapters/dsh_trace_rsi_batch_{mode}.ts').as_uri()
-        new=(ROOT/'src/adapters/dsh_trace_rsi_effect_guard.ts').as_uri()
+        new=(ROOT/'src/adapters/harness/paper/dsh_trace_rsi_effect_guard.ts').as_uri()
         if policy.count(old)!=1:raise ValueError('single_public_plugin_slot_required')
         policy=policy.replace(old,new)
     return original_paid(label,prompt,policy,config,*args)

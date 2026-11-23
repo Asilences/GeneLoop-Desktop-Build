@@ -8,7 +8,7 @@ import { runInNewContext } from 'node:vm';
 import { assertSupportedJsonSchema } from '@deepseek-ai/dsh-tools';
 import { digest } from '../src/adapters/paper_rsi_program.ts';
 import { runTraceTool, validateTraceCandidate } from '../src/adapters/trace_rsi_program.ts';
-import { apply, createRevisionLearning, revisionInputPatch } from '../src/adapters/dsh_revision_rsi_learning.ts';
+import { apply, createRevisionLearning, revisionInputPatch } from '../src/adapters/harness/paper/dsh_revision_rsi_learning.ts';
 
 const names = ['rsi_packet_list','rsi_packet_read','rsi_propose','rsi_test','rsi_trial'];
 const cordis = ['cordis_inspect_list','cordis_inspect_query','cordis_inspect_self',

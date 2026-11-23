@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {mkdirSync,writeFileSync,readFileSync,mkdtempSync,rmSync} from 'node:fs';
 import {createHash} from 'node:crypto';import {resolve,join} from 'node:path';
-import {experimentBoundary} from '../src/adapters/dsh_workflow_experiment.ts';
+import {experimentBoundary} from '../src/adapters/harness/learning/dsh_workflow_experiment.ts';
 const root=resolve(import.meta.dirname,'..'),hash=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
 function fixture(mode){
  const parent=join(root,'.local/workflow-boundary-tests');mkdirSync(parent,{recursive:true});const out=mkdtempSync(join(parent,'test-'));

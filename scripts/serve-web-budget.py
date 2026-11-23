@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key, model_ids
 from src.adapters.deepseek_cost_gate import (State, create_server, request_limit_argument,
     cost_cap_argument, output_limit_argument)
-from src.adapters.web_task_budget import TaskBudgetRegistry, create_control_server
+from src.adapters.web.web_task_budget import TaskBudgetRegistry, create_control_server
 
 
 def main():

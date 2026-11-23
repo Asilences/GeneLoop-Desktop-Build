@@ -6,9 +6,9 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {negativeOutcome} from '../src/adapters/negative_outcome.ts';
-import {currentShapeIssues,validateCurrentConstraint} from '../src/adapters/negative_constraint_runtime.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {negativeOutcome} from '../src/motif_core/trajectory/negative_outcome.ts';
+import {currentShapeIssues,validateCurrentConstraint} from '../src/motif_core/runtime/policies/negative_constraint_runtime.ts';
 import {createNegativeRuntime} from '../src/adapters/script_negative_runtime.ts';
 import {Context} from '@deepseek-ai/cordis';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
@@ -16,7 +16,7 @@ const hash=x=>createHash('sha256').update(x).digest('hex');
 function py(code){const p=spawnSync(process.env.SSS_PYTHON??'python3',['-c',code],{encoding:'utf8'});assert.equal(p.status,0,p.stderr);return JSON.parse(p.stdout);}
 const certified=()=>validateCurrentConstraint(py("import sys,json;sys.path.insert(0,'tests');from test_negative_constraints import fixture_guard;print(json.dumps(fixture_guard()))"));
 test('Python and TS agree on failed checks, mixed outcomes, opaque errors and strict success',()=>{
- const cases=py("import sys,json;sys.path.insert(0,'tests');from test_negative_outcome import cases;from src.adapters.negative_outcome import negative_outcome;print(json.dumps([[v,negative_outcome(v)] for v in cases()]))");
+ const cases=py("import sys,json;sys.path.insert(0,'tests');from test_negative_outcome import cases;from src.motif_core.trajectory.negative_outcome import negative_outcome;print(json.dumps([[v,negative_outcome(v)] for v in cases()]))");
  for(const [value,outcome] of cases)assert.deepEqual(negativeOutcome(value),outcome);
 });
 function fixture(t){

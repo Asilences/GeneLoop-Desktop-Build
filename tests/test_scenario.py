@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 import pytest
 from src.adapters.scenario import ROOT, prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 
 
 def config():
@@ -34,6 +34,17 @@ def test_env_reference_survives_harness_start_without_serializing_secret():
                                  'DEEPSEEK_BASE_URL':'http://127.0.0.1:9',
                                  'DEEPSEEK_API_KEY':'sss-offline-test'}):
             pass
+
+
+def test_literal_cannot_collide_with_environment_reference(tmp_path):
+    data = config()
+    literal = '__SSS_ENV_REFERENCE_0__'
+    data['servers'][0]['args'] = [literal, {'from_env': 'DEMO_MCP_AUTH'}]
+    prepared = prepare(data, tmp_path)
+    rendered = Path(prepared['patch']).read_text(encoding='utf-8')
+    assert json.dumps(literal) in rendered
+    assert rendered.count('!!js ') == 1
+    assert prepared['required_env'] == ['DEMO_MCP_AUTH']
 
 
 def test_http_mcp_headers_keep_environment_references():
@@ -66,7 +77,7 @@ def test_completion_row_is_shared_by_sdk_patch_and_web_preset():
         prepared = prepare(data, temp)
         row = prepared['agent_plugins'][0]
         assert row['config']['artifact_root'] == str(ROOT / '.local')
-        assert row['name'].endswith('/src/adapters/dsh_completion_guard.ts')
+        assert row['name'].endswith('/src/adapters/harness/dsh_completion_guard.ts')
         assert 'sss-completion-guard' in Path(prepared['patch']).read_text()
 
 

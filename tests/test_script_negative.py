@@ -1,6 +1,6 @@
 """Compiler diagnostics. Real trace learning is recorded separately."""
 from copy import deepcopy
-from src.adapters.script_negative_compiler import compile_negative, digest
+from src.motif_core.offline.compilation.script_negative_compiler import compile_negative, digest
 
 
 def witness(code='invalid_shape', call='a'):

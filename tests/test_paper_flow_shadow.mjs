@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync,writeFileSync,rmSync,realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import {join} from 'node:path';
-import {predictFlow,validateFlowLibrary} from '../src/adapters/dsh_paper_flow_shadow.ts';
+import {predictFlow,validateFlowLibrary} from '../src/adapters/harness/paper/dsh_paper_flow_shadow.ts';
 import {shadowDigest} from '../src/adapters/paper_shadow_runtime.ts';
 import {snapshotSource} from '../src/adapters/paper_triage_validation.ts';
 const P='mcp__paper_checks__';

@@ -5,10 +5,10 @@ This example is not a production Artifact Motif adapter or an efficacy benchmark
 """
 import copy,json,sys,os
 from pathlib import Path
-from src.adapters.capability_scene import CapabilityImprovementAdapter,ROOT,run_child,reference
-from src.adapters.capability_improvement import evidence,read,save
-from src.adapters.capability_contract import capability_digest,validate_capability_snapshot
-from src.adapters.capability_discovery import read_context
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter,ROOT,run_child,reference
+from src.rsi.learning.capability_improvement import evidence,read,save
+from src.capability.graph.capability_contract import capability_digest,validate_capability_snapshot
+from src.rsi.learning.capability_discovery import read_context
 
 
 class CountAdapter(CapabilityImprovementAdapter):

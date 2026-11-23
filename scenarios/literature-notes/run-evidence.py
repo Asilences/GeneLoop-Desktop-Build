@@ -68,13 +68,15 @@ def prepare_task(directory, question, *, cache_policy='reuse', mode='baseline', 
                                        'model_call_enabled': model_call_enabled, 'tool_presentation': tool_presentation})
     if frozen_plan is not None:
         snapshot.update(frozen_plan=frozen_plan, frozen_plan_sha256=digest(frozen_plan))
-    shared_files = ['src/motif_core/approved_plan_continuation.ts',
-                    'src/motif_core/approved_plan_continuation.generated.mjs',
-                    'src/motif_core/online_skill_runtime.mjs', 'src/adapters/dsh_online_motif.mjs',
-                    'src/motif_core/offline/continuation_policy.py',
-                    'src/motif_core/offline/chain_compiler.py', 'src/motif_core/offline/edge_compiler.py',
-                    'src/motif_core/offline/trace_compiler.py', 'src/adapters/dsh_trajectory.py',
-                    'src/adapters/tool_contract_loader.py', 'src/adapters/tool_schema_contracts.py',
+    shared_files = ['src/motif_core/runtime/policies/approved_plan_continuation.ts',
+                    'src/motif_core/runtime/policies/approved_plan_continuation.generated.mjs',
+                    'src/motif_core/runtime/online_skill_runtime.mjs', 'src/adapters/harness/motif/dsh_online_motif.mjs',
+                    'src/motif_core/offline/compilation/continuation_policy.py',
+                    'src/motif_core/offline/compilation/chain_compiler.py', 'src/motif_core/offline/compilation/edge_compiler.py',
+                    'src/motif_core/offline/compilation/trace_compiler.py', 'src/adapters/harness/dsh_trajectory.py',
+                    'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+                    'src/motif_core/offline/mining/motif_miner.py',
+                    'src/motif_core/offline/compilation/tool_contracts.py',
                     'scripts/export-online-motif-manifest.py', 'scripts/prepare-online-motif.py']
     snapshot['continuation_protocol'] = {'online_manifest_schema_version': 2,
         'policy_sha256': digest(continuation_policy()), 'allowed_steps': continuation_policy()['steps'],
@@ -84,8 +86,8 @@ def prepare_task(directory, question, *, cache_policy='reuse', mode='baseline', 
 
 
 def collect_packet(run, task_directory):
-    from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
-    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
     snapshot = json.loads((task_directory / 'input-snapshot.json').read_text())
     save_private(run / 'evidence-input-snapshot.json', snapshot)
     events_path = run / 'agent-events.jsonl'
@@ -95,7 +97,7 @@ def collect_packet(run, task_directory):
         contracts = parse_tool_contracts(json.loads((HERE / 'pdf-evidence-contracts.json').read_text()))
         events = [json.loads(line) for line in events_path.read_text().splitlines()]
         if snapshot['execution_options'].get('tool_presentation') == 'ptc':
-            from src.adapters.dsh_event_projection import project_ptc_dispatches
+            from src.adapters.harness.dsh_event_projection import project_ptc_dispatches
             events = project_ptc_dispatches(events)
             save_private(run / 'ptc-analysis-projection.json', {'scope': 'derived analysis, not original events or model decisions', 'events': events})
         trace = extract_dsh_trace(events, contracts, trace_id=run.name,

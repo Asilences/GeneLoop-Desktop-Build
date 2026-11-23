@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.rsi_protocol import envelope
+from src.rsi.protocol.rsi_protocol import envelope
 
 
 def sha(value):
@@ -18,7 +18,7 @@ def sha(value):
 def fixtures():
     code = sha((ROOT / 'examples/rsi-protocol-v1/group_count.py').read_bytes())
     versions = {'motif': {'id': 'diagnostic-motif-v1', 'sha256': code},
-                'matcher': {'id': 'f02-admission-v1', 'sha256': sha((ROOT / 'src/adapters/rsi_protocol.ts').read_bytes())}}
+                'matcher': {'id': 'f02-admission-v1', 'sha256': sha((ROOT / 'src/rsi/protocol/rsi_protocol.ts').read_bytes())}}
     args = {'rows': [{'group': 'workshop'}, {'group': 'poster'}, {'group': 'workshop'}]}
     ref = dict(id='current-table', sha256=sha(json.dumps(args, ensure_ascii=False, separators=(',', ':')).encode()), version='1')
     evidence = envelope('evidence', dict(**ref, task_id='registration-summary-B', subject='current input table',
@@ -68,7 +68,7 @@ def fixtures():
                            previous_versions=versions, next_versions=next_versions, manifest_sha256=sha(b'diagnostic manifest v2')))
     rollback = envelope('rollback_receipt', dict(id='rollback-1', publication_id='publication-1', reason='diagnostic only',
                         previous_versions=next_versions, restored_versions=versions, manifest_sha256=sha(b'diagnostic manifest v1')))
-    from src.adapters.rsi_protocol import provider_ledger_record
+    from src.rsi.protocol.rsi_protocol import provider_ledger_record
     provider = provider_ledger_record(dict(request_id=1, model='deepseek-flash', reserved_upper_usd=0.01), task_id='diagnostic-only', ledger_ref='synthetic-ledger')
     records = [evidence, operator, envelope('operator', tool_op), envelope('operator', bash_op), request,
                training, validation, *diagnoses, *patches, report, decision, *events, publication, rollback, provider]

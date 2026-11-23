@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_feedback import file_ref
-from src.adapters.skill_infinity_baseline import (
+from src.rsi.feedback.capability_feedback import file_ref
+from benchmarks.evolution.skill_infinity_baseline import (
     SkillInfinityRun, create_seed_meta_skill, create_seed_task_skill,
     optimize_task_skill, refine_meta_skill,
 )

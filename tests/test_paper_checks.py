@@ -167,3 +167,19 @@ def test_invalid_cross_host_allocations_fail_closed(tmp_path, allocated_paper_bu
                                'reserved_usd': .25, **change}))
     with pytest.raises(ValueError, match='invalid paper budget allocation'):
         allocated_paper_budget.account(tmp_path/'new')
+
+
+def test_shared_diagnostics_preserve_legacy_native_path_display(tmp_path, monkeypatch):
+    from scenarios.paper_proofreading.document_tools import paper_static_checks
+
+    (tmp_path / 'parts').mkdir()
+    (tmp_path / 'main.tex').write_text(r'\input{parts/body}\label{same}')
+    (tmp_path / 'parts/body.tex').write_text(r'\input{with a macro}\label{same}\begin{figure}[!]')
+    monkeypatch.setattr(checks, 'PATH_SEPARATOR', '\\')
+    canonical = paper_static_checks.source_diagnostics(tmp_path, 'main.tex', None)
+    legacy = checks.source_diagnostics(tmp_path, 'main.tex', None)
+    assert canonical['active_files'] == ['main.tex', 'parts/body.tex']
+    assert legacy['active_files'] == ['main.tex', r'parts\body.tex']
+    assert legacy['unsupported_inputs'][0]['file'] == r'parts\body.tex'
+    assert legacy['invalid_float_positions'][0]['file'] == r'parts\body.tex'
+    assert legacy['duplicate_labels'][0]['locations'][1]['file'] == r'parts\body.tex'

@@ -2,10 +2,59 @@
   "version": 1,
   "profiles": {
     "academic-readable-v1": {
-      "canvas": [1280, 720],
-      "font_candidates": ["Noto Sans CJK SC", "WenQuanYi Micro Hei", "Noto Sans", "DejaVu Sans"],
-      "font_sizes_pt": {"title": 32, "heading": 24, "body": 22, "secondary": 18, "source": 12},
-      "colors": {"background": "#FFFFFF", "text": "#172B4D", "muted": "#475569", "accent": "#194F90", "band": "#F1F5F9"},
+      "canvas": [
+        1280,
+        720
+      ],
+      "font_candidates": [
+        "Noto Sans CJK SC",
+        "WenQuanYi Micro Hei",
+        "Noto Sans",
+        "DejaVu Sans"
+      ],
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "colors": {
+        "background": "#FFFFFF",
+        "text": "#172B4D",
+        "muted": "#475569",
+        "accent": "#194F90",
+        "band": "#F1F5F9"
+      },
+      "minimum_text_contrast": 4.5,
+      "margin_pt": 28,
+      "line_spacing": 1.2
+    },
+    "general-readable-v1": {
+      "canvas": [
+        1280,
+        720
+      ],
+      "font_candidates": [
+        "Noto Sans CJK SC",
+        "WenQuanYi Micro Hei",
+        "Noto Sans",
+        "DejaVu Sans"
+      ],
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "colors": {
+        "background": "#FFFFFF",
+        "text": "#172B4D",
+        "muted": "#475569",
+        "accent": "#2563EB",
+        "band": "#F1F5F9"
+      },
       "minimum_text_contrast": 4.5,
       "margin_pt": 28,
       "line_spacing": 1.2

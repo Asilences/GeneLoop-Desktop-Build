@@ -1,8 +1,8 @@
 /** Free Python assessment -> TS start -> Python independent comparison demo. */
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {bytesSha256} from '../src/adapters/rsi_protocol.ts';
-import {startRsiOptimization} from '../src/adapters/rsi_optimization.ts';
+import {bytesSha256} from '../src/rsi/protocol/rsi_protocol.ts';
+import {startRsiOptimization} from '../src/rsi/learning/rsi_optimization.ts';
 
 const python=process.env.SSS_PYTHON??(process.platform==='win32'?'python':'python3');
 const cwd=fileURLToPath(new URL('../',import.meta.url));

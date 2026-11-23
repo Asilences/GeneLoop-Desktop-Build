@@ -3,13 +3,13 @@ import {appendFileSync,readFileSync,realpathSync,statSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {artifactLocks,artifactInvocation,loadArtifactLibrary,registerArtifactContext} from './artifact_motif_runtime.ts';
+import {artifactLocks,artifactInvocation,artifactRuntimePolicy,loadArtifactLibrary,registerArtifactContext} from './artifact_motif_runtime.ts';
 import {executeArtifactJob,executePublicArtifactTask} from './artifact_motif_transport.ts';
-import {componentContractSchema} from './ppt_component_schema.ts';
+import {componentContractSchema} from './ppt/authoring/ppt_component_schema.ts';
 import {capabilityDigest,capabilityIdentity,capabilityRef,createCapability,createCapabilitySnapshot,
- mapLegacyLibrary,validateCapabilitySnapshot,type CapabilitySnapshot} from './capability_contract.ts';
-import {createCapabilityRuntime,type CapabilityBackend} from './capability_runtime.ts';
-import {bytesSha256,rsiRecord,type AdmissionHost} from './rsi_protocol.ts';
+ mapLegacyLibrary,validateCapabilitySnapshot,type CapabilitySnapshot} from '../capability/graph/capability_contract.ts';
+import {createCapabilityRuntime,type CapabilityBackend} from '../capability/runtime/capability_runtime.ts';
+import {bytesSha256,rsiRecord,type AdmissionHost} from '../rsi/protocol/rsi_protocol.ts';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const read=(path:string)=>JSON.parse(readFileSync(path,'utf8'));
@@ -39,8 +39,9 @@ export function buildArtifactCapabilities(path:string,owner:string,expectedSha25
 }
 
 function executorDigest(){
- return capabilityDigest([...artifactLocks,'src/adapters/artifact_capability_runtime.ts','src/adapters/capability_runtime.ts',
-  'src/adapters/capability_contract.ts','src/adapters/rsi_protocol.ts'].map(path=>({path,sha256:bytesSha256(readFileSync(join(root,path)))})));
+ const code=[...artifactLocks,'src/adapters/artifact_capability_runtime.ts','src/capability/runtime/capability_runtime.ts',
+  'src/capability/graph/capability_contract.ts', 'src/capability/graph/source_program_contract.ts','src/rsi/protocol/rsi_protocol.ts'].map(path=>({path,sha256:bytesSha256(readFileSync(join(root,path)))}));
+ return capabilityDigest({code,artifact_policy:artifactRuntimePolicy()});
 }
 
 /** manifest/registry are host-owned files outside the model-writable workspace.

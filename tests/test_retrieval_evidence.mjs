@@ -79,8 +79,12 @@ test('experimental provider binds real approved input bytes and refuses foreign 
   process.env.SSS_RETRIEVAL_EVIDENCE='1';process.env.SSS_RETRIEVAL_SEARCH_OUTPUT_TOKENS='128';process.env.DEEPSEEK_API_KEY='diagnostic';process.env.SSS_WEB_POLICY=join(root,'policy.json');
   writeFileSync(process.env.SSS_WEB_POLICY,JSON.stringify({output:root,user_id:'owner',endpoint:'http://127.0.0.1:12345/v1'}));
   let provider,created,dispatches=0;const agent={session:{id:'owned',requestHeader:()=>({config:{model:'deepseek-flash'}}),append(){}}};
-  const {apply}=await import('../src/adapters/retrieval_web_search.ts');
-  apply({on:(event,fn)=>{if(event==='agent/created')created=fn;},web:{registerSearchProvider:p=>provider=p},agents:{currentInitiator:()=>agent}});
+  const {apply}=await import('../src/adapters/geneloop_web_search.ts');
+  const context={on:(event,fn)=>{if(event==='agent/created')created=fn;},
+    web:{registerSearchProvider:p=>provider=p},agents:{currentInitiator:()=>agent}};
+  apply(context);
+  assert.equal(created,undefined);
+  apply(context,{retrievalEvidence:true});
   assert.equal(typeof created,'function');
   globalThis.fetch=async(_url,options)=>{dispatches++;assert.equal(JSON.parse(options.body).max_tokens,128);return new Response(JSON.stringify({content:[{type:'web_search_tool_result',content:[{type:'web_search_result',url:'https://example.org/source'}]}]}));};
   await provider.search({query:'actual source question'});await provider.search({query:'actual source question'});assert.equal(dispatches,1);

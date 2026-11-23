@@ -12,7 +12,7 @@ from experiment import run_one,outcomes,accounting
 from prepare import FAMILIES
 from verify import verify as verify_legacy
 sys.path.insert(0,str(ROOT))
-from src.motif_core.offline.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
+from src.motif_core.offline.compilation.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
 
 def execution_version():return report_version()
 def task_scope(spec):
@@ -30,8 +30,8 @@ QUALITY_PROMPT='''本题是两阶段读取：第一阶段单独选择stage_a/全
 
 def code():
     return {**source_code(),**{n:sha(ROOT/n) for n in (
-        'src/motif_core/collection_reentry_policy.ts','src/motif_core/offline/reentry_compiler.py',
-        'src/motif_core/collection_batch_script.ts','src/motif_core/authorized_plan_policy.ts')}}
+        'src/motif_core/runtime/policies/collection_reentry_policy.ts','src/motif_core/offline/compilation/reentry_compiler.py',
+        'src/motif_core/runtime/policies/collection_batch_script.ts','src/motif_core/runtime/policies/authorized_plan_policy.ts')}}
 
 def query_contract(query=None,notice=False,count=1):
     r={'version':CONTRACT_VERSION,'kind':'literal_search','collection_count':count,

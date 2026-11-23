@@ -2,9 +2,9 @@
  * Host operations must inspect their fixed executable bytes and run for real.
  * This fixture is never a production authorization or model-behavior claim.
  */
-import {createCapabilityRuntime} from '../../src/adapters/capability_runtime.ts';
-import {capabilityDigest,capabilityRef} from '../../src/adapters/capability_contract.ts';
-import {bytesSha256} from '../../src/adapters/rsi_protocol.ts';
+import {createCapabilityRuntime} from '../../src/capability/runtime/capability_runtime.ts';
+import {capabilityDigest,capabilityRef} from '../../src/capability/graph/capability_contract.ts';
+import {bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
 import {diagnosticHost} from '../../examples/rsi-protocol-v1/host.mjs';
 
 export async function execute(snapshot,root,input,{taskId,mode='execute',operations}){

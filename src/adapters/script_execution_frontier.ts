@@ -2,7 +2,7 @@
  * No task goal is inferred from historical frequency or embedding similarity.
  */
 import {randomUUID} from 'node:crypto';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 import {reuseSyntaxCorrection} from './reuse_mediation.ts';
 
 export function learnedScriptFragments(library:any){

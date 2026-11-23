@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 import pytest
 
-from src.adapters.capability_contract import capability_ref, create_capability_snapshot
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.evolution_cycle import run_evolution_cycle, accumulate_evolution_feedback
+from src.capability.graph.capability_contract import capability_ref, create_capability_snapshot
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from src.rsi.evolution.evolution_cycle import run_evolution_cycle, accumulate_evolution_feedback
 from tests.test_capability_contract import leaf
 from tests.test_capability_investigation import data, make, put
 from tests.test_capability_evolution_investigation import candidate
@@ -74,7 +74,7 @@ def test_cycle_no_change_needs_no_followup_and_preserves_revisit_identity(tmp_pa
 
 
 def test_shared_cycle_has_no_scene_specific_import_or_scoring():
-    from src.adapters import evolution_cycle
+    from src.rsi.evolution import evolution_cycle
     source = Path(evolution_cycle.__file__).read_text()
     for text in ('BibTeX', 'paper_proofreading', 'QLoRA', 'score ==', 'BenchmarkHost'):
         assert text not in source

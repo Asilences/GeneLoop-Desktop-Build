@@ -2,6 +2,13 @@
 # Keep text as LF even when a Windows checkout has core.autocrlf=true.
 * text=auto eol=lf
 
+# The signed PPT engine snapshot binds these exact bytes on all platforms.
+scenarios/ppt_master/third_party/dsh-ppt/LICENSE -text !eol whitespace=cr-at-eol
+scenarios/ppt_master/third_party/dsh-ppt/package-lock.json -text !eol whitespace=cr-at-eol
+scenarios/ppt_master/third_party/dsh-ppt/package.json -text !eol whitespace=cr-at-eol
+src/adapters/ppt_deck_contract.ts -text !eol whitespace=cr-at-eol
+src/adapters/ppt_deck_tool.ts -text !eol whitespace=cr-at-eol
+
 # Review the small builders; these expanded transport fixtures are generated.
 schemas/rsi-protocol-v1.schema.json linguist-generated=true
 examples/rsi-protocol-v1/fixtures.json linguist-generated=true

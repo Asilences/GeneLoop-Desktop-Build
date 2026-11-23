@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { BlockAssembler } from '@deepseek-ai/dsh-llm';
-import { createOnlineInterceptor } from '../src/adapters/dsh_online_motif.mjs';
-import { observation } from '../src/motif_core/online_skill_runtime.mjs';
+import { createOnlineInterceptor } from '../src/adapters/harness/motif/dsh_online_motif.mjs';
+import { observation } from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import { compileLocalPrograms, digest, parseStructuredTask, proposeNext, proposeReadyBatch,
   validateOnlineManifest }
-  from '../src/adapters/online_motif_frontier.mjs';
+  from '../src/motif_core/runtime/online_skill_runtime.mjs';
 
 function sealManifest(manifest) {
   for (const artifact of manifest.artifacts) {

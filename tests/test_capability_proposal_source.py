@@ -5,9 +5,9 @@ import json
 
 import pytest
 
-from src.adapters import capability_proposal as pilot
-from src.adapters.capability_authoring import aliases
-from src.adapters.capability_source_authoring import prepare_capability_source_request, source_authoring_context
+from src.adapters.harness.capability import capability_proposal as pilot
+from src.capability.builder.capability_authoring import aliases
+from src.capability.builder.capability_source_authoring import prepare_capability_source_request, source_authoring_context
 from tests.test_capability_source_authoring import fixture, INTEGER, RECORD
 from tests.test_capability_proposal_loop import DiagnosticGate, fake_harness
 
@@ -84,8 +84,8 @@ def test_public_source_context_uses_semantic_interfaces_and_pins_actual_parser(t
     assert not any(key in json.dumps(context['source_interfaces']) for key in ('sha256','result_path','input_projection'))
     effective,prompt = pilot.prepare_attempt(task=task,catalog={},snapshot=snapshot,output=tmp_path/'preview')
     assert effective['system_sha256'] == pilot.sha(pilot.SYSTEM)
-    assert 'src/adapters/capability_source_authoring.py' in effective['code_versions']
-    assert 'src/adapters/capability_program_encoding.py' in effective['code_versions']
+    assert 'src/capability/builder/capability_source_authoring.py' in effective['code_versions']
+    assert 'src/capability/builder/capability_program_encoding.py' in effective['code_versions']
     assert 'source_interfaces' in prompt and '"capability_source"' in prompt
 
 

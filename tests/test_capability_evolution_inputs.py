@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_construction_history import capture
-from src.adapters.capability_contract import capability_ref, create_capability_snapshot
-from src.adapters.capability_decision_evidence import CONTEXT_FORMAT, record_construction_decision
-from src.adapters.capability_evolution_inputs import load_builder_input_manifest
-from src.adapters.capability_feedback import file_ref
+from src.rsi.learning.capability_construction_history import capture
+from src.capability.graph.capability_contract import capability_ref, create_capability_snapshot
+from src.adapters.web.learning.capability_decision_evidence import CONTEXT_FORMAT, record_construction_decision
+from src.adapters.web.learning.capability_evolution_inputs import load_builder_input_manifest
+from src.rsi.feedback.capability_feedback import file_ref
 from tests.test_capability_builder import setup
 
 

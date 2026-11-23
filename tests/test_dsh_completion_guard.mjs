@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apply, createReceiptGuard, verifyReceipt, digest } from '../src/adapters/dsh_completion_guard.ts';
+import { apply, createReceiptGuard, verifyReceipt, digest } from '../src/adapters/harness/dsh_completion_guard.ts';
 
 const policy = {tool:'mcp__demo__publish',statuses:['preview','needs_review'],max_continuations:2,artifact_root:tmpdir()};
 test('only the named successful hashed receipt completes; pending/error/plain text never do',()=>{

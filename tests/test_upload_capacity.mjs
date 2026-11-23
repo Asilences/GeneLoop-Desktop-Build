@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,rmSync,readFileSync,readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {bindSceneInputs} from '../src/adapters/harless_task_scope.ts';
+import {bindSceneInputs} from '../src/adapters/web/attachments/harless_task_scope.ts';
 import {FILE_MAX_BYTES} from '../src/adapters/geneloop_upload_limits.ts';
 
 test('large PPT sources bind byte-exactly and failed admission leaves originals intact',async()=>{

@@ -16,7 +16,9 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 export function readPptMasterGuide(tools, section) {
   if (!Object.hasOwn(guidePaths, section)) throw Error('请选择 skill、generate 或 spec。');
   const name = guidePaths[section];
-  const lock = JSON.parse(readFileSync(join(tools.sourceRoot, 'scenarios/ppt_master/skill-lock.json'), 'utf8'));
+  const lockPath=tools.deck?join(dirname(tools.skill),'ppt-master-desktop-lock.json'):
+    join(tools.sourceRoot,'scenarios/ppt_master/skill-lock.json');
+  const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
   const path = join(tools.skill, name);
   const actual = realpathSync(path);
   if ((process.platform === 'win32' ? actual.toLowerCase() !== path.toLowerCase() : actual !== path) || statSync(path).size > 64 * 1024) {
@@ -24,7 +26,7 @@ export function readPptMasterGuide(tools, section) {
   }
   const bytes = readFileSync(path);
   if (createHash('sha256').update(bytes).digest('hex') !== lock.files[name]) throw Error('ppt-master 指南与锁定版本不符。');
-  return bytes.toString('utf8');
+  return '# GeneLoop PPT 制作范围\n仅制作、编辑和核验PPTX及PDF/逐页预览。上游文档的旁白、配音、演示视频和字幕扩展不属于本场景，不执行相关脚本或安装语音依赖。以下仅参考材料、设计、模板、页面和演示文稿导出规范。\n\n'+bytes.toString('utf8');
 }
 
 function sourcesFor(reader, sources = []) {
@@ -46,7 +48,8 @@ export async function pptPython(tools, scratch, signal, module, args) {
       : await run(tools.python, argv, {
       cwd:tools.sourceRoot, signal, timeout:450_000, windowsHide:true, maxBuffer:2 * 1024 * 1024,
       env:{SystemRoot:process.env.SystemRoot, PATH:dirname(tools.python), TEMP:scratch, TMP:scratch,
-        TMPDIR:scratch, HOME:scratch, USERPROFILE:scratch, APPDATA:scratch, LOCALAPPDATA:scratch},
+        TMPDIR:scratch, HOME:scratch, USERPROFILE:scratch, APPDATA:scratch, LOCALAPPDATA:scratch,
+        GENELOOP_OFFICE_NODE:process.execPath,ELECTRON_RUN_AS_NODE:'1'},
     });
     return JSON.parse(stdout);
   } catch (error) {
@@ -61,7 +64,8 @@ function deliverPpt(receipt, output, writer, signal, onReport) {
     // Python filesystem errors may contain absolute paths. Keep those local.
     throw Error('本机 PPT 工具未能校验或导出该项目。');
   }
-  const artifacts = ['pptx', 'pdf'].map(extension => {
+  const extensions = ['pptx','pdf',...(receipt.artifacts.some(row=>row.kind==='zip')?['zip']:[])];
+  const artifacts = extensions.map(extension => {
     const row = receipt.artifacts.find(item => item.kind === extension);
     if (!row || typeof row.path !== 'string' || !new RegExp('^[a-z0-9_-]+\\.' + extension + '$', 'i').test(row.path)) {
       throw Error('缺少经核验的演示文稿产物。');
@@ -74,7 +78,7 @@ function deliverPpt(receipt, output, writer, signal, onReport) {
   });
   const published = publishArtifacts(writer,onReport,signal,[...artifacts,{
     extension:'json',
-    bytes:Buffer.from(JSON.stringify({...receipt,artifacts:receipt.artifacts.filter(item=>['pptx','pdf'].includes(item.kind))},null,2)),
+    bytes:Buffer.from(JSON.stringify({...receipt,artifacts:receipt.artifacts.filter(item=>extensions.includes(item.kind))},null,2)),
   }]);
   return {status:'passed',execution:receipt.execution,review_status:receipt.review_status,
     pages:Array.isArray(receipt.pages)?receipt.pages.length:receipt.pages,artifacts:published};

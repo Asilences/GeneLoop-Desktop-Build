@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdtempSync,writeFileSync,rmSync,readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {test} from 'node:test';
@@ -10,7 +10,7 @@ import {desktopNetworkAllowed} from '../apps/desktop/src/privacy.ts';
 
 test('本机任务的既有模型接口可连接同一服务，未知出口和跨源仍拒绝',()=>{
   const server='https://fixture.example/';
-  for(const path of ['lease','v1/chat/completions','video/render'])
+  for(const path of ['lease','v1/chat/completions','video/render','v1/systemone'])
     assert.equal(desktopNetworkAllowed(server+'api/harless/desktop-model/'+path,server),true);
   for(const url of [server+'api/harless/desktop-model/upload',server+'api/training/upload',
     'https://foreign.example/api/harless/desktop-model/lease'])
@@ -22,17 +22,26 @@ test('独立桌面只提供自己的页面和资源，不获取网页HTML、模�
   try{
     writeFileSync(join(directory,'index.html'),'<main>INDEPENDENT_DESKTOP</main>');
     writeFileSync(join(directory,'app.js'),'OWN_RENDERER');
+    mkdirSync(join(directory,'brand'));
+    writeFileSync(join(directory,'brand/NotoSansSC.ttf'),Buffer.from([0,1,0,0]));
     const host=new LocalFrontendHost({server:'https://fixture.example/',ui:directory,assets:directory,fail:assert.fail,session:{fetch:async request=>{network.push(request.url);return new Response('API_STREAM',{headers:{'content-encoding':'gzip','content-length':'900'}});}}});
     const get=path=>host.fetch(new Request('https://fixture.example'+path));
     for(const path of ['/','/login','/starting'])assert.equal(await(await get(path)).text(),'<main>INDEPENDENT_DESKTOP</main>');
     assert.equal(await(await get('/desktop/app.js')).text(),'OWN_RENDERER');
-    for(const path of ['/plugins/bootstrap.js','/assets/index-web.js','/desktop/unknown.js'])assert.equal((await get(path)).status,404);
+    const font=await get('/desktop/brand/NotoSansSC.ttf');
+    assert.equal(font.headers.get('content-type'),'font/ttf');
+    assert.match(font.headers.get('content-security-policy'),/font-src 'self';/);
+    assert.deepEqual(new Uint8Array(await font.arrayBuffer()),new Uint8Array([0,1,0,0]));
+    for(const path of ['/plugins/bootstrap.js','/assets/index-web.js','/desktop/unknown.js','/desktop/brand/private.ttf','/desktop/brand/../package.json'])assert.equal((await get(path)).status,404);
+    assert.equal((await host.fetch(new Request('https://foreign.example/desktop/brand/NotoSansSC.ttf'))).status,403);
     assert.deepEqual(network,[]);
     const api=await get('/api/harless/tasks');assert.equal(await api.text(),'API_STREAM');assert.equal(api.headers.get('content-encoding'),null);assert.equal(api.headers.get('content-length'),null);
     assert.deepEqual(network,['https://fixture.example/api/harless/tasks']);
     assert.equal((await get('/api/harless/motif-library?workspaceId=owned')).status,200);
     assert.equal((await get('/api/harless/motif-library-unknown')).status,403);
     assert.equal(host.egress.task,2);
+    assert.equal((await get('/api/harless/motif-catalog')).status,200);
+    assert.equal((await get('/api/harless/motif-catalog-unknown')).status,403);
     const headers=(await get('/')).headers;assert.match(headers.get('content-security-policy'),/default-src 'none'/);assert.match(headers.get('content-security-policy'),/form-action 'none'/);
   }finally{assert.equal(directory.startsWith(join(tmpdir(),'geneloop-ui-')),true);rmSync(directory,{recursive:true,force:true});}
 });

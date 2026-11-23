@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {publicSessionEvent} from '../src/adapters/harless_public_output.ts';
-const code=readFileSync(new URL('../src/adapters/harless_web_client/client.js',import.meta.url),'utf8');
+import {publicSessionEvent} from '../src/adapters/web/tasks/harless_public_output.ts';
+const code=readFileSync(new URL('../src/adapters/web/client/client.js',import.meta.url),'utf8');
 const start=code.indexOf('      function displayUserContent('),end=code.indexOf("      ctx.slots.inject('conversation.chat.node'",start);
 const display=vm.runInNewContext(code.slice(start,end)+'; displayUserContent');
 test('server-verified legacy extraction is hidden while the UI preserves admitted text, cards and raw history',()=>{

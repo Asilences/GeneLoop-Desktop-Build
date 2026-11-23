@@ -1,5 +1,17 @@
 # 普通文件管理跨流程学习实验
 
+## File 入口和 JEV
+
+使用仓库现有的 `/file` 场景。普通文件管理继续走主线 Kouri 网关与当前账户工作区。Linux 或 macOS 本地研究环境可以按下列配置启用已认证学习程序的 JEV 判断。Windows 保留普通 File 执行。
+
+1. 在私有运行环境设置主线所需的 `KOURI_API_KEY`。通过 `SSS_FILE_PROVIDER_CONFIG` 指向权限为 600 的私有常规文件，包含 `KOURI_API_KEY` 和 `KOURI_BASE_URL=https://api.kourichat.com/v1`，可选 `KOURI_MODEL=deepseek-v4.1-flash`。
+2. 使用 Node 22.18+ 与项目 Python 环境，按 `npm run web:real` 启动本地入口。File 通过带任务绑定的原网关执行，公共模型目录继续由主线配置。使用 Pro 做新研究时按公共模型配置登记 Pro。日常 File 入口沿用当前任务的模型、输出配置和原费用账本。
+3. 当前任务在 learn 模式、具备已有不限额许可且命中当前账号的认证程序时，才发起 JEV 局部判断。任务结束后，程序学习后台按原材料复制授权挑选合格新轨迹，至少用两份独立材料认证后激活。已有有限费用授权只允许捕获，不能新增无法核价的判断调用。
+
+公开种子和账户学习程序分别登记。历史 `file-v17` 六项与 `file-v18` 两项保留，当前工具兼容的 `file-v19` 包含一项独立认证图。新账号从公开种子和自己的运行记录积累。旧版账户私有认证、真实轨迹、恢复记录及费用保留在原环境；部署成员沙箱尚未开通 JEV 私有配置。见[交接](../../docs/handoffs/file-management.md)。
+
+以下为历史实验结果。
+
 最新[报告契约修复与第六阶段完整基准](../../docs/experiments/file-management-report-benchmark-20261013.md)已完成。inspection全部检查成员、literal_search实际命中/搜索收据、task_result当前效果结果分开；显式阶段范围在选集合前验证，三组共用同一普通契约。两失败修订全部保留，新版本重新获取并认证两代库。36新质量三组各12/12；144完整基准H60/72、L2 62/72，60共同合格配对610→401HTTP、估费−16.02%。22主验收失败保留，未证明整体完全合格或真实业务泛化。
 
 当前fm-report-quality-20261013-d3053cd5，指针.local/file-management/report-current.json；两库零留出前冻结，未用质量/基准再训练。完整基准第二段再入为0，再入增量只见于两阶段新质量。效果/恢复仍普通Harness，未组合单独PlanScene认证；全系列439次/3972HTTP/峰值估费USD3.399507360，实付未知，68失败及全部纠正费用留存。接口与版本见[实施记录](../../docs/changes/file-management-report-contract.md)，默认SDK/Web不开。

@@ -11,10 +11,10 @@ from pathlib import Path
 import subprocess
 import sys
 import pytest
-from src.adapters.capability_contract import capability_digest
-from src.adapters.capability_scene import load_scene_adapter,reference
-from src.adapters.capability_improvement import run_improvement
-from src.adapters.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import capability_digest
+from src.adapters.harness.capability.capability_scene import load_scene_adapter,reference
+from src.rsi.learning.capability_improvement import run_improvement
+from src.capability.builder.capability_builder import compile_proposal
 from scenarios.paper_proofreading.verify_capability_outputs import verify
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -51,7 +51,7 @@ def test_checker_does_not_accept_boolean_counts_or_input_version_changes(tmp_pat
 
 @pytest.mark.skipif(sys.platform!='linux' or os.getenv('RUN_SCRIPT_CAPABILITY_SANDBOX')!='1',reason='Linux native sandbox diagnostic opt-in')
 def test_paper_native_certification_composition_publication_and_next_builder(tmp_path):
-    from src.adapters.script_motif_compiler import observe
+    from src.motif_core.offline.compilation.script_motif_compiler import observe
     source="import re, json\nfrom collections import Counter\ns=open('/work/inputs/source.bib').read()\nkeys=re.findall(r'(?m)^\\s*@\\w+\\s*\\{\\s*([^,\\s{}]+)\\s*,',s)\nc=Counter(keys)\nprint(json.dumps({'entry_count':len(keys),'unique_key_count':len(c),'duplicate_keys':sorted(k for k,n in c.items() if n>1)}))"
     command="python3 - <<'DIAGNOSTIC'\n"+source+"\nDIAGNOSTIC"
     rows=[]

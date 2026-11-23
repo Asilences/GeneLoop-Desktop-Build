@@ -27,7 +27,7 @@ passed `python3 scripts/verify_source_lock.py` on 2026-09-25. Source files:
   DSH's paired tool events)
 
 The runtime subset initially changed only package import paths. SSS later
-adapted `evidence.py` and `dependencies.py` to key cached results by each
+adapted `runtime/evidence.py` and `runtime/dependencies.py` to key cached results by each
 node's evidence version and verified parent signatures, and to enforce
 active negative guards after parameter flow. The offline miner was trimmed
 and adapted for SSS; the original artifact was not modified. The copied code remains under its
@@ -35,7 +35,7 @@ Apache-2.0 license in `LICENSE`. SSS's office adapter calls the runtime
 classes and functions directly;
 the artifact's TauBench-specific general `MotifExecutor` has not yet been ported.
 
-SSS later added `offline/trace_compiler.py` and `read_executor.py` as a
+SSS later added `offline/compilation/trace_compiler.py` and `runtime/read_executor.py` as a
 conservative read-only adaptation of the frozen operatorizer, dependency
 compiler and MotifExecutor control path. These are new SSS implementations,
 not verbatim copies. The compiler needs distinct training task traces,
@@ -48,7 +48,7 @@ for cross-source retrieval. `src/workflows/research_retrieval_tools.py` is an SS
 tool adapter: it keeps the existing deterministic retrieval algorithm while
 the compiled Motif owns source-snapshot dependency and execution control.
 
-`offline/failure_evolution.py` is an SSS extension inspired by EvoGraph's
+`reuse/failure_evolution.py` is an SSS extension inspired by EvoGraph's
 versioned structural revision idea. A failed operator produces a
 privacy-minimal effective-binding signature. Independent failure replays,
 contrasting success, and a separate task-quality review record are required
@@ -58,7 +58,7 @@ call. A versioned registry tracks activation and rollback; only its currently
 active guards are loaded. Proposal and replay-candidate statuses never affect
 execution.
 
-`offline/library_builder.py`, `offline/repeat_compiler.py`, and `controller.py`
+`offline/compilation/library_builder.py`, `offline/compilation/repeat_compiler.py`, and `runtime/controller.py`
 are SSS adaptations of the frozen `offline/motif_dag_builder.py`,
 `offline/connector_table.py`, `offline/motif_skill_operatorizer.py`,
 `runtime/plan_matchers.py`, and `runtime/motif_executor.py` control flow. They
@@ -73,37 +73,37 @@ port and validates the selected values before reading. It does not port write
 operators, parallel execution, or open-world planning. The frozen source was
 not edited.
 
-`offline/link_compiler.py` is a further SSS extension. It promotes an observed
+`offline/compilation/link_compiler.py` is a further SSS extension. It promotes an observed
 observed connector to an executable read dependency only when an explicitly
 attributed scalar parameter transfer repeats in independent training tasks
 and an unseen task, with no unknown or failed tool between the motifs.
-`controller.py` builds an acyclic Motif graph from these edges, binds each
+`runtime/controller.py` builds an acyclic Motif graph from these edges, binds each
 successor from current predecessor output, and suspends or reenters at any
 missing parameter. It supports chains and joins without a hop count limit.
 It does not execute intervening observed tools without certified dependencies,
 or yet cover write operations and top-level semantic workflow nodes.
 
 The online DSH path now keeps deterministic parameter programs inside each
-exported Motif skill. `online_skill_runtime.mjs` validates these bounded
+exported Motif skill. `runtime/online_skill_runtime.mjs` validates these bounded
 programs against certified transfer edges and executes them in the core;
 the DSH adapter only observes host events and emits approved tool calls.
 Field transfer is a skill binding rather than a separate DAG node.
 
-SSS now adds a bounded dynamic-code extension in `pure_code.py` and
-`offline/dynamic_code_nodes.py`. A proposed pure expression is checked against
+SSS now adds a bounded dynamic-code extension in `runtime/pure_code.py` and
+`offline/compilation/dynamic_code_nodes.py`. A proposed pure expression is checked against
 two training task traces and one held-out task, then becomes a signed code
-node in a two-tool Motif skill. `dependencies.py` and the online skill runtime
+node in a two-tool Motif skill. `runtime/dependencies.py` and the online skill runtime
 execute it before the dependent read. This extension is SSS code, not a copy
 of the frozen MotifAgent artifact; it currently handles one scalar result
 and does not authorize general Python programs.
 
-2026-10-12 SSS扩展：`offline/entry_compiler.py`、`entry_read_policy.ts`和
-`inventory_entry_policy.ts`为本项目实现，支持真实原生任务的受限集合入口。
+2026-10-12 SSS扩展：`offline/compilation/entry_compiler.py`、`runtime/policies/entry_read_policy.ts`和
+`runtime/policies/inventory_entry_policy.ts`为本项目实现，支持真实原生任务的受限集合入口。
 增量变体单独认证`read_update_plan -> work[].paper_id -> prepare_pdf`，冻结完整计划、
 PDF/解析版本并在结构读完后语义交接；不是复制上游全局规划器或科研判断。
 旧协议保留，冻结来源、原commit和Apache-2.0 LICENSE未改。
 
-2026-10-12 SSS新增`offline/terminal_compiler.py`和`terminal_receipt_policy.ts`：
+2026-10-12 SSS新增`offline/compilation/terminal_compiler.py`和`runtime/policies/terminal_receipt_policy.ts`：
 从独立原生提交/收据/末尾模型stop轨迹认证受限终止关系；状态渲染为本项目手写的
 有界字段复制，不声称从模型学到任意总结程序。源/范围/版本/真实回调守卫后才停止，
 未修改冻结上游、LICENSE或来源commit。

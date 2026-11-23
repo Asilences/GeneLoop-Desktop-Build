@@ -100,7 +100,8 @@ def main():
     with launch(args.port, 'scene-check-alice', args.real_model, args.run_budget_usd, args.run_request_limit) as (alice, base, output), \
          launch(args.port + 1, 'scene-check-bob') as (bob, bob_base, bob_output):
         value = settings(alice, base)
-        assert [scene['id'] for scene in value['scenes']] == ['ppt', 'paper-proofreading', 'research-data-analysis', 'files', 'new-scene']
+        registry = json.loads((ROOT / 'config/harless-scenes.json').read_text(encoding='utf-8'))
+        assert [scene['id'] for scene in value['scenes']] == [scene['id'] for scene in registry['scenes']]
         assert value['selection']['scene'] == 'new-scene'
         ppt = next(scene for scene in value['scenes'] if scene['id'] == 'ppt')
         assert ppt['available'], ppt

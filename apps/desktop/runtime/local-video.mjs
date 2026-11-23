@@ -26,6 +26,18 @@ async function execute(bin, args, directory, signal) {
   }
 }
 
+function verifyDecodedVideo(tools, directory, signal, audio = '0:a?') {
+  return execute(tools.ffmpeg, ['-v','error','-nostdin','-xerror',...input,'-i','video.mp4',
+    '-map','0:v:0','-map',audio,...decodedOutput], directory, signal);
+}
+
+function publishComposition(writer, onReport, signal, source, video, receipt) {
+  return {...receipt,artifacts:publishArtifacts(writer,onReport,signal,[
+    {extension:'mp4',bytes:video},{extension:'tsx',bytes:Buffer.from(source)},
+    {extension:'json',bytes:Buffer.from(JSON.stringify(receipt,null,2))},
+  ])};
+}
+
 async function probe(tools, name, directory, signal) {
   const result = JSON.parse(await execute(tools.ffprobe, ['-v','error', ...input, '-show_entries',
     'format=duration:stream=codec_type,width,height,duration,avg_frame_rate', '-of','json', name], directory, signal));
@@ -53,14 +65,15 @@ export async function probeLocalVideo(reader, tools, path, signal) {
   });
 }
 
-export async function renderNativeRemotion(ctx, reader, writer, tools, source, assetList, signal, onReport, {assetBytes=16*1024*1024}={}) {
+export async function renderNativeRemotion(ctx, reader, writer, tools, source, assetList, signal, onReport, {assetBytes=16*1024*1024,assetNames,onRenderedVideo}={}) {
   if (!tools.remotion || typeof source !== 'string' || !source.trim() || Buffer.byteLength(source) > 128*1024 ||
       typeof assetList !== 'string' || assetList.length > 16_384) throw Error('本机 Remotion 未安装或工程超出限制。');
   const paths = JSON.parse(assetList);
   if (!Array.isArray(paths) || paths.length > 8 || new Set(paths).size !== paths.length ||
-      paths.some(path=>typeof path !== 'string' || !/\.(mp4|mov|png|jpg|jpeg|mp3|wav)$/i.test(path))) {
+      paths.some(path=>typeof path !== 'string' || !/\.(mp4|mov|webm|mkv|png|jpg|jpeg|webp|gif|svg|mp3|wav|m4a|aac|ogg)$/i.test(path))) {
     throw Error('请输入不重复的工作区素材相对路径。');
   }
+  if(assetNames&&(assetNames.length!==paths.length||new Set(assetNames).size!==paths.length||assetNames.some(name=>typeof name!=='string'||name.startsWith('/')||/[\\:\x00-\x1f]/.test(name)||name.split('/').some(p=>!p||p==='.'||p==='..'))))throw Error('素材公开名称无效');
   return inSceneScratch(async directory => {
     const {mkdirSync} = await import('node:fs');
     mkdirSync(join(directory,'public'));
@@ -69,7 +82,8 @@ export async function renderNativeRemotion(ctx, reader, writer, tools, source, a
       const bytes = reader.readBytes(path,remaining);
       if (!bytes.length) throw Error('渲染素材为空。');
       remaining -= bytes.length;
-      const name = 'asset-'+(index+1)+path.slice(path.lastIndexOf('.')).toLowerCase();
+      const name = assetNames?.[index]??'asset-'+(index+1)+path.slice(path.lastIndexOf('.')).toLowerCase();
+      mkdirSync(join(directory,'public',...name.split('/').slice(0,-1)),{recursive:true});
       writeFileSync(join(directory,'public',name),bytes,{flag:'wx'});
       return {path,name,sha256:sha(bytes)};
     });
@@ -86,20 +100,17 @@ export async function renderNativeRemotion(ctx, reader, writer, tools, source, a
     const media = await probe(tools,'video.mp4',directory,signal);
     if (media.width !== rendered.composition.width || media.height !== rendered.composition.height ||
         Math.abs(media.duration-rendered.composition.frames/rendered.composition.fps) > 0.15) throw Error('本机渲染规格核验失败。');
-    await execute(tools.ffmpeg,['-v','error','-nostdin','-xerror',...input,'-i','video.mp4',
-      '-map','0:v:0','-map','0:a?',...decodedOutput],directory,signal);
+    await verifyDecodedVideo(tools, directory, signal);
     for (const asset of assets) if (sha(reader.readBytes(asset.path,assetBytes)) !== asset.sha256) throw Error('来源素材已变化，请重新渲染。');
     const output = join(directory,'video.mp4');
     if (statSync(output).size > maxSourceBytes) throw Error('本机渲染产物过大。');
     const bytes = readFileSync(output);
+    onRenderedVideo?.(bytes);
     const receipt = {schema_version:1,execution:process.platform+'-local-remotion',
       sandboxEnforcement:browser?.enforcement ?? executed.enforcement,
       sandboxScope:browser?'browser-renderer':'renderer-process',source_sha256:sha(Buffer.from(source)),assets,
       remotionVersion:rendered.remotionVersion,output:{...media,sha256:sha(bytes),fullyDecoded:true}};
-    return {...receipt,artifacts:publishArtifacts(writer,onReport,signal,[
-      {extension:'mp4',bytes},{extension:'tsx',bytes:Buffer.from(source)},
-      {extension:'json',bytes:Buffer.from(JSON.stringify(receipt,null,2))},
-    ])};
+    return publishComposition(writer, onReport, signal, source, bytes, receipt);
   });
 }
 
@@ -123,21 +134,17 @@ export async function renderHybridVideo(reader, writer, tools, source, assetList
   }
   signal.throwIfAborted();
   onPhase?.('remote-render');
-  let video;
-  try { video = await fetchRenderedVideo(source, assets, signal); }
+  let render;
+  try { render = await fetchRenderedVideo(source, assets, signal); }
   finally { onPhase?.('local'); }
-  const digest = sha(video);
+  const {video,digest} = render;
   return inSceneScratch(async directory => {
     writeFileSync(join(directory, 'video.mp4'), video, {flag:'wx'});
     const info = await probe(tools, 'video.mp4', directory, signal);
-    await execute(tools.ffmpeg, ['-v','error','-nostdin','-xerror', ...input,'-i','video.mp4',
-      '-map','0:v:0','-map','0:a?',...decodedOutput], directory, signal);
+    await verifyDecodedVideo(tools, directory, signal);
     const receipt = {schema_version:1, execution:'server-remotion', source_sha256:sha(Buffer.from(source)),
       assets:assets.map(({path, name, sha256}) => ({path, name, sha256})), output:{...info, sha256:digest, fullyDecoded:true}};
-    return {...receipt, artifacts:publishArtifacts(writer, onReport, signal, [
-      {extension:'mp4', bytes:video}, {extension:'tsx', bytes:Buffer.from(source)},
-      {extension:'json', bytes:Buffer.from(JSON.stringify(receipt, null, 2))},
-    ])};
+    return publishComposition(writer, onReport, signal, source, video, receipt);
   });
 }
 
@@ -167,7 +174,7 @@ async function fetchRenderedVideo(source, assets, signal) {
   const video = Buffer.concat(chunks);
   const digest = sha(video);
   if (received !== length || digest !== response.headers.get('x-geneloop-sha256')) throw Error('服务器渲染产物摘要校验失败。');
-  return video;
+  return {video,digest};
 }
 
 export async function renderLocalVideo(reader, writer, tools, plan, signal, onReport, nativeContext) {
@@ -234,10 +241,9 @@ registerRoot(()=> <Composition id="Main" component={Scene} durationInFrames={${f
         media.width !== 1280 || media.height !== 720 || media.fps !== '30/1' || !media.audio) {
       throw Error('导出视频的时长、画面规格或音轨验证失败。');
     }
-    await execute(tools.ffmpeg, ['-v','error','-nostdin','-xerror', ...input,'-i','video.mp4',
-      '-map','0:v:0','-map','0:a:0',...decodedOutput], directory, signal);
+    await verifyDecodedVideo(tools, directory, signal, '0:a:0');
     const output = join(directory, 'video.mp4');
-    if (statSync(output).size > 80 * 1024 * 1024) throw Error('导出视频超过本机交付上限。');
+    if (statSync(output).size > maxSourceBytes) throw Error('导出视频超过本机交付上限。');
     const bytes = readFileSync(output);
     const receipt = Buffer.from(JSON.stringify({schema_version:1, segments, sources:[...sources].map(([path, source]) => ({
       path, sha256:source.sha256, bytes:source.bytes,

@@ -1,6 +1,6 @@
 """免费合成状态诊断，不代表真实模型质量或跳过。
 """
-from src.adapters.trace_rsi_effect_guards import allows, certify_conditions, learn_conjunction
+from src.motif_core.offline.compilation.trace.trace_rsi_effect_guards import allows, certify_conditions, learn_conjunction
 
 
 def sample(name, output, allowed):

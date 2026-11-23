@@ -39,9 +39,9 @@ export function stageMetrics(job: any) {
 }
 function codeSnapshot() {
   const paths = readdirSync(HERE).filter(n=>/\.(py|ts|mjs|md|json)$/.test(n)).map(n=>join(HERE,n));
-  for (const n of ['scripts/run-scenario.py','scripts/project.mjs','src/adapters/dsh_completion_guard.ts',
-    'src/adapters/scenario.py','src/adapters/dsh_scenario_guard.mjs','src/adapters/deepseek_cost_gate.py',
-    'src/adapters/harness_runtime.py','package-lock.json']) paths.push(join(ROOT,n));
+  for (const n of ['scripts/run-scenario.py','scripts/project.mjs','src/adapters/harness/dsh_completion_guard.ts',
+    'src/adapters/scenario.py','src/adapters/harness/dsh_scenario_guard.mjs','src/adapters/deepseek_cost_gate.py',
+    'src/adapters/harness/harness_runtime.py','package-lock.json']) paths.push(join(ROOT,n));
   return Object.fromEntries(paths.map(p=>[p.slice(ROOT.length+1),sha(p)]));
 }
 export async function prepare(directory: string, papers: string, budget=12, taskBudget=3) {

@@ -12,7 +12,7 @@ import {SystemPrompt} from '@deepseek-ai/dsh-system-prompt';
 import {ToolRuntime} from '@deepseek-ai/dsh-tools';
 import {LlmRuntime,createUserMessage} from '@deepseek-ai/dsh-llm';
 import {resolveAdapterOptions} from '@deepseek-ai/dsh-llm-deepseek';
-import {WebDeepSeekAdapter} from '../src/adapters/harless_reasoning.ts';
+import {WebDeepSeekAdapter} from '../src/adapters/web/tasks/harless_reasoning.ts';
 import {CommandRuntime} from '@deepseek-ai/dsh-commands';
 import {PlanModeController} from '@deepseek-ai/dsh-plan-mode';
 import {UserQuestionService} from '@deepseek-ai/dsh-user-questions';

@@ -10,9 +10,9 @@ import json
 import sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from src.adapters.capability_authoring import expand_draft, compact_proposal, diagnose
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import capability_digest
+from src.capability.builder.capability_authoring import expand_draft, compact_proposal, diagnose
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import capability_digest
 from scenarios.remotion_edit.structured.run_capability_loop import parse_proposal
 
 
@@ -45,7 +45,7 @@ def replay(answer_path,task_path,snapshot_path,output,repair=False):
     raw=Path(answer_path).read_text(encoding='utf-8');task=json.loads(Path(task_path).read_text(encoding='utf-8'));snapshot=json.loads(Path(snapshot_path).read_text(encoding='utf-8'))
     summary={'format':'capability_proposal_replay_v1','model_calls':0,'execution_calls':0,'published':False,
              'scope':'offline_diagnostic_not_agent_repair','sources':{label:hashlib.sha256(Path(p).read_bytes()).hexdigest() for label,p in [('answer',answer_path),('task',task_path),('snapshot',snapshot_path)]},
-             'code_sha256':{name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in ['scripts/replay-capability-proposal.py','src/adapters/capability_authoring.py','src/adapters/capability_builder.py','src/adapters/capability_contract.py','scenarios/remotion_edit/structured/run_capability_loop.py']}}
+             'code_sha256':{name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in ['scripts/replay-capability-proposal.py','src/capability/builder/capability_authoring.py','src/capability/builder/capability_builder.py','src/capability/graph/capability_contract.py','scenarios/remotion_edit/structured/run_capability_loop.py']}}
     draft=proposal=None
     try:
         draft=parse_proposal(raw);proposal=expand_draft(draft,task,snapshot)

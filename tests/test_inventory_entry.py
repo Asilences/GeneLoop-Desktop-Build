@@ -1,9 +1,9 @@
 import copy
 import json
 import pytest
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.entry_compiler import inventory_witness,compile_inventory_motif,certify_entry_motif,digest
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.entry_compiler import inventory_witness,compile_inventory_motif,certify_entry_motif,digest
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 S='mcp__test__list';P='mcp__test__prepare'
 C=parse_tool_contracts({S:{'read_only':True,'replay_stable':False,'required_params':[]},P:{'read_only':True,'replay_stable':False,'required_params':['paper_id']}})
 def sample(n,tag):

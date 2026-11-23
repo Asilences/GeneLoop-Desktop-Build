@@ -5,7 +5,7 @@ import urllib.error
 import urllib.request
 
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.web_task_budget import TaskBudgetRegistry
+from src.adapters.web.web_task_budget import TaskBudgetRegistry
 
 
 def test_pdf_vision_gate_ownership_model_payload_and_accounting(tmp_path):

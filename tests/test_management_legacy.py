@@ -3,7 +3,7 @@ import copy
 from pathlib import Path
 import pytest
 from src.adapters.management_legacy import node,graph_nodes,validate_steps,program_actions,make_template,job_key
-from src.motif_core.offline.experience_registry import read,sha
+from src.motif_core.reuse.experience_registry import read,sha
 
 
 def recipe(source='task_sources'):
@@ -73,7 +73,7 @@ def test_legacy_job_identity_cannot_retry_by_changing_material_nonce():
 def test_known_rejection_needs_new_clean_sealed_ordinary_evidence(tmp_path,monkeypatch):
     import os
     from src.adapters import management_legacy as legacy,continuous_rsi as rsi,continuous_motif_learning as learning
-    from src.motif_core.offline.experience_registry import durable,digest
+    from src.motif_core.reuse.experience_registry import durable,digest
     cfg={'state_root':str(tmp_path)};p=recipe();base=tmp_path/'experience/jobs'/job_key(p,'current-runtime')
     durable(base/'failure.json',{'reason':'original native proof rejected'})
     monkeypatch.setattr(rsi,'source_map',lambda:{})
@@ -92,7 +92,7 @@ def test_known_rejection_needs_new_clean_sealed_ordinary_evidence(tmp_path,monke
 
 
 def test_new_program_admission_requires_current_independent_certificate(tmp_path):
-    from src.motif_core.offline.experience_registry import ExperienceRegistry
+    from src.motif_core.reuse.experience_registry import ExperienceRegistry
     with pytest.raises(ValueError,match='independent actual certification'):
         ExperienceRegistry(tmp_path).entry('management_program',tmp_path/'not-an-authority.json',{})
 
@@ -105,7 +105,7 @@ def test_certification_cannot_start_outside_original_worker_lock(tmp_path):
 
 def _native_program_fixture():
     from src.adapters.management_legacy import PREFIX
-    from src.motif_core.offline.experience_registry import digest
+    from src.motif_core.reuse.experience_registry import digest
     r=recipe();r['guard']['objective_sha256']=digest(r['objective'])
     originals=[{'file_id':'id-'+n,'path':'source/'+n,'root_id':'workspace','sha256':digest(n),'bytes':5} for n in ('a.txt','b.md')]
     backups=[{**v,'file_id':'backup-'+str(i),'path':'backup/'+v['path'].split('/',1)[1]} for i,v in enumerate(originals)]
@@ -139,7 +139,7 @@ def test_failed_native_preview_is_a_rejection_barrier_not_a_worker_crash():
 @pytest.mark.parametrize('batch',[False,True])
 def test_rule_proof_accepts_actual_full_scalar_and_batch_reads_but_rejects_late_or_partial(batch):
     from src.adapters.management_legacy import native_program_proof,PREFIX
-    from src.motif_core.offline.experience_registry import digest
+    from src.motif_core.reuse.experience_registry import digest
     r,f=_native_program_fixture();r['context_paths']=['rules/notice.txt'];r['guard']['context_text_sha256']=digest('Original complete rule')
     for row in f['rows']:row['call_seq']*=10;row['result_seq']*=10
     readback={'path':'workspace/rules/notice.txt','text':'Original complete rule','status':'readable','truncated':False}
@@ -165,7 +165,7 @@ def test_native_preparation_only_allows_necessary_parent_directories():
 def test_script_guard_bindings_do_not_follow_mislabeled_final_or_external_records(tmp_path,monkeypatch,defect):
     from src.adapters import continuous_rsi as rsi
     from src.adapters.management_legacy import script_bindings
-    from src.motif_core.offline.experience_registry import durable,digest
+    from src.motif_core.reuse.experience_registry import durable,digest
     root=tmp_path/'project';root.mkdir();monkeypatch.setattr(rsi,'ROOT',root)
     train=(root/'.local/file-management/train') if defect=='holdout_role' else tmp_path/'external'
     goal='Copy originals to backup/ then recover to recovery/'
@@ -179,7 +179,7 @@ def test_script_guard_bindings_do_not_follow_mislabeled_final_or_external_record
 def test_existing_pending_legacy_admission_wins_over_new_version_or_seed(tmp_path,monkeypatch):
     from src.adapters.management_legacy import opportunity,FORMAT
     from src.adapters import continuous_rsi as rsi
-    from src.motif_core.offline.experience_registry import durable
+    from src.motif_core.reuse.experience_registry import durable
     p=recipe();job=tmp_path/'experience/jobs/original-frozen'
     durable(job/'request.json',{'adapter_format':FORMAT,'key':p['key'],'target':'old-runtime','seed':'old-sealed-task','seed_origin':'old-origin'})
     monkeypatch.setattr(rsi,'records',lambda root:pytest.fail('pending request replaced by new task discovery'))
@@ -191,7 +191,7 @@ def test_existing_pending_legacy_admission_wins_over_new_version_or_seed(tmp_pat
 def test_exact_program_delivery_rejects_extra_duplicate_even_after_expected_output_exists(tmp_path):
     import shutil
     from src.adapters.management_legacy import program_output_contract,verify_program_delivery
-    from src.motif_core.offline.experience_registry import durable
+    from src.motif_core.reuse.experience_registry import durable
     p=recipe();template=make_template({'state_root':str(tmp_path)},p,tmp_path/'prototype');spec=read(template/'task.json')
     origin=tmp_path/'runs/session';shutil.copytree(template/'pristine',origin/'pristine');shutil.copytree(template/'pristine',origin/'final-workspace');durable(origin/'task.json',spec)
     rows=[{'path':n,'root_id':'workspace','file_id':n,'sha256':h,'bytes':(origin/'pristine'/n).stat().st_size} for n,h in spec['initial_tree']['workspace']['files'].items() if n!='.experiment-copy']

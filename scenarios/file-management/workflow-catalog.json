@@ -48,7 +48,7 @@
       "docs/experiments/file-management-batch-plan-20261013.md"
     ],
     "recovery": [
-      "src/adapters/dsh_acceptance_guard.ts",
+      "src/adapters/file_acceptance_guard.ts",
       "scripts/validate-file-delivery.py",
       "docs/experiments/acceptance-repair-20261013.md"
     ],
@@ -62,7 +62,7 @@
       "docs/experiments/file-management-workflow-learning-20261014.md"
     ],
     "online_job_plan": [
-      "src/adapters/dsh_job_plan_gate.ts",
+      "src/adapters/harness/dsh_job_plan_gate.ts",
       "docs/experiments/file-management-workflow-online-20261014.md"
     ],
     "new_HSM_holdout": [

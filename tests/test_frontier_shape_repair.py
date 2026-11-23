@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 
 from scenarios.paper_proofreading.frontier.adapter import runtime_shape_feedback
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import create_capability,create_capability_snapshot,capability_ref
-from src.adapters.capability_scene import reference
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import create_capability,create_capability_snapshot,capability_ref
+from src.adapters.harness.capability.capability_scene import reference
 from tests.test_capability_shape_diagnostics import obj
 
 

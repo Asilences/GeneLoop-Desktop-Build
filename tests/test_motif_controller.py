@@ -4,14 +4,14 @@ import hashlib
 import json
 import unittest
 
-from src.adapters.dsh_trajectory import DshTrace, ToolContract, ToolRecord
-from src.adapters.dsh_client import SemanticValidationError
-from src.adapters.motif_read_semantic import (
+from src.adapters.harness.dsh_trajectory import DshTrace, ToolContract, ToolRecord
+from src.adapters.harness.dsh_client import SemanticValidationError
+from src.adapters.harness.motif.motif_read_semantic import (
     resolve_and_resume_controller_slots, resolve_and_resume_motif_choice,
 )
-from src.motif_core.controller import MotifController
-from src.motif_core.handoff import SemanticResolution
-from src.motif_core.offline.library_builder import build_read_motif_library
+from src.motif_core.runtime.controller import MotifController
+from src.motif_core.runtime.handoff import SemanticResolution
+from src.motif_core.offline.compilation.library_builder import build_read_motif_library
 
 
 CONTRACTS = {

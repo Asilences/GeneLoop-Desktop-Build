@@ -4,18 +4,23 @@ import { spawn } from 'node:child_process';
 import { randomBytes, createHash, createHmac, timingSafeEqual, scrypt as scryptCallback, scryptSync } from 'node:crypto';
 import { promisify } from 'node:util';
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, chmodSync, realpathSync } from 'node:fs';
+import { open } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { memberSceneDeployment } from './harless_member_scenes.mjs';
 import {createMotifViewRoute} from './harless_motif_view.ts';
-import { productPersona } from '../src/adapters/harless_product_prompt.ts';
+import { productPersona } from '../src/adapters/web/tasks/harless_product_prompt.ts';
 import {startCommandBroker} from '../src/adapters/geneloop_command_broker.ts';
 import {videoConfiguration} from '../src/adapters/geneloop_video.ts';
 import {composeNativeHost} from '../src/adapters/geneloop_native_host.mjs';
+import {sweepDormantMemberPrivacy} from '../src/adapters/web/account/harless_dormant_privacy.ts';
 import { createPublicRemoteBridge, forwardPublicRpc, isNativeRpcResponse, REMOTE_MUX_PATH } from './harless_public_transport.mjs';
 
+import {createRsiCollectionRoute} from './harless_rsi_collection.mjs';
 import { createDesktopModelRoute, DESKTOP_MODEL_PATH } from './harless_desktop_model.mjs';
 
+const brandFonts = new Set(['IBMPlexMono-Regular.ttf', 'IBMPlexSans-Roman.ttf', 'NotoSansSC.ttf', 'SpaceGrotesk.ttf']);
 const modelTransport = JSON.parse(readFileSync(new URL('../config/geneloop-transport.json', import.meta.url), 'utf8'));
 if (Object.keys(modelTransport).sort().join(',') !== 'model_request_max_bytes,schema_version' ||
     modelTransport.schema_version !== 1 || !Number.isSafeInteger(modelTransport.model_request_max_bytes) ||
@@ -83,10 +88,19 @@ const inviteUsable = invite => Boolean(invite && !invite.revokedAt &&
 
 /** Mount just the public product policy, also for legacy chat-only members. */
 export function memberProductProfile() {
+  const publicConfig = [
+    'geneloop-persona.json', 'geneloop-capabilities.json', 'geneloop-capabilities.md',
+    'pdf-ocr-assets.json', 'geneloop-transport.json',
+    'motif-evidence-v1.schema.json', 'motif-evidence-v2.schema.json',
+    'kouri-models.json',
+    'rsi-privacy-tools.json', 'geneloop-privacy-policy-v1.json', 'harless-scenes.json',
+    'rsi-privacy-candidate-tools.json',
+    'rsi-gitleaks-worker-tools.json', 'privacy-cn-administrative-names.txt',
+    'rsi-privacy-code-compat.json', 'script-runtime-compatibility.json',
+  ];
   return {
     persona: productPersona(),
-    sandboxArgs: ['--dir', '/app/config', ...['geneloop-persona.json', 'geneloop-capabilities.json', 'geneloop-capabilities.md', 'pdf-ocr-assets.json', 'geneloop-transport.json', 'motif-evidence-v1.schema.json']
-      .flatMap(name => ['--ro-bind', fileURLToPath(new URL('../config/' + name, import.meta.url)), '/app/config/' + name])],
+    sandboxArgs: ['--dir', '/app/config', ...publicConfig.flatMap(name => ['--ro-bind', fileURLToPath(new URL('../config/' + name, import.meta.url)), '/app/config/' + name])],
   };
 }
 async function hashPassword(password) {
@@ -156,6 +170,7 @@ export function createGateway(config) {
   let ownerBrokerReady;
   const sceneDeployment = memberSceneDeployment(config.memberPolicy, config.memberSceneDeployment);
   const dataDir = config.dataDir;
+  const collectionRoute=createRsiCollectionRoute({dataDir,authorize:req=>requireOrigin(req)});
   const dbPath = join(dataDir, 'accounts.json');
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   chmodSync(dataDir, 0o700);
@@ -163,7 +178,9 @@ export function createGateway(config) {
   if (db.version !== 1 || !Array.isArray(db.users) || !Array.isArray(db.invites) || !Array.isArray(db.sessions)) throw Error('Invalid account database');
   const save = () => store(dbPath, db);
   const backends = new Map(), pending = new Map(), failures = new Map(), startupErrors = new Map();
-  const memberChildren = new Set(), sockets = new Set(), commandBrokers=new Map();
+  const memberChildren = new Map(), sockets = new Set(), commandBrokers=new Map();
+  const privacySweeps = new Map();
+  let privacyTimer, sweepingPrivacy = false;
   let closing = false;
   const origin = new URL(config.publicOrigin).origin;
   // Reject a stale host patch before anybody can register into a backend that
@@ -175,6 +192,26 @@ export function createGateway(config) {
     return composeNativeHost(patch,config.sourceDir,{member:true});
   })() : null;
   const taskPrefix = user => sha(user.id).slice(0, 8);
+  const standardMemberHistory = memberPatchTemplate?.every(row =>
+    (row.id !== 'session-persistence-jsonl' || !row.config?.root || row.config.root === '/user/dsh/sessions') &&
+    (row.id !== 'session-query-sqlite' || row.config?.openAt === 'never' || !row.config?.path || row.config.path === ':memory:') &&
+    (row.id !== 'storage-json' || !row.config?.root || row.config.root === '/user/dsh/storages')) === true;
+  async function sweepDormantPrivacy() {
+    if (!config.membersDir || sweepingPrivacy || closing) return;
+    sweepingPrivacy = true;
+    try {
+      for (const user of db.users) {
+        if (closing) break;
+        if (user.role !== 'member' || backends.has(user.id) || pending.has(user.id) ||
+            [...memberChildren.values()].includes(user.id)) continue;
+        const work = Promise.resolve().then(() => sweepDormantMemberPrivacy(config.membersDir, user.id,
+          taskPrefix(user), standardMemberHistory)).catch(() => console.warn('rsi_dormant_privacy_sweep_failed'));
+        privacySweeps.set(user.id, work);
+        try { await work; } finally { privacySweeps.delete(user.id); }
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    } finally { sweepingPrivacy = false; }
+  }
   const delegate = (user, purpose) => createHmac('sha256', config.adminToken ?? 'test-only')
     .update(purpose + ':' + user.id).digest('base64url');
   const routeOwner = new Map();
@@ -456,6 +493,8 @@ export function createGateway(config) {
     if (backends.has(user.id)) return backends.get(user.id);
     if (pending.has(user.id)) return pending.get(user.id);
     const promise = (async () => {
+      await privacySweeps.get(user.id);
+      if (closing) throw Error('网关正在重启，请稍后重试');
       const port = await allocatePort();
       const userDir = join(config.membersDir, user.id);
       for (const sub of ['', 'dsh', 'workspace', 'tasks/tasks', 'config']) mkdirSync(join(userDir, sub), { recursive: true, mode: 0o700 });
@@ -469,7 +508,7 @@ export function createGateway(config) {
       store(join(userDir, 'config', 'policy.json'), policy);
       if (!memberPatchTemplate) throw Error('Member host patch unavailable');
       const patch = structuredClone(memberPatchTemplate);
-      patch.push({ insert: [{ name: 'file:///app/src/adapters/dsh_member_workspace.ts' }] });
+      patch.push({ insert: [{ name: 'file:///app/src/adapters/web/sessions/dsh_member_workspace.ts' }] });
       const preset = patch.find(row => row.id === 'agent-presets');
       if (!preset) throw Error('Agent preset patch unavailable');
       preset.config = { ...preset.config, roots: [{ path: '/user/config/presets', trust: 'system' },
@@ -482,7 +521,7 @@ export function createGateway(config) {
         name: '@deepseek-ai/dsh-persona', config: product.persona }]);
       if(sceneDeployment&&!commandBrokers.has(user.id))commandBrokers.set(user.id,await startCommandBroker({
         output:join(userDir,'tasks'),python:config.memberSceneDeployment.pythonExecutable,node:process.execPath,
-        resources:{pptMasterRoot:config.memberSceneDeployment.pptMasterRoot,rendererRoot:config.memberSceneDeployment.rendererRoot,
+        resources:{pptMasterRoot:sceneDeployment?.pptResourceRoot,rendererRoot:config.memberSceneDeployment.rendererRoot,
           fontRoot:config.memberSceneDeployment.fontRoot,projectRoot:config.memberSceneDeployment.projectRoot,videoRenderer}}));
       const commandBroker=commandBrokers.get(user.id);
       if(videoRenderer&&commandBroker)store(join(userDir,'tasks','video-broker.json'),{schema_version:1,socketPath:'/user/config/commands.sock'});
@@ -505,14 +544,16 @@ export function createGateway(config) {
         '--port', String(port), '--no-open', '--trusted-host', new URL(config.publicOrigin).host];
       const env = { PATH: '/opt/node/bin:/usr/bin:/bin', HOME: '/user/workspace', DSH_HOME: '/user/dsh',
         SSS_WEB_POLICY: '/user/config/policy.json', DEEPSEEK_API_KEY: delegate(user, 'model'),
-        HARLESS_GATEWAY_ENABLED: '1',
+        HARLESS_GATEWAY_ENABLED: '1', DSH_TELEMETRY_DISABLED: '1',
+        ...Object.fromEntries(['GENELOOP_RSI_RAW_RETENTION_DAYS', 'GENELOOP_RSI_LEARNING_RETENTION_DAYS']
+          .filter(name => process.env[name] !== undefined).map(name => [name, process.env[name]])),
         ...memberWatchers,
         ...(commandBroker?{GENELOOP_COMMAND_SOCKET:'/user/config/commands.sock'}:{}),
         ...(sceneDeployment ? {SSS_PYTHON:sceneDeployment.python,...sceneDeployment.attachmentEnvironment} : {}),
         NO_PROXY: 'localhost,127.0.0.1,::1', no_proxy: 'localhost,127.0.0.1,::1',
         LANG: 'C.UTF-8', PYTHONUTF8: '1' };
       const child = spawn('/usr/bin/bwrap', args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
-      memberChildren.add(child);
+      memberChildren.set(child, user.id);
       child.once('exit', () => memberChildren.delete(child));
       child.once('error', () => memberChildren.delete(child));
       let output = '';
@@ -597,10 +638,32 @@ export function createGateway(config) {
       if (!safePath(req.url)) return send(res, 400, '无效地址');
       const url = new URL(req.url, origin), path = url.pathname;
       const user = sessionFor(req);
+      if (path === '/assets/geneloop-i18n.js') {
+        if (!['GET', 'HEAD'].includes(req.method)) return send(res, 405, '', {allow: 'GET, HEAD'});
+        const code = req.method === 'HEAD' ? '' : readFileSync(new URL('../src/adapters/web/brand/geneloop-i18n.js', import.meta.url));
+        return send(res, 200, code, {'content-type': 'text/javascript; charset=utf-8'});
+      }
+      const brandFont = path.slice('/assets/fonts/'.length);
+      if (path.startsWith('/assets/fonts/') && brandFonts.has(brandFont)) {
+        if (!['GET', 'HEAD'].includes(req.method)) return send(res, 405, '', {allow: 'GET, HEAD'});
+        const file = await open(new URL('../apps/website/assets/fonts/' + brandFont, import.meta.url), 'r');
+        try {
+          const {size} = await file.stat();
+          res.writeHead(200, {'content-type': 'font/ttf', 'content-length': size, 'x-content-type-options': 'nosniff',
+            'cache-control': 'public, max-age=86400'});
+          if (req.method === 'HEAD') return res.end();
+          await pipeline(file.createReadStream({autoClose: false}), res);
+        } catch (error) {
+          if (error?.code !== 'ERR_STREAM_PREMATURE_CLOSE' || !res.destroyed) throw error;
+        } finally {
+          await file.close();
+        }
+        return;
+      }
       if (path === '/assets/geneloop-spiral.svg' || path === '/assets/geneloop.jpg') {
         if (!['GET', 'HEAD'].includes(req.method)) return send(res, 405, '', { allow: 'GET, HEAD' });
         const spiral = path === '/assets/geneloop-spiral.svg';
-        const logo = readFileSync(new URL(spiral ? '../src/adapters/brand/geneloop-spiral.svg' : '../src/adapters/brand/geneloop.jpg', import.meta.url));
+        const logo = readFileSync(new URL(spiral ? '../src/adapters/web/brand/geneloop-spiral.svg' : '../src/adapters/web/brand/geneloop.jpg', import.meta.url));
         return send(res, 200, req.method === 'HEAD' ? '' : logo,
           { 'content-type': spiral ? 'image/svg+xml' : 'image/jpeg', 'cache-control': 'public, max-age=3600' });
       }
@@ -626,14 +689,15 @@ export function createGateway(config) {
           return res.destroy();
         }
       }
+      if (await collectionRoute(req,res,user)) return;
       if (path.startsWith('/api/account/')) return accountApi(req, res, path, user);
       if (path === '/api/workspace/ready' && req.method === 'GET') return memberReady(res, user);
       if (await motifView(req,res,user)) return;
       if (path === '/account' || path === '/login' || path === '/register' || path === '/claim' || path === '/starting') {
-        const visualStyle = readFileSync(new URL('../src/adapters/geneloop_theme.css', import.meta.url), 'utf8');
+        const visualStyle = readFileSync(new URL('../src/adapters/web/geneloop_theme.css', import.meta.url), 'utf8');
         const html = readFileSync(config.accountHtml, 'utf8').replace('</head>', '<style data-geneloop-theme="1">' + visualStyle + '</style></head>');
         return send(res, 200, html, { 'content-type': 'text/html; charset=utf-8',
-          'content-security-policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'" });
+          'content-security-policy': "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'" });
       }
       if (!user) return send(res, 303, '', { location: '/login' });
       if (user.role === 'member' && !backends.has(user.id)) {
@@ -677,14 +741,21 @@ export function createGateway(config) {
   server.on('connection', socket => {
     sockets.add(socket); socket.once('close', () => sockets.delete(socket));
   });
+  server.once('listening', () => {
+    if (!config.membersDir) return;
+    void sweepDormantPrivacy();
+    privacyTimer = setInterval(() => void sweepDormantPrivacy(), 10 * 60 * 1000);
+    privacyTimer.unref();
+  });
   return { server, scopedBudget, db, save, backends, close: () => {
     if (closing) return;
     closing = true;
+    clearInterval(privacyTimer);
     remoteBridge.close();
     desktopModel?.close();
     // Include booting children, and upgraded/idle browser connections that
     // server.close() otherwise keeps alive during an ordinary SIGTERM restart.
-    for (const child of memberChildren) child.kill();
+    for (const child of memberChildren.keys()) child.kill();
     for (const broker of commandBrokers.values()) broker.close();
     for (const socket of sockets) socket.destroy();
     server.close(); scopedBudget?.close();

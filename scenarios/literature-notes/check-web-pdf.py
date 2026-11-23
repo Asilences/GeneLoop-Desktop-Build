@@ -38,7 +38,7 @@ def main():
         'task_request_limit': 90, 'run_request_limit': 180, 'whole_task_retries': 0,
         'human_review_required': False, 'scientific_quality': 'unverified',
         'files_sha256': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in [ROOT / 'scripts/harness-web.py', ROOT / 'src/adapters/dsh_web_tasks.ts',
+            for p in [ROOT / 'scripts/harness-web.py', ROOT / 'src/adapters/web/dsh_web_tasks.ts',
                       *sorted(HERE.glob('web*.*'))]}, 'run_id': run_id})
     command = [sys.executable, str(HERE / 'run-web.py'), '--papers-dir', str(args.papers_dir),
                '--port', str(args.port), '--run-id', run_id]

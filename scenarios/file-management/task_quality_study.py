@@ -24,8 +24,8 @@ PROMPT = '''你是普通文件管理Agent，仅使用原生MCP操作已授权实
 
 def code():
     return {**source_code(),**{n:sha(ROOT/n) for n in (
-        'scripts/validate-file-delivery.py','src/adapters/dsh_acceptance_guard.ts',
-        'src/motif_core/collection_reentry_policy.ts','src/adapters/dsh_entry_motif.ts')}}
+        'scripts/validate-file-delivery.py','src/adapters/file_acceptance_guard.ts',
+        'src/motif_core/runtime/policies/collection_reentry_policy.ts','src/adapters/harness/motif/dsh_entry_motif.ts')}}
 
 def write(root,name,data):
     p=root/name; p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes(data if isinstance(data,bytes) else data.encode('utf-8'))

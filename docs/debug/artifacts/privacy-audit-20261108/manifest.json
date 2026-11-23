@@ -1,0 +1,9 @@
+{
+  "audit_scope": "post-R3 source/evidence plus synthetic boundaries; no rule revision",
+  "frozen_r3_manifest_files_verified": 23,
+  "runtime_detector_sources_unchanged": true,
+  "files_sha256": {
+    "boundary-probes.json": "6b85e3d3b33b678cf2d949665cb3f5aad230f9945ecf3443c821f8376150d926",
+    "installed-features.json": "80b57038a888a086606e6eff8b2a1172d3b3bb9303dec7078b13689dba94f44d"
+  }
+}

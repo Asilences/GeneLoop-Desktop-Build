@@ -1,0 +1,33 @@
+{
+  "format": "geneloop.privacy-evaluation-component/v1",
+  "component": "R5 repaired default PII only",
+  "frozen_runtime_commit": "ecf449cc164d5596d8dd343ba9bac66099f07e45",
+  "runtime_repair_commit": "bd0ba90c92fb3c8273c4f5d3e92f7a33eaaea768",
+  "pii_rows": 13000,
+  "native_and_core_processing_errors": 0,
+  "accepted": 12958,
+  "rejected": 42,
+  "default_predictions_and_admission_unchanged_from_r4": true,
+  "public_aggregates_only": true,
+  "raw_records_published": false,
+  "privacy_quality_accepted": false,
+  "independent_unseen_evaluation": false,
+  "other_components_not_certified_by_this_receipt": [
+    "optional detectors",
+    "credential benchmarks",
+    "full project regression",
+    "latest public entry checks"
+  ],
+  "private_aggregate_source_sha256": {
+    "default-pii-repair-summary.json": "175d0356d8235358320af64b104dd98b3c98dba4ecd1f2cd32bcd55ab0292bb2",
+    "default-pii-dependency-comparison.json": "c7aa04e65464a7b679aa33093824ba9f2e0781f5c01a5ef26887608253f0335d"
+  },
+  "files_sha256": {
+    "default-pii-repair-summary.json": "9ac061773b9131cf9072c35f94dda6376725b060870411e0c96f56ae10592a86",
+    "default-pii-dependency-comparison.json": "c7aa04e65464a7b679aa33093824ba9f2e0781f5c01a5ef26887608253f0335d"
+  },
+  "byte_hash_scope": "public UTF8/LF pretty JSON and original private aggregate bytes recorded separately",
+  "publisher_sha256": "e1c89e61bcbd672cdcbd609c5be6f3507600bd9d34ddfa41e1379b386c588b30",
+  "cloud_requests": 0,
+  "production_service_touched": false
+}

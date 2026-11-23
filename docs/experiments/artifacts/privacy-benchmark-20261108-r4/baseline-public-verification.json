@@ -1,0 +1,13 @@
+{
+  "public_baselines_match_original_manifests": true,
+  "files_checked": {
+    "privacy-benchmark-20261107-r1": 7,
+    "privacy-benchmark-20261107-r2": 10,
+    "privacy-benchmark-20261108-r3": 15,
+    "privacy-diagnosis-20261108-r3": 8,
+    "privacy-benchmark-20261108-declared-scope": 1
+  },
+  "git_reference": "b3c9314092caf3d0d9af40d1478c39a89f9304ea",
+  "tracked_baseline_delta_empty": true,
+  "private_results_not_claimed_by_this_local_check": true
+}

@@ -363,7 +363,7 @@ def parse_document(path: Path) -> dict:
                     break
         warnings.append('PPTX 首版读取文本、表格文字和嵌入图片后重新排版；不保留动画、母版或图表编辑数据')
     else:
-        from src.adapters.harless_attachment_text import extract_attachment
+        from src.adapters.web.attachments.harless_attachment_text import extract_attachment
         extracted = extract_attachment(path, original_name=path.name)
         if extracted.get('status') != 'extracted' or not extracted.get('text', '').strip():
             raise ValueError('附件已接收，但未提取到可用文字：' + (extracted.get('reason') or 'unsupported_or_empty_content'))

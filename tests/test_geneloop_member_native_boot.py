@@ -27,12 +27,14 @@ def test_native_host_scopes_verified_skill_in_member_namespace(tmp_path):
     fixture=tmp_path.resolve();project=fixture/'public-project';project.mkdir()
     (project/'scenarios/ppt_master').mkdir(parents=True)
     shutil.copyfile(ROOT/'scenarios/ppt_master/runtime-policy.md', project/'scenarios/ppt_master/runtime-policy.md')
-    skill=fixture/'public-skill';skill.mkdir()
+    shutil.copyfile(ROOT/'scenarios/ppt_master/SKILL.md', project/'scenarios/ppt_master/SKILL.md')
     raw=b'---\nname: ppt-master\ndescription: Public namespace diagnostic skill.\n---\nRead public diagnostic resources.\n'
-    (skill/'SKILL.md').write_bytes(raw)
     files={'SKILL.md':hashlib.sha256(raw).hexdigest()}
-    (project/'scenarios/ppt_master/skill-lock.json').write_text(json.dumps({'schema_version':1,'version':'6.6.0','files':files,
-        'package_sha256':hashlib.sha256(json.dumps(files,separators=(',',':')).encode()).hexdigest()}))
+    bundle=hashlib.sha256(json.dumps(files,separators=(',',':')).encode()).hexdigest()
+    skill=project/'.local/ppt-resources'/bundle;skill.mkdir(parents=True)
+    (skill/'SKILL.md').write_bytes(raw)
+    assets=project/'scenarios/ppt_master/third_party/ppt-master-desktop';assets.mkdir(parents=True)
+    (assets/'PROVENANCE.json').write_text(json.dumps({'schema_version':1,'file_count':1,'bundle_sha256':bundle}))
     user=fixture/'user';(user/'config/presets/sss-task').mkdir(parents=True)
     for name in ('workspace','dsh','tasks'): (user/name).mkdir()
     (user/'config/presets/sss-task/preset.yml').write_text('{"name":"Namespace diagnostic"}')
@@ -45,7 +47,7 @@ import {readFileSync} from 'node:fs';
 import {memberSceneDeployment} from %s;
 import {composeNativeHost} from %s;
 const input=JSON.parse(readFileSync(0,'utf8'));
-const scene={id:'new-scene',label:'Chat',preset:'sss-task',adapter:'workspace',allowed_tools:[],
+const scene={id:'new-scene',label:'Chat',preset:'sss-task',adapter:'workspace',ppt_execution_strategy:'ppt_master',allowed_tools:[],
  mcp_rows:[{name:'@deepseek-ai/dsh-mcp-client',config:{serverName:'workspace',transport:'stdio',command:input.python,
  cwd:input.project,args:[input.project+'/scenarios/general/server.py']}}]};
 const deployment={projectRoot:input.project,pythonExecutable:input.python,pythonRoots:input.pythonRoots,pptMasterRoot:input.skill};
@@ -54,7 +56,7 @@ const patch=[...['llm-deepseek','llm-pi-ai','session-title-llm','session-log-dee
  {id:'web-runtime',config:{openBrowser:false,printUrl:true,surfaceContext:false,trustedHosts:[]}},
  {id:'agent-presets',config:{default:'sss-task',includeShippedRoot:false,includeUserRoot:false,
  roots:[{path:'/user/config/presets',trust:'system'}]}},
- {insert:[{id:'geneloop-tasks',name:'file:///app/src/adapters/dsh_web_tasks.ts'},
+ {insert:[{id:'geneloop-tasks',name:'file:///app/src/adapters/web/dsh_web_tasks.ts'},
  {id:'geneloop-shell',name:'file:///app/src/adapters/geneloop_shell.ts'},
  {id:'geneloop-web-search',name:'file:///app/src/adapters/geneloop_web_search.ts'}]}];
 process.stdout.write(JSON.stringify({resources:result.native_resources,mounts:result.mounts,
@@ -150,7 +152,10 @@ export function apply(ctx){ctx.connection.fetch.register({path:'/api/diagnostic/
             assert actual['chat_skills']==[] and actual['host_skills_during_ppt']==[],actual
             assert actual['released_ppt_skills']==[],actual
             assert actual['ppt_loaded']['resourceBase']=={'kind':'directory','path':'/opt/geneloop/ppt-master'},actual
-            assert 'Read public diagnostic resources.' in actual['ppt_loaded']['content'],actual
+            adapted=(ROOT/'scenarios/ppt_master/SKILL.md').read_text(encoding='utf-8')
+            expected=re.match(r'^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)([\s\S]*)$',adapted).group(1).strip()
+            assert actual['ppt_loaded']['content']==expected,actual
+            assert 'Read public diagnostic resources.' not in actual['ppt_loaded']['content'],actual
             assert actual['filesystem']=='GeneLoopFileSystem',actual
             assert actual['subprocess']=='GeneLoopSubprocessRuntime',actual
             assert actual['resources']==deployment['resources'],actual

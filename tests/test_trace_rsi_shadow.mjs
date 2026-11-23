@@ -7,7 +7,7 @@ import { markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { digest } from '../src/adapters/paper_rsi_program.ts';
 import { sha256 } from '../src/adapters/paper_triage_validation.ts';
 import { createTraceRsiTaskTools } from '../scenarios/paper-submission/trace-rsi-task-server.ts';
-import { apply, createTraceShadowInterceptor, predictTraceCheck, validateTraceShadowLibrary } from '../src/adapters/dsh_trace_rsi_shadow.ts';
+import { apply, createTraceShadowInterceptor, predictTraceCheck, validateTraceShadowLibrary } from '../src/adapters/harness/paper/dsh_trace_rsi_shadow.ts';
 
 const P='mcp__paper_trace_rsi__',clone=value=>JSON.parse(JSON.stringify(value));
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
@@ -30,7 +30,7 @@ function fixture(t){
   writeFileSync(libraryPath,JSON.stringify(frozen));writeFileSync(catalogPath,JSON.stringify({keys:['a','b']}));
   writeFileSync(join(work,'triage.json'),JSON.stringify({keys:['a']}));writeFileSync(join(work,'code-version.txt'),'fixed-code');
   const codePaths=['scenarios/paper-submission/trace-rsi-task-server.ts','src/adapters/trace_rsi_program.ts',
-    'src/adapters/paper_rsi_program.ts','src/adapters/dsh_trace_rsi_shadow.ts'].map(path=>resolve(path));
+    'src/adapters/paper_rsi_program.ts','src/adapters/harness/paper/dsh_trace_rsi_shadow.ts'].map(path=>resolve(path));
   codePaths.push(join(work,'code-version.txt'));
   const config={work,session_id:'heldout-session',library_path:libraryPath,tool_digest:frozen.manifest_digest,
     candidate_sha256:frozen.candidate_sha256,catalog_path:catalogPath,catalog_sha256:sha256(readFileSync(catalogPath)),

@@ -17,9 +17,9 @@ def module(name,path):
     spec=importlib.util.spec_from_file_location(name,ROOT/path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 revision=module('patch_task_revision','scripts/paper-rsi-revision-task.py')
 batch=revision.batch;base=batch.base;paid=base.parent
-from src.adapters.trace_rsi_motif_compiler import CONFIG_FIELDS
-from src.adapters.trace_rsi_batch_compiler import compile_trace_rsi_batches
-from src.adapters.trace_tool_evidence import digest
+from src.motif_core.offline.compilation.trace.trace_rsi_motif_compiler import CONFIG_FIELDS
+from src.motif_core.offline.compilation.trace.trace_rsi_batch_compiler import compile_trace_rsi_batches
+from src.motif_core.trajectory.trace_tool_evidence import digest
 EXP=ROOT/'.local/paper-reference/paper-rsi-patch-task-20261012-v1'
 CONTEXT_VIEW=False
 PRIVATE_EXPORT=False
@@ -28,7 +28,7 @@ PATCH=ROOT/'.local/paper-reference/paper-rsi-patch-20261012-v1/frozen-tool.json'
 AUDIT=ROOT/'.local/paper-reference/paper-rsi-revision-counts-20261011-v5/frozen-tool.json'
 AUTH=ROOT/'.local/paper-reference/paper-rsi-local-20261012-v1/authorized-budget.json'
 FILES=list(dict.fromkeys([*base.FILES,'src/adapters/report_patch_protocol.ts','src/adapters/revision_export_receipt.ts','scenarios/paper-submission/patch-rsi-task-server.ts',
- 'scripts/paper-rsi-patch-task.py','src/adapters/dsh_trace_rsi_batch_execute.ts']))
+ 'scripts/paper-rsi-patch-task.py','src/adapters/harness/paper/dsh_trace_rsi_batch_execute.ts']))
 PROMPT=base.PROMPT+batch.PROTOCOLS['tool-channel-v2']+'''
 当前只进行报告结构修订，文献真实性和正式版本不在范围内。根据实际工具schema选择整份报告写入或局部计划入口：局部计划包含set_ids、keep_once_keys、remove_keys、add_records；计划里的值是你的当前修订决定，未变字段由工具保留，不把全部报告字段重复写入计划。新增仍是最小占位，不补科研结论。若旧重复版本的非标识字段冲突，明确交回判断而非猜测。
 需要交付完整结构修订报告，使用提供的导出能力保存完整当前字段、来源、修订前快照和检查结果；最终答复只给产物名称、三类修订依据及真实性/正式版本未核验的限制，不重复粘贴完整JSON。导出结果的output是当前检查，存在false时不得声称成功。检查字段before_count/after_count是实际条目数，added_key_count/removed_key_count是唯一key变化，before_duplicate_key_count是初始重复key种类，after_duplicate_key_count是当前重复key种类；不要混淆这些口径。existing_fields_preserved和top_level_preserved分别检查已有条目的非arxiv_id字段及报告顶层字段。
@@ -86,7 +86,7 @@ def verify(run):
 def task(case,mode,label):
     protocol='full_report' if mode=='full' else 'compact_plan'
     config=prepare(case,protocol);config['mode']='baseline' if mode in ['full','baseline'] else mode
-    plugin=ROOT/'src/adapters/dsh_trace_rsi_shadow.ts';files=FILES
+    plugin=ROOT/'src/adapters/harness/paper/dsh_trace_rsi_shadow.ts';files=FILES
     if mode in ['shadow','execute']:
         library=load(EXP/'shadow-library.json')
         config.update(shadow_library=str(EXP/'shadow-library.json'),batch_library_digest=library['manifest_digest'],
@@ -95,7 +95,7 @@ def task(case,mode,label):
         if config['code_files']!={**library['code_files_sha256'],**library['code_additions_sha256']}:
             raise ValueError('frozen_local_batch_code_drift')
         files=[*FILES,*batch.ADDITIONS]
-        plugin=ROOT/('src/adapters/dsh_trace_rsi_batch_shadow.ts' if mode=='shadow' else 'src/adapters/dsh_trace_rsi_batch_execute.ts')
+        plugin=ROOT/('src/adapters/harness/paper/dsh_trace_rsi_batch_shadow.ts' if mode=='shadow' else 'src/adapters/harness/paper/dsh_trace_rsi_batch_execute.ts')
         if mode=='execute':
             scores=list((EXP/'runs').glob('shadow-*/shadow-score.json'))
             if not scores or not any(load(p)['strict_whole_request']>0 and load(p.parent/'verification.json')['stage_output_passed'] for p in scores):

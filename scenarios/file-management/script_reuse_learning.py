@@ -4,7 +4,7 @@ import json,sys,subprocess
 from pathlib import Path,PurePosixPath
 from common import ROOT,PREFIX,digest,sha,save
 sys.path.insert(0,str(ROOT))
-from src.motif_core.offline.plan_compiler import native_rows
+from src.motif_core.offline.compilation.plan_compiler import native_rows
 NAMES=('read_task','list_files','pin_file','read_file','hash_files','preview_actions','execute_plan','submit_report')
 
 def load_witness(case):
@@ -90,7 +90,7 @@ def learn(exp,p):
     for wid,values in groups.items():
         if len(values)<2 or len({digest(v[0]) for v in values})!=1 or len({v[1]['source_count'] for v in values})<2:raise ValueError('two varied, agreeing native witnesses required: '+wid)
         s={**values[0][0],'training':[v[1] for v in values]};s['script_digest']=digest(s);f=exp/'candidates'/(wid+'.json');save(f,s)
-        subprocess.run(['node','--input-type=module','-e',"import fs from 'node:fs';import {validateScript} from './src/adapters/dsh_learned_script.ts';validateScript(JSON.parse(fs.readFileSync(process.argv[1],'utf8')));",str(f)],cwd=ROOT,check=True,capture_output=True)
+        subprocess.run(['node','--input-type=module','-e',"import fs from 'node:fs';import {validateScript} from './src/adapters/harness/learning/dsh_learned_script.ts';validateScript(JSON.parse(fs.readFileSync(process.argv[1],'utf8')));",str(f)],cwd=ROOT,check=True,capture_output=True)
         scripts.append({'workflow_id':wid,'path':str(f),'sha256':sha(f),'script_digest':s['script_digest']})
     if set(groups)!=set(p['workflows']):raise ValueError('not all selected workflows have usable new evidence')
     save(exp/'candidate-lock.json',{'scripts':scripts,'excluded':excluded,'source_sha256':sha(__file__),'protocol_sha256':sha(exp/'protocol.json'),

@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from src.adapters.deepseek_cost_gate import State, observed_peak_cost, reservation
-from src.adapters.web_task_budget import TaskBudgetRegistry, create_control_server
+from src.adapters.web.web_task_budget import TaskBudgetRegistry, create_control_server
 
 BODY = b'{"model":"deepseek-flash","max_tokens":100,"messages":[]}'
 USAGE = {"prompt_tokens": 12, "prompt_cache_hit_tokens": 8,
@@ -17,6 +17,23 @@ USAGE = {"prompt_tokens": 12, "prompt_cache_hit_tokens": 8,
 
 
 class WebTaskBudgetTests(unittest.TestCase):
+    def test_reported_accounting_preserves_counters_when_total_is_anomalous(self):
+        from src.adapters.deepseek_cost_gate import response_usage
+        session = self.register(); self.registry.activate(session)
+        route = self.registry.state_for({'x-deepseek-harness-session-id': session})
+        usage = response_usage('application/json', b'{"usage":{"prompt_tokens":23524,"completion_tokens":96,"total_tokens":23679,"prompt_tokens_details":{"cached_tokens":22400}}}')
+        booked = route.book(BODY)
+        self.assertEqual(route.settle(booked[0], booked[1], 200, usage), (None, 0.0))
+        route.log({'request_id': booked[0], 'model': 'deepseek-flash', 'response_status': 200, 'response_usage': usage, 'observed_peak_usd': None})
+        stats = self.registry.stats(session)
+        evidence = stats['reported_accounting']
+        self.assertEqual(stats['unknown_usage_requests'], 1)
+        self.assertEqual(evidence['reported_usage']['prompt_cache_hit_tokens'], 22400)
+        self.assertAlmostEqual(evidence['reported_component_proxy_usd'], .0005868)
+        self.assertEqual(evidence['unclassified_tokens'], 59)
+        self.assertEqual(stats['budget_reserved_usd'], booked[2])
+        self.assertIsNone(evidence['invoice_usd'])
+
     def test_cancel_exports_only_current_route_receipts_and_does_not_reset_usage(self):
         session=self.register()
         self.registry.activate(session)

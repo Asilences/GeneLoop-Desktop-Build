@@ -9,20 +9,22 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path as BootstrapPath
 import re
 import subprocess
 import sys
 from uuid import uuid4
 
-ROOT = Path(__file__).resolve().parents[2]
-SCENE = Path(__file__).resolve().parent
+ROOT = BootstrapPath(__file__).resolve().parents[2]
+SCENE = BootstrapPath(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
+from src.adapters.filesystem_paths import Path
+ROOT = Path(ROOT).resolve()
+SCENE = Path(SCENE).resolve()
 
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.library_builder import _digest as library_digest, library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.library_builder import _digest as library_digest, library_from_certified
 
 
 def file_hash(path: Path) -> str:
@@ -176,12 +178,13 @@ def learn(dataset: Path, *, contracts_path: Path = SCENE / 'contracts.json',
     paths = [dataset, contracts_path, version_fields_path, Path(__file__).resolve(), *guard_paths]
     paths += [ROOT / path for path in (
         'scripts/compile-dsh-motif-library.py', 'scripts/compile-witnessed-read-chains.py',
-        'scripts/export-online-motif-manifest.py', 'src/adapters/dsh_trajectory.py',
-        'src/adapters/task_identity.py', 'src/adapters/tool_contract_loader.py',
-        'src/adapters/tool_schema_contracts.py', 'src/motif_core/offline/trace_compiler.py',
-        'src/motif_core/offline/edge_compiler.py', 'src/motif_core/offline/chain_compiler.py',
-        'src/motif_core/offline/library_builder.py', 'src/motif_core/offline/local_programs.py',
-        'src/motif_core/read_executor.py', 'src/motif_core/online_skill_runtime.mjs')]
+        'scripts/export-online-motif-manifest.py', 'src/adapters/harness/dsh_trajectory.py',
+        'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+        'src/motif_core/offline/mining/motif_miner.py',
+        'src/adapters/task_identity.py', 'src/motif_core/offline/compilation/tool_contracts.py', 'src/motif_core/offline/compilation/trace_compiler.py',
+        'src/motif_core/offline/compilation/edge_compiler.py', 'src/motif_core/offline/compilation/chain_compiler.py',
+        'src/motif_core/offline/compilation/library_builder.py', 'src/motif_core/offline/compilation/local_programs.py',
+        'src/motif_core/runtime/read_executor.py', 'src/motif_core/runtime/online_skill_runtime.mjs')]
     if tool_schema_path is not None:
         paths.append(tool_schema_path)
     for split in rows.values():

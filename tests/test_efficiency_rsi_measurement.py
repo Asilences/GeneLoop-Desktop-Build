@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.efficiency_rsi_measurement import digest, validate_study, measure_study
-from src.adapters.rsi_protocol import envelope
+from src.rsi.feedback.efficiency_rsi_measurement import digest, validate_study, measure_study
+from src.rsi.protocol.rsi_protocol import envelope
 
 
 def sha(raw): return hashlib.sha256(raw).hexdigest()

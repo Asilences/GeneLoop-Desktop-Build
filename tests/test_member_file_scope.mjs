@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 const options={skip:!process.features?.typescript};
 test('Scene task mount alias is allowed only for the same directory identity',options,async()=>{
- const {memberTaskRoots}=await import('../src/adapters/harless_member_file_scope.ts');
+ const {memberTaskRoots}=await import('../src/adapters/web/sessions/harless_member_file_scope.ts');
  const directory=mkdtempSync(join(tmpdir(),'harless-member-files-alias-'));
  try{
   const own=join(directory,'own'),foreign=join(directory,'foreign');mkdirSync(own);mkdirSync(foreign);
@@ -17,7 +17,7 @@ test('Scene task mount alias is allowed only for the same directory identity',op
  }finally{assert.ok(resolve(directory).startsWith(resolve(tmpdir())+sep));rmSync(directory,{recursive:true,force:true});}
 });
 test('Directory alias identity retains file IDs beyond Number precision',options,async()=>{
- const {memberTaskRoots}=await import('../src/adapters/harless_member_file_scope.ts');
+ const {memberTaskRoots}=await import('../src/adapters/web/sessions/harless_member_file_scope.ts');
  const directory=mkdtempSync(join(tmpdir(),'harless-member-files-wide-id-'));
  const own=join(directory,'own'),foreign=join(directory,'foreign');mkdirSync(own);mkdirSync(foreign);
  const nativeStat=fs.statSync,ownId=2n**53n,foreignId=ownId+1n;
@@ -37,7 +37,7 @@ test('Directory alias identity retains file IDs beyond Number precision',options
  }
 });
 async function fixture(){
- const {guardMemberFileRpc}=await import('../src/adapters/harless_member_file_scope.ts');
+ const {guardMemberFileRpc}=await import('../src/adapters/web/sessions/harless_member_file_scope.ts');
  const directory=mkdtempSync(join(tmpdir(),'harless-member-files-')),work=join(directory,'workspace'),sessions=join(directory,'sessions'),config=join(directory,'config');
  for(const p of [work,sessions,config])mkdirSync(p);writeFileSync(join(work,'own.txt'),'owned');writeFileSync(join(config,'policy.json'),'internal');
  const calls=[],gateway={async invoke(req){calls.push(req);return {absolutePath:req.namespace==='workspaceFiles'?req.args.path:undefined};},async stream(){return(async function*(){yield {kind:'ready'};yield {kind:'change',change:{absolutePath:join(work,'own.txt')}};yield {kind:'change',change:{absolutePath:join(config,'policy.json')}};})();}};
@@ -75,7 +75,7 @@ test('Symlinked ancestors cannot expose configuration through member file RPCs',
 });
 
 test('Member plugin registers guarded RPC routes and the shared stream scope lookup',options,async()=>{
- const {apply}=await import('../src/adapters/dsh_member_workspace.ts');
+ const {apply}=await import('../src/adapters/web/sessions/dsh_member_workspace.ts');
  const routes=new Map(),calls=[],work=resolve('/user/workspace');let configured;
  const original={resolve:async id=>id==='own'?{workspaceRoot:work}:id==='internal'?{workspaceRoot:resolve('/user/config')}:undefined};
  const ctx={workspaceRegistry:{async create(path,title){calls.push({bootstrap:path,title});}},

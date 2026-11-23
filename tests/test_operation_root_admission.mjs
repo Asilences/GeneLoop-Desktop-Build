@@ -4,12 +4,12 @@ import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync} from 'node:
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {createOperationRuntime} from '../src/adapters/dsh_operation_motif.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {apply,createOperationRuntime} from '../src/adapters/harness/motif/dsh_operation_motif.ts';
 
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const obs=value=>({value:{structuredContent:value}});
-function fixture(t,rootContract={}) {
+function fixture(t,rootContract={}, {runtimeSource={},state='candidate',role='certify'}={}) {
   mkdirSync(join(root,'.local'),{recursive:true});
   const home=mkdtempSync(join(root,'.local','operation-root-admission-'));
   t.after(()=>rmSync(home,{recursive:true,force:true}));
@@ -25,11 +25,11 @@ function fixture(t,rootContract={}) {
   const policy={schema_version:1,format:'sss-operation-graph-v2',execution_version_sha256:scope.execution_version,artifact};policy.policy_digest=digest(policy);
   const payload=join(home,'policy.json');writeFileSync(payload,JSON.stringify(policy));
   const sha=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
-  const manifest={schema_version:1,format:'sss-experience-registry-v1',generation:0,entries:[{entry_id:policy.policy_digest,kind:'operation_graph',payload:'policy.json',sha256:sha(payload),runtime_source:{},state:'candidate',activated_generation:1}]};manifest.registry_digest=digest(manifest);
+  const manifest={schema_version:1,format:'sss-experience-registry-v1',generation:0,entries:[{entry_id:policy.policy_digest,kind:'operation_graph',payload:'policy.json',sha256:sha(payload),runtime_source:runtimeSource,state,activated_generation:1}]};manifest.registry_digest=digest(manifest);
   const registry=join(home,'registry.json');writeFileSync(registry,JSON.stringify(manifest));
-  const audit=[],runtime=createOperationRuntime({registry_file:registry,registry_sha256:sha(registry),registry_root:home,role:'certify',adapter:'file_operations_v2',scope,catalog},row=>audit.push(row));
+  const audit=[],runtime=createOperationRuntime({registry_file:registry,registry_sha256:sha(registry),registry_root:home,role,adapter:'file_operations_v2',scope,catalog},row=>audit.push(row));
   const messages=id=>[{role:'assistant',source:{kind:'model'},content:[{type:'tool-call',id,name:names[0],arguments:{intent:'actual new goal'}}]}];
-  return {names,scope,tools,audit,runtime,messages};
+  return {home,sha,names,scope,tools,audit,runtime,messages};
 }
 
 for (const error of [{isError:true,value:{content:[{type:'text',text:'preview rejected before effects'}]}},
@@ -71,3 +71,29 @@ for(const kind of ['status','authority'])test('same-scope ordinary semantic call
  f.runtime.observe({name:f.names[0],callId:'native-approved',arguments:{}},obs({first:'approved',status:'certifiable',_sss_scope:f.scope,_sss_authorized:true}));
  assert.ok(f.runtime.propose(f.tools,f.messages('native-approved'))[0]);
 });
+
+
+const staleSources=[
+ ['removed retired scope',{'src/adapters/file_task_scope.ts':'c1e7da4dec1e8001603629fe24e5eb7effcdba2110f404ee7c785012ec88b261'}],
+ ['updated File scene',{'src/adapters/web/scenes/harless_file_scene.ts':'c1278bebcb68b9ca540363ca68b6ae8d4b4a40a27366b9d8282276e0e96b437a'}],
+];
+for(const [label,runtimeSource] of staleSources){
+ test('saved candidates with '+label+' defer through ordinary work',t=>{
+  const f=fixture(t,{}, {runtimeSource,state:'active',role:'ordinary'});
+  f.runtime.observe({name:f.names[0],callId:'ordinary',arguments:{}},obs({first:'native-proof',_sss_scope:f.scope}));
+  assert.equal(f.runtime.halted,false);
+  assert.deepEqual(f.runtime.propose(f.tools,f.messages('ordinary')),[]);
+  assert.equal(f.audit.find(row=>row.kind==='experience_runtime_ready').entries,0);
+  assert.equal(f.audit.some(row=>row.kind==='experience_selected'),false);
+ });
+ test('new operation binding still rejects '+label,t=>{
+  const f=fixture(t);
+  const task=join(f.home,'task.json'),binding=join(f.home,'binding.json');
+  writeFileSync(task,'{}');
+  writeFileSync(binding,JSON.stringify({task_file:task,task_sha256:f.sha(task),runtime_source:runtimeSource}));
+  const previous=process.env.SSS_OPERATION_BINDING;
+  t.after(()=>{if(previous===undefined)delete process.env.SSS_OPERATION_BINDING;else process.env.SSS_OPERATION_BINDING=previous;});
+  process.env.SSS_OPERATION_BINDING=binding;
+  assert.throws(()=>apply({}),error=>error.code==='ENOENT'||error.message==='operation runtime changed');
+ });
+}

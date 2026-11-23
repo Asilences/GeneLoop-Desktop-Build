@@ -10,11 +10,11 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,realpathSync,cpS
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {scriptCodeLocks} from '../src/adapters/script_motif_runtime.ts';
 import * as runtime from '../src/adapters/script_capability_runtime.ts';
-import {capabilityDigest,capabilityRef,createCapability,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
-import {bytesSha256 as sha} from '../src/adapters/rsi_protocol.ts';
+import {capabilityDigest,capabilityRef,createCapability,createCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
+import {bytesSha256 as sha} from '../src/rsi/protocol/rsi_protocol.ts';
 import {SCRIPT_FAILURE_FRAME,scriptWorkerFailure} from '../src/adapters/script_worker_failure.mjs';
 
 const unsupported=process.platform==='win32',sourceRoot=resolve('.');
@@ -143,7 +143,7 @@ test('actual executor or compatibility policy changes invalidate cached validati
  for(const name of ['src','scripts','config','schemas'])cpSync(join(sourceRoot,name),join(isolated,name),{recursive:true});
  symlinkSync(realpathSync(join(sourceRoot,'node_modules')),join(isolated,'node_modules'),'dir');
  const api=await import(pathToFileURL(join(isolated,'src/adapters/script_capability_runtime.ts')).href);
- for(const file of ['src/adapters/capability_runtime.ts','config/script-runtime-compatibility.json'])await t.test(file,async child=>{
+ for(const file of ['src/capability/runtime/capability_runtime.ts','config/script-runtime-compatibility.json'])await t.test(file,async child=>{
   const f=fixture(child,api,isolated),path=join(isolated,file),original=readFileSync(path);
   // Only this private copy is touched. The real shared checkout/locks never
   // change while the suite or other agents are running.

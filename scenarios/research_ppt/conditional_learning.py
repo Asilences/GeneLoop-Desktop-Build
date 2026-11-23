@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCENE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.adapters.dsh_trajectory import ToolContract, extract_dsh_trace, infer_dsh_provenance
+from src.adapters.harness.dsh_trajectory import ToolContract, extract_dsh_trace, infer_dsh_provenance
 from scenarios.research_ppt.motif_v6 import schema_tools
 from scenarios.research_ppt.documents import file_hash
 from scenarios.research_ppt.delivery_smoke import params
@@ -43,8 +43,8 @@ MANDATORY_DEPENDENCIES = tuple('scenarios/research_ppt/' + name for name in (
     'dist/layout-policy-cli.js', 'dist/delivery-adapter.js', 'dist/mcp-adapter.js', 'ts/delivery-adapter.ts',
     'ts/mcp-adapter.ts', 'ts/conditional-continuation.ts', 'dist/conditional-continuation.js',
     'ts/conditional-probe-cli.ts', 'dist/conditional-probe-cli.js', 'conditional-continuation.schema.json',
-    'conditional_learning.py')) + ('package-lock.json', 'src/adapters/dsh_online_motif.mjs',
-        'src/adapters/dsh_scenario_guard.mjs', 'src/adapters/harness_runtime.py', 'src/motif_core/online_skill_runtime.mjs')
+    'conditional_learning.py')) + ('package-lock.json', 'src/adapters/harness/motif/dsh_online_motif.mjs',
+        'src/adapters/harness/dsh_scenario_guard.mjs', 'src/adapters/harness/harness_runtime.py', 'src/motif_core/runtime/online_skill_runtime.mjs')
 
 
 def digest(value):

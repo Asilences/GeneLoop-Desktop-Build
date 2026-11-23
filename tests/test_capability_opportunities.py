@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_contract import capability_digest, capability_ref
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_improvement import run_improvement
-from src.adapters.capability_opportunities import OpportunityDiscovery
-from src.adapters.capability_feedback import file_ref
+from src.capability.graph.capability_contract import capability_digest, capability_ref
+from src.capability.builder.capability_builder import compile_proposal
+from src.rsi.learning.capability_improvement import run_improvement
+from src.rsi.learning.capability_opportunities import OpportunityDiscovery
+from src.rsi.feedback.capability_feedback import file_ref
 from tests.test_capability_improvement import plan_at, Adapter, put
 
 
@@ -145,7 +145,7 @@ def test_changed_context_is_rejected_before_any_proposal(tmp_path):
 
 
 def test_default_proposer_has_no_implicit_paid_authorization(tmp_path):
-    from src.adapters.capability_goal_proposal import propose
+    from src.adapters.harness.capability.capability_goal_proposal import propose
     assert propose({},tmp_path/'unused')['model_called'] is False
     with pytest.raises(ValueError,match='finite_budget'):propose({},tmp_path/'unused',object())
 

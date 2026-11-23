@@ -106,7 +106,7 @@ def main():
         config={'dataDir':str(area/'accounts'),'membersDir':str(area/'members'),
                 'publicOrigin':'https://launch.example.test','port':port,'scopedBudgetPort':scope,
                 'ownerPort':int(owner_base.rsplit(':',1)[1]),'ownerTokenFile':str(output/'access-url.txt'),
-                'accountHtml':str(ROOT/'src/adapters/harless_account.html'),
+                'accountHtml':str(ROOT/'src/adapters/web/account/harless_account.html'),
                 'nodeRoot':str(node.parent.parent),'nodeModules':str((ROOT/'node_modules').resolve()),
                 'sourceDir':str(ROOT/'src'),'memberPolicy':policy,
                 'memberPatch':json.loads((output/'host.patch.yml').read_text()),

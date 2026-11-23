@@ -2,11 +2,11 @@
 import argparse,json
 from decimal import Decimal,InvalidOperation
 from pathlib import Path
-from src.adapters.capability_improvement import evidence,run_improvement
-from src.adapters.capability_contract import validate_capability_snapshot
+from src.rsi.learning.capability_improvement import evidence,run_improvement
+from src.capability.graph.capability_contract import validate_capability_snapshot
 from scenarios.paper_proofreading.frontier.adapter import FrontierAdapter
 from scenarios.paper_proofreading.frontier.budget import FrontierGate,StudyEpisodeRegistry
-from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
+from src.rsi.feedback.efficiency_rsi_registry import StudyRequestRegistry
 from scenarios.paper_proofreading.frontier.freeze import deadline_epoch
 
 

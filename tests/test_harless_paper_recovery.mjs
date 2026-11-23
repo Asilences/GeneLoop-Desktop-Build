@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPaperRecovery,paperExportRequested} from '../src/adapters/harless_paper_recovery.ts';
+import {createPaperRecovery,paperExportRequested} from '../src/adapters/web/scenes/harless_paper_recovery.ts';
 const execution=name=>({name:'mcp__paper_checks__'+name});
 const result=value=>({structuredContent:value});
 test('paper export needs an explicit file request and respects text-only requests',()=>{

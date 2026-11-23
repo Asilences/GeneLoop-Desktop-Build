@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { bindSceneInputs } from '../src/adapters/harless_task_scope.ts';
+import { bindSceneInputs } from '../src/adapters/web/attachments/harless_task_scope.ts';
 
 test('Paper and general scenes share native file admission without scene-specific counts', async () => {
   const root = mkdtempSync(join(tmpdir(), 'harless-paper-upload-'));

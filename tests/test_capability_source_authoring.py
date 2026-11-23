@@ -4,10 +4,10 @@ import hashlib
 
 import pytest
 
-from src.adapters.capability_authoring import aliases, expand_draft
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import create_capability, create_capability_snapshot, capability_ref, capability_digest
-from src.adapters.capability_source_authoring import (
+from src.capability.builder.capability_authoring import aliases, expand_draft
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import create_capability, create_capability_snapshot, capability_ref, capability_digest
+from src.capability.builder.capability_source_authoring import (
     SourceAuthoringError, compile_capability_source, source_callable_interfaces,
 )
 from tests.test_capability_contract import leaf

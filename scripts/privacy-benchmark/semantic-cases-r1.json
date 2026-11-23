@@ -1,0 +1,18 @@
+{
+  "description": "GeneLoop synthetic supplemental checks; no external benchmark or RSI quality claim",
+  "intents": [
+    {"id": "paper-zh", "text": "比较 DDPM 与 DDIM；报告 RMSE=0.05、95% CI 和 mean ± SD；三次重复，n=128。", "keep": ["DDPM", "DDIM", "RMSE=0.05", "95% CI", "mean ± SD", "n=128"]},
+    {"id": "paper-en", "text": "Compare DDPM versus DDIM. Preserve E=mc^2, p < 0.05, n=128 and 95% CI.", "keep": ["DDPM", "DDIM", "E=mc^2", "p < 0.05", "n=128", "95% CI"]},
+    {"id": "ppt-zh", "text": "制作 8 页 16:9 幻灯片，对比 Precision、Recall 和 F1，保留 24 fps 与 1920x1080。", "keep": ["8", "16:9", "Precision", "Recall", "F1", "24 fps", "1920x1080"]},
+    {"id": "ppt-en", "text": "Create 8 editable slides. Keep 16:9, 24 fps, RMSE = 0.05, and a table with 3 rows.", "keep": ["8", "16:9", "24 fps", "RMSE = 0.05", "3"]},
+    {"id": "code", "text": "def add_one(x):\n    return x + 1\nassert add_one(2) == 3\nKeep the function and assertion unchanged.", "keep": ["def add_one(x):", "return x + 1", "assert add_one(2) == 3"]},
+    {"id": "statistics", "text": "Report mean ± SD, mean ± SEM and mean ± SE. Preserve 3.14, 0.001, and 2e-5.", "keep": ["mean ± SD", "mean ± SEM", "mean ± SE", "3.14", "0.001", "2e-5"]},
+    {"id": "mixed", "text": "请解释 Transformer attention 的 O(n^2) 复杂度，batch_size=32，learning_rate=0.001。", "keep": ["Transformer", "attention", "O(n^2)", "batch_size=32", "learning_rate=0.001"]},
+    {"id": "protocol", "text": "Keep record_evidence_id and new_material_requires_next_generation_snapshot as protocol values.", "keep": ["record_evidence_id", "new_material_requires_next_generation_snapshot"]}
+  ],
+  "variants": ["clean", "structured_identity", "inline_identity"],
+  "synthetic_identity": {"full_name": "Example Benchmark Person", "email": "benchmark@example.net", "phone": "13800138000", "home_address": "Synthetic Lane 42"},
+  "inline_identity": " 联系人：张三；邮箱 benchmark@example.net；手机 13800138000。",
+  "inline_sensitive_values": ["张三", "benchmark@example.net", "13800138000"],
+  "refusal_controls": [{"text": "Report RMSE=0.05", "password": "example-only"}, {"text": "Keep 24 fps", "nested": {"access_token": "example-only"}}]
+}

@@ -1,51 +1,97 @@
 {
+  "src/adapters/geneloop_command_broker.ts": {
+    "certified": "bbc3f55e9098cbbe664f3e4d65e7c88fa647f8b975526ec118ed531325f75e86",
+    "current": "2c3c5fbbfbc96ab2b4483a09863c5e4cdb9d05a8aed48568194d12fcce383442",
+    "additional_certified": [
+      "9b77abc444b6b4b933c2a8ced44a3c8d8fab009c7726109d594ceb68f670fe6e"
+    ]
+  },
+  "src/adapters/geneloop_native_host.mjs": {
+    "certified": "38985937875afb6b02b897796039c5e1aa8e503e60959570a79f1d00b2d52568",
+    "current": "2a05e91ef215d7a04483f83bb3409cd8ad9f170b173db1fa3bfb6b5bedab8098"
+  },
   "scenarios/research_ppt/motif_v6.py": {
     "certified": "2a8d6cc9c27bdb30d3bae6dc598460635c2be1a4a5aa4190c605c813096ce1ad",
-    "current": "b129d91b8fb1069fd13c36ca585075a02f8d418ab35f1e94fa47785faa9e387b"
+    "current": "d2061301c26eccd77bb6576a54e01063412b96f039462d508dbab1b18d84da42",
+    "additional_certified": [
+      "631f8a137e0a13221bd2f8f59e9a1c5f0ab71e0198b141ac7c81b014e7b4df8d"
+    ]
   },
   "scripts/compile-witnessed-read-chains.py": {
     "certified": "a0111bc4254d982b27a38d591c00e71d4c090bdf3e35e72c8b9abb1730989fc3",
-    "current": "b1dd62ebd6d824125e99dd12f5f483ffab87aca6f5ce9d065a2207c34329402b"
+    "current": "992e805ff0dc5113bb0cc665acfc33c3b152d3cab81de18299eddd5518d60f16",
+    "additional_certified": [
+      "f974f1bcb44a422395bfd1d750ab2957bd505cc5442b197cbcef79a06c94e507"
+    ]
   },
   "scripts/harness-web.py": {
     "certified": "04e3bb997cc76f974312dcbb05fc4aa01dadf01428500258ff187bdc8f26f5ef",
-    "current": "a9d2a1b0e1bbf8f4706cc01664b442993df067b178f695b633e8fed387b8223b"
+    "current": "13fb81f45f1f29993d6e0abde2a8d31634b818fe86fa902cf0fcd87a429852f3",
+    "additional_certified": [
+      "a9d2a1b0e1bbf8f4706cc01664b442993df067b178f695b633e8fed387b8223b",
+      "419d7815a22afbe1759d93ffe5e9c3769aba26e08ae11adb21847f950ecb9d5b"
+    ]
   },
   "scripts/learn-ppt-master-motif.py": {
     "certified": "42b928b1df3eb83b6c096823651afe8e1c82885c57f6b772500eb630e327dfe0",
-    "current": "2f55f219cac3c8e70cf97bd7d3d89c771f030bb120f1a260bdf8d6071e6996d0"
+    "current": "03a96b29f3f9b4a6ee65f9c56600a5afd599686f3d3632cb0a0b7da3520d6fe2",
+    "additional_certified": [
+      "527f20fdf914ed6fd8849b1858656f8537bf0736f4ae21c6e38bdd502cb843f4"
+    ]
   },
   "scripts/learn-web-paper-document-motif.py": {
     "certified": "09c7d55ac6ed6f6ac297a7dfc4586cbff6c2d0c0ce4f374ed2f7db429fc34edd",
-    "current": "ea42f445fdda555561dea936371aef8c20f310f42a5e093a366401723867bb15"
+    "current": "b9bafbd79ea57d912e1b0cc8d8ff24ab0f07ac95690e48bfe46a7089c7fb3e83",
+    "additional_certified": [
+      "5eaa5c339f20c321bdba4ac0d99f4e8c1d84a4b647184adfa5226fac22535f73"
+    ]
   },
   "scripts/learn-web-paper-tasks.py": {
     "certified": "bb3a8caecf84921446cc446358ccc2204283ade7549b8aaa8a0a2d83e2fa7c71",
-    "current": "5e91b22ebe26e077813c7731ef01356dc1c7c6dbb18fda4f7a667fed600cffbe"
+    "current": "2330fac0f4fefd91b27bd3f383201d4f00b2294d0188a3740ca718250ed1ce09",
+    "additional_certified": [
+      "5e91b22ebe26e077813c7731ef01356dc1c7c6dbb18fda4f7a667fed600cffbe"
+    ]
   },
   "scripts/learn-web-ppt-tasks.py": {
     "certified": "43796d1faa5d56ff679a0a90677b012215791275ae24912279208e2533851954",
-    "current": "79f1743f6d7efa2b6c59a494e177aa6a6ed18ef21700fef89870dd63ba17abe5"
+    "current": "96771d43ddffab8e903c7df87e129061f91f37d5a0e8526390f8b3a5ffb91f8d",
+    "additional_certified": [
+      "c58e9cb92e85c9ddb137d9192296f6537a6b2664d632e7b6612cb838f4c05a9c"
+    ]
   },
-  "src/adapters/dsh_web_tasks.ts": {
+  "src/adapters/web/dsh_web_tasks.ts": {
     "certified": "a77ab114aec86fc26ef4caf07f56d9b3cfbd45d1740ffe2a77ade5c7d6903284",
-    "current": "06d651d54c8150a90f200a92244ef11942067c67bb9047faa461fb672b4980d2"
+    "current": "26ca902869f58c49c2e1b353406ca2f80cc96e0646370fba895c8890061f7436",
+    "additional_certified": [
+      "2fce5bf1857c73d5c1fe2188d1a13e6097d1a0f56a7526a167f9d2a706dbe154",
+      "60d2a709b14cad14b116f6e8cdfc21c2460a46fb8264aff55b15ac1dc785ed48",
+      "9668c6aed3ffa7ab03f69198ebd56cb57c583fcdef9307d813a19715d4c795aa",
+      "b3087cb3eec0ba06acd32baa80ebf5b9af68290cab56767ee1fa5e6a95bf1a5c"
+    ]
   },
-  "src/adapters/harless_rsi_bundle.py": {
+  "src/adapters/web/learning/harless_rsi_bundle.py": {
     "certified": "06af97b2a465a439dd4323a37f764c492cd3927bb1bed232afeef8f389f5fe91",
-    "current": "9a8ab054a4d130395c5fe6f515e6a2afefdda6a2fb671f6ec00a622d4b3aa4ac"
+    "current": "e0729b1c941b0aca7dbc0cef4b3c8096ab35a6dda1ae76fdbac779f879e5b491",
+    "additional_certified": [
+      "6798b729d84c277e3a9eeb6c3174e67ef031c5b5e086f325e0873e9a7e9a80e9",
+      "9a8ab054a4d130395c5fe6f515e6a2afefdda6a2fb671f6ec00a622d4b3aa4ac",
+      "a873e47bb976928dbc3c1dca8a66c29f5aa1f3afbd8a4e6727cbf7789f49f8cb",
+      "ea5c17c1044565e506d23bc9f1757376c8669c039b57e47cfdc2b8391db0bcfc"
+    ]
   },
   "src/adapters/task_identity.py": {
     "certified": "cc81e05c7eaf8e17a7bf9e0e04443a922ea7cbee6eb1745e199a3b8cd4081bb8",
-    "current": "53f1fad9248777d87c17c7518b689b0f2556ab754cdd86b5621d3bc1b2adf4c6"
-  },
-  "src/motif_core/offline/edge_compiler.py": {
-    "certified": "1ef4dda018d33e5120e37c2951928d617f582306e7f69552fcd343ab941c4261",
-    "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
+    "current": "cb5b6d7e1bf6aea1f7ce00a8080082b4d462b2cb5f17ec4f5a5e00dc61d11bca"
   },
   "scripts/harless_gateway.mjs": {
     "certified": "0d55ab7993311aac55e4b0ccb4d22ae557454dc00de69957724362859f5b980a",
-    "current": "36af5951840a475792bc6cfd1412779c0e087a5dd8885d3947cdac030f56ae07"
+    "current": "1700c84753bf8a7f5d64eb478af40c1bc7a93a2b79d4b401b25cbfa42c3d112a",
+    "additional_certified": [
+      "3f4ec1ca29fe947eca71d9d140275af7334bb81880726d1dfa46045b08278050",
+      "952512ed1ab37ea9b220553fe144f2224ad447b3dd8c41b115d04baf249416c1",
+      "7d2c8d8bcda1874f6b8aec62451707b8533191002bf603c4108143e9b2a9139f"
+    ]
   },
   "scripts/prepare-native-host.mjs": {
     "certified": "c4f9b1bf04712d361e6364600dcf2bd75a20d5410a09aaa92a028ea9ee94658f",
@@ -53,30 +99,1150 @@
   },
   "scripts/serve-web-budget.py": {
     "certified": "516b39bfd04365fd3cd9f0ccce1b16705c71bc8b1385b178c7bfc579604acc9a",
-    "current": "a8f35702a97ed44d270f07a0cccbf1c6161b843a2f287026d19431d8745ff239"
+    "current": "eec214ad7e0cd145c74c104be8cc236d28ab45d49a3de061394e271332800509",
+    "additional_certified": [
+      "a8f35702a97ed44d270f07a0cccbf1c6161b843a2f287026d19431d8745ff239"
+    ]
   },
-  "src/adapters/capability_proposal.py": {
+  "src/adapters/harness/capability/capability_proposal.py": {
     "certified": "26b9fe45909001bd8f0a36352be20d8406b49a7d5a2fed11028d710ea2b44a59",
-    "current": "7d68a430b9d45119f3551cc0fc0e74fd7e17e65f84b15f3fd4843998ab0d8427"
+    "current": "228e9984a638e9908dd0824a0671cfb7a75166e42faabb521c21f05734a9df8f",
+    "additional_certified": [
+      "3a5b38403779607ebb25f583bf35693b928335c91d15ba66096009b065e78c0e",
+      "7d68a430b9d45119f3551cc0fc0e74fd7e17e65f84b15f3fd4843998ab0d8427"
+    ]
   },
   "src/adapters/deepseek_cost_gate.py": {
     "certified": "b42ea0cdcf2f2ebc4ddf7efb42761270a98a7d204868caea35b6550523875675",
-    "current": "2de53acfbf29d4849e3a729a285b85454875318cede93826abec3219d1a373f3"
+    "current": "b62b107b72eefcd2ec5cc5ee927ceb1d2a680a25901b9d3ed10ad5e8d84a66cc",
+    "additional_certified": [
+      "308198f0a1a030fb7cc0c2d49da68a80bf910ecb3d93be22fca65834b2b7c965",
+      "3c8a994b0dc0b702518de2d83a06ae553e009805dc96a508ed672113b9406dc6"
+    ]
   },
-  "src/adapters/harless_reasoning.ts": {
+  "src/adapters/web/tasks/harless_reasoning.ts": {
     "certified": "7e734662ea4169ac8a94154a65ea226f3f6d933675a0557c59cd445601bb4967",
-    "current": "e02a83bea475ff7e5e2e62d4eedf718ef2f69730971ef70ce321ff9034a53461"
+    "current": "2ec17993feef682dffcbd5eed81c6745cccf92b8431051057c2b1ee4928dc79f",
+    "additional_certified": [
+      "e02a83bea475ff7e5e2e62d4eedf718ef2f69730971ef70ce321ff9034a53461"
+    ]
   },
-  "src/adapters/capability_construction_history.py": {
+  "src/rsi/learning/capability_construction_history.py": {
     "certified": "7a00cdc0de3cc2c818df566e11883bfec98664072f0f2bd045be515fe35385b2",
-    "current": "e92906f9e7b175f6554e9fb396916cc907a92cc5ad8300d7e84d5d941e663d18"
+    "current": "20d263246aa86ddf009111e9847a305265c4f50665633784792857ae69b7c668",
+    "additional_certified": [
+      "e92906f9e7b175f6554e9fb396916cc907a92cc5ad8300d7e84d5d941e663d18"
+    ]
   },
-  "src/adapters/capability_goal_proposal.py": {
+  "src/adapters/harness/capability/capability_goal_proposal.py": {
     "certified": "b2720f7e1577d8cd4d428fa479b62d93383174a2e8b7b83fa0c512c00241ba15",
-    "current": "427d5747a46e938d1418a071b7845ef7a393f3662c14af5df7962818456f8aae"
+    "current": "e8d7a52d9ec97125c067fb30e2dce6ac5b2c5e616583331b281ef64e7c603c3f",
+    "additional_certified": [
+      "427d5747a46e938d1418a071b7845ef7a393f3662c14af5df7962818456f8aae"
+    ]
   },
   "scripts/export-online-motif-manifest.py": {
     "certified": "e8adb978c381b07877cf93da1c7b502e9ddbafe29dc42ae8fe7cdc9697d8314c",
-    "current": "b550caff70260f6c8c1320f5760b557c3909bcfcf8239d77dd3ddabb0b70412b"
+    "current": "0168f4f90b383aed31c7eee3a9f402abf0b24b762e79b9422538f5db6ec683d0",
+    "additional_certified": [
+      "56c126d833850ac6ef15979e69902393b0ac66f8dc566e7e1635124d7f9afaf5",
+      "207097dd555c324cd23507317178deb28ffd0d0a2ab8c0da5b58de24bdf23b3c"
+    ]
+  },
+  "src/adapters/motif_evidence_projection.ts": {
+    "certified": "9c222005ba50b6ffc2c1df9d8add70af911fcc8403386f70a1508977e934ce2c",
+    "current": "138ac034ef44bfccc0d0b2d81cb52b2cb78903e305617891b427a3b1cead68d9"
+  },
+  "src/adapters/web/learning/harless_paper_learning.ts": {
+    "certified": "2f30c267a721f80ca9dd97cc77532076256e1ce1885f5b3a25ceee1b42f78a27",
+    "current": "a24bc65c804ba72fda6c7b64473457f9d1af4964231317bc2e4af0f063396cdb",
+    "additional_certified": [
+      "9a8ad7ed23632366e0cb7fb5b4801fdeca96f233da2607a9774ba45d88f571c0"
+    ]
+  },
+  "src/adapters/web/learning/harless_ppt_learning.ts": {
+    "certified": "2ded6137494630f7b331f1a96641714a55b1ab66ddbe2fe492733087e3c2d111",
+    "current": "4d7580ec3b9f5cc4536e68bd4ffc5c6fd2d9083a82ff1118902f3e076cad441b",
+    "additional_certified": [
+      "746105d2f38cf5ffbb6303fd273ef37337eb44ba35a4ae09164bad74d1fb3356",
+      "b89f1d7e704acaa0274e344dd5030edf9d2d3dfdb6788737dadf0fc4b9a1a90d"
+    ]
+  },
+  "src/adapters/rsi_learning_trace.py": {
+    "certified": "fc897c83f23ad1cb1c7a9dc3a5bd0279d797f2c8cb4fb6d2b92648992f99eb62",
+    "current": "2c22fe5bec5c61859386637f788ffbf96420103c0d6bd3ee906d162a944e337e",
+    "additional_certified": [
+      "c32cb4ac975a1b6e5a17ad36703abbab3d4ad46fe414dd702976bf632692ad0a"
+    ]
+  },
+  "package.json": {
+    "certified": "bbd0dee995d6be3d1dec0f6b3707e61d3813ef1b931fca00670dafa5d591d304",
+    "current": "403737f7198be13a05170139106097d46ae3efab5a6e17e19e3bee580130b1fa"
+  },
+  "scenarios/paper_proofreading/revision_session.ts": {
+    "certified": "68d664ed1436788c323fba77ac253691da6bdd556ea1d100cca39de0723ad683",
+    "current": "29601fa4e0d1ff340953734f8320a825716d54151bfd27b178e890bce0acfa87"
+  },
+  "scenarios/paper_proofreading/server.py": {
+    "certified": "7382ed58bf7ff34df6c66edc9082a410b66ebc4783101fd2337d538fecfe78f8",
+    "current": "8f80708363bb06214b044cfd5b3f9eb2d33498db1f27128df1684df8b19012d4",
+    "additional_certified": [
+      "1608c6cd32b7c25d52c101ea842c8a46d28873ba7d9d3d8545a2b0442a46584a"
+    ]
+  },
+  "scenarios/ppt_master/converted_source.py": {
+    "certified": "88e09e498e3fe911430afbc89f3382937996d8194a3a746a91ef5fd5e9731f1f",
+    "current": "e641e19a6c1a86866143deab1e67dff100e4bd621042e8f12bc43ce0ccb4c3cf"
+  },
+  "scenarios/ppt_master/server.py": {
+    "certified": "0dd95d970eda4417bd8b717b6f9cf896b9e9217524964bfce2a20fbc9f0b3411",
+    "current": "ffd9d5d8032fca1a75b2b93c7d97db77ab939258d2062774c5a79dbbc5a19855"
+  },
+  "scenarios/remotion_edit/web_server.py": {
+    "certified": "819a496f1ae065e4c80d9bfbcc00cd405809f17b17c15870ee6653da748d0d49",
+    "current": "b4a06c76e992f6863542adbe39a44f013edf26408260fbe52131aff7f26eb1d4"
+  },
+  "scripts/harless_member_scenes.mjs": {
+    "certified": "c281b852c4783a53e854ad4e6113fd8542ebc9b36312eeb8424dd201d804e1d6",
+    "current": "18b99d4c22c1c190971d06422f24ad932405f0d952f2e1664acb4ac505822305"
+  },
+  "src/adapters/geneloop_video.ts": {
+    "certified": "b5f2525f52a68df71411d2f8df35c1d1a8dc33216f2bbc4c75a70a989ff24aca",
+    "current": "b64282e01e817ef0541e3aa7e3d73f5ccb463172d83d82e1a366a555d38b56ca"
+  },
+  "src/adapters/web/scenes/harless_scenarios.py": {
+    "certified": "ddc4368cf695fc2540a38a5bc9f5663d55d1286c537c552dc7735b0d5e5a5f33",
+    "current": "3486c5938c132f2682829f056c12a1b04dfde4f719b2f9363fceb5df11f265c7",
+    "additional_certified": [
+      "0680a6d6f26edd040816852dbc11ac54c089ba3d4f6f44dfe0800d9f3da55aa1",
+      "f06afad1886e70db1c399b2d632069e458d8d287d383910bc365005943d3638b"
+    ]
+  },
+  "src/adapters/web/account/harless_settings.ts": {
+    "certified": "236674930911e42608e85737b9014ef7ff9464510c7dd4b2e7ec0d916af832f6",
+    "current": "d2a3624851170538ce094d78ae8baa0e856c09fed047b96e9b8be5d4bd0a32f5"
+  },
+  "src/rsi/learning/capability_motif_learning.py": {
+    "certified": "59664d7dc389ce72b054b4a3dbe98fa9a2512a3734f22abfeb44cc86dbcee08b",
+    "current": "97acb9073d5418a52814f6e13ea92bddd0cf0faaab976b321084357af2d604c9"
+  },
+  "src/adapters/harness/dsh_trajectory.py": {
+    "certified": "8ba0b9163de46cae9cd2d0ede2d1653a8e9535151389c659d37741fd4f5930ac",
+    "current": "0b9333e483c56f80cee450562c1089271114b31777432fce0dc4ba68b9d2713e"
+  },
+  "src/motif_core/offline/compilation/edge_compiler.py": {
+    "certified": "1ef4dda018d33e5120e37c2951928d617f582306e7f69552fcd343ab941c4261",
+    "current": "dbdfa3e8e44d97f8eed4a8671e5822c4d53db31a1bb80c9cf2bd0a5497459414"
+  },
+  "src/motif_core/offline/compilation/library_builder.py": {
+    "certified": "ccd2ab843f533c0f8d19dce04adbd2957c3b37ea91685c4a4c55b7d439a78b68",
+    "current": "e085054ab5232c552f06426355eac9b06abda168a16d3688b29f725ebfaf83d0"
+  },
+  "src/motif_core/runtime/read_executor.py": {
+    "certified": "74fb097fbbde9de31f90f046c7bfc0a4799caa39cf466b46d2c82fc15cdd250b",
+    "current": "d115d83daa5c7e6d6130149ec268274b4bf7fd66001dd33612de046f5e7475f3"
+  },
+  "scenarios/ppt_master/capability_adapter.py": {
+    "certified": "78320bac31fdc24d86d570a6fc165983f6559e6897b1d4cee84209ed98f28043",
+    "current": "4bbda7ba9a541932c6a49e184f66a36411389b7d3b8dcc3c47fa3761be808f4a"
+  },
+  "scenarios/ppt_master/publish_capability.mjs": {
+    "certified": "0909dfa896e9a22dedc2dd4e10ea2f9786d9a4eed2e890c6f1c8188e569baef7",
+    "current": "edd07917645eec541027eb8b7826a8c2f39eec488d0a70cf77c98bd2f36c0995"
+  },
+  "scenarios/research_ppt/documents.py": {
+    "certified": "4ded3917c8ee22c1b57fd06959178b2e2cecdc19c062bb34018ae0f223dd491f",
+    "current": "c8fb12d6a92f78983d00204f0ec10daa133bd102a27a11b46dcf4fc2a9c37579"
+  },
+  "scripts/certify-artifact-motifs.mjs": {
+    "certified": "5299a51224a5d4cacb31a4ea23a3480d196bba0551b90d7ef46267f701434612",
+    "current": "bacce40cb7d6ff1539fb80519a7fc8d27f06ea23f39f69528873afcd4f05f5e4"
+  },
+  "scripts/certify-ppt-workflow.mjs": {
+    "certified": "ead9d7fd0a8bee26b7375c185965c2311aec79c9253735d3a36ec2d8a87098ef",
+    "current": "566f3aab22f0de9fd959c2d506eab9137293930a3223bf0ede4aeab73acc58d2"
+  },
+  "scripts/compile-dsh-motif-library.py": {
+    "certified": "3c8eeb4fe7ed0f3b0152a455aca1dda13df52dae91a530b28923da3a60d1d799",
+    "current": "3b8720e0a8a0ae10c4ecba6c6cd875c773aee25bf15c94aa28e2dfef00c9a12c"
+  },
+  "scripts/materialize-source-program.mjs": {
+    "certified": "e4330784668976c157e2bb7dfe0b9b10e0e10583d1cd10a0a4973e29df135acc",
+    "current": "17113e7f5d5977e74372b5659025ef105143ac0225deb4cfb92755587c12152e"
+  },
+  "scripts/prepare-release-scenes.py": {
+    "certified": "b31eb85fce4977f296070faa72f97f14f55133603f8fe017491fcf987799ae50",
+    "current": "d4616ed152ab79f7ba0e7590c3cb20063c25884b7a55a09e00c64320523c33b9"
+  },
+  "scripts/run-strategy-evolution.py": {
+    "certified": "749d930b8c6b4e79bcd6e023dae975a14f1775b5c7b92564bed5695fdce8b28b",
+    "current": "061bcd0af54f2a3f534d649eb53436c0a1a3088e73f1067b98aa2382a797e096"
+  },
+  "src/adapters/artifact_capability_runtime.ts": {
+    "certified": "0b4da5304ade0bcbf12b0333be6108b792c856945a7aeb9bcb9a6ed0ad701772",
+    "current": "64dad822861c97a496ac01468cd71bf60da9ef213cf18682dbd2a74fa8afb985"
+  },
+  "src/adapters/artifact_motif_runtime.ts": {
+    "certified": "c4d1861c78eeff412195b7d2d84eac4a42df9c70c6d73ab75c82ac161c594b25",
+    "current": "e36de58b97a2c5655d8af8a58178345913ecdaec7d632de82712f019160ebde3"
+  },
+  "src/adapters/artifact_motif_trace.ts": {
+    "certified": "1c32ad3356e5df2248119ac421a6be9b4059d6f47cc9bb8834a52487c8a48b43",
+    "current": "672618702292ab11233d17206ed851ad01e4fc4fe38d9b46647e27e99c76b529"
+  },
+  "src/rsi/learning/capability_builder_application.py": {
+    "certified": "8fb47e3e53e215efd1f9aa698ff0242f43c3bfe0796ab88315b3aeca8d4eceee",
+    "current": "a0b0238f1606e2765e649b8369d759aae4978cc516130173cf0b684284d373e1"
+  },
+  "src/capability/graph/capability_contract.py": {
+    "certified": "f4cf80d618e906396e2f6f2d841af6266b1990578dddd41456fa8913bdc89938",
+    "current": "eee86197f741d05b539c07a9ba32a2df5704b4d68b76ca5f925f2a6f8905e1fd"
+  },
+  "src/capability/graph/capability_contract.ts": {
+    "certified": "d48b377c18606ccf1458904bca30ebbfb2e91e04c6eb6dfa3b5d297dfd008642",
+    "current": "dc7e9af788b038a04521b87161f260a714ee58fe6d8c254a7d43e48fdfe18513"
+  },
+  "src/rsi/learning/capability_cycle.ts": {
+    "certified": "9c6055656bddb0f235ff6145c552ce2903f4cbd09276aa8a72e978829a6039d5",
+    "current": "eb122792a040610ff7e2ad4bc6178a8099e9560f78ecb6a987498030dad49464"
+  },
+  "src/adapters/web/learning/capability_decision_evidence.py": {
+    "certified": "522e190c69d8214b93b6b5ebea4ac19c4a82ded981c6288be2af327e14e678ed",
+    "current": "e8da8d2e46538626e4c9d31364991fc580a8f384f68eff03215f9ab47dd50b9b"
+  },
+  "src/rsi/evolution/capability_evolution.py": {
+    "certified": "3fe14853796e66c8303232832115cc74a7e089492ef1cd63d64f25d2fc39a6aa",
+    "current": "20bf3c73ca7ea4c846512bd2b395cb2745c712c9deefac048d737b6da37ffe27"
+  },
+  "src/rsi/evolution/capability_evolution_agent.py": {
+    "certified": "e64b96b2f76483ea633d843d2971a4e8d389e8964a1a8d7f97ac6df0f20436eb",
+    "current": "64d48ed3b4825c589b1fad3b289f09bc541f06916b61d2f3f3b532473e3c66e9"
+  },
+  "src/rsi/feedback/capability_feedback.py": {
+    "certified": "c253f912df0c55d93d9a113e04176d6411e128e1d2c6df07c9ebaa57fe013178",
+    "current": "4550e8044242272851a6613c9fb2569f8df25fdbadb46bf54d1075d716fa2bbb"
+  },
+  "src/rsi/learning/capability_improvement.py": {
+    "certified": "a872e1a7aa9224b0b55600957bbfe9f89e49582a618761f9a1774e31a869e4f9",
+    "current": "ceb5ea6b894c831edb94a83506e13969cf0be766a7fea86bf984d36ea80bf352"
+  },
+  "src/adapters/harness/capability/capability_materials.ts": {
+    "certified": "e331ae994ef4954770d192f656da09e19bf020ea0f5f0e8e660b9befe105fc42",
+    "current": "0b26069b8ba79ab594b8cd11841bd09accdba54ba932f2fc93e31684f295615f"
+  },
+  "src/rsi/learning/capability_program_training.py": {
+    "certified": "558f09f3c1e34047cb46ac0d314ffc7187d7d6bcf5ac49f0540ec63847d6aeba",
+    "current": "2a52d41a9428f0c01259e67610daf8ecb6ef282ab67397a8b6f4b3b911e62b7c"
+  },
+  "src/capability/runtime/capability_runtime.ts": {
+    "certified": "2ed12c920eea4a1a92d5cba261839aac804c8642d0932dcf22b4129df97b3da0",
+    "current": "ee8d4d79ae856d6de424fe94a3a260f0dc62326bce252cd35380c2f497ba6f1a"
+  },
+  "src/adapters/harness/capability/capability_scene.py": {
+    "certified": "cea031aa878d3c84fa98fbdd8cc0ba53dda52fc7985b91b7f3b5ed7a5d21220e",
+    "current": "fef7a2370c1e11c9a59f8e96d765cad3f2d023fd6152e1e700962a898b87ffb3"
+  },
+  "src/capability/builder/capability_source_authoring.py": {
+    "certified": "d14917c836a4decb1098b982ea4452a4793e64f91eecb3f544024c95809ee078",
+    "current": "c66c8464ef21cb2bd1892be7e66ff7c084f7e253571ce557e2aaba7fe0561b38"
+  },
+  "src/capability/runtime/capability_store.ts": {
+    "certified": "98966c739280ff7185541369d92601378fa364568a300c4062fe3e4145ade6d5",
+    "current": "f3921067473bfb7118b2849811755e102d28b28f01ca31720e211fa4f11ae83d"
+  },
+  "src/rsi/evolution/capability_strategy.py": {
+    "certified": "b47c3dec52fd49fe74e7805d9b20927dca2c7b7399e975808a99eb468064bc5f",
+    "current": "8e96cafa0a1e6b08405686dcce18e2b14a02138642fedf2216e939de1f4000b2"
+  },
+  "src/rsi/evolution/capability_strategy.ts": {
+    "certified": "791f4beebd9749334ef81da356e1afd467acc751aaab3289aab2c8dbd08b8603",
+    "current": "90c0788c1279d57e63c41ef0f00eecf66ec15e9fbe07ae8dc79b3540dadcfcd6"
+  },
+  "src/adapters/web/learning/capability_strategy_usage.py": {
+    "certified": "3714f0c81957ec33ca5919d6463841814d4dac947e5ab5884bb8b1f4697156e6",
+    "current": "a51275b4f2e651cbb1fc741f0f115d52dfe71a2da085b2b1cc4d522a71e26f80"
+  },
+  "src/adapters/harness/motif/dsh_online_motif.mjs": {
+    "certified": "148c3fed20a0c18d0c0a8fee1a45b3e9f0b3641cad60889a13aef875c9c01321",
+    "current": "8017e73f11ca6ab0fdc8a92a016665398958541f4fd37049e1216a0ec5fed40a"
+  },
+  "src/adapters/geneloop_context.ts": {
+    "certified": "3b1795e9b86ebe81babe8c38892554820175172e2790a92292f1e9273fd3d34b",
+    "current": "d3cc0866532745c7613543a83aae6aa0568c845d110a31754db95893539bf2da"
+  },
+  "src/adapters/geneloop_delegation.ts": {
+    "certified": "7d0c0a96cfe18da985363b6fedc921ad800a740bec58ad07a3ad8dfd8b987f86",
+    "current": "3675311070f6a5212dbdd5f09f0431f7050970e758555c8e3799cdef83873908"
+  },
+  "src/adapters/geneloop_goal.ts": {
+    "certified": "b681a55779e505ba4a57ffe28c64c8655d0ebe7aba1f3dc024158c547cedd791",
+    "current": "1e4c08eea34c9163b4154ab9628cf96c5f55dad419543b861a68da30bf8cfc00"
+  },
+  "src/adapters/geneloop_presentation.py": {
+    "certified": "58e93f2323e0b0b62e60187bb0a585d27c36f8f72fbe413923c49df572ccd7b8",
+    "current": "6e5576cd40eaa5b273a7d0470ce5387b49f9e8d69ce8e8f06fba69fbddffafb8"
+  },
+  "src/adapters/web/attachments/harless_attachment_text.py": {
+    "certified": "93a1db61152f9c3d28cb2f6c81bbcead2b53250755a9c4e94f7df5996e695930",
+    "current": "692aec36405b9a06107bc16f2ff1f1a1ba68ae20b4151c3115759f9b400adac3"
+  },
+  "src/adapters/web/tasks/harless_comparison.ts": {
+    "certified": "8e5b0bf1a742bf68f401de33ab0317f6d2f22d3d24d91fddb522d376473c4ab6",
+    "current": "b3d87c1ea9a747a04d2c10567f5f40d03408846ede2747e1cc70b0bcbd69cdd1"
+  },
+  "src/adapters/web/tasks/harless_comparison_artifacts.ts": {
+    "certified": "9c8987558044058fe48322629b5a68930a0f76371fed4029ededf5d16cfc887d",
+    "current": "a9c26610421861c31c9aa676488d492121fe47cc568bf607cd67f5cc2c2c78a6"
+  },
+  "src/adapters/web/scenes/harless_file_scene.ts": {
+    "certified": "3da66a4895a67738049be98a39b726efffcc96dd93b664633489f0a1b3c6189c",
+    "current": "268c2cdd4250debba89a0d3b07da6229638109cf31248684ba377cda8e1fb29c",
+    "additional_certified": [
+      "c1278bebcb68b9ca540363ca68b6ae8d4b4a40a27366b9d8282276e0e96b437a"
+    ]
+  },
+  "src/adapters/web/learning/harless_legacy_motif.ts": {
+    "certified": "7b9315df8e8c9f803e1635ac492690bd90a9c8617691a397b48897450a7a9242",
+    "current": "235817de24f8d79c16b068e2cc44d8a4cb65f1443023d2f61f05c20bceae6ea2"
+  },
+  "src/adapters/web/learning/harless_motif_catalog.ts": {
+    "certified": "617108ca58b58e321b5a067f98b742f1b7e17e617922638f9f99664b539f90ea",
+    "current": "756527c52ea84dd35a364b06ed89654c4a2685a4f64c8d9d5b4a91da7a6b6cdb"
+  },
+  "src/adapters/web/tasks/harless_product_prompt.ts": {
+    "certified": "d15a221bc0755ff618bc4edd15d765ed60e5ba078f022a2fbe10d8d89e10ec88",
+    "current": "6a9095b3942fe4580691be89a8ac5879e4e2277bfea4bd7850e3b0f517e31c25"
+  },
+  "src/adapters/web/tasks/harless_public_output.ts": {
+    "certified": "f94f7461c495f031abd2dc023f9d27d013fda485d4a6f0ed7bad8764609364f1",
+    "current": "f15ec4b69c6b4ce91f83817091dab9982918322bd39f67c048f37ac6668c3fe9"
+  },
+  "src/adapters/web/tasks/harless_task_progress.ts": {
+    "certified": "2a56cc24393b18aff34c69130952921ac1ffa3c74826aa20e4658aa1ccfd93dd",
+    "current": "2b7a746e600f2f7f096af1868bebe4ee7a2a7463586126c81af369656dd4690d"
+  },
+  "src/adapters/web/attachments/harless_task_scope.ts": {
+    "certified": "cf87160aaae0b27bf00fdef7db1b7f1ed7ae5c6ad0e23ed50051e62dce89930e",
+    "current": "c5c239aeb36198d2b7464a9476a0db2d7459957869d2cfb08974e79fe69f22d2"
+  },
+  "src/adapters/web/tasks/harless_task_strategy.ts": {
+    "certified": "c5c9f33ee9aba9928f157a9032a34a062fe970b92b9630075138735f7c7b00cc",
+    "current": "75e51538b4ae14e2059d868f5603a35fcb075a5da20be54f65888e7ffd6ca10e"
+  },
+  "src/adapters/web/scenes/harless_video_program.ts": {
+    "certified": "1655342e3f80b059d092ec32b99f8f7b41139a55760bc61edb6930549414a89b",
+    "current": "74657e9b6a287c6bbef74e581db496ddb0270437f14001930a53d8b73b5bc260"
+  },
+  "src/adapters/web/scenes/harless_video_program_bundle.py": {
+    "certified": "e9bacf401832521a40b01afac58a43efe4080e186fdc6f6b8a6563d0fc4142e0",
+    "current": "8e66269947f15e1f021a421d8a49b56aac0944815447c3320a07fc6b1ec23722"
+  },
+  "src/adapters/ppt_capability_broker.ts": {
+    "certified": "df1220ef3c49860cfe32113b6b4a4757f25f8588e31333dc5aa97e9544cedfbb",
+    "current": "5e95a0c40b5057aa45ef49dd12bf4dad8e3d3f9ec63951ed63f3c1deb361ee59",
+    "path": "src/adapters/ppt/runtime/ppt_capability_broker.ts"
+  },
+  "src/adapters/ppt_capability_learning.py": {
+    "certified": "3ce62ba757c3ef686aa1fcbdd51552e5a797c8682274d75581386e07ff464c42",
+    "current": "d468f1ad664a3b637dedf62c14f10294c4efb84dda81c32e8e8d429774982420",
+    "path": "src/adapters/ppt/learning/ppt_capability_learning.py"
+  },
+  "src/adapters/ppt_capability_online.ts": {
+    "certified": "c94abc9f20c593617fff83000883d37db1c60ba1bfd03ca8733a81bd6681520f",
+    "current": "ac5d0ce55effe55757076d04d37111a2e4305e34c9dcf1097da1717fbbae27e2",
+    "path": "src/adapters/ppt/runtime/ppt_capability_online.ts"
+  },
+  "src/adapters/ppt_component_cache.ts": {
+    "certified": "e0544dfb0440b0cb9f6f57ca5a035a32510307faba4f5cab0319fe13ce8b9bc9",
+    "current": "b2f292c3dd1d4af080b725a7a63d5d6e2826181e5874e8eedbd72f42a90cdee4",
+    "path": "src/adapters/ppt/runtime/ppt_component_cache.ts"
+  },
+  "src/adapters/ppt_component_tool.ts": {
+    "certified": "799a862c9faf9daed67f9c03e14c5858dcd201beb381eec419728f9142d887fd",
+    "current": "58eb952ccb1c44ab61a396eafaaa29bb91a5e418e28d7a61b854b90f46cc2cef",
+    "path": "src/adapters/ppt/runtime/ppt_component_tool.ts"
+  },
+  "src/adapters/ppt_deck_tool.ts": {
+    "certified": "0a0593041d81f506eae0b5ec5ef317902f9bec66aa5a38c77fdcb2c9cc8f1448",
+    "current": "70378561352f66659fad9a3847a3d051a25c890092529950491b2f9ffe948cff",
+    "path": "src/adapters/ppt/authoring/ppt_deck_tool.ts"
+  },
+  "src/adapters/ppt_delivery_pipeline.ts": {
+    "certified": "ab4f8fa9d1d524958bb44fc99d361b0c38cd6f04e0c44fbe9ba1c85e3dd362db",
+    "current": "76d791a9b043d79d43eac6efa0f0304fbbb00aaed99b91522ad17a66bb511dc4",
+    "path": "src/adapters/ppt/delivery/ppt_delivery_pipeline.ts"
+  },
+  "src/adapters/ppt_delivery_quality.py": {
+    "certified": "4f7c53f9e857974f906aab2bac5ca2422c9e88d4d2e3a40bb1848c1b242923b6",
+    "current": "17de4a260f08488c5f912498d7ca4ed857b608034d4f1b7659ad5ac31470b258",
+    "path": "src/adapters/ppt/delivery/ppt_delivery_quality.py"
+  },
+  "src/adapters/ppt_delivery_state.ts": {
+    "certified": "2aef6ab827aa554d76bc8ba61de55630096645407e1d54b0ffabd5d04118a8a3",
+    "current": "e485c29f404a3a3d66f4f8c7a367fca75e882f2818206beb382f049f1a85a88c",
+    "path": "src/adapters/ppt/delivery/ppt_delivery_state.ts"
+  },
+  "src/adapters/ppt_design.ts": {
+    "certified": "38c3bef0c588dfcbadc4fb1c9972aaa2714d0b51964eac40435a37a3b147bd06",
+    "current": "67a1777ea56bfca125cd63c63f7eef9365c23573693824039eae32e4e0d1557f",
+    "path": "src/adapters/ppt/authoring/ppt_design.ts"
+  },
+  "src/adapters/ppt_execution.ts": {
+    "certified": "b65fbdc0a2bcb32faf2d3b8ea22f5418fad146608e923c9d68d35d9166f604d8",
+    "current": "ff69a537b545f3b4c7998f6d25cff30f28ddcd6f1a0416063707e5e4aab152ae",
+    "path": "src/adapters/ppt/runtime/ppt_execution.ts"
+  },
+  "src/adapters/ppt_program_learning.py": {
+    "certified": "125a8afdacec98e91c52d3399b7bfa2b06ac780f2ccbf90b0ecb1d6440f73906",
+    "current": "52985fbf559f71129bb5ab0858e6841db7354fd5a1b25f060f1f88bfc399c93d",
+    "path": "src/adapters/ppt/learning/ppt_program_learning.py"
+  },
+  "src/adapters/ppt_workflow_host.ts": {
+    "certified": "cc10f2ed0e0aaa5f5e1c6252a8926aac59e58f51addf1c6ba15f4601d351258a",
+    "current": "e60e3e88af8f2589895573168685cc24291697a4b4ac91db4976295bc6d34068",
+    "path": "src/adapters/ppt/runtime/ppt_workflow_host.ts"
+  },
+  "src/adapters/ppt_workflow_runtime.ts": {
+    "certified": "b7df39aac7e527760b6706701cf734e8816a25bca85ca3cb43116adaf49c0315",
+    "current": "5be34af6caa94d5a900599aed25573490aea4d5a0fd5340a4e2a54a1d0793e96",
+    "path": "src/adapters/ppt/runtime/ppt_workflow_runtime.ts"
+  },
+  "src/adapters/ppt_write_runtime.ts": {
+    "certified": "acd8af84a88b3ca7a6c603c07b4a84d4ad0ee1c1042257b3dd4660ec85fa4697",
+    "current": "1d699dd958c0e5860fbf0c3fe8838213ba977c5cc629e026a24f347ec9a90567",
+    "path": "src/adapters/ppt/runtime/ppt_write_runtime.ts"
+  },
+  "src/adapters/ppt_write_tool.ts": {
+    "certified": "795e524b397157a6d77c33b440b90de3be5e229feddd4653ea3459bb8f186fbe",
+    "current": "933a2ca91ecb2baa687ffbe6bd9f8093c00956c94152ff3d0c74bcaafe8a537a",
+    "path": "src/adapters/ppt/runtime/ppt_write_tool.ts"
+  },
+  "src/adapters/reuse_mediation.ts": {
+    "certified": "7c2a08564ac5192e21b8762c1a866494007366ad01120d0510ad7098fb68e18d",
+    "current": "994255eb11bbc943047fb0d5e7616965a30e4843ad139c69fe7fc233a691c64a",
+    "additional_certified": [
+      "a62ef3098677c4f536c4dc2d12e72f30841f49a1e123a1b8f01604a367143ae0"
+    ]
+  },
+  "src/rsi/protocol/rsi_protocol.py": {
+    "certified": "787c95df510fad24dfe4f1b25e7d0fc83860b101d16f04818f1c998c1b49ef9f",
+    "current": "84de9b015e4316d02964664574bb0f48272059d35c021dafa494164671dcbc8b"
+  },
+  "src/rsi/protocol/rsi_protocol.ts": {
+    "certified": "882a269a0402293c3e565e908791edaf7ff39dfb7742c974dbe49c295a028aa6",
+    "current": "f69ea0094456cb30c190c5da46b355fbf763b551d736d7e1c6a6b4d909e7a3af"
+  },
+  "src/rsi/feedback/rsi_quality.py": {
+    "certified": "b1276af102e1571718a2da31fe65938d0eb3398a23131a6606c8d3839d9ea358",
+    "current": "20e717adb3644b8c84d6e9a1dd693a4ef144e515d21d40aecce4de08cc8105ee"
+  },
+  "src/rsi/feedback/rsi_quality.ts": {
+    "certified": "d5916bcf4ffd2d44b7d3721dc94bd5261e1f104de4f68682d509d5391c7af5b2",
+    "current": "0c4035637f62aca47d07b2a224c2cb8f08173aeca6e449ac17a0d8ef9209a97f"
+  },
+  "src/capability/runtime/source_program_runtime.ts": {
+    "certified": "610d7085ba2a9daabf424d221611f222fede026b1e1106c196a6a1c96214b558",
+    "current": "f5862a6cf7612d02cba3e745e198ee9348b3649617230c84308dc1981cf1f68c"
+  },
+  "src/adapters/web/web_task_request.ts": {
+    "certified": "575b099db2005938a58c45c8133cfe121b54d7d0103995004f0f87d2da6e72e4",
+    "current": "5f4a7eca3eb449a2f8345b3437127f7c527e049ad250384f287ffd75269bd313"
+  },
+  "src/motif_core/runtime/online_skill_runtime.mjs": {
+    "certified": "7d26af278af8e231fea1e28ddad4b9ce75afdbf871e85ee85892a9419fe2ef2d",
+    "current": "878efa7c83c7a9a0dfd8c44082838bba247f6d59d7a62fb3f3acd0c96175dbc0"
+  },
+  "src/motif_core/trajectory/model.py": {
+    "certified": "e4e9fa013697748cae587dd89e65dcab4786faeab9c9c459de0f86cc3661acce",
+    "current": "e8eb6318237ca898642616a277fd413d82908873d86a8b19683cf8189f266c2e"
+  },
+  "src/adapters/web/web_task_budget.py": {
+    "certified": "997ae0a0895e0d150c06ccc742cc12b32f3780854ecac48b3d71792f627dfd14",
+    "current": "5d165e4fb595f18344a914f9006c5788d5fe74edc4891bced6c9715c857ebc86"
+  },
+  "src/adapters/paper_query_recovery.py": {
+    "certified": "8008ca5c38b9a69bab1d90342792443e5d85e36ae35004877bb4242cdbc3da0a",
+    "current": "3f42b780ea277e6c70e40c6ce93338f7c19d3d6ae13f9451fb75de1d5f745c76"
+  },
+  "src/adapters/geneloop_web_search.ts": {
+    "certified": "2066879ef98e91f22c7a5b1ab09d3bb9db129ac34d72389e8c570b3622d4d6d2",
+    "current": "883048bde7ff44f3d7e401b8cca0caa1e2c38828fc2d10d073e69777b29b6303"
+  },
+  "private_paper_document_relocations": {
+    "scenarios/paper_proofreading/server.py": {
+      "path": "scenarios/paper_proofreading/server.py",
+      "from_sha256": "1608c6cd32b7c25d52c101ea842c8a46d28873ba7d9d3d8545a2b0442a46584a",
+      "to_sha256": "8f80708363bb06214b044cfd5b3f9eb2d33498db1f27128df1684df8b19012d4"
+    },
+    "scripts/harless_gateway.mjs": {
+      "path": "scripts/harless_gateway.mjs",
+      "from_sha256": "1a1b360bd294a0ce0a01acfc7eace8f5460fc831023fa388577633cf86e71e9f",
+      "to_sha256": "b8f22e2ae99b263faf7d5209bc3ebc7ea3fda44b14c0c103859e6788e1e9d2fc"
+    },
+    "scripts/learn-web-paper-document-motif.py": {
+      "path": "scripts/learn-web-paper-document-motif.py",
+      "from_sha256": "f1f2878a4bd9c15e7835093e8bfc2b548fde1fd55f4b32d80f5106ba45d2836d",
+      "to_sha256": "b9bafbd79ea57d912e1b0cc8d8ff24ab0f07ac95690e48bfe46a7089c7fb3e83",
+      "additional_source_sha256": [
+        "5596116551eed0f36d1387882269cb04b19fdf1259c3ee0c73e7c6101acc60d2"
+      ]
+    },
+    "src/adapters/paper_archive.py": {
+      "path": "scenarios/paper_proofreading/document_tools/paper_archive.py",
+      "from_sha256": "9704b7eea7f0746b892adb0e569b41c9f8e0635cf100d702a30d0dd575f44e4c",
+      "to_sha256": "d01b90391be4e4c9ba0dd850fd2a5ff6954b430063a7eea2c6261859c7adcf5e"
+    },
+    "src/adapters/paper_renderer.py": {
+      "path": "scenarios/paper_proofreading/document_tools/paper_renderer.py",
+      "from_sha256": "3463c468293fe6b5fc1d0545c742c23801aefa6c5538466434de53c01014684d",
+      "to_sha256": "3463c468293fe6b5fc1d0545c742c23801aefa6c5538466434de53c01014684d"
+    },
+    "src/adapters/paper_static_checks.py": {
+      "path": "scenarios/paper_proofreading/document_tools/paper_static_checks.py",
+      "from_sha256": "53507f424f8a285b0ead7c0cf4719f5870f8b3bd5220c79988afa124cea633ed",
+      "to_sha256": "53507f424f8a285b0ead7c0cf4719f5870f8b3bd5220c79988afa124cea633ed"
+    },
+    "src/adapters/rsi_learning_trace.py": {
+      "path": "src/adapters/rsi_learning_trace.py",
+      "from_sha256": "ee6f852aacbbcb880d5fc534942574e8f0c8d7bac4feb3f8b94ac185272b437a",
+      "to_sha256": "2c22fe5bec5c61859386637f788ffbf96420103c0d6bd3ee906d162a944e337e"
+    },
+    "src/adapters/tool_contract_loader.py": {
+      "path": "src/motif_core/offline/compilation/tool_contracts.py",
+      "from_sha256": "a5db11673be3369f854fa577ba57c8565a975d4c91aa9dddd1df939545d8adf8",
+      "to_sha256": "b55bd2c7fc80e169050c461b7fe3805ccf1931a810acbe4161932aca453ee190"
+    },
+    "src/adapters/tool_schema_contracts.py": {
+      "path": "src/motif_core/offline/compilation/tool_contracts.py",
+      "from_sha256": "7d019d1c29eb838f169f5c49a528a98a4fe537f77517ce92f9d671bee7bdbe57",
+      "to_sha256": "b55bd2c7fc80e169050c461b7fe3805ccf1931a810acbe4161932aca453ee190"
+    },
+    "src/adapters/web/learning/harless_paper_learning.ts": {
+      "path": "src/adapters/web/learning/harless_paper_learning.ts",
+      "from_sha256": "cc8de6499b62a0309e3b53518ddbe8e93faeffc6cc1ece1d86921e9af51f62c0",
+      "to_sha256": "a24bc65c804ba72fda6c7b64473457f9d1af4964231317bc2e4af0f063396cdb"
+    },
+    "src/adapters/web/learning/harless_rsi_bundle.py": {
+      "path": "src/adapters/web/learning/harless_rsi_bundle.py",
+      "from_sha256": "a873e47bb976928dbc3c1dca8a66c29f5aa1f3afbd8a4e6727cbf7789f49f8cb",
+      "to_sha256": "e0729b1c941b0aca7dbc0cef4b3c8096ab35a6dda1ae76fdbac779f879e5b491",
+      "additional_source_sha256": [
+        "c776d46c13da849d94e845d670e1a7817595ac6f1a68af9e3f4ee7a9e75f06f8"
+      ]
+    },
+    "scenarios/paper-submission/checks.py": {
+      "path": "scenarios/paper-submission/checks.py",
+      "from_sha256": "764796db94af73a516f1bcfc00de8fe12ec90e75242f049f0d7d875754a9c344",
+      "to_sha256": "d4cb5c138771d6662f1a3066770393556ba5b22173e00e28ac4034e09662ebaa"
+    },
+    "src/adapters/geneloop_command_broker.ts": {
+      "path": "src/adapters/geneloop_command_broker.ts",
+      "from_sha256": "9b77abc444b6b4b933c2a8ced44a3c8d8fab009c7726109d594ceb68f670fe6e",
+      "to_sha256": "2c3c5fbbfbc96ab2b4483a09863c5e4cdb9d05a8aed48568194d12fcce383442",
+      "additional_source_sha256": [
+        "8720aa6703d4c17bb10dff14a5020f654d2f8f22fad1b1befbb3f0d80585e309"
+      ]
+    },
+    "src/adapters/geneloop_shell.ts": {
+      "path": "src/adapters/geneloop_shell.ts",
+      "from_sha256": "64d9ceb58261ca85f1a9f1f69ea446abef00344fb90e280facec0a9c07980ac3",
+      "to_sha256": "21490ecfdd6ae00da5736adb10323890fc8e94a5c7c435c6750e57370743afdd"
+    },
+    "src/adapters/web/dsh_web_tasks.ts": {
+      "path": "src/adapters/web/dsh_web_tasks.ts",
+      "from_sha256": "c5f43c05414c5cc61b5621fcf926e17432f0a85760824ac6248e45c6e0778198",
+      "to_sha256": "26ca902869f58c49c2e1b353406ca2f80cc96e0646370fba895c8890061f7436",
+      "additional_source_sha256": [
+        "90422d00d74aa4ba77252fa33880ddb82c5aabc6732cbf5f710ebc58c0b48877"
+      ]
+    }
+  },
+  "src/adapters/ppt_program_evaluation.py": {
+    "certified": "597d9667bb673a6d9e9705258632a06d273932d9c0a6334f35a9de09682b27aa",
+    "current": "c9756c630478b367eb5bddb2454cd4fff107b88490cd00f7d21a1133f419f168",
+    "path": "src/adapters/ppt/learning/ppt_program_evaluation.py"
+  },
+  "private_ppt_document_relocations": {
+    "scenarios/research_ppt/motif_v6.py": {
+      "path": "scenarios/research_ppt/motif_v6.py",
+      "from_sha256": "befac83ea937d41747260a7262070b6743853f479cf9d6f790f9ba742272ef02",
+      "to_sha256": "d2061301c26eccd77bb6576a54e01063412b96f039462d508dbab1b18d84da42"
+    },
+    "scripts/compile-witnessed-read-chains.py": {
+      "path": "scripts/compile-witnessed-read-chains.py",
+      "from_sha256": "40f00d667f9e47f5ca724b590c456ed2a375424faefc6e21ea6262d5bd33afbe",
+      "to_sha256": "992e805ff0dc5113bb0cc665acfc33c3b152d3cab81de18299eddd5518d60f16"
+    },
+    "scripts/export-online-motif-manifest.py": {
+      "path": "scripts/export-online-motif-manifest.py",
+      "from_sha256": "035d9da6250493e66922986de2b8f18499b94bec982d73c0c72298ed6c847856",
+      "to_sha256": "0168f4f90b383aed31c7eee3a9f402abf0b24b762e79b9422538f5db6ec683d0"
+    },
+    "scripts/harless_gateway.mjs": {
+      "path": "scripts/harless_gateway.mjs",
+      "from_sha256": "1a1b360bd294a0ce0a01acfc7eace8f5460fc831023fa388577633cf86e71e9f",
+      "to_sha256": "b8f22e2ae99b263faf7d5209bc3ebc7ea3fda44b14c0c103859e6788e1e9d2fc"
+    },
+    "scripts/learn-ppt-master-motif.py": {
+      "path": "scripts/learn-ppt-master-motif.py",
+      "from_sha256": "3df5ba32ec405e03812896e7278045a7eb28358e5c4f18c1650ac0a3f815f85e",
+      "to_sha256": "03a96b29f3f9b4a6ee65f9c56600a5afd599686f3d3632cb0a0b7da3520d6fe2",
+      "additional_source_sha256": [
+        "c0c76d320801606baebfa6949b76e5d10fddac72edd710d1de9d298ce9c5be3a"
+      ]
+    },
+    "scripts/learn-web-paper-document-motif.py": {
+      "path": "scripts/learn-web-paper-document-motif.py",
+      "from_sha256": "f1f2878a4bd9c15e7835093e8bfc2b548fde1fd55f4b32d80f5106ba45d2836d",
+      "to_sha256": "b9bafbd79ea57d912e1b0cc8d8ff24ab0f07ac95690e48bfe46a7089c7fb3e83",
+      "additional_source_sha256": [
+        "5596116551eed0f36d1387882269cb04b19fdf1259c3ee0c73e7c6101acc60d2"
+      ]
+    },
+    "src/adapters/artifact_capability_runtime.ts": {
+      "path": "src/adapters/artifact_capability_runtime.ts",
+      "from_sha256": "04e76ffffa96b0620058fb4794960b014e262f7c1abcd72b4bcffea01145953c",
+      "to_sha256": "64dad822861c97a496ac01468cd71bf60da9ef213cf18682dbd2a74fa8afb985",
+      "additional_source_sha256": [
+        "1444d611069f04e7f49b6e56d85ec3da6c1baafc45445988549951a58bda03ed"
+      ]
+    },
+    "src/adapters/artifact_motif_runtime.ts": {
+      "path": "src/adapters/artifact_motif_runtime.ts",
+      "from_sha256": "f48f081975bb8c6b1a8eafee57b1c9bcc8db0da61e191f116b62f99de210b0fb",
+      "to_sha256": "e36de58b97a2c5655d8af8a58178345913ecdaec7d632de82712f019160ebde3",
+      "additional_source_sha256": [
+        "48d4653d8a9408a3743d07a2579f34aba810badf5bab95d5be79fb1918678142"
+      ]
+    },
+    "src/adapters/artifact_motif_trace.ts": {
+      "path": "src/adapters/artifact_motif_trace.ts",
+      "from_sha256": "73952281c67739652d09655f2f2ad084fce5e1d5cc5dcd5718feafa8a9426d0b",
+      "to_sha256": "672618702292ab11233d17206ed851ad01e4fc4fe38d9b46647e27e99c76b529"
+    },
+    "src/adapters/rsi_learning_trace.py": {
+      "path": "src/adapters/rsi_learning_trace.py",
+      "from_sha256": "ee6f852aacbbcb880d5fc534942574e8f0c8d7bac4feb3f8b94ac185272b437a",
+      "to_sha256": "2c22fe5bec5c61859386637f788ffbf96420103c0d6bd3ee906d162a944e337e"
+    },
+    "src/adapters/web/learning/harless_ppt_learning.ts": {
+      "path": "src/adapters/web/learning/harless_ppt_learning.ts",
+      "from_sha256": "a14d1b94f3b642d339b6719fb6451d16d27e0e37b000465beba8e22e525b9388",
+      "to_sha256": "4d7580ec3b9f5cc4536e68bd4ffc5c6fd2d9083a82ff1118902f3e076cad441b",
+      "additional_source_sha256": [
+        "d1e55c2b668400c6f100e67ad05ca89284139008109ee3e37759622c6c37834f"
+      ]
+    },
+    "src/adapters/web/learning/harless_rsi_bundle.py": {
+      "path": "src/adapters/web/learning/harless_rsi_bundle.py",
+      "from_sha256": "a873e47bb976928dbc3c1dca8a66c29f5aa1f3afbd8a4e6727cbf7789f49f8cb",
+      "to_sha256": "e0729b1c941b0aca7dbc0cef4b3c8096ab35a6dda1ae76fdbac779f879e5b491",
+      "additional_source_sha256": [
+        "c776d46c13da849d94e845d670e1a7817595ac6f1a68af9e3f4ee7a9e75f06f8"
+      ]
+    },
+    "src/adapters/geneloop_command_broker.ts": {
+      "path": "src/adapters/geneloop_command_broker.ts",
+      "from_sha256": "9b77abc444b6b4b933c2a8ced44a3c8d8fab009c7726109d594ceb68f670fe6e",
+      "to_sha256": "2c3c5fbbfbc96ab2b4483a09863c5e4cdb9d05a8aed48568194d12fcce383442",
+      "additional_source_sha256": [
+        "8720aa6703d4c17bb10dff14a5020f654d2f8f22fad1b1befbb3f0d80585e309"
+      ]
+    },
+    "src/adapters/geneloop_shell.ts": {
+      "path": "src/adapters/geneloop_shell.ts",
+      "from_sha256": "64d9ceb58261ca85f1a9f1f69ea446abef00344fb90e280facec0a9c07980ac3",
+      "to_sha256": "21490ecfdd6ae00da5736adb10323890fc8e94a5c7c435c6750e57370743afdd"
+    },
+    "src/adapters/web/dsh_web_tasks.ts": {
+      "path": "src/adapters/web/dsh_web_tasks.ts",
+      "from_sha256": "c5f43c05414c5cc61b5621fcf926e17432f0a85760824ac6248e45c6e0778198",
+      "to_sha256": "26ca902869f58c49c2e1b353406ca2f80cc96e0646370fba895c8890061f7436",
+      "additional_source_sha256": [
+        "90422d00d74aa4ba77252fa33880ddb82c5aabc6732cbf5f710ebc58c0b48877"
+      ]
+    },
+    "src/adapters/ppt_delivery_quality.py": {
+      "path": "src/adapters/ppt/delivery/ppt_delivery_quality.py",
+      "from_sha256": "50e38d8b48be7f89b8c2382f3c2e912c8faf840a936e34274403189583ad1732",
+      "to_sha256": "17de4a260f08488c5f912498d7ca4ed857b608034d4f1b7659ad5ac31470b258"
+    },
+    "src/adapters/ppt_delivery_runner.py": {
+      "path": "src/adapters/ppt/delivery/ppt_delivery_runner.py",
+      "from_sha256": "8d0dd64349a015a0030a55e0ebdfef185d3829a4bc5e58cfc09feb0143770a71",
+      "to_sha256": "08c09c68617960c61585deb30f3eb43e8d6d676db2d5444c56c79f4aedabfc4b"
+    },
+    "src/adapters/ppt_delivery_state.ts": {
+      "path": "src/adapters/ppt/delivery/ppt_delivery_state.ts",
+      "from_sha256": "02a2bf04604d4a5786ccbf3779efd93eed98a64970173806dea9bca0f4982571",
+      "to_sha256": "e485c29f404a3a3d66f4f8c7a367fca75e882f2818206beb382f049f1a85a88c"
+    },
+    "src/adapters/ppt_master_recovery.ts": {
+      "path": "src/adapters/ppt/delivery/ppt_master_recovery.ts",
+      "from_sha256": "0f5d29c03eb40c93c130262b167afdc3beaab3ac881de84a99d0e52a2d2f0291",
+      "to_sha256": "0f5d29c03eb40c93c130262b167afdc3beaab3ac881de84a99d0e52a2d2f0291"
+    },
+    "src/adapters/ppt_preparation_runner.py": {
+      "path": "src/adapters/ppt/delivery/ppt_preparation_runner.py",
+      "from_sha256": "037dd46530a8c6e9a3b4588692bf71165dd821f519f1a35a1f443438f988dc42",
+      "to_sha256": "3c3e56a7b190b4ad439bbdffb5c9e3bae19c0cf957f36b5ac763e1cff7e61e2e"
+    },
+    "src/adapters/ppt_annotation_repair.py": {
+      "path": "src/adapters/ppt/learning/ppt_annotation_repair.py",
+      "from_sha256": "009eaf28a6eb8f5663189f25a19b1d57f3c5b5ef6656e807ce1b02f4a6b12e69",
+      "to_sha256": "009eaf28a6eb8f5663189f25a19b1d57f3c5b5ef6656e807ce1b02f4a6b12e69"
+    },
+    "src/adapters/ppt_background_review.py": {
+      "path": "src/adapters/ppt/learning/ppt_background_review.py",
+      "from_sha256": "21a25d8916a07718ea97e2f2e6e44ab5b66b0dbe63c81242abc18c2771a267c4",
+      "to_sha256": "bba72e3339eb2bdd8bd6aa79ce720f961a890c056639c7c24cde3096fb1988f0"
+    },
+    "src/adapters/ppt_capability_budget.py": {
+      "path": "src/adapters/ppt/learning/ppt_capability_budget.py",
+      "from_sha256": "0d02ddd8776f512b1f9a09beca48435fe280d8e7c4d8c842fa9d75d5b7c2f740",
+      "to_sha256": "0d02ddd8776f512b1f9a09beca48435fe280d8e7c4d8c842fa9d75d5b7c2f740"
+    },
+    "src/adapters/ppt_component_equivalence.py": {
+      "path": "src/adapters/ppt/learning/ppt_component_equivalence.py",
+      "from_sha256": "9ce6255cf0c5255e3bccb641c4cd6e6d38ab4b4c0638792455f2ca027a6a5043",
+      "to_sha256": "21a1d6a6620067585d621da309c74852da9efff36e3fbfa433b7d9d7d36d03c6"
+    },
+    "src/adapters/ppt_component_learning.py": {
+      "path": "src/adapters/ppt/learning/ppt_component_learning.py",
+      "from_sha256": "37c19fd64759c2db895bdc84e39c161d53f7192a0deab9feb973bc4200cd4d40",
+      "to_sha256": "f8c8f397ed82b8f3a86c1bd6c125e1791593d44a62206a87a25d0294185ca629"
+    },
+    "src/adapters/ppt_component_literals.py": {
+      "path": "src/adapters/ppt/learning/ppt_component_literals.py",
+      "from_sha256": "0a3035702bbfed1fbc11dfc111ca79570a1e84905d6badb1d0e14efeef7392eb",
+      "to_sha256": "0a3035702bbfed1fbc11dfc111ca79570a1e84905d6badb1d0e14efeef7392eb"
+    },
+    "src/adapters/ppt_delivery_learning.py": {
+      "path": "src/adapters/ppt/learning/ppt_delivery_learning.py",
+      "from_sha256": "30db2fe91840f01dd12ef1b511182a94292efc0cbf44259f8936cc7518c5e9dd",
+      "to_sha256": "c5c27100646d881cc23b715feb2a7930bd5d218c345a05e2abcc915e33c79b14"
+    },
+    "src/adapters/ppt_learning_evidence.py": {
+      "path": "src/adapters/ppt/learning/ppt_learning_evidence.py",
+      "from_sha256": "cf5fd6f6d729099c1a20fce94d82b577a84ee11602247d10b46fd9a51ea83e01",
+      "to_sha256": "5f100103b62db0ddddcc4e36dbcfbb0d674588400bdab0b989f43a7c43d5d1af"
+    },
+    "src/adapters/ppt_learning_evidence.ts": {
+      "path": "src/adapters/ppt/learning/ppt_learning_evidence.ts",
+      "from_sha256": "942c9de3786125eb96a08269ae79810cb088f4947302b7200966d0a963af3049",
+      "to_sha256": "942c9de3786125eb96a08269ae79810cb088f4947302b7200966d0a963af3049"
+    },
+    "src/adapters/ppt_page_learning.py": {
+      "path": "src/adapters/ppt/learning/ppt_page_learning.py",
+      "from_sha256": "167dbcf4f99360cf75cc205bc1b6db53fd08e5f6c871e82d9363e96c341fff42",
+      "to_sha256": "6e1b85755ed61f596066a132a16c73833df9028b381d722426b321441ee36001"
+    },
+    "src/adapters/ppt_program_evaluation.py": {
+      "path": "src/adapters/ppt/learning/ppt_program_evaluation.py",
+      "from_sha256": "434ce55c8b1fdb38aba23cd8bcf289f2bb3358bde5ef3dc437b9e3056903e6e2",
+      "to_sha256": "c9756c630478b367eb5bddb2454cd4fff107b88490cd00f7d21a1133f419f168"
+    },
+    "src/adapters/ppt_web_fetch.ts": {
+      "path": "src/adapters/ppt/sources/ppt_web_fetch.ts",
+      "from_sha256": "7ebb2fcbfdcf32a4f289d078ee5a7f6c9d24de22fe3e4906eea86535363de3a2",
+      "to_sha256": "7ebb2fcbfdcf32a4f289d078ee5a7f6c9d24de22fe3e4906eea86535363de3a2"
+    },
+    "src/adapters/ppt_web_fetch_worker.mjs": {
+      "path": "src/adapters/ppt/sources/ppt_web_fetch_worker.mjs",
+      "from_sha256": "7c72837011f8517a499a89e6ca57e1bfec5f64d13497e1fcb34bd449a5214dc5",
+      "to_sha256": "7c72837011f8517a499a89e6ca57e1bfec5f64d13497e1fcb34bd449a5214dc5"
+    },
+    "src/adapters/ppt_authoring.ts": {
+      "path": "src/adapters/ppt/authoring/ppt_authoring.ts",
+      "from_sha256": "af1bbca8cc9286b3ea9e0045d21acc64963c06ac72bb06845778bf5210c6037a",
+      "to_sha256": "ac258bf5d2c9ad51eee20b2f9fbf9b638677c21ac20f3ddd879370a88d82aac7"
+    },
+    "src/adapters/ppt_component_render.py": {
+      "path": "src/adapters/ppt/authoring/ppt_component_render.py",
+      "from_sha256": "b17964447fc25902e6a2c2dabf9cc0ac75336878fd387a0a07feb78f9164a681",
+      "to_sha256": "b17964447fc25902e6a2c2dabf9cc0ac75336878fd387a0a07feb78f9164a681"
+    },
+    "src/adapters/ppt_component_schema.ts": {
+      "path": "src/adapters/ppt/authoring/ppt_component_schema.ts",
+      "from_sha256": "9eac333294f600bd1e4283f1a0e6c033e2c4535ee33422d66aad828c72ab7a2c",
+      "to_sha256": "9eac333294f600bd1e4283f1a0e6c033e2c4535ee33422d66aad828c72ab7a2c"
+    },
+    "src/adapters/ppt_deck_contract.ts": {
+      "path": "src/adapters/ppt/authoring/ppt_deck_contract.ts",
+      "from_sha256": "5627798146bb16d3e9023de4a7d2b1108d07850da3be22b267ad8293fa28a41d",
+      "to_sha256": "4a4ba77d0dc1ebe3bc55779f1146f64ab1fc219faf4505b3be71680de79b6694"
+    },
+    "src/adapters/ppt_deck_engine.ts": {
+      "path": "src/adapters/ppt/authoring/ppt_deck_engine.ts",
+      "from_sha256": "fc0d9b42985994af9d998333c6271e0af3800cc05b2f209e8da606c85b123ccf",
+      "to_sha256": "f336751c848a32da39645e5d3285a9607e1ee0da6dee58814be752ec1a2f5f34"
+    },
+    "src/adapters/ppt_deck_tool.ts": {
+      "path": "src/adapters/ppt/authoring/ppt_deck_tool.ts",
+      "from_sha256": "e25faab7ae3e6458b0b90bad4c1dc65651f94c31a3011e0be7c11acb29d50b29",
+      "to_sha256": "70378561352f66659fad9a3847a3d051a25c890092529950491b2f9ffe948cff"
+    },
+    "src/adapters/ppt_design.ts": {
+      "path": "src/adapters/ppt/authoring/ppt_design.ts",
+      "from_sha256": "950c28b4ca5bb626cac0c884bab3604eb93dcd766a6570c6018a9eb852e1dbe7",
+      "to_sha256": "67a1777ea56bfca125cd63c63f7eef9365c23573693824039eae32e4e0d1557f"
+    },
+    "src/adapters/ppt_design_preflight.py": {
+      "path": "src/adapters/ppt/authoring/ppt_design_preflight.py",
+      "from_sha256": "a6dcc8e10911a1b969df80f40194be0d8639c648e26d4f04c74914244fcd7a86",
+      "to_sha256": "a6dcc8e10911a1b969df80f40194be0d8639c648e26d4f04c74914244fcd7a86"
+    },
+    "src/adapters/ppt_input_policy.ts": {
+      "path": "src/adapters/ppt/authoring/ppt_input_policy.ts",
+      "from_sha256": "4289d5c4650ed8e1716c52b8946c89a89cf5768f6da08394429f11a9848f3c48",
+      "to_sha256": "4289d5c4650ed8e1716c52b8946c89a89cf5768f6da08394429f11a9848f3c48"
+    },
+    "src/adapters/ppt_native_edit.py": {
+      "path": "src/adapters/ppt/authoring/ppt_native_edit.py",
+      "from_sha256": "49b68544f05f8ea079a4ce1d34f6c74f2a1834b18eba6603a1170562b345e8b9",
+      "to_sha256": "49b68544f05f8ea079a4ce1d34f6c74f2a1834b18eba6603a1170562b345e8b9"
+    },
+    "src/adapters/ppt_page_renderer.py": {
+      "path": "src/adapters/ppt/authoring/ppt_page_renderer.py",
+      "from_sha256": "c95a2b890894587ffd96a31e180b350bde3d54a8ff7985ac6c5e63ff16ff299b",
+      "to_sha256": "39095bb041ce6afba7930fb33dd43ca2c35e24b24d7623d00736d6c5772986d9"
+    },
+    "src/adapters/ppt_asset_budget.ts": {
+      "path": "src/adapters/ppt/delivery/ppt_asset_budget.ts",
+      "from_sha256": "f751e2e771f5833d7a944f6e0612023aa1c3ad5fe830b6ef9d65a5a9c034cbfd",
+      "to_sha256": "f751e2e771f5833d7a944f6e0612023aa1c3ad5fe830b6ef9d65a5a9c034cbfd"
+    },
+    "src/adapters/ppt_delivery_pipeline.ts": {
+      "path": "src/adapters/ppt/delivery/ppt_delivery_pipeline.ts",
+      "from_sha256": "e5de956ae11a1077ba9bd1867393c272c62bdf9547e61891014c069d560e9c97",
+      "to_sha256": "76d791a9b043d79d43eac6efa0f0304fbbb00aaed99b91522ad17a66bb511dc4"
+    },
+    "src/adapters/ppt_output_packaging.ts": {
+      "path": "src/adapters/ppt/delivery/ppt_output_packaging.ts",
+      "from_sha256": "cf7166f0570a20e04598a83ce9c69acc69898eb9b20aa99af895c3d1f9b84e54",
+      "to_sha256": "cf7166f0570a20e04598a83ce9c69acc69898eb9b20aa99af895c3d1f9b84e54"
+    },
+    "src/adapters/ppt_task_completion.ts": {
+      "path": "src/adapters/ppt/delivery/ppt_task_completion.ts",
+      "from_sha256": "25553ffdf48ec1fe29f09a48746cd395f921746fc14f6c565d50fafc432086b1",
+      "to_sha256": "304302bdee348d998a608287365c83c73e74ce30d77a4030f1127118e989098f"
+    },
+    "src/adapters/ppt_capability_learning.py": {
+      "path": "src/adapters/ppt/learning/ppt_capability_learning.py",
+      "from_sha256": "43a4470a8701d203dc532f93544c95c09897666175d8244b6f266474d191bb23",
+      "to_sha256": "d468f1ad664a3b637dedf62c14f10294c4efb84dda81c32e8e8d429774982420"
+    },
+    "src/adapters/ppt_program_learning.py": {
+      "path": "src/adapters/ppt/learning/ppt_program_learning.py",
+      "from_sha256": "d3bd48263ff940d93bca9e844276131a8a15931897f47ecad683db2c18e3f405",
+      "to_sha256": "52985fbf559f71129bb5ab0858e6841db7354fd5a1b25f060f1f88bfc399c93d"
+    },
+    "src/adapters/ppt_skill_opportunities.py": {
+      "path": "src/adapters/ppt/learning/ppt_skill_opportunities.py",
+      "from_sha256": "9428296a33c5373db89e01a6415162c5048901d62bbfd9889f1ce424c668d7cf",
+      "to_sha256": "e029dcc9e0d6aab8f7777b1e48716724ea7958a664dc262f57e609bcd676fcc3"
+    },
+    "src/adapters/ppt_workflow_certification.py": {
+      "path": "src/adapters/ppt/learning/ppt_workflow_certification.py",
+      "from_sha256": "a6472222cd285da84e1252ddf77896607d088a0f328df512189512605f07b1b2",
+      "to_sha256": "2d44e736dd034931df078ad2b49342578c41330cbe169ad13457db97dc0e91c8"
+    },
+    "src/adapters/ppt_workflow_learning.py": {
+      "path": "src/adapters/ppt/learning/ppt_workflow_learning.py",
+      "from_sha256": "d3d1d6391ea9d9422275eda9549c743dabfafb93a29ea8db84a3c3b34f7a4102",
+      "to_sha256": "8cb5e2798095d90ca9caf27feeaa8eade6a8b83a6c5858e152176f642ba9ea75"
+    },
+    "src/adapters/ppt_write_learning.py": {
+      "path": "src/adapters/ppt/learning/ppt_write_learning.py",
+      "from_sha256": "601a4265c444f687c59a875de6c517b6669ecdb06e199983e99d71ed83679104",
+      "to_sha256": "453153333164e810f8a54f59f658cd524e51d6b54d2794570fecb976d4c0759a"
+    },
+    "src/adapters/ppt_capability_broker.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_capability_broker.ts",
+      "from_sha256": "6d704dffc4a96e0477011a8791d406b05ad8e8befb099725fd979f7dd3eb9ba1",
+      "to_sha256": "5e95a0c40b5057aa45ef49dd12bf4dad8e3d3f9ec63951ed63f3c1deb361ee59"
+    },
+    "src/adapters/ppt_capability_online.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_capability_online.ts",
+      "from_sha256": "21c6e35b03950188fc6a010d57f266d3a8816806d4680e0ac1db0308d932a4f0",
+      "to_sha256": "ac5d0ce55effe55757076d04d37111a2e4305e34c9dcf1097da1717fbbae27e2"
+    },
+    "src/adapters/ppt_component_cache.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_component_cache.ts",
+      "from_sha256": "e45a227681765f76cc4caa3f0684d6f251e51542fbad38606e6f62f4a79f60a6",
+      "to_sha256": "b2f292c3dd1d4af080b725a7a63d5d6e2826181e5874e8eedbd72f42a90cdee4"
+    },
+    "src/adapters/ppt_component_tool.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_component_tool.ts",
+      "from_sha256": "7dbf8ea8b3857c9824ebc1b9e099a71f50a7883fd22ce67baab2bc0fcf6f716f",
+      "to_sha256": "58eb952ccb1c44ab61a396eafaaa29bb91a5e418e28d7a61b854b90f46cc2cef"
+    },
+    "src/adapters/ppt_execution.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_execution.ts",
+      "from_sha256": "0a4d1a725c8435379171ccb0b5519f0ea30eed88a8fdc9e21dc532ffda64317a",
+      "to_sha256": "ff69a537b545f3b4c7998f6d25cff30f28ddcd6f1a0416063707e5e4aab152ae"
+    },
+    "src/adapters/ppt_program_broker.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_program_broker.ts",
+      "from_sha256": "9f9fb48ad4726128f88a59973a335f066956a1802c5befeb097d70aa01310fad",
+      "to_sha256": "60a9cf0501b8ea71b490250c56ff98535101432248d6ce6485eb6658454c9e84"
+    },
+    "src/adapters/ppt_program_learning.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_program_learning.ts",
+      "from_sha256": "b8bcc8c11df93c79864ac8197c22127431530d6a6c861b64365acfec3c6e481f",
+      "to_sha256": "0a4609a30a64f44fb66dc7447cff0c9bba2dd1d79144ef03d2d86f57a0a8919f"
+    },
+    "src/adapters/ppt_workflow_host.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_workflow_host.ts",
+      "from_sha256": "7dbff2073b4449b816ed49fe75453ebfad093a8d480a4fcca188d8471cd2dc3f",
+      "to_sha256": "e60e3e88af8f2589895573168685cc24291697a4b4ac91db4976295bc6d34068"
+    },
+    "src/adapters/ppt_workflow_runtime.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_workflow_runtime.ts",
+      "from_sha256": "c15b0399625d12d6c03ec58da4e82a3782a175e8041cb53267fa7f69d1566b60",
+      "to_sha256": "5be34af6caa94d5a900599aed25573490aea4d5a0fd5340a4e2a54a1d0793e96"
+    },
+    "src/adapters/ppt_write_runtime.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_write_runtime.ts",
+      "from_sha256": "d7fa01778a07a1c309c9066ee0190e1c867809644318c577e4972b7b593bf434",
+      "to_sha256": "1d699dd958c0e5860fbf0c3fe8838213ba977c5cc629e026a24f347ec9a90567"
+    },
+    "src/adapters/ppt_write_tool.ts": {
+      "path": "src/adapters/ppt/runtime/ppt_write_tool.ts",
+      "from_sha256": "b59834e58b3c104c40eac0d2a4b5b53798dc64239b23506db9b4df9338e3739d",
+      "to_sha256": "933a2ca91ecb2baa687ffbe6bd9f8093c00956c94152ff3d0c74bcaafe8a537a"
+    },
+    "src/adapters/ppt_pdf_index.py": {
+      "path": "src/adapters/ppt/sources/ppt_pdf_index.py",
+      "from_sha256": "638a36f780668af6ea10a95f15dd260e8580c87f0ea98efa2c542a085b1afb13",
+      "to_sha256": "638a36f780668af6ea10a95f15dd260e8580c87f0ea98efa2c542a085b1afb13"
+    },
+    "src/adapters/ppt_preview_runner.py": {
+      "path": "src/adapters/ppt/sources/ppt_preview_runner.py",
+      "from_sha256": "b991433d345a95c160fca318cb6ecb4a2a237d8c351f0bc2082a329adc4a870f",
+      "to_sha256": "b991433d345a95c160fca318cb6ecb4a2a237d8c351f0bc2082a329adc4a870f"
+    }
+  },
+  "paper_citation_checker_identity": {
+    "previous_sha256": "764796db94af73a516f1bcfc00de8fe12ec90e75242f049f0d7d875754a9c344",
+    "current_sha256": "d4cb5c138771d6662f1a3066770393556ba5b22173e00e28ac4034e09662ebaa",
+    "static_checks_sha256": "53507f424f8a285b0ead7c0cf4719f5870f8b3bd5220c79988afa124cea633ed"
+  },
+  "scenarios/paper-submission/checks.py": {
+    "certified": "764796db94af73a516f1bcfc00de8fe12ec90e75242f049f0d7d875754a9c344",
+    "current": "d4cb5c138771d6662f1a3066770393556ba5b22173e00e28ac4034e09662ebaa"
+  },
+  "src/adapters/geneloop_shell.ts": {
+    "certified": "64d9ceb58261ca85f1a9f1f69ea446abef00344fb90e280facec0a9c07980ac3",
+    "current": "21490ecfdd6ae00da5736adb10323890fc8e94a5c7c435c6750e57370743afdd"
+  },
+  "apps/desktop/runtime/local-ppt-deck.mjs": {
+    "certified": "9dac360c715715f16f55ee53fac3a67422fcc83a2a5913a861b5d1f7d386f4a2",
+    "current": "b230f8fcf3a6afb3ae9595c8568d1ce097bb8d30fbe5e6b9e9cd79ae085a58c7"
+  },
+  "apps/desktop/scripts/stage-ppt-deck.mjs": {
+    "certified": "776e4f1011fb62de44c36f2f50f329b9be42b184857c9f3d26d17a2763e2b235",
+    "current": "25c357124d877466a80d96e712b2da778b501254257a6e6ec3f91d259e410cf2"
+  },
+  "scenarios/ppt_master/workflow-contracts.json": {
+    "certified": "5c14b34a10a463591dea77ce545fa0785d87b7f3e680777b6bd4d181046d5bd7",
+    "current": "58ceb3e3480461229178906fdf4d5b7336f2af78b200325c221f1fa237a06e8a"
+  },
+  "scripts/learn-ppt-components.py": {
+    "certified": "6dacf531fcbe2cdea8f1b3d9c3ae56925f2f19e4eccc3947d39222a1e80aac41",
+    "current": "f84e10ee5f32bd7b660484603d1131d327a85ebad8c800bbb6f0615e272708e0"
+  },
+  "scripts/run-artifact-capability.mjs": {
+    "certified": "8bfed12b6400fc9ae8ba2b800dbd696c6b897750474c17aff7d79c74eddfc7c3",
+    "current": "f7b07401d67da9016744344f4d80f0b78221583a30641c7708151ef72577b031"
+  },
+  "src/adapters/file_event_projection.ts": {
+    "certified": "875191cf53fca2ed509466aac7fc4af87783a6d2a39791114458ce18965fcda9",
+    "current": "875191cf53fca2ed509466aac7fc4af87783a6d2a39791114458ce18965fcda9",
+    "path": "src/adapters/file_management/file_event_projection.ts"
+  },
+  "src/adapters/ppt_annotation_repair.py": {
+    "certified": "009eaf28a6eb8f5663189f25a19b1d57f3c5b5ef6656e807ce1b02f4a6b12e69",
+    "current": "009eaf28a6eb8f5663189f25a19b1d57f3c5b5ef6656e807ce1b02f4a6b12e69",
+    "path": "src/adapters/ppt/learning/ppt_annotation_repair.py"
+  },
+  "src/adapters/ppt_asset_budget.ts": {
+    "certified": "f751e2e771f5833d7a944f6e0612023aa1c3ad5fe830b6ef9d65a5a9c034cbfd",
+    "current": "f751e2e771f5833d7a944f6e0612023aa1c3ad5fe830b6ef9d65a5a9c034cbfd",
+    "path": "src/adapters/ppt/delivery/ppt_asset_budget.ts"
+  },
+  "src/adapters/ppt_authoring.ts": {
+    "certified": "af1bbca8cc9286b3ea9e0045d21acc64963c06ac72bb06845778bf5210c6037a",
+    "current": "ac258bf5d2c9ad51eee20b2f9fbf9b638677c21ac20f3ddd879370a88d82aac7",
+    "path": "src/adapters/ppt/authoring/ppt_authoring.ts"
+  },
+  "src/adapters/ppt_background_review.py": {
+    "certified": "21a25d8916a07718ea97e2f2e6e44ab5b66b0dbe63c81242abc18c2771a267c4",
+    "current": "bba72e3339eb2bdd8bd6aa79ce720f961a890c056639c7c24cde3096fb1988f0",
+    "path": "src/adapters/ppt/learning/ppt_background_review.py"
+  },
+  "src/adapters/ppt_capability_budget.py": {
+    "certified": "0d02ddd8776f512b1f9a09beca48435fe280d8e7c4d8c842fa9d75d5b7c2f740",
+    "current": "0d02ddd8776f512b1f9a09beca48435fe280d8e7c4d8c842fa9d75d5b7c2f740",
+    "path": "src/adapters/ppt/learning/ppt_capability_budget.py"
+  },
+  "src/adapters/ppt_component_equivalence.py": {
+    "certified": "9ce6255cf0c5255e3bccb641c4cd6e6d38ab4b4c0638792455f2ca027a6a5043",
+    "current": "21a1d6a6620067585d621da309c74852da9efff36e3fbfa433b7d9d7d36d03c6",
+    "path": "src/adapters/ppt/learning/ppt_component_equivalence.py"
+  },
+  "src/adapters/ppt_component_learning.py": {
+    "certified": "37c19fd64759c2db895bdc84e39c161d53f7192a0deab9feb973bc4200cd4d40",
+    "current": "f8c8f397ed82b8f3a86c1bd6c125e1791593d44a62206a87a25d0294185ca629",
+    "path": "src/adapters/ppt/learning/ppt_component_learning.py"
+  },
+  "src/adapters/ppt_component_literals.py": {
+    "certified": "0a3035702bbfed1fbc11dfc111ca79570a1e84905d6badb1d0e14efeef7392eb",
+    "current": "0a3035702bbfed1fbc11dfc111ca79570a1e84905d6badb1d0e14efeef7392eb",
+    "path": "src/adapters/ppt/learning/ppt_component_literals.py"
+  },
+  "src/adapters/ppt_component_render.py": {
+    "certified": "b17964447fc25902e6a2c2dabf9cc0ac75336878fd387a0a07feb78f9164a681",
+    "current": "b17964447fc25902e6a2c2dabf9cc0ac75336878fd387a0a07feb78f9164a681",
+    "path": "src/adapters/ppt/authoring/ppt_component_render.py"
+  },
+  "src/adapters/ppt_component_schema.ts": {
+    "certified": "9eac333294f600bd1e4283f1a0e6c033e2c4535ee33422d66aad828c72ab7a2c",
+    "current": "9eac333294f600bd1e4283f1a0e6c033e2c4535ee33422d66aad828c72ab7a2c",
+    "path": "src/adapters/ppt/authoring/ppt_component_schema.ts"
+  },
+  "src/adapters/ppt_deck_contract.ts": {
+    "certified": "5627798146bb16d3e9023de4a7d2b1108d07850da3be22b267ad8293fa28a41d",
+    "current": "4a4ba77d0dc1ebe3bc55779f1146f64ab1fc219faf4505b3be71680de79b6694",
+    "path": "src/adapters/ppt/authoring/ppt_deck_contract.ts"
+  },
+  "src/adapters/ppt_deck_engine.ts": {
+    "certified": "fc0d9b42985994af9d998333c6271e0af3800cc05b2f209e8da606c85b123ccf",
+    "current": "f336751c848a32da39645e5d3285a9607e1ee0da6dee58814be752ec1a2f5f34",
+    "path": "src/adapters/ppt/authoring/ppt_deck_engine.ts"
+  },
+  "src/adapters/ppt_delivery_learning.py": {
+    "certified": "30db2fe91840f01dd12ef1b511182a94292efc0cbf44259f8936cc7518c5e9dd",
+    "current": "c5c27100646d881cc23b715feb2a7930bd5d218c345a05e2abcc915e33c79b14",
+    "path": "src/adapters/ppt/learning/ppt_delivery_learning.py"
+  },
+  "src/adapters/ppt_delivery_runner.py": {
+    "certified": "8d0dd64349a015a0030a55e0ebdfef185d3829a4bc5e58cfc09feb0143770a71",
+    "current": "08c09c68617960c61585deb30f3eb43e8d6d676db2d5444c56c79f4aedabfc4b",
+    "path": "src/adapters/ppt/delivery/ppt_delivery_runner.py"
+  },
+  "src/adapters/ppt_design_preflight.py": {
+    "certified": "a6dcc8e10911a1b969df80f40194be0d8639c648e26d4f04c74914244fcd7a86",
+    "current": "a6dcc8e10911a1b969df80f40194be0d8639c648e26d4f04c74914244fcd7a86",
+    "path": "src/adapters/ppt/authoring/ppt_design_preflight.py"
+  },
+  "src/adapters/ppt_input_policy.ts": {
+    "certified": "4289d5c4650ed8e1716c52b8946c89a89cf5768f6da08394429f11a9848f3c48",
+    "current": "4289d5c4650ed8e1716c52b8946c89a89cf5768f6da08394429f11a9848f3c48",
+    "path": "src/adapters/ppt/authoring/ppt_input_policy.ts"
+  },
+  "src/adapters/ppt_learning_evidence.py": {
+    "certified": "cf5fd6f6d729099c1a20fce94d82b577a84ee11602247d10b46fd9a51ea83e01",
+    "current": "5f100103b62db0ddddcc4e36dbcfbb0d674588400bdab0b989f43a7c43d5d1af",
+    "path": "src/adapters/ppt/learning/ppt_learning_evidence.py"
+  },
+  "src/adapters/ppt_learning_evidence.ts": {
+    "certified": "942c9de3786125eb96a08269ae79810cb088f4947302b7200966d0a963af3049",
+    "current": "942c9de3786125eb96a08269ae79810cb088f4947302b7200966d0a963af3049",
+    "path": "src/adapters/ppt/learning/ppt_learning_evidence.ts"
+  },
+  "src/adapters/ppt_master_recovery.ts": {
+    "certified": "0f5d29c03eb40c93c130262b167afdc3beaab3ac881de84a99d0e52a2d2f0291",
+    "current": "0f5d29c03eb40c93c130262b167afdc3beaab3ac881de84a99d0e52a2d2f0291",
+    "path": "src/adapters/ppt/delivery/ppt_master_recovery.ts"
+  },
+  "src/adapters/ppt_native_edit.py": {
+    "certified": "49b68544f05f8ea079a4ce1d34f6c74f2a1834b18eba6603a1170562b345e8b9",
+    "current": "49b68544f05f8ea079a4ce1d34f6c74f2a1834b18eba6603a1170562b345e8b9",
+    "path": "src/adapters/ppt/authoring/ppt_native_edit.py"
+  },
+  "src/adapters/ppt_output_packaging.ts": {
+    "certified": "cf7166f0570a20e04598a83ce9c69acc69898eb9b20aa99af895c3d1f9b84e54",
+    "current": "cf7166f0570a20e04598a83ce9c69acc69898eb9b20aa99af895c3d1f9b84e54",
+    "path": "src/adapters/ppt/delivery/ppt_output_packaging.ts"
+  },
+  "src/adapters/ppt_page_learning.py": {
+    "certified": "167dbcf4f99360cf75cc205bc1b6db53fd08e5f6c871e82d9363e96c341fff42",
+    "current": "6e1b85755ed61f596066a132a16c73833df9028b381d722426b321441ee36001",
+    "path": "src/adapters/ppt/learning/ppt_page_learning.py"
+  },
+  "src/adapters/ppt_page_renderer.py": {
+    "certified": "c95a2b890894587ffd96a31e180b350bde3d54a8ff7985ac6c5e63ff16ff299b",
+    "current": "39095bb041ce6afba7930fb33dd43ca2c35e24b24d7623d00736d6c5772986d9",
+    "path": "src/adapters/ppt/authoring/ppt_page_renderer.py"
+  },
+  "src/adapters/ppt_pdf_index.py": {
+    "certified": "638a36f780668af6ea10a95f15dd260e8580c87f0ea98efa2c542a085b1afb13",
+    "current": "638a36f780668af6ea10a95f15dd260e8580c87f0ea98efa2c542a085b1afb13",
+    "path": "src/adapters/ppt/sources/ppt_pdf_index.py"
+  },
+  "src/adapters/ppt_preparation_runner.py": {
+    "certified": "037dd46530a8c6e9a3b4588692bf71165dd821f519f1a35a1f443438f988dc42",
+    "current": "3c3e56a7b190b4ad439bbdffb5c9e3bae19c0cf957f36b5ac763e1cff7e61e2e",
+    "path": "src/adapters/ppt/delivery/ppt_preparation_runner.py"
+  },
+  "src/adapters/ppt_preview_runner.py": {
+    "certified": "b991433d345a95c160fca318cb6ecb4a2a237d8c351f0bc2082a329adc4a870f",
+    "current": "b991433d345a95c160fca318cb6ecb4a2a237d8c351f0bc2082a329adc4a870f",
+    "path": "src/adapters/ppt/sources/ppt_preview_runner.py"
+  },
+  "src/adapters/ppt_program_broker.ts": {
+    "certified": "9f9fb48ad4726128f88a59973a335f066956a1802c5befeb097d70aa01310fad",
+    "current": "60a9cf0501b8ea71b490250c56ff98535101432248d6ce6485eb6658454c9e84",
+    "path": "src/adapters/ppt/runtime/ppt_program_broker.ts"
+  },
+  "src/adapters/ppt_program_learning.ts": {
+    "certified": "b8bcc8c11df93c79864ac8197c22127431530d6a6c861b64365acfec3c6e481f",
+    "current": "0a4609a30a64f44fb66dc7447cff0c9bba2dd1d79144ef03d2d86f57a0a8919f",
+    "path": "src/adapters/ppt/runtime/ppt_program_learning.ts"
+  },
+  "src/adapters/ppt_skill_opportunities.py": {
+    "certified": "9428296a33c5373db89e01a6415162c5048901d62bbfd9889f1ce424c668d7cf",
+    "current": "e029dcc9e0d6aab8f7777b1e48716724ea7958a664dc262f57e609bcd676fcc3",
+    "path": "src/adapters/ppt/learning/ppt_skill_opportunities.py"
+  },
+  "src/adapters/ppt_task_completion.ts": {
+    "certified": "25553ffdf48ec1fe29f09a48746cd395f921746fc14f6c565d50fafc432086b1",
+    "current": "304302bdee348d998a608287365c83c73e74ce30d77a4030f1127118e989098f",
+    "path": "src/adapters/ppt/delivery/ppt_task_completion.ts"
+  },
+  "src/adapters/ppt_web_fetch.ts": {
+    "certified": "7ebb2fcbfdcf32a4f289d078ee5a7f6c9d24de22fe3e4906eea86535363de3a2",
+    "current": "7ebb2fcbfdcf32a4f289d078ee5a7f6c9d24de22fe3e4906eea86535363de3a2",
+    "path": "src/adapters/ppt/sources/ppt_web_fetch.ts"
+  },
+  "src/adapters/ppt_web_fetch_worker.mjs": {
+    "certified": "7c72837011f8517a499a89e6ca57e1bfec5f64d13497e1fcb34bd449a5214dc5",
+    "current": "7c72837011f8517a499a89e6ca57e1bfec5f64d13497e1fcb34bd449a5214dc5",
+    "path": "src/adapters/ppt/sources/ppt_web_fetch_worker.mjs"
+  },
+  "src/adapters/ppt_workflow_certification.py": {
+    "certified": "a6472222cd285da84e1252ddf77896607d088a0f328df512189512605f07b1b2",
+    "current": "2d44e736dd034931df078ad2b49342578c41330cbe169ad13457db97dc0e91c8",
+    "path": "src/adapters/ppt/learning/ppt_workflow_certification.py"
+  },
+  "src/adapters/ppt_workflow_learning.py": {
+    "certified": "d3d1d6391ea9d9422275eda9549c743dabfafb93a29ea8db84a3c3b34f7a4102",
+    "current": "8cb5e2798095d90ca9caf27feeaa8eade6a8b83a6c5858e152176f642ba9ea75",
+    "path": "src/adapters/ppt/learning/ppt_workflow_learning.py"
+  },
+  "src/adapters/ppt_write_learning.py": {
+    "certified": "601a4265c444f687c59a875de6c517b6669ecdb06e199983e99d71ed83679104",
+    "current": "453153333164e810f8a54f59f658cd524e51d6b54d2794570fecb976d4c0759a",
+    "path": "src/adapters/ppt/learning/ppt_write_learning.py"
+  },
+  "src/adapters/web/learning/private_source_locks.ts": {
+    "certified": "c209e7710c0b5162149a67d19cd2abf680fcb2c72ad92c2eb7296e44b253d63b",
+    "current": "5d11e23303020dc4d0258f63e4ea45d842c050210d443664fd9322dcd7f9c691"
+  },
+  "ppt_workflow_environment": {
+    "348a2cca52f7b9d146e0efd3dfaecdf8b2e0bbf1f40611ffe526ccf2aa8495aa": "e35d5da3674b717827c29fd3121490aa494c749c69201180c5ea35152dca0c8f",
+    "a2c8c5d30a81d142a9d44a94bdb71aa01d3a49693a21f009457b02f1dc49e8b4": "d148faa7224962ef6e35f1782dd75c8850f9fceac75669bdc720f06a87a9ffc3",
+    "3c38fcd8e24c8431e87a6d69239426984e68602eac47c0c797de541a0313e36a": "119d4eb6f0fd2f19544fe0775abca67937eea53da11eacfd6c5d371788d0b76b"
   }
 }

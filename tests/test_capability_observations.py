@@ -3,9 +3,9 @@ import copy
 import json
 from pathlib import Path
 import pytest
-from src.adapters.capability_contract import capability_digest
-from src.adapters.capability_improvement import run_improvement, discover
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref
+from src.capability.graph.capability_contract import capability_digest
+from src.rsi.learning.capability_improvement import run_improvement, discover
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref
 from scenarios.remotion_edit.structured.capability_observations import discover_jobs, inspect_run
 from scenarios.remotion_edit.structured.run_capability_improvement import SourceImprovementAdapter
 from tests.test_capability_improvement import plan_at, put, Adapter

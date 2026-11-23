@@ -1,4 +1,4 @@
-from src.adapters.report_patch_evidence import observed_revision_plan,patch_input,patch_expectation,patch_cases
+from scenarios.paper_proofreading.learning.report_patch_evidence import observed_revision_plan,patch_input,patch_expectation,patch_cases
 
 def test_normal_diff_extracts_plan_without_rewriting_research_fields():
     a={'key':'a','arxiv_id':'old','source_urls':['one','two']}

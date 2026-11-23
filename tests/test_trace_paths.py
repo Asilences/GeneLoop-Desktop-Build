@@ -2,8 +2,8 @@ from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
 
-from src.adapters.trace_paths import relative_trace_path
-from src.adapters.native_motif_compiler import normal, compile_read
+from src.motif_core.trajectory.trace_paths import relative_trace_path
+from src.motif_core.offline.compilation.trace.native_motif_compiler import normal, compile_read
 
 
 @pytest.mark.parametrize('work,path', [

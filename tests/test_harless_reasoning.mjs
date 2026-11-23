@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import {getEventListeners} from 'node:events';
 import {snapshotJsonValue} from '@deepseek-ai/dsh-util-values';
 import { resolveAdapterOptions } from '@deepseek-ai/dsh-llm-deepseek';
-import { WebDeepSeekAdapter, webReasoningEffort, webReasoningAvailability, webDeepSeekModels,WEB_DEEPSEEK_OUTPUT_CAPACITY } from '../src/adapters/harless_reasoning.ts';
+import { WebDeepSeekAdapter, webReasoningEffort, webReasoningAvailability, webDeepSeekModels,WEB_DEEPSEEK_OUTPUT_CAPACITY } from '../src/adapters/web/tasks/harless_reasoning.ts';
 
 test('Native model discovery offers every supported strength while the installed adapter sends its native wire values',async()=>{
   const requests=[];
@@ -97,14 +97,20 @@ test('new model output capacity respects the smaller configured application cap'
   try{
     const option={provider:'deepseek-official',model:'kouri-diagnostic',label:'Kouri diagnostic',available:true,
       context_window:16000,max_output_tokens:4000,input_modalities:['text'],supported_reasoning_efforts:['off']};
-    const options=resolveAdapterOptions({baseURL:`http://127.0.0.1:${server.address().port}`,maxTokens:1000,reasoningEffort:'off'});
-    options.models=webDeepSeekModels(options.models,[option]);
-    const adapter=new WebDeepSeekAdapter({options:()=>options,resolveApiKey:async()=>'local-only',
-      resolveUserId:()=> 'diagnostic',prepareExtensions:async()=>({fields:{},accept:async()=>{}})},[option]);
-    for await(const _ of adapter.stream({provider:'deepseek-official',model:'kouri-diagnostic',reasoningEffort:'off',
-      messages:[{id:'diagnostic-user',role:'user',content:[{type:'text',text:'test'}]}]})){}
-    assert.equal(requests[0].model,'kouri-diagnostic');
-    assert.equal(requests[0].max_tokens,1000);
+    for (const [applicationCap, expected] of [[1000,1000],[null,4000],[6000,4000]]) {
+      const options=resolveAdapterOptions({baseURL:`http://127.0.0.1:${server.address().port}`,
+        maxTokens:applicationCap??WEB_DEEPSEEK_OUTPUT_CAPACITY,reasoningEffort:'off'});
+      options.models=webDeepSeekModels(options.models,[option],applicationCap);
+      const adapter=new WebDeepSeekAdapter({options:()=>options,resolveApiKey:async()=>'local-only',
+        resolveUserId:()=> 'diagnostic',prepareExtensions:async()=>({fields:{},accept:async()=>{}})},[option]);
+      const prepared=await adapter.prepareCall('deepseek-official',option.model);
+      assert.equal(prepared.model.defaultMaxTokens,expected);
+      for await(const _ of prepared.stream({provider:'deepseek-official',model:option.model,reasoningEffort:'off',
+        maxTokens:prepared.model.defaultMaxTokens,
+        messages:[{id:'diagnostic-user',role:'user',content:[{type:'text',text:'test'}]}]})){}
+      assert.equal(requests.at(-1).model,option.model);
+      assert.equal(requests.at(-1).max_tokens,expected);
+    }
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
 

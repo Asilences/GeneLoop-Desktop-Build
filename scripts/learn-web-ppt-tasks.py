@@ -10,21 +10,23 @@ import hashlib
 import importlib.util
 import json
 import math
-from pathlib import Path
+from pathlib import Path as BootstrapPath
 import re
 import sys
 import subprocess
 import time
 from uuid import uuid4
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=BootstrapPath(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
+from src.adapters.filesystem_paths import Path
+ROOT=Path(ROOT).resolve()
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.harless_rsi_bundle import load_product_bundle
-from src.adapters.ppt_delivery_quality import inspect_delivery, record_quality
-from src.adapters.ppt_program_learning import advance_programs
-from src.adapters.ppt_learning_evidence import freeze_state,verify_state_binding
-spec=importlib.util.spec_from_file_location('ppt_master_compiler',ROOT/'scripts/learn-ppt-master-motif.py')
+from src.adapters.web.learning.harless_rsi_bundle import load_product_bundle
+from src.adapters.ppt.delivery.ppt_delivery_quality import inspect_delivery, record_quality, delivery_preview_files
+from src.adapters.ppt.learning.ppt_program_learning import advance_programs
+from src.adapters.ppt.learning.ppt_learning_evidence import freeze_state,verify_state_binding
+spec=importlib.util.spec_from_file_location('ppt_master_compiler',str(ROOT/'scripts/learn-ppt-master-motif.py'))
 compiler=importlib.util.module_from_spec(spec);spec.loader.exec_module(compiler)
 SHA=re.compile(r'[a-f0-9]{64}')
 TASK=re.compile(r'[a-f0-9]{32}')
@@ -62,6 +64,7 @@ def delivery(output,turn,lane,locks,*,store=None,info=None,review=None):
         if sha(path)!=artifact.get('sha256') or path.stat().st_size!=artifact.get('bytes'):raise ValueError('delivery bytes changed')
         locks[path.relative_to(output).as_posix()]=sha(path)
         files.setdefault(Path(artifact['name']).suffix.lower(),[]).append(path)
+    files=delivery_preview_files(output,row['task_id'],files,locks)
     details=inspect_delivery(files)
     if store is not None:
         return record_quality(output,store,turn,lane,info,files,details,review,locks)
@@ -114,11 +117,12 @@ def decision_root(output,identity,request,task_request,state):
     return 'web-'+(state.get('source_task_id') or state['session_id'])
 
 
-def task_info(output,identity,request,*,baseline=False):
+def task_info(output,identity,request,*,baseline=False,review_only=False,structure_only=False):
     if not TASK.fullmatch(identity):raise ValueError('invalid task identity')
     task=output/'tasks'/identity
     names=['task-state.json','effective-config.json','task.json','budget-route.json','learning-accounting.json','events.jsonl','answer.md']
-    locks={file(output,task/name).relative_to(output).as_posix():sha(task/name) for name in names[1:]}
+    locks={file(output,task/name).relative_to(output).as_posix():sha(task/name) for name in names[1:]
+           if not (structure_only and name=='learning-accounting.json')}
     file(output,task/names[0])
     state,effective,req,route,accounting=[read(task/name) for name in names[:5]]
     if any(row.get('task_id')!=identity for row in (state,effective,req,accounting)) or any(row.get('user_id')!=request['user'] for row in (state,effective)):
@@ -129,18 +133,32 @@ def task_info(output,identity,request,*,baseline=False):
     if baseline and (any(row.get('mode')!='baseline' for row in (state,effective,req)) or state.get('status')!='completed' or state.get('failure') or state.get('stats',{}).get('verified_skips',0) or
                      req.get('role') in ('holdout','evaluate','benchmark') or req.get('learning_eligible') is False):
         raise ValueError('training requires a successful original Baseline')
-    totals=compiler.accounting.reconcile(state,req,accounting['request_receipts'],qualifying=baseline)
-    if (not totals['usage_complete'] or not finite(totals['proxy_peak_usd']) or
+    if review_only:
+        if baseline:raise ValueError('quality-only evidence cannot bypass training accounting')
+        # A quality verdict does not settle costs or authorize learning. Actual
+        # artifact bytes and sources are checked separately by the reviewer.
+        return {'task_id':identity,'task_dir':str(task),'state':state,'effective':effective,'request':req,'locks':locks,'quality_only':True}
+    if structure_only and (baseline or state.get('status')!='completed' or state.get('failure') or
+            req.get('learning_eligible') is False or req.get('role') in ('holdout','evaluate','benchmark')):
+        raise ValueError('structural discovery requires completed eligible material')
+    totals=None if structure_only else compiler.accounting.reconcile(state,req,accounting['request_receipts'],qualifying=baseline)
+    if not structure_only and (not totals['usage_complete'] or not finite(totals['proxy_peak_usd']) or
         any(type(v) is not int or v<0 for v in totals['tokens'].values())):raise ValueError('unsettled accounting')
-    binding=freeze_state(output,task,state)
+    binding=freeze_state(output,task,state,structure_only=structure_only)
     locks[binding.relative_to(output).as_posix()]=sha(binding)
     schemas=compiler.accounting.native_schemas(effective['tools'])
     sources=sorted(row.get('version_sha256','') for row in state.get('scene_inputs',[]))
-    if not sources or any(not SHA.fullmatch(v) for v in sources):raise ValueError('missing frozen source versions')
     question=' '.join(' '.join(p['text'] for p in req['content'] if p.get('type')=='text').casefold().split())
+    if any(not SHA.fullmatch(v) for v in sources):raise ValueError('missing frozen source versions')
+    source_kind='uploaded_materials'
+    if not sources:
+        if not question:raise ValueError('missing frozen task content')
+        sources=[digest({'user_content':req['content']})]
+        source_kind='immutable_user_request'
     decision=decision_root(output,identity,request,req,state)
-    return {'task_id':identity,'task_dir':str(task),'state':state,'effective':effective,'request':req,'schemas':schemas,'totals':totals,'locks':locks,
-        'decision_id':decision,'source_signature':digest(sources),'question_sha256':digest(question),
+    return {'task_id':identity,'task_dir':str(task),'state':state,'effective':effective,'request':req,'schemas':schemas,
+        **({'structural_only':True,'cost_eligible':False} if structure_only else {'totals':totals}),'locks':locks,
+        'decision_id':decision,'source_signature':digest(sources),'source_kind':source_kind,'question_sha256':digest(question),
         'compatibility':digest({'tools':schemas,'model':effective.get('model'),'provider':effective.get('provider'),
             'reasoning':effective.get('reasoning_effort'),'skill':effective.get('skill_package_sha256'),
             'instructions':effective.get('instructions_sha256'),'compression':effective.get('compression')})}
@@ -266,7 +284,9 @@ def advance(request_path):
         raise ValueError('invalid owning PPT learning request')
     ids=request.get('task_ids')
     if not isinstance(ids,list) or any(not isinstance(v,str) or not TASK.fullmatch(v) for v in ids):raise ValueError('invalid owned task index')
-    with exclusive_lock(store/'.lock'):
+    mode=request.get('worker_mode','combined')
+    if mode not in ('learning','review','combined'):raise ValueError('invalid PPT worker mode')
+    with exclusive_lock(store/('.review.lock' if mode=='review' else '.lock')):
         report={'schema_version':1,'compilation_model_requests':0,'extra_provider_requests':0,'actual_paid_usd':None,'cpu_cost_usd':None}
         def status(value):save(store/'status.json',{**report,**value,'worker_seconds':time.monotonic()-started})
         feedback_path=store/'feedback-version.json'
@@ -280,10 +300,14 @@ def advance(request_path):
         comparisons=read(file(output,comparison_path)) if comparison_path.exists() else {'principal':request['user'],'turns':[]}
         if comparisons.get('principal')!=request['user']:raise ValueError('foreign comparison store')
         turns={turn['id']:turn for turn in comparisons['turns'] if turn.get('scene')=='ppt'}
-        infos={};excluded=[]
+        infos={};review_infos={};structural_infos={};excluded=[]
         for identity in dict.fromkeys(ids):
             try:infos[identity]=task_info(output,identity,request)
             except (ValueError,KeyError,OSError,TypeError) as error:excluded.append({'task_id':identity,'reason':str(error)[:160]})
+            try:review_infos[identity]=infos.get(identity) or task_info(output,identity,request,review_only=True)
+            except (ValueError,KeyError,OSError,TypeError):pass  # Never weaken ownership/version checks for a review.
+            try:structural_infos[identity]=task_info(output,identity,request,structure_only=True)
+            except (ValueError,KeyError,OSError,TypeError):pass
         paired_ids={row.get('task_id') for turn in turns.values() for row in turn.get('lanes',{}).values()}
         for identity,info in infos.items():
             if identity in paired_ids:continue
@@ -292,12 +316,37 @@ def advance(request_path):
                 if single is not None:turns[single['id']]=single
             except (ValueError,KeyError,OSError,TypeError) as error:excluded.append({'task_id':identity,'reason':str(error)[:160]})
         reviewed=reviews(output,store,request,turns)
+        from src.adapters.ppt.learning.ppt_background_review import advance_reviews
+        review_turns=dict(turns)
+        for identity,info in review_infos.items():
+            if identity in paired_ids or identity in infos:continue
+            try:
+                single=single_turn(output,info,request)
+                if single is not None:review_turns[single['id']]=single
+            except (ValueError,KeyError,OSError,TypeError):pass
+        if mode in ('review','combined'):
+            advance_reviews(output,store,review_infos,review_turns,delivery=delivery)
+        if mode=='review':
+            save(store/'review-worker-status.json',{'status':'completed','worker_mode':'review','included_in_creation':False})
+            return
+        from src.adapters.ppt.learning.ppt_workflow_learning import advance_workflow_learning
+        workflow_turns=dict(turns)
+        for identity,info in structural_infos.items():
+            if identity in paired_ids or identity in infos:continue
+            try:
+                single=single_turn(output,info,request)
+                if single is not None:workflow_turns[single['id']]=single
+            except (ValueError,KeyError,OSError,TypeError):pass
+        try:advance_workflow_learning(output,store,request,structural_infos,workflow_turns,delivery=delivery,failure_infos=review_infos)
+        except (ValueError,KeyError,OSError,TypeError) as error:
+            (store/'workflows').mkdir(exist_ok=True,mode=0o700)
+            save(store/'workflows/status.json',{'status':'rejected','reason':str(error)[:200],'new_model_requests':0})
         try:advance_programs(output,store,request,infos,turns,reviewed,delivery=delivery,positive=positive,costs=comparison_costs)
         except (ValueError,KeyError,OSError,TypeError,subprocess.SubprocessError) as error:
             save(store/'program-status.json',{'status':'failed','reason':str(error)[:200],'extra_provider_requests':0})
             save(store/'program-suspended.json',{'reason':'program_worker_failed'})
         try:
-            from src.adapters.ppt_capability_learning import sync_ppt_capabilities
+            from src.adapters.ppt.learning.ppt_capability_learning import sync_ppt_capabilities
             sync_ppt_capabilities(output,store,request,infos,turns,reviewed,delivery=delivery,positive=positive)
         except (ValueError,KeyError,OSError,TypeError,subprocess.SubprocessError) as error:
             (store/'capability').mkdir(exist_ok=True,mode=0o700)

@@ -1,5 +1,5 @@
 import hashlib
-from src.adapters.harless_ppt_deployment import configure_ppt_rendering
+from src.adapters.web.scenes.harless_ppt_deployment import configure_ppt_rendering
 
 
 def test_ppt_reading_is_available_without_falsely_claiming_rendering(monkeypatch):

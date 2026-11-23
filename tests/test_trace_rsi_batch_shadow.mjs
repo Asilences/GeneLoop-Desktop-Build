@@ -7,8 +7,8 @@ import {markAgentLoopRequest} from '@deepseek-ai/dsh-llm';
 import {digest} from '../src/adapters/paper_rsi_program.ts';
 import {sha256} from '../src/adapters/paper_triage_validation.ts';
 import {createTraceRsiTaskTools} from '../scenarios/paper-submission/trace-rsi-task-server.ts';
-import {apply,createBatchShadowInterceptor,validateBatchShadowLibrary} from '../src/adapters/dsh_trace_rsi_batch_shadow.ts';
-import {createBatchExecuteInterceptor} from '../src/adapters/dsh_trace_rsi_batch_execute.ts';
+import {apply,createBatchShadowInterceptor,validateBatchShadowLibrary} from '../src/adapters/harness/paper/dsh_trace_rsi_batch_shadow.ts';
+import {createBatchExecuteInterceptor} from '../src/adapters/harness/paper/dsh_trace_rsi_batch_execute.ts';
 import {renderRevisionMarkdown} from '../src/adapters/report_patch_protocol.ts';
 
 const P='mcp__paper_trace_rsi__',clone=x=>JSON.parse(JSON.stringify(x));
@@ -49,8 +49,8 @@ function fixture(t,order=['check','read'],artifact=false){
   writeFileSync(libraryPath,JSON.stringify(frozen));writeFileSync(catalogPath,JSON.stringify({keys:['a','b'],...(artifact?{initial_report:{keys:['a']}}:{})}));
   writeFileSync(join(work,'triage.json'),JSON.stringify({keys:['a']}));writeFileSync(join(work,'code.txt'),'baseline-code');
   const basePaths=['scenarios/paper-submission/trace-rsi-task-server.ts','src/adapters/trace_rsi_program.ts',
-    'src/adapters/paper_rsi_program.ts','src/adapters/dsh_trace_rsi_shadow.ts'].map(p=>resolve(p));basePaths.push(join(work,'code.txt'));
-  const additions=['src/adapters/trace_rsi_batch_compiler.py','src/adapters/dsh_trace_rsi_batch_shadow.ts','scripts/paper-rsi-batch-shadow.py'];
+    'src/adapters/paper_rsi_program.ts','src/adapters/harness/paper/dsh_trace_rsi_shadow.ts'].map(p=>resolve(p));basePaths.push(join(work,'code.txt'));
+  const additions=['src/motif_core/offline/compilation/trace/trace_rsi_batch_compiler.py','src/adapters/harness/paper/dsh_trace_rsi_batch_shadow.ts','scripts/paper-rsi-batch-shadow.py'];
   const code_files_sha256=Object.fromEntries(basePaths.map(p=>[p,sha256(readFileSync(p))]));
   const code_additions_sha256=Object.fromEntries(additions.map(p=>[resolve(p),sha256(readFileSync(resolve(p)))]));
   const config={work,session_id:'synthetic-heldout',library_path:libraryPath,tool_digest:frozen.manifest_digest,candidate_sha256:frozen.candidate_sha256,

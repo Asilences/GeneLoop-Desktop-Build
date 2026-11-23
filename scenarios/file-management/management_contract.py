@@ -3,6 +3,58 @@ import json,copy
 from pathlib import Path
 from common import digest,sha
 VERSION='sss-management-quality-v7'
+
+def verify_history(spec,state,out,actual):
+    """Replay execution AND restoration in actual order, including partial undo."""
+    errors=[];expected=spec['initial_tree'];seen=set()
+    for event in state['operation_history']:
+        pid=event.get('plan_id');direction=event.get('direction');key=(pid,direction)
+        if pid not in state['journals'] or direction not in ('execute','restore') or key in seen:
+            errors.append('invalid or repeated operation history');continue
+        seen.add(key);j=state['journals'][pid];plan=state['plans'][pid]
+        if plan['task_sha256']!=digest(spec) or plan['plan_sha256']!=digest({k:v for k,v in plan.items() if k!='plan_sha256'}):errors.append('plan identity/integrity differs')
+        if direction=='execute':
+            if j['before']!=expected:errors.append('journal history chain differs')
+            if j['status'] not in ('executed_verified','restored_verified'):errors.append('unfinished management operation')
+            if (j['completed']!=j['effects'][:len(j['completed'])] or len(j['boundaries'])!=len(j['completed'])
+                or j['status']=='executed_verified' and len(j['completed'])!=len(j['effects'])):errors.append('actual effect sequence differs')
+            chain=j['before']
+            for e,b in zip(j['completed'],j['boundaries']):
+                legal=copy.deepcopy(b['before']);t=legal[e['root']]
+                if e['kind']=='mkdir':t['directories']=sorted(set(t['directories'])|{e['path']})
+                elif e['kind']=='unlink':t['files'].pop(e['path'],None)
+                elif e['kind'] in ('publish','replace'):t['files'][e['path']]=e['sha256']
+                else:errors.append('unknown effect primitive')
+                if legal!=b['after']:errors.append('effect changed files beyond recorded primitive')
+                if b['before']!=chain:errors.append('effect boundary chain differs')
+                chain=b['after']
+            if j['status']=='executed_verified' and j.get('after')!=chain:errors.append('effect final boundary differs')
+            if j['status']=='restored_verified' and j.get('after')!=j['before']:errors.append('restoration final boundary differs')
+            expected=chain
+            approval_key=plan['plan_sha256'];approval_dir='approvals'
+        else:
+            if (pid,'execute') not in seen or j['status']!='restored_verified':errors.append('restoration has no completed original journal')
+            if j.get('restore_before')!=expected:errors.append('restoration history chain differs')
+            reverse=j.get('restore_boundaries',[])
+            if reverse!=[{'before':b['after'],'after':b['before']} for b in reversed(j['boundaries'])]:errors.append('restoration is not the exact inverse effects')
+            chain=j.get('restore_before')
+            for b in reverse:
+                if b['before']!=chain:errors.append('restoration boundary chain differs')
+                chain=b['after']
+            if chain!=j['before']:errors.append('restoration final boundary differs')
+            expected=chain;approval_dir='restore-approvals'
+            approval_key=digest({'plan_sha256':plan['plan_sha256'],'direction':'restore','before':j.get('restore_before')})
+        if plan['risks']:
+            f=out/approval_dir/(pid+'.json')
+            if not f.is_file():errors.append('missing actual one-plan approval')
+            else:
+                a=json.loads(f.read_text())
+                if a['plan_sha256']!=approval_key or a['proof'].get('task_sha256')!=digest(spec) or a['proof'].get('outcome')!='allowed-once':errors.append('approval differs from actual task/plan')
+    required={(pid,'execute') for pid in state['journals']}|{(pid,'restore') for pid,j in state['journals'].items() if j['status']=='restored_verified'}
+    if seen!=required:errors.append('operation history omits or invents an effect')
+    if expected!=actual:errors.append('unrequested filesystem changes')
+    return errors
+
 def verify_management(spec,report,output,*,root_paths=None,events=None):
     from management_tools import tree,execution_version
     out=Path(output);errors=[];report=report or {}
@@ -18,7 +70,9 @@ def verify_management(spec,report,output,*,root_paths=None,events=None):
     ids={'file:local:'+digest({'path':p,'sha':h})[:24] for p,h in files.items()}
     if len(report.get('file_ids',[]))!=len(ids) or set(report.get('file_ids',[]))!=ids:errors.append('report file identities differ from actual authorized files')
     expected=spec['initial_tree']
-    for p,j in state['journals'].items():
+    if 'operation_history' in state:
+        errors.extend(verify_history(spec,state,out,actual));expected=actual
+    for p,j in ([] if 'operation_history' in state else state['journals'].items()):
         if j['before']!=expected:errors.append('journal chain differs')
         if j['status']=='restored_verified':
             plan=state['plans'][p];chain=j['restore_before']
@@ -67,6 +121,8 @@ def verify_management(spec,report,output,*,root_paths=None,events=None):
     from management_goals import compile_goal
     if not goal:goal=compile_goal(spec['objective'],spec['initial_tree']['workspace'],requirements if requirements else None,initial_roots=spec['initial_tree'])
     if goal and goal.get('objective_sha256')!=digest(spec['objective']):errors.append('frozen goal differs from original user objective')
+    if goal.get('state')=='external_frozen' and (goal.get('source')!='host_delivery_contract' or
+        goal.get('delivery_contract_sha256')!=digest(spec['quality'].get('delivery_contract'))):errors.append('host delivery contract differs from its original goal binding')
     if goal.get('state')=='frozen':
         fresh=compile_goal(spec['objective'],spec['initial_tree']['workspace'],requirements if goal.get('source')=='explicit_frozen_checks' else None,initial_roots=spec['initial_tree'])
         # Temporal predicates are frozen alongside file predicates, including
@@ -103,10 +159,12 @@ def verify_management(spec,report,output,*,root_paths=None,events=None):
             full_document=any(coverage(d)['complete'] for d in documents)
             if not full_document and not any(not r.get('mode') and v.get('status')=='readable' and v.get('truncated') is False and not v.get('metadata',{}).get('preview_only') for v in reads):errors.append('required complete read missing: '+p)
     from management_temporal import verify_temporal
+    from management_delivery import verify_delivery
+    errors.extend(verify_delivery(spec,report,state,out,actual))
     timing=verify_temporal(goal.get('temporal',{'state':'not_requested'}),events,state,
         __import__('src.adapters.mcp_learning',fromlist=['adapter']).adapter('management_v3').scope(spec))
     errors.extend(timing['errors'])
-    verified=not errors and goal.get('state')=='frozen' and timing['verified']
+    verified=not errors and goal.get('state') in ('frozen','external_frozen') and timing['verified']
     return {'passed':not errors,'errors':errors,'quality_version':VERSION,'effect_integrity_verified':not integrity_errors,
             'semantic_quality_verified':verified,'goal_status':'verified' if verified else 'failed' if errors else 'review_required',
             'goal_checks':goal.get('checks',[]),'goal_review_reason':goal.get('reason'),'temporal':timing,

@@ -7,7 +7,7 @@ sys.path.insert(0,str(ROOT))
 from operation_prepare_v2 import prepare as material
 from src.adapters.persistent_file_rsi import default_config,status
 from src.adapters.continuous_rsi import load_config,source_map,records
-from src.motif_core.offline.experience_registry import read
+from src.motif_core.reuse.experience_registry import read
 from experiment import accounting
 
 def prepare():

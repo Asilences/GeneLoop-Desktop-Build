@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {validateManagementProgram,copyProgramActions,createManagementProgramRuntime} from '../src/adapters/management_program.ts';
 const prefix='mcp__file_management__',obs=v=>({value:{structuredContent:v}});
 function fixture(mode='all',context=false){

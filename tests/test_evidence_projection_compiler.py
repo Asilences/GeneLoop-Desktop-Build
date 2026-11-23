@@ -10,10 +10,10 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from src.adapters.motif_output_projection import LatestToolProjector
-from src.motif_core.offline.evidence_projection_compiler import compile_evidence_projections
-from src.motif_core.offline.trace_compiler import artifact_signature
-from src.motif_core.output_view_codecs import marked_html_visible_text_v1
+from src.adapters.harness.motif.motif_output_projection import LatestToolProjector
+from src.motif_core.offline.compilation.evidence_projection_compiler import compile_evidence_projections
+from src.motif_core.offline.compilation.trace_compiler import artifact_signature
+from src.motif_core.runtime.output_view_codecs import marked_html_visible_text_v1
 
 
 TOOL = "read_email"

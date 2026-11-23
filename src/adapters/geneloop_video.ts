@@ -2,6 +2,7 @@
 import {existsSync,lstatSync,mkdirSync,realpathSync,readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {isExecutionSessionId} from './geneloop_session_id.ts';
 export type VideoRenderer={image:string;runtimeRoot:string;mediaToolsRoot:string};
 function fixed(path:string){
  if(!path||realpathSync(path)!==resolve(path)||!lstatSync(path).isDirectory()||lstatSync(path).isSymbolicLink()||path.includes(','))throw Error('video requires fixed directories');
@@ -16,7 +17,7 @@ export function videoConfiguration(value:any):VideoRenderer {
  return {image:value.image,runtimeRoot,mediaToolsRoot};
 }
 export function videoCommand(output:string,session:string,command:string,renderer:VideoRenderer){
- if(!/^session-[a-f0-9-]{36}$/.test(session)||typeof command!=='string'||!command||Buffer.byteLength(command)>1024*1024)throw Error('invalid owning video Session');
+ if(!isExecutionSessionId(session)||typeof command!=='string'||!command||Buffer.byteLength(command)>1024*1024)throw Error('invalid owning video Session');
  const root=fixed(output);let work=root;
  for(const part of ['sessions',session,'work'])work=fixed(join(work,part));
  const project=join(work,'remotion');if(!existsSync(project))mkdirSync(project,{mode:0o700});fixed(project);

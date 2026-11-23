@@ -1,0 +1,47 @@
+{
+  "rows": 13000,
+  "scope": "default PII dependency-only comparison against R4; not candidate or credential benchmark",
+  "datasets": {
+    "zh_formal": {
+      "rows": 5000,
+      "counts": {
+        "native_predictions_changed": 0,
+        "native_processing_errors": 0,
+        "native_context_retention_changed": 0,
+        "core_predictions_changed": 0,
+        "core_processing_errors": 0,
+        "core_context_retention_changed": 0,
+        "module_admission_changed": 0,
+        "module_residual_changed": 0
+      }
+    },
+    "zh_chat": {
+      "rows": 3000,
+      "counts": {
+        "native_predictions_changed": 0,
+        "native_processing_errors": 0,
+        "native_context_retention_changed": 0,
+        "core_predictions_changed": 0,
+        "core_processing_errors": 0,
+        "core_context_retention_changed": 0,
+        "module_admission_changed": 0,
+        "module_residual_changed": 0
+      }
+    },
+    "en_test": {
+      "rows": 5000,
+      "counts": {
+        "native_predictions_changed": 0,
+        "native_processing_errors": 0,
+        "native_context_retention_changed": 0,
+        "core_predictions_changed": 0,
+        "core_processing_errors": 0,
+        "core_context_retention_changed": 0,
+        "module_admission_changed": 0,
+        "module_residual_changed": 0
+      }
+    }
+  },
+  "cloud_requests": 0,
+  "audit_driver_sha256": "ce8d00055be43a00b4c7ffacea22c30e5a1a75b81415f614eb7322274ab3b373"
+}

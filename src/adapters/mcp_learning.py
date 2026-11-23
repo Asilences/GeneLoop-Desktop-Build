@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 from .continuous_rsi import ROOT
-from src.motif_core.offline.experience_registry import digest
+from src.motif_core.reuse.experience_registry import digest
 
 class LearningAdapter(Protocol):
     def validate(self,spec,prepared): ...
@@ -34,8 +34,8 @@ class FileOperations:
                 'permission_sha256':digest({'operations':spec['allowed_operations'],'rules':spec['rules']}),
                 'initial_snapshot_sha256':digest(spec['initial_snapshot']),'result_read_allowed':spec['operation_contract']['require_result_read']}
     def runtime_sources(self):
-        return ['src/adapters/dsh_operation_motif.ts','src/motif_core/operation_graph_policy.ts','src/motif_core/control_flow_policy.ts',
-                'src/motif_core/online_skill_runtime.mjs','scenarios/file-management/operation_tools.py',
+        return ['src/adapters/harness/motif/dsh_operation_motif.ts','src/motif_core/runtime/policies/operation_graph_policy.ts','src/motif_core/runtime/policies/control_flow_policy.ts',
+                'src/motif_core/runtime/online_skill_runtime.mjs','scenarios/file-management/operation_tools.py',
                 'scenarios/file-management/operation_contract.py','scenarios/file-management/report_tools.py',
                 'scenarios/file-management/collection_tools.py','scenarios/file-management/file_tools.py','scenarios/file-management/common.py']
     def verify_record(self,spec,record,origin,rows,events):
@@ -84,7 +84,7 @@ class FileOperationsV2(FileOperations):
         from operation_tools_v2 import operation_version
         return {**super().scope(spec),'execution_version':operation_version()}
     def runtime_sources(self):
-        return [*super().runtime_sources(),'src/motif_core/operation_graph_policy_v1.ts',
+        return [*super().runtime_sources(),'src/motif_core/runtime/policies/operation_graph_policy_v1.ts',
           'scenarios/file-management/operation_tools_v2.py','scenarios/file-management/operation_contract_v2.py','src/adapters/operation_job.ts','src/adapters/file_workflow_job.ts']
     def verify_record(self,spec,record,origin,rows,events):
         super().verify_record(spec,record,origin,rows,events)
@@ -107,8 +107,12 @@ class ManagementOperations(FileOperationsV2):
           'permission_sha256':digest({'owner':spec['owner'],'workspace_id':spec['workspace_id'],'external_roots':spec.get('external_roots',{}),'low_operations':sorted(LOW_OPS),'read_only':spec.get('rules',{}).get('read_only',False),'high_risk':'one_plan_native_confirmation'}),
           'initial_snapshot_sha256':digest(spec['initial_tree']),'result_read_allowed':True}
     def runtime_sources(self):
-        return [*super().runtime_sources(),'scenarios/file-management/management_tools.py','scenarios/file-management/management_native.py','scenarios/file-management/management_reading.py','scenarios/file-management/management_contract.py','scenarios/file-management/management_goals.py','scenarios/file-management/management_provenance.py','src/adapters/management_program.ts','src/adapters/general_tool_replay.py','src/adapters/general_tools.py','src/adapters/geneloop_pdf.py','scenarios/file-management/general-tools.json','scenarios/general/runtime.py','scenarios/file-management/management_temporal.py','src/adapters/management_temporal.ts','src/adapters/management_seed.py','src/adapters/management_seed.ts','src/adapters/management_model_gate.py','src/adapters/management_model_gate.ts','src/adapters/management_platform_budget.py','src/adapters/file_event_projection.ts','src/adapters/file_task_scope.ts','src/adapters/harless_file_scene.ts','src/adapters/file_approval_bridge.ts','scenarios/file-management/file_scene_worker.py','src/adapters/file_scenario.py','src/adapters/file_cost_gate.py','src/adapters/file_acceptance_guard.ts',
-                'src/adapters/model_transport.py','config/geneloop-transport.json']
+        return [*super().runtime_sources(),'scenarios/file-management/management_tools.py','scenarios/file-management/management_native.py','scenarios/file-management/management_reading.py','scenarios/file-management/management_contract.py','scenarios/file-management/management_goals.py','scenarios/file-management/management_provenance.py','src/adapters/management_program.ts','src/adapters/general_tool_replay.py','src/adapters/general_tools.py','src/adapters/geneloop_pdf.py','scenarios/file-management/general-tools.json','scenarios/general/runtime.py','scenarios/file-management/management_temporal.py','src/adapters/management_temporal.ts','src/adapters/management_seed.py','src/adapters/management_seed.ts','src/adapters/management_platform_budget.py','src/adapters/file_management/file_event_projection.ts','src/adapters/web/scenes/harless_file_scene.ts','src/adapters/file_management/file_approval_bridge.ts','scenarios/file-management/file_scene_worker.py','src/adapters/scenario.py','src/adapters/deepseek_cost_gate.py','src/adapters/file_acceptance_guard.ts',
+                'src/adapters/model_transport.py','config/geneloop-transport.json',
+                'src/adapters/file_script_tools.py','src/adapters/file_script_runtime.ts',
+                'src/adapters/file_script_learning.py','scenarios/file-management/management_delivery.py',
+                'src/adapters/harness/dsh_code_container.ts','src/adapters/harness/dsh_code_container_runner.mjs',
+                'src/adapters/source_program_compiler.py','src/motif_core/offline/compilation/script_motif_compiler.py']
     def verify_record(self,spec,record,origin,rows,events):
         import sys,json
         sys.path.insert(0,str(ROOT/'scenarios/file-management'))
@@ -121,6 +125,8 @@ class ManagementOperations(FileOperationsV2):
         if not review['passed']:raise ValueError('management quality rejected: '+str(review['errors']))
         if not review['temporal']['verified']:raise ValueError('temporal goal not independently verified')
         state=read(delivery/'management-state.json')
+        from src.adapters.file_script_tools import script_observations
+        rows=[*rows,*script_observations(spec,delivery,rows)]
         if any(p['risks'] for p in state['plans'].values()):raise ValueError('high-risk human decisions retained but not automatically recertified or reused as grants')
         # Semantic planning remains at the real model root. Certification covers
         # the guarded parameter graph and immutable effect-integrity standard;

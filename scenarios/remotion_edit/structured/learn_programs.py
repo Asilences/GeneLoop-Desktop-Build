@@ -18,7 +18,7 @@ ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT))
 from src.adapters.model_api import model_api_root, model_sdk_key
 from src.adapters.source_program_compiler import compile_source_program,source_library
-from src.adapters.script_motif_compiler import sha,digest
+from src.motif_core.offline.compilation.script_motif_compiler import sha,digest
 from src.adapters.deepseek_cost_gate import State,create_server
 
 SYSTEM='''You compile reusable programs from witnessed successful model-authored source.

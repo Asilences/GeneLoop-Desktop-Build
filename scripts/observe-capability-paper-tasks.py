@@ -11,8 +11,8 @@ from pathlib import Path
 import re
 import sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from src.adapters.capability_trajectory import record_web_task
-from src.adapters.capability_improvement import read
+from src.adapters.web.learning.capability_trajectory import record_web_task
+from src.rsi.learning.capability_improvement import read
 from src.adapters.file_lock import exclusive_lock
 
 

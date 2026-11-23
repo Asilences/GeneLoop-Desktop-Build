@@ -1,8 +1,8 @@
 /** Adapter conformance runner. Explicit synthetic tasks, no model or user data. */
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {completeCapabilityCycle} from '../../../src/adapters/capability_cycle.ts';
-import {capabilityRef} from '../../../src/adapters/capability_contract.ts';
+import {completeCapabilityCycle} from '../../../src/rsi/learning/capability_cycle.ts';
+import {capabilityRef} from '../../../src/capability/graph/capability_contract.ts';
 import {execute,checkResult,validator} from './runtime.mjs';
 const plan=JSON.parse(readFileSync(process.argv[2],'utf8'));
 const candidate=JSON.parse(readFileSync(plan.candidate,'utf8')),output=resolve(plan.output);

@@ -24,10 +24,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State, create_server
 from src.adapters.native_budget import NativeBudgetGuard
-from src.adapters.dsh_client import _usage
+from src.adapters.harness.dsh_client import _usage
 
 OUTPUT_CAP = 32768
 PROMPT = ROOT/'scenarios/paper-submission/reference-audit.prompt.md'
@@ -124,7 +124,7 @@ def run(exp, source, index, mode, cap_usd=1):
     if mode=='execute':
         manifest=exp/'native-motifs.json'
         if not manifest.exists():raise ValueError('compile frozen native Motif candidates before evaluation')
-        save(out/'motif.patch.yml','- insert:\n    - id: native-paper-motif\n      name: '+json.dumps((ROOT/'src/adapters/dsh_native_motif.ts').as_uri())+'\n')
+        save(out/'motif.patch.yml','- insert:\n    - id: native-paper-motif\n      name: '+json.dumps((ROOT/'src/adapters/harness/motif/dsh_native_motif.ts').as_uri())+'\n')
         patches.append(str(out/'motif.patch.yml'))
         env.update(SSS_NATIVE_MOTIF_MANIFEST=str(manifest),SSS_NATIVE_MOTIF_WORK=str(work),
                    SSS_NATIVE_MOTIF_SESSION=session,SSS_NATIVE_MOTIF_PROMPT_SHA256=sha(PROMPT),
@@ -139,7 +139,7 @@ def run(exp, source, index, mode, cap_usd=1):
             'dsh_version':json.loads((ROOT/'node_modules/@deepseek-ai/dsh/package.json').read_text())['version'],
             'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
             'dirty':bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True)),
-            'code_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [Path(__file__),ROOT/'scripts/paper-motif-experiment.py',ROOT/'src/adapters/file_lock.py',ROOT/'src/adapters/trace_paths.py',ROOT/'src/adapters/harness_runtime.py',ROOT/'src/adapters/deepseek_cost_gate.py',ROOT/'src/adapters/native_motif_compiler.py',ROOT/'src/adapters/dsh_native_motif.ts',ROOT/'src/adapters/dsh_online_motif.mjs',ROOT/'src/motif_core/online_skill_runtime.mjs',ROOT/'package-lock.json']},
+            'code_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [Path(__file__),ROOT/'scripts/paper-motif-experiment.py',ROOT/'src/adapters/file_lock.py',ROOT/'src/motif_core/trajectory/trace_paths.py',ROOT/'src/adapters/harness/harness_runtime.py',ROOT/'src/adapters/deepseek_cost_gate.py',ROOT/'src/motif_core/offline/compilation/trace/native_motif_compiler.py',ROOT/'src/adapters/harness/motif/dsh_native_motif.ts',ROOT/'src/adapters/harness/motif/dsh_online_motif.mjs',ROOT/'src/motif_core/runtime/online_skill_runtime.mjs',ROOT/'package-lock.json']},
             'native_manifest_sha256':sha(exp/'native-motifs.json') if mode=='execute' else None}
     save(out/'manifest.json',config)
     class RecordedState(State):
@@ -218,7 +218,7 @@ def main():
     lockdir=ROOT/'.local/paper-motif';lockdir.mkdir(exist_ok=True)
     with exclusive_lock((lockdir/'.budget.lock')) as lock:
         if args.phase=='compile':
-            from src.adapters.native_motif_compiler import compile_native_runs
+            from src.motif_core.offline.compilation.trace.native_motif_compiler import compile_native_runs
             save(exp/'native-motifs.json',compile_native_runs(exp,sha(PROMPT),sha(source)));return
         if not args.call_model:parser.error('explicit --call-model required')
         if not model_api_key_configured():raise ValueError('server credential missing')

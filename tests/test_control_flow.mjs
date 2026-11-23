@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {execFileSync} from 'node:child_process';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {validateOperationPolicy,createOperationController} from '../src/motif_core/operation_graph_policy.ts';
-import {createOperationRuntime} from '../src/adapters/dsh_operation_motif.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validateOperationPolicy,createOperationController} from '../src/motif_core/runtime/policies/operation_graph_policy.ts';
+import {createOperationRuntime} from '../src/adapters/harness/motif/dsh_operation_motif.ts';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {resolve,join} from 'node:path';import {createHash} from 'node:crypto';
 // Compile with the actual Python learner, then execute its IR in TypeScript.

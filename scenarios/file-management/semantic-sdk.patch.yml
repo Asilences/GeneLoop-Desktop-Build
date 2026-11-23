@@ -3,6 +3,11 @@
 # and native failed-request recovery in file_scenario.py. Native compaction-basic
 # remains active and uses the same provider/gate as the owning SDK request.
 # Keep the credential provider and DeepSeek adapter from the standard SDK profile.
+# File owns durable, permission-scoped receipts. Its complete text results must
+# reach the model/learner: native preview spill points at an unavailable read
+# tool here and is not evidence of full-text delivery.
+- id: spill-policy
+  disabled: true
 - id: tool-bash
   disabled: true
 - id: tool-bash-persistent

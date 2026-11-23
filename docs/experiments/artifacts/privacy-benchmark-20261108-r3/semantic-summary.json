@@ -1,0 +1,259 @@
+{
+  "case_sha256": "312ad74b6acd6f3389ad7037efdff4e4eda71dc76bc02f14e2b617c275e5dd44",
+  "config_sha256": "f8c1e3d6b77b7c8b5d352bab5259074def701d017db9be4f9a9a344b52fbb6c6",
+  "cases": [
+    {
+      "id": "paper-zh",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "paper-zh",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "paper-zh",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "paper-en",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "paper-en",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "paper-en",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "ppt-zh",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 7,
+      "retained_invariants": 7,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "ppt-zh",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 7,
+      "retained_invariants": 7,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "ppt-zh",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 7,
+      "retained_invariants": 7,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "ppt-en",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 5,
+      "retained_invariants": 5,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "ppt-en",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 5,
+      "retained_invariants": 5,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "ppt-en",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 5,
+      "retained_invariants": 5,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "code",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 3,
+      "retained_invariants": 3,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "code",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 3,
+      "retained_invariants": 3,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "code",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 3,
+      "retained_invariants": 3,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "statistics",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "statistics",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "statistics",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 6,
+      "retained_invariants": 6,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "mixed",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 5,
+      "retained_invariants": 5,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "mixed",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 5,
+      "retained_invariants": 5,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "mixed",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 5,
+      "retained_invariants": 5,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "protocol",
+      "variant": "clean",
+      "accepted": true,
+      "invariants": 2,
+      "retained_invariants": 2,
+      "sensitive_values": 0,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "protocol",
+      "variant": "structured_identity",
+      "accepted": true,
+      "invariants": 2,
+      "retained_invariants": 2,
+      "sensitive_values": 4,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    },
+    {
+      "id": "protocol",
+      "variant": "inline_identity",
+      "accepted": true,
+      "invariants": 2,
+      "retained_invariants": 2,
+      "sensitive_values": 3,
+      "literal_residual_values": 0,
+      "original_unchanged": true
+    }
+  ],
+  "secret_field_controls_rejected": [
+    true,
+    true
+  ],
+  "accepted": 24,
+  "total": 24,
+  "retained_invariants": 120,
+  "all_invariants": 120,
+  "accepted_invariants": 120,
+  "literal_residual_values": 0,
+  "wall_seconds": 78.85508848074824,
+  "cloud_requests": 0,
+  "cloud_api_cost": 0
+}

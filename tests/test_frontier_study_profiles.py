@@ -4,8 +4,8 @@ from collections import Counter
 
 import pytest
 
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import create_capability, create_capability_snapshot, capability_ref
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import create_capability, create_capability_snapshot, capability_ref
 from scenarios.paper_proofreading.frontier.study_profiles import balanced_order, creation_value_profile
 from tests.test_capability_builder import RECORD, setup
 

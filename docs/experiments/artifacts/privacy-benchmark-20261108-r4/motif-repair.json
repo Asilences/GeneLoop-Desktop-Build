@@ -1,0 +1,68 @@
+{
+  "commit": "b39eac69d7fa765ecdec47f54e5901bf10d768ce",
+  "changed_files": [
+    "scripts/motif-example.py",
+    "tests/test_distributed_motif_library.py"
+  ],
+  "targeted_tests": {
+    "passed": 9,
+    "skipped": 0,
+    "failed": 0
+  },
+  "targeted_junit_sha256": "d522fb05e995b35edfa2f3e1fe7006a5e214c9336667e1f83dbeafd9ada714f2",
+  "motif_log_sha256": "7a73f6c4d91f6c98e68628f2c86390cde9a264b3e8b41a5bc11f96cbe0783fc9",
+  "motif_fixture_acceptance": {
+    "status": "passed",
+    "certified_motifs": 4,
+    "library_digest": "c6c19281d9af63e798651c9cfb349875309f2357582b547fe3baca3c1ee9cc33",
+    "rebuilt_output": ".local/motif-example/rebuilt",
+    "paid_api_requests": 0,
+    "reasoning_effort": "off",
+    "scope": "structural_and_protocol_only",
+    "replayed_public_tool_calls": 46,
+    "harness_checks": [
+      {
+        "mode": "baseline",
+        "stale": false,
+        "model_requests": 14,
+        "tool_calls": 13,
+        "verified_bypasses": 0,
+        "shadow_candidates": 0,
+        "embedding_requests": 0
+      },
+      {
+        "mode": "shadow",
+        "stale": false,
+        "model_requests": 14,
+        "tool_calls": 13,
+        "verified_bypasses": 0,
+        "shadow_candidates": 9,
+        "embedding_requests": 9
+      },
+      {
+        "mode": "execute",
+        "stale": false,
+        "model_requests": 7,
+        "tool_calls": 13,
+        "verified_bypasses": 5,
+        "shadow_candidates": 0,
+        "embedding_requests": 5
+      },
+      {
+        "mode": "execute",
+        "stale": true,
+        "model_requests": 14,
+        "tool_calls": 13,
+        "verified_bypasses": 0,
+        "shadow_candidates": 0,
+        "embedding_requests": 0
+      }
+    ]
+  },
+  "detector_or_policy_changed": false,
+  "normal_sdk_close_semantics_changed": false,
+  "inner_worker_deadline_seconds": 120,
+  "scope": "targeted lifecycle repair and real SDK against local fixture Provider; no semantic RSI certification",
+  "cloud_requests": 0,
+  "production_service_touched": false
+}

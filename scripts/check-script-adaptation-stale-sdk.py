@@ -7,8 +7,8 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT));sys.path.i
 import workflow_holdout as h
 import script_adaptation_study as s
 from common import save,sha,digest,snapshot,PREFIX
-from src.adapters.file_scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 parser=argparse.ArgumentParser();parser.add_argument('--experiment',type=Path,required=True);args=parser.parse_args();exp=args.experiment.resolve();p=json.loads((exp/'protocol.json').read_text())
 class StopProvider(BaseHTTPRequestHandler):
@@ -24,9 +24,9 @@ def check(wid):
  c=next(c for c in p['tasks'] if c['role']=='certify' and c['workflow_id']==wid and c['layout_changed'] and c['profile_id']==wid+(':'+('max' if wid=='FM05' else 'filtered')))
  out,spec,env,_=h.instantiate(exp,c,p,True);s.bind(exp,c,p,out,spec,env,True);prepared=prepare_scenario(Path(c['task_dir'])/'scenario.json')
  save(out/'stale-control.json',{'target':c['control']['target'],'before_sha256':c['control']['before_sha256'],'marker':str(out/'stale-marker.json'),'workspace':spec['workspace'],'workflow_id':wid})
- plugin=out/'stale-preview.ts';runtime=(ROOT/'src/motif_core/online_skill_runtime.mjs').as_uri()
+ plugin=out/'stale-preview.ts';runtime=(ROOT/'src/motif_core/runtime/online_skill_runtime.mjs').as_uri()
  plugin.write_text("import {readFileSync,writeFileSync,existsSync} from 'node:fs';import {resolve,sep} from 'node:path';import {createHash} from 'node:crypto';import {observation} from '"+runtime+"';\nexport const name='sss-free-stale-preview';export const inject=['agents'];export function apply(ctx:any){const c=JSON.parse(readFileSync(process.env.SSS_FREE_STALE_CONTROL!,'utf8'));const target=resolve(c.workspace,c.target);if(!target.startsWith(resolve(c.workspace)+sep)||!existsSync(resolve(c.workspace,'.experiment-copy')))throw Error('marked copy required');ctx.on('agent/created',({agent}:any)=>agent.ctx.on('tools/result',(exec:any,result:any)=>{if(existsSync(c.marker))return;const o=observation(result,exec.name);if(exec.name!=='mcp__file_management__preview_actions'||o?.status!=='validated_copy_plan'||(c.workflow_id==='FM17'&&!o.actions.some((a:any)=>a.destination.startsWith('recovery-drill/'))))return;const hash=()=>createHash('sha256').update(readFileSync(target)).digest('hex');if(hash()!==c.before_sha256)throw Error('frozen preimage changed');writeFileSync(target,'DECLARED FREE STALE VERSION');writeFileSync(c.marker,JSON.stringify({target:c.target,before_sha256:c.before_sha256,after_sha256:hash(),boundary_call_id:exec.callId}));}));}\n")
- patch=out/'stale.patch.yml';save(patch,[{'insert':[{'id':'sss-free-stale-preview','name':plugin.as_uri()},{'id':'sss-learned-copy-script-v2','name':(ROOT/'src/adapters/dsh_learned_script_v2.ts').as_uri()}]}])
+ patch=out/'stale.patch.yml';save(patch,[{'insert':[{'id':'sss-free-stale-preview','name':plugin.as_uri()},{'id':'sss-learned-copy-script','name':(ROOT/'src/adapters/harness/learning/dsh_learned_script.ts').as_uri()}]}])
  server=ThreadingHTTPServer(('127.0.0.1',0),StopProvider);server.bodies=[];worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
  env.update(DEEPSEEK_API_KEY='mock-no-key',DEEPSEEK_BASE_URL=f'http://127.0.0.1:{server.server_port}/v1',DSH_HOME=str(out/'dsh'),SSS_FREE_STALE_CONTROL=str(out/'stale-control.json'),SSS_SCENARIO_PRESENTATION='native',SSS_SCENARIO_TOOLS=json.dumps(prepared['allowed_tools']))
  for n in ['SSS_ONLINE_MOTIF_MANIFEST','SSS_ONLINE_MOTIF_TASK','SSS_ENTRY_MOTIF_POLICY','SSS_ENTRY_MOTIF_TASK','SSS_TERMINAL_MOTIF_POLICY','SSS_TERMINAL_MOTIF_TASK','SSS_COLLECTION_MOTIF_POLICY','SSS_COLLECTION_MOTIF_TASK','SSS_COLLECTION_SCRIPT','SSS_COLLECTION_SCRIPT_TASK','SSS_REENTRY_MOTIF_POLICY','SSS_REENTRY_MOTIF_TASK','SSS_PLAN_MOTIF_POLICY','SSS_PLAN_MOTIF_TASK','SSS_DURABLE_PLAN_BINDING']:env[n]=''

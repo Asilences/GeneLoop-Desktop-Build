@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters.benchmark_script_materials import BenchmarkScriptMaterials
-from src.adapters.capability_feedback import verify
+from benchmarks.evolution.benchmark_script_materials import BenchmarkScriptMaterials
+from src.rsi.feedback.capability_feedback import verify
 from tests.test_benchmark_script_materials import data
 from tests.test_evolution_benchmark import script_module
 
@@ -48,8 +48,8 @@ def continuation(directory, *, snapshot=None):
 
 @pytest.mark.parametrize('sibling_code_roots', [False, True])
 def test_cli_reopens_original_material_store_and_passes_actual_library_to_native_backend(tmp_path, monkeypatch, data, sibling_code_roots):
-    import src.adapters.benchmark_script_materials as native
-    import src.adapters.evolution_benchmark_gene as gene
+    import benchmarks.evolution.benchmark_script_materials as native
+    import benchmarks.evolution.evolution_benchmark_gene as gene
     module = script_module()
     code_root = tmp_path / '.local/code-r5' if sibling_code_roots else tmp_path
     code_root.mkdir(parents=True, exist_ok=True)
@@ -157,7 +157,7 @@ def test_generation_records_original_backend_and_custom_publication_configuratio
 
 
 def test_legacy_explicit_empty_pool_cannot_satisfy_inherited_snapshot(tmp_path, monkeypatch, data):
-    import src.adapters.benchmark_script_materials as native
+    import benchmarks.evolution.benchmark_script_materials as native
     module = script_module()
     monkeypatch.setattr(module, 'ROOT', tmp_path)
     original, program, examples, source, _ = data

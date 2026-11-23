@@ -1,0 +1,151 @@
+"""Version-checked native bindings for the unchanged, locked PPT Skill.
+
+Only project output roots and Office document/vector conversion are rebound.
+No Agent loop, semantic decision or private credential is implemented here.
+"""
+import hashlib
+import importlib.abc
+import importlib.machinery
+import json
+import os
+from src.adapters.filesystem_paths import Path
+import subprocess
+import sys
+import tempfile
+
+
+def read_skill_lock(skill):
+    skill = Path(skill)
+    packaged = skill.parent / 'ppt-master-desktop-lock.json'
+    if not packaged.exists():
+        from scenarios.ppt_master.package import runtime_lock
+        return runtime_lock(skill)
+    if packaged.is_symlink() or packaged.resolve(strict=True) != packaged:
+        raise ValueError('desktop_ppt_resource_lock_path_invalid')
+    lock = json.loads(packaged.read_text(encoding='utf-8'))
+    files = lock.get('files')
+    if lock.get('schema_version') != 1 or not isinstance(files, dict) or not files:
+        raise ValueError('desktop_ppt_resource_lock_invalid')
+    digest = hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    if digest != lock.get('package_sha256'):
+        raise ValueError('desktop_ppt_resource_digest_mismatch')
+    return lock
+
+
+def verify_desktop_skill(skill):
+    skill = Path(skill)
+    from scenarios.ppt_master.package import read_verified
+    lock = read_skill_lock(skill)
+    actual = {p.relative_to(skill).as_posix() for p in skill.rglob('*') if p.is_file() or p.is_symlink()}
+    if actual != set(lock['files']):
+        raise ValueError('ppt_master_unregistered_files')
+    for name in lock['files']:
+        read_verified(skill, name, lock)
+    return lock
+
+
+def verify_source(skill, origin):
+    lock = read_skill_lock(skill)
+    relative = origin.relative_to(skill).as_posix()
+    if origin.is_symlink() or hashlib.sha256(origin.read_bytes()).hexdigest() != lock['files'].get(relative):
+        raise ImportError('native Skill source version changed: ' + relative)
+
+
+def install():
+    if os.environ.get('GENELOOP_NATIVE_SKILL_RUNTIME') != '1':
+        return
+    # The desktop already supplies Node. Playwright's bundled executable is a
+    # duplicate (over 100 MB on Windows); keep its JS driver and license files.
+    node = os.environ.get('GENELOOP_OFFICE_NODE') or os.environ.get('SSS_PPT_NODE_EXECUTABLE')
+    if node and Path(node).is_absolute() and Path(node).is_file():
+        os.environ['PLAYWRIGHT_NODEJS_PATH'] = node
+        os.environ['ELECTRON_RUN_AS_NODE'] = '1'
+    if any(isinstance(f, NativeSkillFinder) for f in sys.meta_path):
+        return
+    skill = Path(os.environ['GENELOOP_PPT_MASTER_ROOT']).resolve(strict=True)
+    work = Path(os.environ['GENELOOP_NATIVE_WORKSPACE']).resolve(strict=True)
+    lock = read_skill_lock(skill)
+    sys.meta_path.insert(0, NativeSkillFinder(skill, work, lock['files']))
+
+
+class NativeSkillFinder(importlib.abc.MetaPathFinder):
+    modules = {'config', 'project_management.paths', 'source_to_md', 'source_to_md.doc_to_md',
+               'doc_to_md', 'pptx_to_svg.pic_to_svg'}
+
+    def __init__(self, skill, work, files):
+        self.skill, self.work, self.files = skill, work, files
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname not in self.modules:
+            return None
+        spec = importlib.machinery.PathFinder.find_spec(fullname, path)
+        if spec is None or not spec.origin:
+            return None
+        origin = Path(spec.origin)
+        if not origin.is_relative_to(self.skill):
+            return None
+        relative = origin.relative_to(self.skill).as_posix()
+        if origin.is_symlink() or origin.resolve(strict=True) != origin or hashlib.sha256(origin.read_bytes()).hexdigest() != self.files.get(relative):
+            raise ImportError('native Skill source version changed: ' + relative)
+        spec.loader = NativeSkillLoader(spec.loader, self)
+        return spec
+
+
+class NativeSkillLoader(importlib.abc.Loader):
+    def __init__(self, original, binding):
+        self.original, self.binding = original, binding
+
+    def create_module(self, spec):
+        return self.original.create_module(spec)
+
+    def exec_module(self, module):
+        self.original.exec_module(module)
+        work = self.binding.work
+        if module.__name__ == 'config':
+            module.REPO_ROOT = work
+            module.PROJECTS_DIR = work / 'projects'
+        elif module.__name__ == 'project_management.paths':
+            module.REPO_ROOT = work
+            module.PROJECTS_ROOT = work / 'projects'
+        elif module.__name__ in ('doc_to_md', 'source_to_md.doc_to_md'):
+            original = module._convert_with_pandoc
+            def convert(source, output, suffix):
+                if suffix not in ('.doc', '.odt', '.rtf'):
+                    return original(source, output, suffix)
+                with tempfile.TemporaryDirectory(prefix='office-source-', dir=work) as tmp:
+                    folder = Path(tmp)
+                    _office(source, folder, 'docx')
+                    return module._convert_docx(folder / (Path(source).stem + '.docx'), output)
+            module._convert_with_pandoc = convert
+        elif module.__name__ == 'source_to_md':
+            original = module.run_backend
+            def run_backend(command, script_name):
+                if len(command) > 1 and Path(command[1]).resolve() == self.binding.skill / 'scripts/source_to_md/doc_to_md.py':
+                    command = [command[0], str(Path(__file__).with_name('desktop_python_entry.py')), *command[1:]]
+                return original(command, script_name)
+            module.run_backend = run_backend
+        elif module.__name__ == 'pptx_to_svg.pic_to_svg':
+            def vector_preview(filename, data):
+                with tempfile.TemporaryDirectory(prefix='office-vector-', dir=work) as tmp:
+                    folder = Path(tmp)
+                    source = folder / ('vector' + Path(filename).suffix.lower())
+                    source.write_bytes(data)
+                    _office(source, folder, 'png')
+                    result = folder / 'vector.png'
+                    return result.read_bytes() if result.is_file() else None
+            module._convert_office_vector_to_png = vector_preview
+
+
+def _office(source, folder, extension):
+    executable = os.environ['GENELOOP_NATIVE_SOFFICE']
+    profile = (Path(folder) / 'office-profile').as_uri()
+    kit = (Path(executable).parents[1] / 'office-kit.json').is_file() if sys.platform == 'win32' else (Path(executable).parents[2] / 'office-kit.json').is_file()
+    if kit and Path(source).suffix.lower() == '.rtf':
+        raise RuntimeError('RTF 不再作为独立输入格式，请另存为 DOCX 或 TXT 后使用。')
+    embedded = ['--geneloop-embedded-preview'] if kit and extension == 'png' and Path(source).suffix.lower() in ('.emf', '.wmf') else []
+    result = subprocess.run([executable, *embedded, '-env:UserInstallation=' + profile, '--headless',
+                             '--convert-to', extension, '--outdir', str(folder), str(source)],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120,
+                            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0)
+    if result.returncode:
+        raise RuntimeError('native Office conversion failed')

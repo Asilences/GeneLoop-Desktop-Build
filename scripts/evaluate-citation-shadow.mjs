@@ -3,9 +3,9 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, join, relative, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
-import { createOnlineInterceptor } from '../src/adapters/dsh_online_motif.mjs';
-import { digest, proposeReadyBatch } from '../src/motif_core/online_skill_runtime.mjs';
-import { closedCitationBatchRead } from '../src/adapters/dsh_paper_motif.ts';
+import { createOnlineInterceptor } from '../src/adapters/harness/motif/dsh_online_motif.mjs';
+import { digest, proposeReadyBatch } from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import { closedCitationBatchRead } from '../src/adapters/harness/paper/dsh_paper_motif.ts';
 
 const json = p => JSON.parse(readFileSync(p, 'utf8'));
 const jsonl = p => readFileSync(p, 'utf8').split('\n').filter(s => s.trim()).map(JSON.parse);

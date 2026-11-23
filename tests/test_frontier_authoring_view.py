@@ -8,9 +8,9 @@ import pytest
 
 from scenarios.paper_proofreading.frontier.author import source_primary_context
 from scenarios.paper_proofreading.frontier.prepare_D import authoring_presentation
-from src.adapters.capability_authoring import authoring_context,aliases
-from src.adapters.capability_contract import capability_ref,create_capability_snapshot
-from src.adapters.capability_source_authoring import source_callable_interfaces
+from src.capability.builder.capability_authoring import authoring_context,aliases
+from src.capability.graph.capability_contract import capability_ref,create_capability_snapshot
+from src.capability.builder.capability_source_authoring import source_callable_interfaces
 from tests.test_capability_improvement import put
 from tests.test_capability_program_composition import data
 

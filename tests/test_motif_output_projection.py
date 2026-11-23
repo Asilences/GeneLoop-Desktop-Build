@@ -15,16 +15,20 @@ import urllib.error
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from src.adapters.motif_output_projection import (CompactJsonProjector, LatestToolProjector,
-                                                  load_certified_projection)
+from src.adapters.harness.motif.motif_output_projection import (
+    CompactJsonProjector, LatestToolProjector, load_certified_projection,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PROJECTION_MODULE = "src.adapters.harness.motif.motif_output_projection"
+
+
 class ProjectionArtifactCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from src.adapters.dsh_trajectory import ToolContract, extract_dsh_trace
-        from src.motif_core.offline.library_builder import build_read_motif_library
+        from src.adapters.harness.dsh_trajectory import ToolContract, extract_dsh_trace
+        from src.motif_core.offline.compilation.library_builder import build_read_motif_library
         from tests.test_trace_compiled_read_motif import event_pair
         contracts = {
             "snapshot_sources": ToolContract(("root",), True, ("sha256",), replay_stable=True),
@@ -216,7 +220,7 @@ class ProjectionWireTest(ProjectionArtifactCase):
             thread.start()
             with ThreadingHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler) as slot:
                 port = slot.server_port
-            process = subprocess.Popen([sys.executable, "-m", "src.adapters.motif_output_projection",
+            process = subprocess.Popen([sys.executable, "-m", PROJECTION_MODULE,
                                         "--upstream", f"http://127.0.0.1:{provider.server_port}",
                                         "--compact-json-only", "--local-dir", temp, "--port", str(port)],
                                        cwd=ROOT, stdout=subprocess.DEVNULL,
@@ -260,7 +264,7 @@ class ProjectionWireTest(ProjectionArtifactCase):
             thread.start()
             with ThreadingHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler) as slot:
                 port = slot.server_port
-            process = subprocess.Popen([sys.executable, "-m", "src.adapters.motif_output_projection",
+            process = subprocess.Popen([sys.executable, "-m", PROJECTION_MODULE,
                                         "--upstream", f"http://127.0.0.1:{provider.server_port}",
                                         "--artifact", str(self.artifact), "--local-dir", temp,
                                         "--port", str(port)], cwd=ROOT,

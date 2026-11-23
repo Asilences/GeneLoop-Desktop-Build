@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_decision_evidence import inspect_decision, record_web_decision
-from src.adapters.capability_evolution_agent import model_view, packet
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.capability_investigation import Investigation
-from src.adapters.rsi_quality import review_quality
+from src.adapters.web.learning.capability_decision_evidence import inspect_decision, record_web_decision
+from src.rsi.evolution.capability_evolution_agent import model_view, packet
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from src.rsi.evolution.capability_investigation import Investigation
+from src.rsi.feedback.rsi_quality import review_quality
 from tests.test_capability_decision_evidence import context, put, source_refs, web_task
 from tests.test_capability_feedback import fixture
 
@@ -177,9 +177,9 @@ def test_existing_strategy_cli_preview_consumes_quality_without_provider_calls(t
     cli = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cli)
     cli.ROOT = tmp_path
-    code = tmp_path / 'src/adapters/capability_evolution_agent.py'
+    code = tmp_path / 'src/rsi/evolution/capability_evolution_agent.py'
     code.parent.mkdir(parents=True)
-    code.write_bytes((root / 'src/adapters/capability_evolution_agent.py').read_bytes())
+    code.write_bytes((root / 'src/rsi/evolution/capability_evolution_agent.py').read_bytes())
     entries = [{'split': 'training', 'scope': 'paper', 'evidence': record(tmp_path, reviewed)}]
     second = web_task(tmp_path, identity='second', source='independent-second')
     arguments = {**reviewed[3], 'task_id': 'second', 'task': file_ref(second / 'task.json'),

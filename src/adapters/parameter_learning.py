@@ -10,8 +10,8 @@ import shutil
 from uuid import uuid4
 
 from .file_lock import exclusive_lock
-from .native_motif_compiler import digest, root_events
-from .parameter_motif_compiler import compile_parameter_runs
+from src.motif_core.offline.compilation.trace.native_motif_compiler import digest, root_events
+from src.motif_core.offline.compilation.trace import parameter_motif_compiler
 
 
 def sha(path):
@@ -115,7 +115,7 @@ def advance_round(store, new_training_runs, validation_runs=None):
         if len({row['path'] for row in all_rows}) != len(all_rows) or len({row['session_id'] for row in all_rows}) != len(all_rows):
             raise ValueError('duplicate or overlapping training/validation session')
         # Validation is not a selector: only training witnesses create a prototype.
-        library = compile_parameter_runs([(Path(r['path']), 'training') for r in training]
+        library = parameter_motif_compiler.compile_parameter_runs([(Path(r['path']), 'training') for r in training]
                                          + [(Path(r['path']), 'heldout') for r in validation],
                                          source_experiment=store.name)
         for row in all_rows:
@@ -137,7 +137,7 @@ def advance_round(store, new_training_runs, validation_runs=None):
                       'reserved_validation': list({r['path']: r for r in reserved + validation}.values()),
                       'new_training_sessions': [r['session_id'] for r in fresh],
                       'added_motifs': sorted(new_ids - old_ids), 'removed_motifs': sorted(old_ids - new_ids),
-                      'compiler_sha256': sha(Path(__file__).with_name('parameter_motif_compiler.py')),
+                      'compiler_sha256': sha(Path(parameter_motif_compiler.__file__)),
                       'learning_code_sha256': sha(__file__),
                       'scope': 'native_parameter_probe_sequential_learning',
                       'independent_task_certification': False, 'actual_model_requests_skipped': 0,

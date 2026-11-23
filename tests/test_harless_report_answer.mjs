@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,realpathSync} from 'node:fs';
 import {join,resolve,sep} from 'node:path';
 import {tmpdir} from 'node:os';
-import {bindReportAnswer,hasReportPlaceholders,REPORT_ANSWER_BINDING} from '../src/adapters/harless_report_answer.ts';
+import {bindReportAnswer,hasReportPlaceholders,REPORT_ANSWER_BINDING} from '../src/adapters/web/scenes/harless_report_answer.ts';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 function fixture(){
  const root=mkdtempSync(join(tmpdir(),'report-answer-')),workspace=join(root,'work'),directory=join(workspace,'outputs/report/records');mkdirSync(directory,{recursive:true});

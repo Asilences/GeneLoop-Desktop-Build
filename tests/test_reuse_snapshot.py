@@ -1,7 +1,7 @@
 import json
 import pytest
 from src.adapters.reuse_snapshot import restore_boundary
-from src.adapters.script_motif_compiler import sha
+from src.motif_core.offline.compilation.script_motif_compiler import sha
 
 
 def evidence(tmp_path):

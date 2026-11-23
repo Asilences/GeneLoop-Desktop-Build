@@ -1,9 +1,9 @@
 """Finite branch/loop discovery, independent evidence and real-path replay."""
 import copy
 import pytest
-from src.motif_core.offline.experience_registry import digest
-from src.motif_core.offline.operation_graph import catalog
-from src.motif_core.offline.control_flow import discover_flows,certify_flow,verify_execution_path,guard
+from src.motif_core.reuse.experience_registry import digest
+from src.motif_core.offline.compilation.operation_graph import catalog
+from src.motif_core.offline.compilation.control_flow import discover_flows,certify_flow,verify_execution_path,guard
 
 
 def frames(counts=(3,4)):
@@ -144,7 +144,7 @@ def test_independent_document_read_interleaving_preserves_each_real_loop_route()
 
 def test_new_independently_observed_branches_can_upgrade_an_active_flow(tmp_path):
     from src.adapters.continuous_motif_learning import learning_job
-    from src.motif_core.offline.experience_registry import durable
+    from src.motif_core.reuse.experience_registry import durable
     compiled=discover_flows(frames()[:2])[0][0]['compiled'];job=tmp_path/'learning/old';job.mkdir(parents=True)
     durable(job/'compiled.json',compiled);durable(job/'activation.json',{'opportunity_key':'route','policy_digest':'active'})
     candidate={'key':'route','compiled':copy.deepcopy(compiled)}

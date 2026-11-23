@@ -4,9 +4,9 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync,mkdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {createCapability,capabilityRef,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
-import {completeCapabilityCycle,publicationVerdict} from '../src/adapters/capability_cycle.ts';
-import {createCapabilityStore} from '../src/adapters/capability_store.ts';
+import {createCapability,capabilityRef,createCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
+import {completeCapabilityCycle,publicationVerdict} from '../src/rsi/learning/capability_cycle.ts';
+import {createCapabilityStore} from '../src/capability/runtime/capability_store.ts';
 import {seed,contract,execute,checkResult,validator} from '../examples/capability-scenes/counts/runtime.mjs';
 
 function fixture(t){

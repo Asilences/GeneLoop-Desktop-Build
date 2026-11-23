@@ -1,6 +1,6 @@
 /** Explicit diagnostic authority. Never connect this synthetic host to a user session. */
 import {readFileSync} from 'node:fs';
-import {validateRsiRecord,bytesSha256} from '../../src/adapters/rsi_protocol.ts';
+import {validateRsiRecord,bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
 
 export const fixtures=JSON.parse(readFileSync(new URL('./fixtures.json',import.meta.url),'utf8'));
 export function fixtureRecord(kind,id){

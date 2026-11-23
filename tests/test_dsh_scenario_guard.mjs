@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apply } from '../src/adapters/dsh_scenario_guard.mjs';
+import { apply } from '../src/adapters/harness/dsh_scenario_guard.mjs';
 
 test('scenario tools are restricted and the execution guard rejects other calls', () => {
   const old = process.env.SSS_SCENARIO_TOOLS;

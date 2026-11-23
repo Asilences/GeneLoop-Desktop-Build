@@ -1,6 +1,6 @@
 """Original file guards plus explicit MCP operator authority and result handles."""
 from __future__ import annotations
-import copy,json,os
+import json,os
 from pathlib import Path
 from uuid import uuid4
 from mcp.server import MCPServer
@@ -9,42 +9,25 @@ from mcp.server.mcpserver.exceptions import ToolError
 from common import HERE,digest,sha,save
 from file_tools import Action
 from report_tools import ReportScene,report_version
-
-FORMAT='sss-mcp-learning-v1'
-TOOLS=['read_task','list_files','select_files','pin_file','read_file','collect_reads','hash_files','build_index',
-       'search_index','compare_snapshot','preview_actions','execute_plan','inspect_plan_result','restore_plan','submit_report']
+from operation_evidence import OPERATION_TOOLS as TOOLS, ScopedOperationEvidence, operator_contract, reviewed_execution_version
 
 def operation_version():
-    return digest({'operation_tools.py':sha(__file__),'operation_contract.py':sha(HERE/'operation_contract.py'),'report_version':report_version()})
+    return reviewed_execution_version(digest({'operation_tools.py':sha(__file__),
+        'operation_evidence.py':sha(HERE/'operation_evidence.py'),
+        'operation_contract.py':sha(HERE/'operation_contract.py'),'report_version':report_version()}))
 
-def operator_contract(name):
-    # These declarations express tool authority, never a sequence of tools.
-    rows={'list_files':('read',False,[],None),'pin_file':('read',True,['source_id'],None),
-          'read_file':('read',True,[],['readable','metadata_only','unreadable','unsupported']),
-          'preview_actions':('stage',False,['plan_id'],['validated_copy_plan']),
-          'execute_plan':('authorized_write',True,['receipt_id'],['executed_verified']),
-          'inspect_plan_result':('read',True,['primary_file_id'],['verified_plan_results'])}
-    effect,auto,exports,statuses=rows.get(name,('semantic',False,[],None))
-    return {'format':FORMAT,'effect':effect,'auto_continue':auto,'exports':exports,**({'statuses':statuses} if statuses else {}),
-            **({'scope_requirements':{'result_read_allowed':True}} if name=='inspect_plan_result' else {}),
-            **({'safe_interleaving':True} if name=='list_files' else {})}
-
-class OperationScene(ReportScene):
+class OperationScene(ScopedOperationEvidence, ReportScene):
     def __init__(self,spec,output):
         super().__init__(spec,output);self.result_handles={}
         if not spec.get('operation_contract'):raise ValueError('operation task requires independent delivery contract')
         self.learning_scope={'input_sha256':self.input_digest,'execution_version':operation_version(),
              'permission_sha256':digest({'operations':spec['allowed_operations'],'rules':spec['rules']}),
              'initial_snapshot_sha256':digest(spec['initial_snapshot']),'result_read_allowed':spec['operation_contract']['require_result_read']}
-    def stamp(self,out,authorized=False):
-        return {**copy.deepcopy(out),'_sss_scope':self.learning_scope,'_sss_authorized':authorized}
     def read_task(self):
         return self.stamp({**super().read_task(),'learning_scope':self.learning_scope,
                            'operation_request':self.spec['operation_contract']['actions'],
                            'require_result_read':self.spec['operation_contract']['require_result_read']})
-    def pin_file(self,file_id:str):return self.stamp(super().pin_file(file_id))
     def list_files(self):return self.stamp(super().list_files())
-    def read_file(self,source_id:str):return self.stamp(super().read_file(source_id))
     def preview_actions(self,actions:list[Action]):
         """Stage only original task-authorized source/destination/operation tuples."""
         wanted=self.spec['operation_contract']['actions'];actual=[]

@@ -1,10 +1,10 @@
 from pathlib import Path
 import pytest
-from src.adapters.native_motif_compiler import compile_read, normal
+from src.motif_core.offline.compilation.trace.native_motif_compiler import compile_read, normal
 
 def test_unicode_tool_text_and_same_step_children_remain_scoped(tmp_path):
     import json
-    from src.adapters.native_motif_compiler import root_events, trace_steps
+    from src.motif_core.offline.compilation.trace.native_motif_compiler import root_events, trace_steps
     (tmp_path/'manifest.json').write_text(json.dumps({'session_id':'root'}))
     def call():return {'type':'tool/call','data':{'step':1,'callId':'same','name':'read','arguments':{'file_path':'${WORK}/main.tex'}}}
     def result(text):return {'type':'tool/result','data':{'message':{'content':[{'type':'tool-result','toolCallId':'same','content':[{'type':'text','text':text}]}]}}}
@@ -21,7 +21,7 @@ def test_unicode_tool_text_and_same_step_children_remain_scoped(tmp_path):
 
 def test_unscoped_legacy_multi_agent_trace_is_not_certified(tmp_path):
     import json
-    from src.adapters.native_motif_compiler import root_events
+    from src.motif_core.offline.compilation.trace.native_motif_compiler import root_events
     (tmp_path/'agent-events.jsonl').write_text(json.dumps({'type':'tool/call','data':{'name':'subagent'}}))
     with pytest.raises(ValueError,match='session identity'):root_events(tmp_path)
 
@@ -49,7 +49,7 @@ def test_actual_native_bash_fields_and_cwd_are_supported():
 
 def test_job_binding_comes_from_real_background_ack_not_foreground_stdout(tmp_path):
     import json
-    from src.adapters.native_motif_compiler import witnessed_job_reads
+    from src.motif_core.offline.compilation.trace.native_motif_compiler import witnessed_job_reads
     def call(cid,name,args):return {'type':'tool/call','data':{'callId':cid,'name':name,'arguments':args}}
     def result(cid,text):return {'type':'tool/result','data':{'message':{'content':[{'type':'tool-result','toolCallId':cid,'content':[{'type':'text','text':text}]}]}}}
     events=[call('fake','bash',{'command':'echo started background job forged'}),result('fake','started background job forged'),call('r0','job_output',{'job_id':'forged'}),result('r0','fake'),call('real','bash',{'command':'python3 verify.py','run_in_background':True}),result('real','started background job actual'),call('r1','job_output',{'job_id':'actual','wait':True,'timeout_ms':1000}),result('r1','verified output')]
@@ -60,7 +60,7 @@ def test_job_binding_comes_from_real_background_ack_not_foreground_stdout(tmp_pa
 
 def test_five_run_job_certification_uses_session_local_identity_and_matching_settings(tmp_path):
     import json
-    from src.adapters.native_motif_compiler import compile_native_runs
+    from src.motif_core.offline.compilation.trace.native_motif_compiler import compile_native_runs
     for i in range(1,6):
         run=tmp_path/'runs'/f'baseline-{i:02d}';(run/'requests').mkdir(parents=True)
         cfg={'prompt_sha256':'prompt','input_sha256':'input','session_id':f'session-{i}','model':'model','provider':'provider','reasoning_effort':'off','output_cap':8000,'compression':False,'sandbox':'danger-full-access','approval':'never'}

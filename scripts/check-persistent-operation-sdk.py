@@ -8,9 +8,9 @@ from common import DATA,save
 from operation_prepare_v2 import prepare
 from src.adapters.continuous_rsi import load_config,initialize,actual_schemas,source_map,records
 from src.adapters.mcp_learning import adapter
-from src.adapters.file_scenario import prepare_scenario
-from src.motif_core.offline.operation_graph import catalog
-from src.motif_core.offline.experience_registry import ExperienceRegistry,digest,read
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.motif_core.offline.compilation.operation_graph import catalog
+from src.motif_core.reuse.experience_registry import ExperienceRegistry,digest,read
 
 def run(fixture,crash=False):
     uid='free-persistent-sdk-'+uuid4().hex[:8];out=ROOT/'.local/persistent-checks'/uid;work=DATA/uid/'source';spec=prepare(out,work)

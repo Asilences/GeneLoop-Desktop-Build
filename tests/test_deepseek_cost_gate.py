@@ -10,6 +10,17 @@ from src.adapters.deepseek_cost_gate import (State, normalize_request_limit, req
 
 
 class DeepSeekCostGateTests(unittest.TestCase):
+    def test_openai_completion_limit_and_nested_cache_keep_accounting(self):
+        body=b'{"model":"deepseek-flash","max_completion_tokens":100,"messages":[]}'
+        self.assertGreater(reservation(body,max_output=100)[1],0)
+        with self.assertRaisesRegex(ValueError,'conflicting'):
+            reservation(b'{"model":"deepseek-flash","max_tokens":99,"max_completion_tokens":100}',max_output=100)
+        usage=response_usage('application/json',json.dumps({'usage':{'prompt_tokens':100,
+            'completion_tokens':3,'total_tokens':103,'prompt_tokens_details':{'cached_tokens':80}}}).encode())
+        self.assertEqual(usage['prompt_cache_hit_tokens'],80)
+        self.assertEqual(usage['prompt_cache_miss_tokens'],20)
+        self.assertAlmostEqual(observed_peak_cost('deepseek-flash',usage),(20*.3+80*.006+3*1.2)/1e6)
+
     def test_union_and_object_schema_types_preserve_real_media_reservation(self) -> None:
         payload = {'model': 'deepseek-flash', 'max_tokens': 100, 'messages': [], 'tools': [
             {'type': 'function', 'function': {'name': 'create_candidate', 'parameters': {

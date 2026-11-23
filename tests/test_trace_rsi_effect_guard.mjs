@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {guardAllows} from '../src/adapters/dsh_trace_rsi_effect_guard.ts';
+import {guardAllows} from '../src/adapters/harness/paper/dsh_trace_rsi_effect_guard.ts';
 test('output conditions distinguish complete state, field loss, missing and wrong types',()=>{
  const c=[{feature:'matched:true',equals:true},{feature:'changed:empty',equals:true}];
  assert.equal(guardAllows(c,{matched:true,changed:[]}),true);

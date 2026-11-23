@@ -16,9 +16,9 @@ import {DeepSeekAdapter,resolveAdapterOptions} from '@deepseek-ai/dsh-llm-deepse
 import {BasicCompactionEngine} from '@deepseek-ai/dsh-compaction-basic';
 import {apply as nativeRetry} from '@deepseek-ai/dsh-llm-retry';
 import {apply as nativeTodo} from '@deepseek-ai/dsh-tool-todo';
-import {apply as scenarioGuard} from '../src/adapters/dsh_scenario_guard.mjs';
-import {fileEventProjection} from '../src/adapters/file_event_projection.ts';
-import {createTaskProgress} from '../src/adapters/harless_task_progress.ts';
+import {apply as scenarioGuard} from '../src/adapters/harness/dsh_scenario_guard.mjs';
+import {fileEventProjection} from '../src/adapters/file_management/file_event_projection.ts';
+import {createTaskProgress} from '../src/adapters/web/tasks/harless_task_progress.ts';
 import {WEB_RETRY_POLICY} from '../src/adapters/geneloop_retry.ts';
 const sse=(delta,finish_reason=null)=>'data: '+JSON.stringify({id:'file-native-local',object:'chat.completion.chunk',created:1,
  model:'deepseek-flash',choices:[{index:0,delta,finish_reason}]})+'\n\n';

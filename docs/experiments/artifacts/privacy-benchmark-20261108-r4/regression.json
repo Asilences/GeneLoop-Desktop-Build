@@ -1,0 +1,122 @@
+{
+  "commit": "b39eac69d7fa765ecdec47f54e5901bf10d768ce",
+  "canonical_npm_test_exit_code": 0,
+  "expected_python_cases": 3392,
+  "environment": {
+    "python": "3.12.15 (main, Oct  6 2026, 23:50:18) [GCC 15.3.0]",
+    "node": "v22.23.2",
+    "platform": "Linux-4.15.0-213-generic-x86_64-with-glibc2.27",
+    "architecture": "x86_64",
+    "packages": {
+      "deepseek-harness-sdk": "0.1.5rc1",
+      "pytest": "8.4.2",
+      "PyMuPDF": "1.26.7",
+      "pytesseract": null,
+      "numpy": "2.4.6",
+      "presidio-analyzer": "2.2.365",
+      "presidio-anonymizer": "2.2.365",
+      "spacy": "3.8.7",
+      "regex": "2026.9.29",
+      "en-core-web-sm": "3.8.0",
+      "zh-core-web-sm": "3.8.0"
+    },
+    "node_dsh": "0.1.5-rc.3",
+    "cpu_threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1"
+    },
+    "ci": "true",
+    "home_isolated": true,
+    "temporary_root_isolated": true,
+    "tessdata_configured": true
+  },
+  "expected_python_files": 291,
+  "node_files": 179,
+  "collection_sha256": "9093a14434604b43f18db294b7723c57e3261545543055cca412feb39bfebd01",
+  "commands": [
+    {
+      "name": "collect",
+      "exit_code": 0,
+      "started": "2026-11-08T01:42:52.925137+00:00",
+      "finished": "2026-11-08T01:43:12.510869+00:00"
+    },
+    {
+      "name": "npm-test",
+      "exit_code": 0,
+      "started": "2026-11-08T01:43:12.537526+00:00",
+      "finished": "2026-11-08T02:49:48.482296+00:00"
+    },
+    {
+      "name": "smoke",
+      "exit_code": 0,
+      "started": "2026-11-08T02:49:48.483406+00:00",
+      "finished": "2026-11-08T02:50:26.752651+00:00"
+    },
+    {
+      "name": "motif",
+      "exit_code": 0,
+      "started": "2026-11-08T02:50:26.753195+00:00",
+      "finished": "2026-11-08T02:51:41.624447+00:00"
+    }
+  ],
+  "results": {
+    "python": {
+      "cases": 3392,
+      "unique_identifiers": 3392,
+      "failed": 0,
+      "skipped": 214,
+      "passed": 3178,
+      "skip_reasons": {
+        "explicit Linux native public acquisition diagnostic": 1,
+        "real Windows read-handle deletion semantics": 1,
+        "explicit Linux native sandbox diagnostic": 3,
+        "Install pinned languages for real OCR integration test": 1,
+        "isolated Docker image not installed": 1,
+        "Windows 8.3 path alias regression": 1,
+        "macOS resume remains unsupported": 1,
+        "real PDF tests require external Poppler": 189,
+        "Poppler required": 4,
+        "Explicit Poppler diagnostic requires an installed pdftoppm": 1,
+        "Linux native sandbox diagnostic opt-in": 1,
+        "could not import 'cairosvg': No module named 'cairosvg'": 5,
+        "could not import 'pandas': No module named 'pandas'": 2,
+        "could not import 'scipy': No module named 'scipy'": 1,
+        "PPT renderer build required": 2
+      },
+      "junit_sha256": "00605c3c3c6e363c04140717a153815c9dd98bc597a1c8284f33c3ee8d0d83a5"
+    },
+    "node": {
+      "cases": 1739,
+      "unique_identifiers": 1643,
+      "failed": 0,
+      "skipped": 9,
+      "passed": 1730,
+      "skip_reasons": {
+        "true": 9
+      },
+      "junit_sha256": "088d5020ab94c6368feb23f4479ece71882143ff4d56aed94fdc9ab3c407f13d"
+    }
+  },
+  "python_collection_matches_junit": true,
+  "checkout_status": "",
+  "node_tap": {
+    "tests": 1741,
+    "suites": 0,
+    "pass": 1732,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 9,
+    "todo": 0,
+    "duration_ms": 395299.288763
+  },
+  "identity_audit": {
+    "python_collected_equals_junit_by_full_nodeid": true,
+    "unique_python_nodeids": 3392,
+    "node_junit_is_leaf_view": true,
+    "node_tap_and_junit_count_difference": 2,
+    "raw_summary_sha256": "c0cc29fd5afb2a6a0c604833bdffe3e720d3864c097f9a9b524bcbe5f7ce4b83",
+    "reviewer_source_sha256": "3460fc835b999af97a27fdef5b4213d8ec6c892846006cae2f6f1e1eb174c321"
+  },
+  "command_arguments": "private; canonical npm test, independent collection, smoke, Motif"
+}

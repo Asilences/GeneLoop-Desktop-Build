@@ -20,13 +20,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from jsonschema import Draft202012Validator
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import capability_digest, capability_ref, validate_capability_snapshot
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_improvement import evidence, save, validate
-from src.adapters.capability_motif_learning import _bind, _checked, capture_composition_trace
-from src.adapters.capability_script_execution import execute as execute_script
-from src.adapters.capability_scene import run_child
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import capability_digest, capability_ref, validate_capability_snapshot
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_improvement import evidence, save, validate
+from src.rsi.learning.capability_motif_learning import _bind, _checked, capture_composition_trace
+from src.adapters.harness.capability.capability_script_execution import execute as execute_script
+from src.adapters.harness.capability.capability_scene import run_child
 
 
 def read(ref):
@@ -175,8 +175,11 @@ def run_manifest(manifest, output, *, execute=False, private_root=None):
              'store': str(output / 'store'), 'expected_latest': None,
              'preparation': 'full_original_root_runtime_replay_included_in_elapsed_time',
              'code': [file_ref(ROOT / name) for name in (
-                 'scripts/validate-recursive-paper-candidate.py', 'src/adapters/capability_motif_learning.py',
-                 'src/adapters/capability_script_execution.py', 'scenarios/paper_proofreading/frontier/publish.mjs',
+                 'scripts/validate-recursive-paper-candidate.py', 'src/rsi/learning/capability_motif_learning.py',
+                 'src/motif_core/trajectory/model.py',
+                 'src/motif_core/offline/mining/trace_mining.py',
+                 'src/motif_core/offline/mining/motif_miner.py',
+                 'src/adapters/harness/capability/capability_script_execution.py', 'scenarios/paper_proofreading/frontier/publish.mjs',
                  'scenarios/paper_proofreading/frontier/check.py', 'scenarios/paper_proofreading/frontier/oracle.py')]})
         result['boundary_projection'] = file_ref(output / 'boundary-projection.json')
         if execute:

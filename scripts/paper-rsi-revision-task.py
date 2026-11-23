@@ -16,7 +16,7 @@ spec=importlib.util.spec_from_file_location('revision_batch_base',ROOT/'scripts/
 batch=importlib.util.module_from_spec(spec);spec.loader.exec_module(batch)
 base=batch.base
 from src.adapters.revision_tool_evidence import revision_facts
-from src.adapters.trace_tool_evidence import digest
+from src.motif_core.trajectory.trace_tool_evidence import digest
 
 EXP=ROOT/'.local/paper-reference/paper-rsi-revision-task-shadow-20261011-v6'
 FROZEN=ROOT/'.local/paper-reference/paper-rsi-revision-counts-20261011-v5/frozen-tool.json'

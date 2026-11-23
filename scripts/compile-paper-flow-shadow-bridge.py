@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.native_motif_compiler import digest
+from src.motif_core.offline.compilation.trace.native_motif_compiler import digest
 
 P = 'mcp__paper_checks__'
 CURRENT = {

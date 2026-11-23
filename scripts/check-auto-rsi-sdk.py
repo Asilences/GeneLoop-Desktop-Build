@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT));sys.path.insert(0, str(ROOT / 'scenarios/file-management'))
 import auto_rsi as rsi
 from common import save, digest
-from src.adapters.file_scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 
 

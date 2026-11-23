@@ -6,8 +6,9 @@ import pytest
 from src.adapters import experience_library as lib, continuous_rsi as rsi
 from src.adapters import continuous_motif_learning as learner_module
 from src.adapters import management_backup as backup
-from src.motif_core.offline.experience_registry import ExperienceRegistry, digest, durable, read, sha
-from src.motif_core.offline.operation_graph import discover_graphs, certify_graph
+from src.motif_core.reuse.experience_registry import ExperienceRegistry, digest, durable, read, sha
+from src.adapters.file_management.experience_certification import check_motif_certificate
+from src.motif_core.offline.compilation.operation_graph import discover_graphs, certify_graph
 from test_operation_graph import frames
 
 
@@ -66,7 +67,8 @@ def historical(home, label='first', *, current=True, template_role=None):
             'native_review': reviews[0], 'reviews': reviews[1:]}
     certfile = origin_root/'certificate.json'; durable(certfile, cert)
     registry = ExperienceRegistry(origin_root/'registry')
-    entry = registry.entry('operation_graph', payload, runtime_source, certfile)
+    entry = registry.entry('operation_graph', payload, runtime_source, certfile,
+                           verify_certificate=check_motif_certificate)
     registry.publish([entry], reason='synthetic independent certificate fixture')
     return registry, entry, policy, certfile
 

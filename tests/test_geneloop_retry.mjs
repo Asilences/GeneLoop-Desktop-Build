@@ -13,9 +13,9 @@ import {ToolRuntime,defineTool} from '@deepseek-ai/dsh-tools';
 import {LlmRuntime,LlmError,createUserMessage,isAgentLoopRequest} from '@deepseek-ai/dsh-llm';
 import {resolveAdapterOptions} from '@deepseek-ai/dsh-llm-deepseek';
 import {apply as nativeRetry} from '@deepseek-ai/dsh-llm-retry';
-import {WebDeepSeekAdapter} from '../src/adapters/harless_reasoning.ts';
+import {WebDeepSeekAdapter} from '../src/adapters/web/tasks/harless_reasoning.ts';
 import {WEB_RETRY_POLICY,taskFailureStatus} from '../src/adapters/geneloop_retry.ts';
-import {createTaskProgress} from '../src/adapters/harless_task_progress.ts';
+import {createTaskProgress} from '../src/adapters/web/tasks/harless_task_progress.ts';
 
 const frame=(delta,finish_reason=null)=>'data: '+JSON.stringify({id:'local-diagnostic',object:'chat.completion.chunk',created:1,
   model:'deepseek-flash',choices:[{index:0,delta,finish_reason}]})+'\n\n';

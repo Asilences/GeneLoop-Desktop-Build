@@ -1,7 +1,7 @@
 """A real failed API task remains failed; it is never a cheap completed sample."""
 from scenarios.remotion_edit.structured.review_program_runs import failed_artifact_review,external_reviews
 from src.adapters.research_requests import image_content
-from src.adapters.script_motif_compiler import digest
+from src.motif_core.offline.compilation.script_motif_compiler import digest
 import json,pytest
 
 
@@ -48,7 +48,7 @@ def test_external_pixel_review_waits_for_current_video_and_task_evidence(tmp_pat
 
 
 def test_shared_external_quality_requires_observed_files_and_pauses_unknown(tmp_path):
-    from src.adapters.rsi_protocol import envelope
+    from src.rsi.protocol.rsi_protocol import envelope
     from scenarios.remotion_edit.structured.review_program_runs import VISUAL_CHECKS
     import hashlib
     run=tmp_path/'runs/shared/program/task';(run/'qa').mkdir(parents=True)

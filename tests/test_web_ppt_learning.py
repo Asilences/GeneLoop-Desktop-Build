@@ -2,7 +2,7 @@
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
+from src.adapters.filesystem_paths import Path
 import shutil
 from uuid import uuid4
 import zipfile
@@ -10,7 +10,7 @@ import zipfile
 import fitz
 import pytest
 from tests.test_trace_compiled_read_motif import event_pair
-from src.adapters.harless_rsi_bundle import load_product_bundle
+from src.adapters.web.learning.harless_rsi_bundle import load_product_bundle
 
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('auto_ppt',ROOT/'scripts/learn-web-ppt-tasks.py')
@@ -44,7 +44,7 @@ def task(owned,index,*,mode='baseline',source=None,version=None,cost=.002,reques
         **{key:value*requests for key,value in usage.items()}}
     common={'task_id':identity,'session_id':'session-'+identity,'user_id':USER,'mode':mode,'scene':'ppt','status':'completed','stats':stats,
         'source_task_id':identity,'scene_inputs':[{'version_sha256':source_version}]}
-    schemas=json.loads((ROOT/'motif-libraries/ppt-master-v8/tool-schemas.json').read_text(encoding='utf-8'))
+    schemas=json.loads((ROOT/'motif-libraries/ppt-master/tool-schemas.json').read_text(encoding='utf-8'))
     effective={**common,'provider_mode':'real','tools':schemas,'trace_start_index':len(rows) if old_only else 0,'ppt_execution_strategy':'ppt_master',
         'skill_package_sha256':worker.compiler.read_lock()['package_sha256'],'model':'diagnostic','provider':'diagnostic','reasoning_effort':'off',
         'instructions_sha256':'b'*64,'compression':False,'learning_version':version}
@@ -95,6 +95,87 @@ def pair(owned,index,baseline,motif=None,*,review=True):
 def seed(owned):
     for n in range(1,4):pair(owned,n,task(owned,n))
     worker.advance(owned[2]);assert worker.read(owned[1]/'status.json')['status']=='probation'
+
+
+def test_shared_quality_record_separates_verified_layout_from_incorrect_facts(owned):
+    directory = task(owned, 1)
+    turn = pair(owned, 1, directory, review=False)
+    info = worker.task_info(owned[0], directory.name, worker.read(owned[2]), baseline=True)
+    proof = worker.delivery(owned[0], turn, 'baseline', {}, store=owned[1], info=info,
+        review={'quality': {'scientific': False, 'visual': True, 'usable': True},
+                'allow_learning': True, 'human_minutes': 0})
+    assert proof['status'] == 'failed'
+    assert proof['mechanical_status'] == 'passed'
+    assert proof['layout_status'] == 'passed'
+
+
+def test_unsettled_cost_can_be_reviewed_but_does_not_enter_learning(owned, monkeypatch):
+    from src.adapters.ppt.learning import ppt_background_review
+    directory = task(owned, 1); single(owned, directory)
+    state = worker.read(directory/'task-state.json')
+    state['stats'].update(usage_complete=False, unknown_usage_requests=2)
+    save(directory/'task-state.json', state)
+    accounting = worker.read(directory/'learning-accounting.json')
+    for receipt in accounting['request_receipts']:
+        receipt['observed_peak_usd'] = None
+        receipt['response_usage']['total_tokens'] += 59
+    save(directory/'learning-accounting.json', accounting)
+    request = worker.read(owned[2])
+    with pytest.raises(ValueError):worker.task_info(owned[0], directory.name, request)
+    info = worker.task_info(owned[0], directory.name, request, review_only=True)
+    assert info['quality_only'] is True and 'totals' not in info
+    with pytest.raises(ValueError, match='quality-only'):
+        worker.task_info(owned[0], directory.name, request, baseline=True, review_only=True)
+    with pytest.raises(ValueError, match='ownership'):
+        worker.task_info(owned[0], directory.name, {**request, 'user': 'foreign'}, review_only=True)
+    structural=worker.task_info(owned[0],directory.name,request,structure_only=True)
+    assert structural['structural_only'] and structural['cost_eligible'] is False and 'totals' not in structural
+    assert 'schemas' in structural and 'source_signature' in structural
+    assert not any(name.endswith('learning-accounting.json') for name in structural['locks'])
+    assert any('learning-structure-' in name for name in structural['locks'])
+    with pytest.raises(ValueError,match='ownership'):
+        worker.task_info(owned[0],directory.name,{**request,'user':'foreign'},structure_only=True)
+    req=worker.read(directory/'task.json');req['learning_eligible']=False;save(directory/'task.json',req)
+    with pytest.raises(ValueError,match='eligible'):
+        worker.task_info(owned[0],directory.name,request,structure_only=True)
+    req.pop('learning_eligible');save(directory/'task.json',req)
+    observed = {}
+    def review(output, store, infos, turns, **kwargs):
+        observed['review_ids'] = set(infos)
+        observed['review_turns'] = set(turns)
+        for turn in turns.values():kwargs['delivery'](output, turn, 'baseline', {})
+    def learning(output, store, request, infos, *args, **kwargs):observed['learning_ids'] = set(infos)
+    def workflows(output,store,request,infos,turns,**kwargs):
+        observed['workflow_ids']=set(infos)
+        assert all(info.get('structural_only') and 'totals' not in info for info in infos.values())
+        assert 'single-'+directory.name in turns
+    from src.adapters.ppt.learning import ppt_workflow_learning
+    monkeypatch.setattr(ppt_workflow_learning,'advance_workflow_learning',workflows)
+    monkeypatch.setattr(ppt_background_review, 'advance_reviews', review)
+    monkeypatch.setattr(worker, 'advance_programs', learning)
+    worker.advance(owned[2])
+    assert observed['review_ids'] == {directory.name}
+    assert observed['review_turns'] == {'single-'+directory.name}
+    assert observed['learning_ids'] == set()
+    assert observed['workflow_ids'] == {directory.name}
+    assert not (owned[1]/'selected.json').exists()
+
+
+def test_plain_language_task_has_immutable_source_identity_without_an_attachment(owned):
+    directory = task(owned, 1, question='Prepare a fifteen-page employee onboarding presentation')
+    for name in ('task-state.json', 'effective-config.json', 'task.json'):
+        value = worker.read(directory / name)
+        value['scene_inputs'] = []
+        save(directory / name, value)
+    info = worker.task_info(owned[0], directory.name, worker.read(owned[2]), baseline=True)
+    assert info['source_kind'] == 'immutable_user_request'
+    assert info['source_signature']
+    assert 'tasks/' + directory.name + '/task.json' in info['locks']
+    state = worker.read(directory / 'task-state.json')
+    state['scene_inputs'] = [{'version_sha256': ''}]
+    save(directory / 'task-state.json', state)
+    with pytest.raises(ValueError, match='missing frozen source versions'):
+        worker.task_info(owned[0], directory.name, worker.read(owned[2]), baseline=True)
 
 
 def test_completed_task_ui_refresh_does_not_retire_certified_evidence(owned):
@@ -284,7 +365,7 @@ def test_automatic_learning_needs_no_review_and_keeps_scientific_quality_unknown
 
 
 def test_shared_quality_records_bind_real_delivery_and_do_not_invent_a_review(owned):
-    from src.adapters.rsi_quality import quality_status, verify_quality_files
+    from src.rsi.feedback.rsi_quality import quality_status, verify_quality_files
     seed(owned)
     out,store,req=owned
     for n in (4,5):
@@ -412,3 +493,59 @@ def test_feedback_during_compilation_cannot_reenable_the_stale_candidate(owned,m
     assert (store/'suspended.json').exists()
     assert worker.read(store/'selected.json')['feedback_version']!=worker.sha(store/'feedback-version.json')
     worker.advance(owned[2]);assert worker.read(store/'selected.json')['phase']=='disabled'
+
+
+def test_private_ppt_document_release_admits_only_exact_ppt_scope_relocations(owned, tmp_path):
+    from src.adapters.web.learning.harless_rsi_bundle import load_uploaded_bundle
+
+    seed(owned)
+    root = tmp_path / 'project'
+    store = root / '.local/ppt-owner'
+    release = store / 'release'
+    shutil.copytree(owned[1] / 'round-0001/release', release)
+    certificate_file = release / 'certification.json'
+    entry_file = release / 'entry.json'
+    cert, entry = worker.read(certificate_file), worker.read(entry_file)
+    locks = cert['code_locks']
+    for name in {*locks, 'scenarios/ppt_master/source-evidence-identities.json'}:
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, root / name)
+
+    old = 'src/adapters/harless_rsi_bundle.py'
+    current = 'src/adapters/web/learning/harless_rsi_bundle.py'
+    actual = locks.pop(current)
+    legacy = 'a' * 64
+    locks[old] = legacy
+
+    def seal_fixture():
+        save(certificate_file, cert)
+        entry['files']['certification.json'] = worker.sha(certificate_file)
+        save(entry_file, entry)
+
+    seal_fixture()
+    before = {p: p.read_bytes() for p in release.iterdir()}
+    policy = root / 'config/rsi-privacy-code-compat.json'
+    policy.parent.mkdir(parents=True, exist_ok=True)
+    mapping = {old: {'path': current, 'from_sha256': legacy, 'to_sha256': actual}}
+    save(policy, {'private_paper_document_relocations': mapping})
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_product_bundle(root, release, 'ppt', private_root=store)
+
+    save(policy, {'private_ppt_document_relocations': mapping})
+    admitted = load_product_bundle(root, release, 'ppt', private_root=store)
+    assert admitted['runtime_kind'] == 'ppt_master_v2'
+    assert admitted['certified_code_locks'][str((root / current).resolve())] == actual
+    assert str((root / old).resolve()) not in admitted['certified_code_locks']
+    assert {p: p.read_bytes() for p in release.iterdir()} == before
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_uploaded_bundle(root, release, 'ppt', skill_read=True)
+
+    locks[old] = 'b' * 64
+    seal_fixture()
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_product_bundle(root, release, 'ppt', private_root=store)
+    for p, raw in before.items():
+        p.write_bytes(raw)
+    (root / current).write_bytes(b'changed relocated source')
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_product_bundle(root, release, 'ppt', private_root=store)

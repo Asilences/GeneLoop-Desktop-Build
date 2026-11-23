@@ -8,9 +8,9 @@ import {join} from 'node:path';
 import {scriptWorkerFailure,readScriptWorkerFailure,SCRIPT_FAILURE_FRAME} from '../src/adapters/script_worker_failure.mjs';
 import {scriptCodeLocks} from '../src/adapters/script_motif_runtime.ts';
 import {buildScriptCapabilities,runScriptCapability} from '../src/adapters/script_capability_runtime.ts';
-import {capabilityDigest,capabilityRef} from '../src/adapters/capability_contract.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {bytesSha256 as sha} from '../src/adapters/rsi_protocol.ts';
+import {capabilityDigest,capabilityRef} from '../src/capability/graph/capability_contract.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {bytesSha256 as sha} from '../src/rsi/protocol/rsi_protocol.ts';
 
 test('worker diagnostics preserve bounded type/location without private text or host paths',()=>{
  const message='script_sandbox_failed: Traceback (most recent call last):\n  File "/private/input/secrets.py", line 9, in run\nTypeError: private source body must not escape';

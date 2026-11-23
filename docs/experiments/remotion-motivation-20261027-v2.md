@@ -9,7 +9,7 @@
 
 检验更多异质剪辑轨迹是否产生可以认证的结构，以及重复探测/渲染/验证是否构成值得工具化的开销。否定条件是候选无法获得参数、依赖、版本和权限证据，或接管后质量/费用不合格；工具名重复不算效果。
 
-新增题面见 [tasks-v2.json](../../scenarios/remotion_edit/tasks-v2.json)，30题注册表见 [tasks-all.json](../../scenarios/remotion_edit/tasks-all.json)。包含24/25/30fps输出与24/30/60fps派生源、裁切、布局、转场、冻结、倍速、循环、字幕和音频时序；时长6–8秒，最高640×360，竖屏360×640、方形480×480。
+新增题面见 [tasks-v2.json](../../scenarios/remotion_edit/tasks-v2.json)，30 题按顺序来自 [第一批题目](../../scenarios/remotion_edit/tasks.json) 和第二批题目。包含24/25/30fps输出与24/30/60fps派生源、裁切、布局、转场、冻结、倍速、循环、字幕和音频时序；时长6–8秒，最高640×360，竖屏360×640、方形480×480。
 
 模型调用前已冻结10题训练候选、5题认证、5题评测，文件为 [split-v2.json](../../scenarios/remotion_edit/split-v2.json)。旧10题只作历史描述，不进入新划分。实际编译训练为7题，认证为5题；没有完成事件/视频的训练题被排除：t19_long_crossfade, t23_music_ducking, t28_metric_panel。这里的“正常交付”仅是会话/文件门槛，没有假称经过独立质量盲审。
 

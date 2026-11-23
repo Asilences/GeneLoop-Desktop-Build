@@ -10,11 +10,10 @@ import sys
 from common import ROOT,HERE,PREFIX,digest,save,sha
 from file_tools import FileScene
 sys.path.insert(0,str(ROOT))
-from src.adapters.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges,mine_dsh_traces
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif
-from src.motif_core.offline.library_builder import library_from_certified
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges,mine_dsh_traces
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 REQUIREMENTS={'read_task':[],'list_files':[],'pin_file':['file_id'],'read_file':['source_id'],
  'hash_files':['file_ids'],'build_index':['source_ids'],'search_index':['query'],
@@ -172,7 +171,7 @@ def main():
         used={t for a in artifacts for t in a['tools']}
         updated={k:{**v,'description':ct[k].description} for k,v in raw.items()}
         manifest=exporter.export_manifest(library,updated,version_fields={t:'source_version' for t in used if 'source_version' in ct[t].output_fields})
-        subprocess.run(['node','--input-type=module','-e',"import fs from 'node:fs';import {validateOnlineManifest} from './src/motif_core/online_skill_runtime.mjs';validateOnlineManifest(JSON.parse(fs.readFileSync(0,'utf8')));"],
+        subprocess.run(['node','--input-type=module','-e',"import fs from 'node:fs';import {validateOnlineManifest} from './src/motif_core/runtime/online_skill_runtime.mjs';validateOnlineManifest(JSON.parse(fs.readFileSync(0,'utf8')));"],
                         cwd=ROOT,input=json.dumps(manifest),text=True,capture_output=True,check=True)
         save(destination/'online-manifest.json',manifest)
     result={'training_tasks':len(traces['explore']),'certification_tasks':len(traces['certify']),

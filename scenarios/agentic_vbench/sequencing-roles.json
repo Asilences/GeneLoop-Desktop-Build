@@ -1,0 +1,23 @@
+{
+  "study": "agentic-vbench-sequencing-applicability-pair-20261110-v1",
+  "evaluation_role": "independent_normal_sequencing_applicability_paired",
+  "tasks": {
+    "agentic-vbench-sequencing-task2": "sealed_applicability",
+    "agentic-vbench-sequencing-task1": "sealed_applicability"
+  },
+  "selection_basis": "The two Sequencing applicability tasks fixed in the original roles.json, ordered by the public input size: seven clips before thirteen. No score-based selection or replacement.",
+  "prerequisites": ["finish the frozen Assembly Task14 pair", "zero-model verification that each task uses complete clips and the current manifest interface", "verify official material hashes and freeze identical input/image/tool configuration before each pair"],
+  "task_order": ["agentic-vbench-sequencing-task2", "agentic-vbench-sequencing-task1"],
+  "order_per_task": ["reuse", "baseline_empty_store"],
+  "timeout_seconds_per_arm": 900,
+  "library_revision_policy": "Reuse the exact already-frozen Task14 library and runtime; no learning, recertification, interface edits or oracle-based binding from these successor tasks. Baseline uses the same owner's empty store.",
+  "quality": "Unchanged official Sequencing video verifier; report raw aggregate quality separately from normalized reward, actual C adoption and local manifest correctness.",
+  "model": "gpt-6-luna",
+  "reasoning_effort": "none",
+  "max_completion_tokens": 128000,
+  "registered_tool_order": ["execute", "read_image", "capability_list", "capability_call"],
+  "expected_wire_tool_order": ["capability_call", "capability_list", "execute", "read_image"],
+  "shared_policy": "Identical existing trial.py, native tools, current video metadata, labelled temporal evidence policy and Artifact value-input flag on both sides. Only the capability catalog differs.",
+  "adoption": "Optional; no forced C use or supplied clip order. Keep failures, refusals, unknown usage, retries and recovery in the original cumulative ledger.",
+  "expansion": "Only these two previously planned applicability tasks. Do not expand Repair/Repurpose or use these tasks to repair the learned program. Incompatible input is an applicability/fallback result."
+}

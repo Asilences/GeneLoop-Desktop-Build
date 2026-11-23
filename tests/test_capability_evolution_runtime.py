@@ -12,10 +12,10 @@ import sys
 
 import pytest
 
-from src.adapters.capability_contract import capability_ref
-from src.adapters.capability_evolution import evolve_abstraction, propose_evolution_boundary, record_relation
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref
-from src.adapters.capability_motif_learning import capture_capability_trace, learn_capability_motifs
+from src.capability.graph.capability_contract import capability_ref
+from src.rsi.evolution.capability_evolution import evolve_abstraction, propose_evolution_boundary, record_relation
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref
+from src.rsi.learning.capability_motif_learning import capture_capability_trace, learn_capability_motifs
 
 ROOT = Path(__file__).resolve().parents[1]
 

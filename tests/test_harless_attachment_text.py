@@ -13,7 +13,7 @@ import zipfile
 
 import pytest
 
-from src.adapters import harless_attachment_text as attachment
+from src.adapters.web.attachments import harless_attachment_text as attachment
 
 
 def put(tmp_path, name, data):

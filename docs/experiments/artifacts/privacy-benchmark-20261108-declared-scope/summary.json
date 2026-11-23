@@ -1,0 +1,173 @@
+{
+  "analysis_id": "privacy-benchmark-20261108-declared-scope-view",
+  "analysis_only": true,
+  "rule_commit": "d832be12fabc76fc995b358e15a110a506ba4711",
+  "method_commit": "ca083357342fd1f7f4e8238d6f8f72add94ab95c",
+  "scope_origin": "R1/R2 frozen supported_text_tags; no category added or removed after scoring",
+  "scope_labels": [
+    "PERSON",
+    "PHONE_NUMBER",
+    "EMAIL_ADDRESS",
+    "LOCATION",
+    "IDENTITY_NUMBER",
+    "CREDIT_CARD",
+    "FINANCIAL_ACCOUNT",
+    "IP_ADDRESS",
+    "PRIVATE_REFERENCE",
+    "CREDENTIAL"
+  ],
+  "post_hoc_aggregation": true,
+  "new_detector_calls": 0,
+  "source_hashes": {
+    "docs/experiments/artifacts/privacy-benchmark-20261107-r1/pii-summary.json": "85233af13bc764a2307a483a68a65062127a7ae2be7d499e1cd44e31da90a3bd",
+    "docs/experiments/artifacts/privacy-benchmark-20261107-r1/verification.json": "ad87e7d235910a0e13c8cb1b23b7c15a5b4c7322c6e869a5bae2ebbe95193011",
+    "docs/experiments/artifacts/privacy-benchmark-20261107-r2/pii-summary.json": "7ce4c6e78fe61406b7d816f15bc2c779db13da49d103ab273f900be6f0bc5cb8",
+    "docs/experiments/artifacts/privacy-benchmark-20261107-r2/verification.json": "d96968185e9bd460bf52816e9988d16e326790ddcce9d27455d71611be3d335e"
+  },
+  "datasets": {
+    "zh_formal": {
+      "native": {
+        "gold_entities": 15207,
+        "fully_covered_entities": 8858,
+        "incomplete_entities": 6349,
+        "incomplete_rate": 0.4175050963372131
+      },
+      "r1_core": {
+        "gold_entities": 15207,
+        "fully_covered_entities": 10011,
+        "incomplete_entities": 5196,
+        "incomplete_rate": 0.34168475044387453
+      },
+      "r2_core": {
+        "gold_entities": 15207,
+        "fully_covered_entities": 10251,
+        "incomplete_entities": 4956,
+        "incomplete_rate": 0.32590254488064707
+      },
+      "outside_view_gold_entities": 455,
+      "outside_view_by_label": {
+        "LICENSE_PLATE": 455
+      },
+      "all_gold_entities": 15662,
+      "r2_module_admitted_scope": {
+        "gold_entities": 15207,
+        "literal_residual_entities": 4124
+      },
+      "r2_module_all_documents": {
+        "accepted": 5000,
+        "rejected": 0,
+        "rejection_reasons": {}
+      },
+      "r2_all_label_non_pii_proxy": {
+        "gold_chars": 166005,
+        "covered_gold_chars": 117796,
+        "non_pii_chars": 63620,
+        "masked_non_pii_chars": 3084,
+        "gold_entities": 15662,
+        "fully_covered_entities": 10255
+      }
+    },
+    "zh_chat": {
+      "native": {
+        "gold_entities": 7305,
+        "fully_covered_entities": 4733,
+        "incomplete_entities": 2572,
+        "incomplete_rate": 0.3520876112251882
+      },
+      "r1_core": {
+        "gold_entities": 7305,
+        "fully_covered_entities": 4347,
+        "incomplete_entities": 2958,
+        "incomplete_rate": 0.40492813141683776
+      },
+      "r2_core": {
+        "gold_entities": 7305,
+        "fully_covered_entities": 4347,
+        "incomplete_entities": 2958,
+        "incomplete_rate": 0.40492813141683776
+      },
+      "outside_view_gold_entities": 239,
+      "outside_view_by_label": {
+        "LICENSE_PLATE": 239
+      },
+      "all_gold_entities": 7544,
+      "r2_module_admitted_scope": {
+        "gold_entities": 7305,
+        "literal_residual_entities": 2794
+      },
+      "r2_module_all_documents": {
+        "accepted": 3000,
+        "rejected": 0,
+        "rejection_reasons": {}
+      },
+      "r2_all_label_non_pii_proxy": {
+        "gold_chars": 65614,
+        "covered_gold_chars": 44293,
+        "non_pii_chars": 30305,
+        "masked_non_pii_chars": 751,
+        "gold_entities": 7544,
+        "fully_covered_entities": 4353
+      }
+    },
+    "en_test": {
+      "native": {
+        "gold_entities": 10937,
+        "fully_covered_entities": 7395,
+        "incomplete_entities": 3542,
+        "incomplete_rate": 0.32385480479107615
+      },
+      "r1_core": {
+        "gold_entities": 10937,
+        "fully_covered_entities": 6770,
+        "incomplete_entities": 4167,
+        "incomplete_rate": 0.3810002742982536
+      },
+      "r2_core": {
+        "gold_entities": 10937,
+        "fully_covered_entities": 7079,
+        "incomplete_entities": 3858,
+        "incomplete_rate": 0.3527475541739051
+      },
+      "outside_view_gold_entities": 10441,
+      "outside_view_by_label": {
+        "PRIVATE_ID": 2814,
+        "MEDICAL_RECORD_NUMBER": 2658,
+        "DATE_TIME": 3805,
+        "LICENSE_PLATE": 579,
+        "BIOMETRIC_IDENTIFIER": 137,
+        "VEHICLE_IDENTIFIER": 98,
+        "CERTIFICATE_LICENSE_NUMBER": 124,
+        "COMPANY_NAME": 185,
+        "HEALTH_PLAN_BENEFICIARY_NUMBER": 41
+      },
+      "all_gold_entities": 21378,
+      "r2_module_admitted_scope": {
+        "gold_entities": 10859,
+        "literal_residual_entities": 2245
+      },
+      "r2_module_all_documents": {
+        "accepted": 4958,
+        "rejected": 42,
+        "rejection_reasons": {
+          "policy_or_processing_rejection": 13,
+          "credential_hit": 29
+        }
+      },
+      "r2_all_label_non_pii_proxy": {
+        "gold_chars": 284534,
+        "covered_gold_chars": 135592,
+        "non_pii_chars": 798401,
+        "masked_non_pii_chars": 19340,
+        "gold_entities": 21378,
+        "fully_covered_entities": 7894
+      }
+    }
+  },
+  "limits": [
+    "Declared text-detector scope is not a complete privacy policy.",
+    "Outside this view does not mean permitted disclosure, especially structured PRIVATE_ID and unsupported sensitive types.",
+    "No gold spans, detector outputs, rules, refusals, timeouts or baseline files changed.",
+    "Miss rate is type-blind incomplete entity coverage; it is not a re-identification probability.",
+    "False deletion proxy remains all-label gold-complement masking; no new policy-specific false-deletion annotations exist."
+  ]
+}

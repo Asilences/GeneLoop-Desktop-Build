@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import pytest
 
 from src.adapters.scenario import ROOT, prepare_scenario
-from src.adapters.harless_product_prompt import product_persona, product_system_prompt
-from src.adapters.harless_scenarios import prepare_scene_registry
+from src.adapters.web.tasks.harless_product_prompt import product_persona, product_system_prompt
+from src.adapters.web.scenes.harless_scenarios import prepare_scene_registry
 
 
 def test_sdk_defaults_are_unchanged_and_web_identity_does_not_rewrite_task_text():

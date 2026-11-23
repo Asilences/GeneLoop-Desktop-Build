@@ -100,9 +100,13 @@ def program_from_witness(source, arguments, input_paths, output_index, witness):
         raise ValueError('program_all_arguments_must_be_bound')
     contracts = [{**file_contract(input_paths[i]), 'source_origin': 'uploaded_input' if Path(input_paths[i]).parent.name == 'inputs' else 'model_artifact'} for i in sorted(input_paths)]
     dependencies = {}
-    if any(isinstance(n, (ast.Import, ast.ImportFrom)) and any(m in ('text_measure', 'preset_shape_svg') for m in ([n.module] if isinstance(n, ast.ImportFrom) else [a.name for a in n.names])) for n in ast.walk(tree)):
-        lock = Path(__file__).resolve().parents[2] / 'scenarios/ppt_master/skill-lock.json'
-        dependencies['ppt_master_package_sha256'] = json.loads(lock.read_text(encoding='utf-8'))['package_sha256']
+    modules = {m for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))
+               for m in ([node.module] if isinstance(node, ast.ImportFrom) else [a.name for a in node.names])}
+    if modules.intersection({'text_measure', 'preset_shape_svg'}):
+        from scenarios.ppt_master.package import installation, runtime_lock
+        files = runtime_lock(installation())['files']
+        scripts = {name: version for name, version in files.items() if name.startswith('scripts/')}
+        dependencies['ppt_resource_scripts_sha256'] = sha(json.dumps(scripts, sort_keys=True, separators=(',', ':')))
     body = {'version': 1, 'source': source, 'inputs': contracts, 'dependencies': dependencies,
             'input_argument_indices': sorted(input_paths), 'output_argument_index': output_index,
             'argument_count': len(arguments), 'language': 'python',

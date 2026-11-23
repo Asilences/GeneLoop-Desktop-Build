@@ -5,8 +5,8 @@ import {dirname,basename,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport,getDefaultEnvironment} from '@modelcontextprotocol/sdk/client/stdio.js';
-import {createOnlineInterceptor} from '../src/adapters/dsh_online_motif.mjs';
-import {bindUploadedPptTask,structuralOnlySimilarity} from '../src/adapters/harless_rsi_binding.ts';
+import {createOnlineInterceptor} from '../src/adapters/harness/motif/dsh_online_motif.mjs';
+import {bindUploadedPptTask,structuralOnlySimilarity} from '../src/adapters/web/learning/harless_rsi_binding.ts';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const jobPath=process.argv[2];const job=JSON.parse(readFileSync(jobPath,'utf8'));

@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from src.adapters.reuse_compiler import collect, compile_library, successful, LOCKS
+from src.motif_core.offline.compilation.reuse_compiler import collect, compile_library, successful, LOCKS
 
 
 def test_soft_failures_and_synthetic_calls_are_not_training_successes(tmp_path):

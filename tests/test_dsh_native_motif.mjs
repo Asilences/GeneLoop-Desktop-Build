@@ -5,8 +5,8 @@ import { mkdtempSync,writeFileSync,rmSync,readFileSync,realpathSync,symlinkSync 
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
-import { createNativeInterceptor,nativeArguments } from '../src/adapters/dsh_native_motif.ts';
-import { digest } from '../src/motif_core/online_skill_runtime.mjs';
+import { createNativeInterceptor,nativeArguments } from '../src/adapters/harness/motif/dsh_native_motif.ts';
+import { digest } from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import './test_dsh_parameter_motif.mjs';
 
 test('native read protocol rejects code execution, unsafe options and external operands',()=>{

@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {digest, validateOnlineManifest} from '../src/motif_core/online_skill_runtime.mjs';
-import {validateCollectionPolicy} from '../src/motif_core/collection_read_policy.ts';
-import {validateReentryPolicy} from '../src/motif_core/collection_reentry_policy.ts';
-import {validatePlanPolicy} from '../src/motif_core/authorized_plan_policy.ts';
+import {digest, validateOnlineManifest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validateCollectionPolicy} from '../src/motif_core/runtime/policies/collection_read_policy.ts';
+import {validateReentryPolicy} from '../src/motif_core/runtime/policies/collection_reentry_policy.ts';
+import {validatePlanPolicy} from '../src/motif_core/runtime/policies/authorized_plan_policy.ts';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const args = process.argv.slice(2);
@@ -120,8 +120,8 @@ for (const row of catalog.files.filter(r => r.kind === 'online_manifest')) {
 const compat=json(path.join(root,'config/file-management-runtime-compatibility.json'));
 const compatible=compat.original_catalog_sha256===sha(fs.readFileSync(path.join(bundle,'catalog.json'))) && compat.new_certification===false;
 for (const [name, original] of Object.entries(catalog.runtime_validators)) {
-  const expected=compatible?compat.runtime_validators[name]:original;
-  need(sha(fs.readFileSync(scoped(root, name))) === expected, 'runtime validator changed: ' + name);
+  const current=compatible?compat.runtime_validators[name]:{path:name,sha256:original};
+  need(current&&sha(fs.readFileSync(scoped(root, current.path))) === current.sha256, 'runtime validator changed: ' + name);
 }
 const sourceLock = contents.get('workflow-v1/library-lock.json');
 for (const row of sourceLock.artifacts) need(lock.sha256['workflow-v1/' + row.path] === row.sha256,

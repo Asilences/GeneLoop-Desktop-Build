@@ -60,7 +60,7 @@ shadow 和 execute 分开解释：shadow 预测接管机会的增长用于检查
 
 新增 Crossref 只读查询原型从正常 `web_fetch` 轨迹学习查询键、rows/select 及其顺序，模型显式选择目录中的标题，Runtime 核对来源字节、标题身份、请求模板、HTTP 200 和 JSON 结果。空结果只代表查询未命中；搜索候选不代表正式出版或科研判断已经通过。
 
-这条链目前仍是 `parameterized_continuation_probe`，`production_activation=false`。它已支持发布新库，但没有接入完整脚本/解析/归并节点，也没有自动学到任务选择策略。`offline/motif_miner.py`、`offline/library_builder.py`、`offline/dynamic_code_nodes.py`、`offline/failure_evolution.py` 仍是后续接入底座；不能把本次窄原型编译称为完整 RSI 或实际调用下降。
+这条链目前仍是 `parameterized_continuation_probe`，`production_activation=false`。它已支持发布新库，但没有接入完整脚本/解析/归并节点，也没有自动学到任务选择策略。`offline/mining/motif_miner.py`、`offline/library_builder.py`、`offline/dynamic_code_nodes.py`、`offline/failure_evolution.py` 仍是后续接入底座；不能把本次窄原型编译称为完整 RSI 或实际调用下降。
 
 ```sh
 # 在服务器加载环境；首次先指定训练与独立保留的验证会话。

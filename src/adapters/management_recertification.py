@@ -14,10 +14,11 @@ from pathlib import Path
 from src.adapters.continuous_rsi import ROOT, load_config, private, source_map, state_event, writer_lock
 from src.adapters.continuous_motif_learning import frame, run_material, verify_operation_execution, RecoveryPending
 from src.adapters.mcp_learning import adapter
-from src.motif_core.offline.experience_registry import (
-    ExperienceRegistry, check_motif_certificate, digest, durable, read, sha,
+from src.motif_core.reuse.experience_registry import (
+    ExperienceRegistry, digest, durable, read, sha,
 )
-from src.motif_core.offline.operation_graph import certify_graph, witnesses
+from src.adapters.file_management.experience_certification import check_motif_certificate
+from src.motif_core.offline.compilation.operation_graph import certify_graph, witnesses
 
 
 def native_view(f, nodes):
@@ -175,7 +176,7 @@ def recertify(config_file, old_policy, old_certificate, template, job, *, worker
                                    'candidate_lock_sha256': sha(lock_file),
                                    'recertifier_sha256': frozen['recertifier_sha256'], 'native_prefix': prefix})
         if is_flow:
-            from src.motif_core.offline.control_flow import certify_flow
+            from src.motif_core.offline.compilation.control_flow import certify_flow
             policy=certify_flow(compiled,view)
         else:policy = certify_graph(compiled, view)
         for name, value in (('compiled.json', compiled), ('policy.json', policy), ('native-prefix.json', prefix)):
@@ -228,7 +229,8 @@ def recertify(config_file, old_policy, old_certificate, template, job, *, worker
         if failures:
             raise ValueError('independent actual re-certification rejected; old and failed proofs retained')
         guard()
-        entry = registry.entry('operation_graph', policy_file, runtime, job/'certificate.json')
+        entry = registry.entry('operation_graph', policy_file, runtime, job/'certificate.json',
+                               verify_certificate=check_motif_certificate)
         with (nullcontext() if worker_locked else writer_lock(root, 'worker')):
             state = registry.load()
             existing = next((e for e in state['entries'] if e['entry_id'] == entry['entry_id']), None)

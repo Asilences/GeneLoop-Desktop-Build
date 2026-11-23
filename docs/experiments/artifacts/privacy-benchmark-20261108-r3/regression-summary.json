@@ -1,0 +1,110 @@
+{
+  "application_commit": "4f6adedbc1f854f9f9bbd9e323fb3f460bd65afa",
+  "python": {
+    "collected_unique": 3357,
+    "passed": 3143,
+    "skipped": 214,
+    "failed": 0,
+    "disjoint_groups": {
+      "a": {
+        "cases": 37,
+        "failed": 0,
+        "skipped": 0
+      },
+      "b": {
+        "cases": 97,
+        "failed": 0,
+        "skipped": 0
+      },
+      "c": {
+        "cases": 548,
+        "failed": 0,
+        "skipped": 1
+      },
+      "d": {
+        "cases": 2675,
+        "failed": 0,
+        "skipped": 213
+      }
+    }
+  },
+  "node": {
+    "tests": 1732,
+    "pass": 1723,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 9,
+    "todo": 0,
+    "duration_ms": 439421.91765
+  },
+  "node_junit_leaf_view": {
+    "cases": 1730,
+    "passed": 1721,
+    "skipped": 9,
+    "failed": 0
+  },
+  "commands": [
+    {
+      "name": "collect",
+      "returncode": 0,
+      "started": "2026-11-07T19:25:19.393268+00:00",
+      "finished": "2026-11-07T19:25:36.479102+00:00"
+    },
+    {
+      "name": "continuation",
+      "returncode": 0,
+      "started": "2026-11-07T19:25:36.534313+00:00",
+      "finished": "2026-11-07T19:25:36.713361+00:00"
+    },
+    {
+      "name": "node-full",
+      "returncode": 0,
+      "started": "2026-11-07T19:25:36.764914+00:00",
+      "finished": "2026-11-07T19:32:56.595878+00:00"
+    },
+    {
+      "name": "python-c",
+      "returncode": 0,
+      "started": "2026-11-07T19:25:36.764463+00:00",
+      "finished": "2026-11-07T19:37:55.002619+00:00"
+    },
+    {
+      "name": "python-a",
+      "returncode": 0,
+      "started": "2026-11-07T19:25:36.752114+00:00",
+      "finished": "2026-11-07T19:39:34.330052+00:00"
+    },
+    {
+      "name": "python-b",
+      "returncode": 0,
+      "started": "2026-11-07T19:25:36.752460+00:00",
+      "finished": "2026-11-07T19:46:34.870913+00:00"
+    },
+    {
+      "name": "python-d",
+      "returncode": 0,
+      "started": "2026-11-07T19:25:36.764689+00:00",
+      "finished": "2026-11-07T19:46:58.558048+00:00"
+    },
+    {
+      "name": "smoke",
+      "returncode": 0,
+      "started": "2026-11-07T19:46:58.609899+00:00",
+      "finished": "2026-11-07T19:47:37.525913+00:00"
+    },
+    {
+      "name": "motif",
+      "returncode": 0,
+      "started": "2026-11-07T19:47:37.526880+00:00",
+      "finished": "2026-11-07T19:48:14.938024+00:00"
+    }
+  ],
+  "raw_receipts_sha256": {
+    "coverage.json": "b9827fdadf3d6b9432f23a86ba1c14cae128cdd2638b1c148d40e84bbe26d0d1",
+    "python-counts.json": "171be266b8fcb54c455f4b95fa4100f392e64ef533e32b55450619984b44ccad",
+    "commands.jsonl": "ca185faa8bbbc19b06b339a00a7add392587960fd210ec8b1064ff82a3fe65c7",
+    "node-results.xml": "01a1927aee5a462f3c3682f2eef6609e07a484d246b2dcd0cfde2ae1f746e0da"
+  },
+  "cloud_requests": 0,
+  "production_service_touched": false
+}

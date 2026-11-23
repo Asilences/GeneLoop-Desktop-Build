@@ -3,11 +3,11 @@ import json
 from pathlib import Path
 import pytest
 from tests.test_web_ppt_learning import owned, task, single, worker
-from src.adapters.ppt_capability_learning import sync_ppt_capabilities
+from src.adapters.ppt.learning.ppt_capability_learning import sync_ppt_capabilities
 from scenarios.ppt_master.capability_adapter import PptCapabilityAdapter
-from src.adapters.capability_scene import reference
-from src.adapters.capability_discovery import discover_jobs
-from src.adapters.ppt_program_learning import read, save
+from src.adapters.harness.capability.capability_scene import reference
+from src.rsi.learning.capability_discovery import discover_jobs
+from src.adapters.ppt.learning.ppt_program_learning import read, save
 
 
 def test_real_worker_projects_single_normal_tasks_without_comparison_or_model(owned):

@@ -3,8 +3,8 @@ import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {capabilityDigest, validateCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
-import {createCapabilityStore} from '../src/adapters/capability_store.ts';
+import {capabilityDigest, validateCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
+import {createCapabilityStore} from '../src/capability/runtime/capability_store.ts';
 import {runScriptCapability} from '../src/adapters/script_capability_runtime.ts';
 
 const sha = value => createHash('sha256').update(value).digest('hex');

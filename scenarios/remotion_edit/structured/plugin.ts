@@ -1,7 +1,7 @@
 /** Scene policy only; matching, DSH lifecycle and verified receipts remain shared. */
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {installOnlineMotif} from '../../../src/adapters/dsh_online_motif.mjs';
+import {installOnlineMotif} from '../../../src/adapters/harness/motif/dsh_online_motif.mjs';
 export const name = 'remotion-certified-source-dereference';
 export const inject = ['llm', 'agents'];
 export function apply(ctx) {
@@ -10,8 +10,8 @@ export function apply(ctx) {
   const manifest = JSON.parse(readFileSync(path, 'utf8'));
   const lockFiles = ['scenarios/remotion_edit/structured/server.py',
     'scenarios/remotion_edit/server.py', 'scenarios/remotion_edit/structured/contracts.json',
-    'src/adapters/dsh_online_motif.mjs', 'src/motif_core/online_skill_runtime.mjs',
-    'src/motif_core/source_dereference.generated.mjs', 'package-lock.json'];
+    'src/adapters/harness/motif/dsh_online_motif.mjs', 'src/motif_core/runtime/online_skill_runtime.mjs',
+    'src/motif_core/runtime/policies/source_dereference.generated.mjs', 'package-lock.json'];
   if (JSON.stringify(Object.keys(manifest.scene_code_locks ?? {}).sort()) !==
       JSON.stringify([...lockFiles].sort())) throw Error('scene code locks missing');
   for (const file of lockFiles) {

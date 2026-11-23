@@ -7,9 +7,11 @@ export function usd(value: number | null): string {
 export function evidenceView(input: unknown, check: (value: unknown) => boolean) {
   if (!check(input)) throw new Error('Coding evidence contract mismatch');
   const data = input as Row;
+  const runtime=data.format==='geneloop-motif-evidence-v2';
   const capabilities = new Map<string, Row>(data.capabilities.map((c: Row) => [c.id, c]));
   const runs = new Map<string, Row>(data.runs.map((r: Row) => [r.id, r]));
   const evidence = new Set(data.evidence.map((e: Row) => e.id));
+  if(runtime&&!data.source.revisions.every((row:Row)=>evidence.has(row.evidence_ref)))throw new Error('Unknown version evidence');
   if (capabilities.size !== data.capabilities.length || runs.size !== data.runs.length || evidence.size !== data.evidence.length)
     throw new Error('Duplicate evidence identity');
   if (new Set(data.events.map((e: Row) => e.id)).size !== data.events.length)
@@ -20,7 +22,7 @@ export function evidenceView(input: unknown, check: (value: unknown) => boolean)
   for (const c of capabilities.values()) {
     const certified = c.status === 'certified';
     if (c.certification.status !== c.status || certified !== c.in_frozen_library ||
-        certified !== (c.version.certificate_digest !== null)) throw new Error('Inconsistent certification');
+        (!runtime&&certified !== (c.version.certificate_digest !== null)) || runtime&&certified&&!c.version.certificate_digest) throw new Error('Inconsistent certification');
     if (certified) certifiedCount++;
   }
   if (certifiedCount !== data.library.certified_count) throw new Error('Incorrect library count');
@@ -33,6 +35,7 @@ export function evidenceView(input: unknown, check: (value: unknown) => boolean)
       certified: data.library.certified_count,
       pending: data.capabilities.filter((c: Row) => c.status === 'pending_certification').length,
       invalid: data.capabilities.filter((c: Row) => c.status === 'invalid').length,
+      registered: data.capabilities.filter((c: Row) => c.status === 'registered').length,
       applied: data.events.filter((e: Row) => e.kind === 'invoke' && e.status === 'applied' && e.actual_execution).length,
       fallbacks: data.events.filter((e: Row) => e.kind === 'fallback').length,
       savings: null,
@@ -44,6 +47,7 @@ export function evidenceView(input: unknown, check: (value: unknown) => boolean)
       certification: c.certification, contract: c.contract, dependencies: c.dependencies,
       cost: usd(c.cost.amount_usd), evidenceRefs: c.evidence_refs,
       events: data.events.filter((e: Row) => e.capability_id === c.id),
+      tools:c.tools,toolFlow:c.tool_flow,sourceTaskCount:c.source_task_count,
     })),
     runs: [...runs.values()].map(r => ({...r, costLabel: usd(r.cost.cost_usd),
       elapsedLabel: r.end_to_end_elapsed_seconds === null ? '未知' : `${r.end_to_end_elapsed_seconds} 秒`})),

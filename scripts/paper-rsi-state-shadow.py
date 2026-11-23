@@ -11,8 +11,8 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.trace_rsi_state_compiler import ADDITIONS,compile_stateful_trace_motifs
-from src.adapters.trace_rsi_motif_compiler import CONFIG_FIELDS
+from src.motif_core.offline.compilation.trace.trace_rsi_state_compiler import ADDITIONS,compile_stateful_trace_motifs
+from src.motif_core.offline.compilation.trace.trace_rsi_motif_compiler import CONFIG_FIELDS
 spec=importlib.util.spec_from_file_location('state_task_base',ROOT/'scripts/paper-rsi-generated-task.py')
 base=importlib.util.module_from_spec(spec);spec.loader.exec_module(base)
 EXP=ROOT/'.local/paper-reference/paper-rsi-state-shadow-20261011-v1'
@@ -36,7 +36,7 @@ def shadow(case,label):
     config['code_files']={str(ROOT/p):sha(ROOT/p) for p in FILES}
     if config['code_files']!=library['derived_library']['code_files_sha256']:raise ValueError('state_library_code_drift')
     path=EXP/'runs'/label/'config.json'
-    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_trace_rsi\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/trace-rsi-task-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_TRACE_RSI_TASK_CONFIG: '+json.dumps(str(path))+'\n    - name: '+json.dumps((ROOT/'src/adapters/dsh_trace_rsi_state_shadow.ts').as_uri())+'\n'
+    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_trace_rsi\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/trace-rsi-task-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_TRACE_RSI_TASK_CONFIG: '+json.dumps(str(path))+'\n    - name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_trace_rsi_state_shadow.ts').as_uri())+'\n'
     base.parent.EXP=EXP;base.parent.FILES=FILES
     run=base.parent.paid(label,base.PROMPT,policy,config,['SSS_TRACE_RSI_TASK_CONFIG'])
     effective=load(run/'config.json');manifest=load(run/'manifest.json')

@@ -6,7 +6,7 @@ import unittest
 
 from src.adapters.deepseek_cost_gate import (State, reservation, normalize_output_limit,
     output_limit_argument, provider_output_reservation)
-from src.adapters.web_task_budget import TaskBudgetRegistry
+from src.adapters.web.web_task_budget import TaskBudgetRegistry
 
 
 class UnlimitedOutputBudgetTests(unittest.TestCase):

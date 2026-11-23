@@ -5,9 +5,9 @@ import json
 import unittest
 import subprocess
 from pathlib import Path
-from src.adapters.capability_contract import (capability_digest, capability_ref, create_capability,
+from src.capability.graph.capability_contract import (capability_digest, capability_ref, create_capability,
     create_capability_snapshot, validate_capability, validate_capability_snapshot, map_legacy_library)
-from src.adapters.script_motif_compiler import digest
+from src.motif_core.offline.compilation.script_motif_compiler import digest
 
 
 def leaf(name='a', owner='owner'):

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {join} from 'node:path';
-import {createOnlineInterceptor} from '../../../src/adapters/dsh_online_motif.mjs';
-import {digest,validateOnlineManifest,parseStructuredTask} from '../../../src/motif_core/online_skill_runtime.mjs';
+import {createOnlineInterceptor} from '../../../src/adapters/harness/motif/dsh_online_motif.mjs';
+import {digest,validateOnlineManifest,parseStructuredTask} from '../../../src/motif_core/runtime/online_skill_runtime.mjs';
 import {apply as installScene} from './plugin.ts';
 
 const base=process.env.REMOTION_EXPERIMENT_ROOT,exp=join(base,'structured-v1');

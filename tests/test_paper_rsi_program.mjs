@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {validateProgram,runProgram,digest,validateFrozen} from '../src/adapters/paper_rsi_program.ts';
 import {createRsiTools} from '../scenarios/paper-submission/rsi-server.ts';
-import {predictLearnedCheck} from '../src/adapters/dsh_paper_rsi_shadow.ts';
+import {predictLearnedCheck} from '../src/adapters/harness/paper/dsh_paper_rsi_shadow.ts';
 import {snapshotSource,sha256} from '../src/adapters/paper_triage_validation.ts';
 
 test('pure programs cannot call host functions, use prototype paths or expand without bound',()=>{

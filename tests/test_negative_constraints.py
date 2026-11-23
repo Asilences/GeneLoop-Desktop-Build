@@ -2,8 +2,8 @@
 import copy
 import pytest
 from src.adapters.evidence_report import structure_issues
-from src.adapters.negative_constraint_compiler import certify_current_constraint,shape_issues,recertify_current_constraints
-from src.adapters.script_negative_compiler import digest
+from src.motif_core.offline.compilation.negative_constraint_compiler import certify_current_constraint,shape_issues,recertify_current_constraints
+from src.motif_core.offline.compilation.script_negative_compiler import digest
 
 def fixture_observations():
     observations=[];failures=[];successes=[]

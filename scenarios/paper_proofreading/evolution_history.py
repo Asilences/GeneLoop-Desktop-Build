@@ -6,11 +6,11 @@ import shutil
 from decimal import Decimal
 from pathlib import Path
 
-from src.adapters.capability_contract import capability_digest
-from src.adapters.capability_decision_evidence import _web, record_web_decision, inspect_decision
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.capability_improvement import save
-from src.adapters.capability_trajectory import project_web_task
+from src.capability.graph.capability_contract import capability_digest
+from src.adapters.web.learning.capability_decision_evidence import _web, record_web_decision, inspect_decision
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from src.rsi.learning.capability_improvement import save
+from src.adapters.web.learning.capability_trajectory import project_web_task
 
 OWNER = 'script-motif-real'
 SCOPE = 'bibliography-integrity-history'

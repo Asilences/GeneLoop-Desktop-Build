@@ -119,7 +119,7 @@ def prepare(assets):
                               'input_template_sha256':sha(td/'input-template.json'),'oracle_sha256':sha(td/'oracle.json'),'snapshot_sha256':digest(initial)})
     frozen=[*HERE.glob('*.py'),*HERE.glob('*.md')]+[ROOT/n for n in (
         'src/adapters/file_workflow_job.ts','src/adapters/file_job_budget.py','src/adapters/file_acceptance_guard.ts',
-        'src/adapters/file_scenario.py','src/adapters/file_cost_gate.py','src/adapters/harness_runtime.py',
+        'src/adapters/scenario.py','src/adapters/deepseek_cost_gate.py','src/adapters/harness/harness_runtime.py',
         'scripts/run-file-scenario.py','scripts/validate-file-delivery.py','scripts/check-file-workflows.py','scripts/check-file-workflow-sdk.py',
         'config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt')]
     for p in frozen:

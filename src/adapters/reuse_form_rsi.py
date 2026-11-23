@@ -9,8 +9,8 @@ import json
 from pathlib import Path
 from itertools import product
 from .source_program_compiler import json_numbers
-from .script_motif_compiler import digest
-from src.motif_core.offline.experience_registry import durable,read,sha
+from src.motif_core.offline.compilation.script_motif_compiler import digest
+from src.motif_core.reuse.experience_registry import durable,read,sha
 
 
 def validate_form(form):
@@ -127,7 +127,7 @@ def publish_form(store,proposal,verdict,library,measurements_file,*,expected_par
         if library['digest']!=digest(json_numbers({k:v for k,v in library.items() if k!='digest'})):
             raise ValueError('reuse_form_library_changed')
         from .reuse_form_protocol import form_update_bundle,validate_form_update,encoded,sha as text_sha
-        from .rsi_protocol import envelope
+        from src.rsi.protocol.rsi_protocol import envelope
         payload_sha=text_sha(encoded({'proposal':proposal,'verdict':verdict,'library_digest':library['digest'],
             'measurements_sha256':sha(measurements_file)}))
         bundle=form_update_bundle(proposal,verdict,library,measured,
@@ -173,7 +173,7 @@ def resolve_form(store,owner):
     if 'rsi_update_digest' in policy:
         directory=policy_path.parent;bundle=read(directory/'rsi-update.json')
         publication=read(directory/'rsi-publication.json')
-        from .rsi_protocol import validate_record
+        from src.rsi.protocol.rsi_protocol import validate_record
         validate_record(publication)
         p=publication['payload']
         if (policy['rsi_update_digest']!=digest(json_numbers(bundle))

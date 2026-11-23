@@ -5,8 +5,9 @@ import { sameServer } from './policy.ts';
 import {apiPurpose,sharingControlAllowed} from './privacy.ts';
 type RequestWithOrigin = Request & { readonly initiatorOrigin?: string };
 type Options = { session: Session; server: string; assets: string; ui: string; fail: (message: string) => void; diagnostic?: boolean };
-const FILES = ['app.js','api.js','conversation.js','components.js','lucide-icons.js','composer.js','scene-picker.js','panels.js','comparison.js','deliveries.js','privacy.js','desktop.css','motif-library.css','motif-library.js','workspace-run.js','motif-evidence.js','motif-example.json'];
-const TYPES: Record<string,string> = {'.json':'application/json; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
+const FILES = ['app.js','api.js','conversation.js','components.js','lucide-icons.js','composer.js','scene-picker.js','panels.js','comparison.js','deliveries.js','privacy.js','desktop.css','fractal.css','fractal-art.js','motif-library.css','motif-library.js','motif-comparison.js','motif-pool.js','desktop-navigation.js','workspace-run.js','motif-evidence.js','motif-example.json'];
+const BRAND_FONTS = ['IBMPlexMono-Regular.ttf','IBMPlexSans-Roman.ttf','NotoSansSC.ttf','SpaceGrotesk.ttf'];
+const TYPES: Record<string,string> = {'.json':'application/json; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.ttf':'font/ttf'};
 /** 独立桌面页面与服务器API的传输边界；不读取、组合或执行服务器网页。 */
 export class LocalFrontendHost {
   readonly served = {local:0,network:0,localScripts:[] as string[],networkScripts:[] as string[]};
@@ -18,7 +19,7 @@ export class LocalFrontendHost {
   dispose():void{if(this.installed)this.options.session.protocol.unhandle(new URL(this.options.server).protocol.slice(0,-1));this.installed=false;}
   private local(file:string,method:string):Response{
     this.served.local++;const socket=new URL(this.options.server);socket.protocol=socket.protocol==='https:'?'wss:':'ws:';
-    return new Response(method==='HEAD'?null:new Uint8Array(readFileSync(file)),{headers:{'content-type':TYPES[extname(file)]||'application/octet-stream','cache-control':'no-store','x-geneloop-desktop-resource':'local','x-content-type-options':'nosniff','content-security-policy':`default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${socket.origin}; frame-src blob:; base-uri 'none'; form-action 'none'`}});
+    return new Response(method==='HEAD'?null:new Uint8Array(readFileSync(file)),{headers:{'content-type':TYPES[extname(file)]||'application/octet-stream','cache-control':'no-store','x-geneloop-desktop-resource':'local','x-content-type-options':'nosniff','content-security-policy':`default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${socket.origin}; frame-src blob:; base-uri 'none'; form-action 'none'`}});
   }
   async fetch(request:RequestWithOrigin):Promise<Response>{
     const {server,ui,assets,session}=this.options;
@@ -30,6 +31,8 @@ export class LocalFrontendHost {
       if(['GET','HEAD'].includes(request.method)){
         if(['/','/login','/register','/account','/starting'].includes(path))return this.local(join(ui,'index.html'),request.method);
         if(path==='/assets/geneloop-spiral.svg')return this.local(join(assets,'geneloop-spiral.svg'),request.method);
+        const font=BRAND_FONTS.find(name=>path==='/desktop/brand/'+name);
+        if(font)return this.local(join(assets,'brand',font),request.method);
         const file=FILES.find(name=>path==='/desktop/'+name);
         if(file){if(/\.(js|css)$/.test(file))this.served.localScripts.push(path);return this.local(join(ui,file),request.method);}
       }

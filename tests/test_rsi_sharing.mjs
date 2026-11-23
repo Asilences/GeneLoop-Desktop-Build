@@ -83,6 +83,18 @@ test('cancel, expiry and restart invalidate consent without changing local mater
   assert.equal(options.prepare&&await options.prepare(),payload);
 });
 
+test('deleted or expired source revokes an existing preview before upload',async t=>{
+  const receiver=await sink(t,(_request,response)=>response.end('ok'));
+  let sourceExists=true;
+  const sharing=createRsiSharing({endpoint:receiver.url,allowLoopback:true,prepare:async()=>payload,audit:()=>{},
+    async authorize(){if(!sourceExists)throw Error('sharing_source_unavailable');}});
+  const first=await preview(sharing), second=await preview(sharing);
+  sourceExists=false;
+  assert.equal((await sharing.handle(req(send(first)))).status,410);
+  assert.equal((await sharing.handle(new Request('http://local/api/harless/rsi-sharing?preview_id='+second.preview_id))).status,410);
+  assert.equal(receiver.bodies.length,0);
+});
+
 test('network interruption and cancellation during transfer keep an unknown receipt and never retry',{timeout:10000},async t=>{
   let arrived;
   const received=new Promise(resolve=>{arrived=resolve;});

@@ -2,9 +2,9 @@
 import copy
 import json
 import pytest
-from src.adapters.capability_authoring import aliases, authoring_context, expand_draft, compact_proposal, diagnose
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import create_capability_snapshot
+from src.capability.builder.capability_authoring import aliases, authoring_context, expand_draft, compact_proposal, diagnose
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import create_capability_snapshot
 from tests.test_capability_builder import setup
 
 

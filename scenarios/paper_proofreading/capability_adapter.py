@@ -6,12 +6,12 @@ import os
 from pathlib import Path
 import sys
 import subprocess
-from src.adapters.capability_scene import CapabilityImprovementAdapter,ROOT,run_child,reference
-from src.adapters.capability_improvement import evidence,read,save
-from src.adapters.capability_contract import capability_digest,validate_capability_snapshot
-from src.adapters.capability_discovery import read_context
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter,ROOT,run_child,reference
+from src.rsi.learning.capability_improvement import evidence,read,save
+from src.capability.graph.capability_contract import capability_digest,validate_capability_snapshot
+from src.rsi.learning.capability_discovery import read_context
 from scenarios.paper_proofreading.verify_capability_outputs import verify
-from src.adapters.capability_trajectory import project_web_task
+from src.adapters.web.learning.capability_trajectory import project_web_task
 from src.adapters.file_lock import exclusive_lock
 
 
@@ -40,8 +40,8 @@ class PaperCapabilityAdapter(CapabilityImprovementAdapter):
             if any(r not in row['evidence'] for r in observed['evidence']):raise ValueError('paper_learning_unpinned_evidence')
             for r in row['evidence']:evidence(r)
             refs.extend(row['evidence'])
-        files=['scripts/learn-script-motifs.py','scripts/certify-script-motifs.mjs','src/adapters/script_motif_compiler.py',
-               'src/adapters/script_dataflow_compiler.py','src/adapters/reuse_snapshot.py']
+        files=['scripts/learn-script-motifs.py','scripts/certify-script-motifs.mjs','src/motif_core/offline/compilation/script_motif_compiler.py',
+               'src/motif_core/offline/compilation/script_dataflow_compiler.py','src/adapters/reuse_snapshot.py']
         refs.extend(reference(ROOT/name) for name in files)
         key=capability_digest({'route':route,'evidence':refs});directory=self.materials.directory/'acquisitions'/key
         directory.mkdir(parents=True,exist_ok=True,mode=0o700)

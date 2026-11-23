@@ -1,0 +1,755 @@
+{
+  "version": 2,
+  "canvas": [
+    1280,
+    720
+  ],
+  "themes": [
+    {
+      "id": "general",
+      "name": "通用简约",
+      "categories": [
+        "general"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#17365D",
+        "accent": "#2563EB",
+        "text": "#172B4D",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Use clear headings, varied content layouts and source-supported charts.",
+      "provenance": {
+        "kind": "geneloop-authored"
+      }
+    },
+    {
+      "id": "atlas",
+      "name": "商务汇报",
+      "categories": [
+        "business",
+        "general"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#20354A",
+        "accent": "#2563EB",
+        "text": "#172B4D",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Lead with the result and use charts or comparisons for supporting evidence.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/atlas/PROMPT.md",
+        "sha256": "03888239101ba60dd5917a3b856160bc21bacf6ce4a363a21553b99c59d219e6",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "boardroom",
+      "name": "决策提案",
+      "categories": [
+        "business",
+        "consulting"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#1F3A5F",
+        "accent": "#4C7DB5",
+        "text": "#172B4D",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Use conclusion titles, decision alternatives and readable evidence exhibits.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/boardroom/PROMPT.md",
+        "sha256": "9a9f975234000e7d7925a0d84334fddaa26ba7b9a05d78e10f71166ace1fc717",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "qbr",
+      "name": "季度复盘",
+      "categories": [
+        "business",
+        "finance"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#16324F",
+        "accent": "#166534",
+        "text": "#172B4D",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Separate targets, actual results, causes and next commitments.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/qbr/PROMPT.md",
+        "sha256": "33fbaeae38838a108290b45e4ac8df7acec02ae0f3e5f450867cfd67a875a350",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "runway",
+      "name": "商业计划",
+      "categories": [
+        "pitch",
+        "business"
+      ],
+      "colors": {
+        "bg": "#FAFCFA",
+        "primary": "#173E2D",
+        "accent": "#166534",
+        "text": "#17352A",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Explain the problem, solution, users, business assumptions and next milestones.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/runway/PROMPT.md",
+        "sha256": "eb450d776e63861a74ec9d977a14abb3efcc3c09f55c51acaebce7358fc2ab14",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "demo-day",
+      "name": "路演展示",
+      "categories": [
+        "pitch",
+        "product"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#172554",
+        "accent": "#2563EB",
+        "text": "#172B4D",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Keep one main message per page and emphasize the product and its evidence.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/demo-day/PROMPT.md",
+        "sha256": "a7e3820e712c291faea8ba1189f89708df2f4e53138a760df93fe64b19436f2f",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "brand-guidelines",
+      "name": "品牌介绍",
+      "categories": [
+        "marketing",
+        "creative"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#172B4D",
+        "accent": "#9F1239",
+        "text": "#172B4D",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Show positioning, audience, visual identity and concrete applications.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/brand-guidelines/PROMPT.md",
+        "sha256": "90591e2cd0cacbcdb1b65d9150655e489e3368183cc2c73e910361d6c014f685",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "bento",
+      "name": "产品介绍",
+      "categories": [
+        "product",
+        "technology"
+      ],
+      "colors": {
+        "bg": "#F8FAFC",
+        "primary": "#312E81",
+        "accent": "#6D28D9",
+        "text": "#1E293B",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Group related features and vary the page structure to match the message.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/bento/PROMPT.md",
+        "sha256": "2db3286e45e5792ffd76b9d3d1281c28c0f2459472f3b788150b857ca7d81afb",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "wireframe",
+      "name": "技术方案",
+      "categories": [
+        "technology",
+        "product"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#111827",
+        "accent": "#1D4ED8",
+        "text": "#111827",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Use editable architecture, workflows and annotated screenshots where useful.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/wireframe/PROMPT.md",
+        "sha256": "4389cf1f32e48514017b0c8cbb5956621448c73a61c90d3179871d1941fa1d63",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "lesson-plan",
+      "name": "课程培训",
+      "categories": [
+        "education",
+        "general"
+      ],
+      "colors": {
+        "bg": "#FFFDF7",
+        "primary": "#7C2D12",
+        "accent": "#9A3412",
+        "text": "#292524",
+        "muted": "#57534E"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Organize learning goals, explanations, examples, practice and recap.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/lesson-plan/PROMPT.md",
+        "sha256": "2cdb4e1cf19e8c625f03881d67e2b42b22da5265ad8c8b652be88cf6c6656e22",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "trailhead",
+      "name": "科普讲解",
+      "categories": [
+        "education",
+        "science"
+      ],
+      "colors": {
+        "bg": "#FAF9F4",
+        "primary": "#28513D",
+        "accent": "#166534",
+        "text": "#1C3328",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Introduce concepts gradually with examples, figures and short explanations.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/trailhead/PROMPT.md",
+        "sha256": "2639bc3260170370c275374bac085787a537bcf75a50abb4d78d1ef19b11688f",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "lookbook",
+      "name": "个人作品集",
+      "categories": [
+        "personal",
+        "creative"
+      ],
+      "colors": {
+        "bg": "#17202A",
+        "primary": "#F8FAFC",
+        "accent": "#FBBF24",
+        "text": "#F8FAFC",
+        "muted": "#CBD5E1"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Use large images, concise captions and clear personal context.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/lookbook/PROMPT.md",
+        "sha256": "a7385e993b521b676f935a4e136e66d9e4568fa570eab4a38ca68be2cf43ab87",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "scrapbook",
+      "name": "照片与故事",
+      "categories": [
+        "personal",
+        "creative"
+      ],
+      "colors": {
+        "bg": "#FFFBEB",
+        "primary": "#7F1D1D",
+        "accent": "#9F1239",
+        "text": "#292524",
+        "muted": "#57534E"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Organize a personal story with photographs, captions and a coherent timeline.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/scrapbook/PROMPT.md",
+        "sha256": "1e3be5840c43f0c45ff7f889d2784e4cc833b8444d56e3338775621249d144cb",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "quiz-night",
+      "name": "活动互动",
+      "categories": [
+        "events",
+        "education"
+      ],
+      "colors": {
+        "bg": "#231942",
+        "primary": "#F8FAFC",
+        "accent": "#FACC15",
+        "text": "#F8FAFC",
+        "muted": "#D8DEE9"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Use readable prompts, activity instructions, timing and answers when requested.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/quiz-night/PROMPT.md",
+        "sha256": "686803398e988313c9877b0b2f23826593c3149f97b1facb800303fde9b2eab9",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "wrapped",
+      "name": "年度回顾",
+      "categories": [
+        "events",
+        "personal"
+      ],
+      "colors": {
+        "bg": "#172554",
+        "primary": "#F8FAFC",
+        "accent": "#FBBF24",
+        "text": "#F8FAFC",
+        "muted": "#CBD5E1"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Highlight meaningful moments and verified numbers with varied emphasis.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/wrapped/PROMPT.md",
+        "sha256": "4d0ac0c96ac60f81130090edb014964f0d1413ff7ed066ba5d5580bec463f2ef",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "annual-report",
+      "name": "年度经营",
+      "categories": [
+        "finance",
+        "business"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#17365D",
+        "accent": "#92400E",
+        "text": "#172B4D",
+        "muted": "#475569"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Present results, drivers, risks and plans with explicit periods and units.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/annual-report/PROMPT.md",
+        "sha256": "68b017c2e112fd6444fb701d25069416610e42a5291f456bf504bf27d790dc2c",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "ledger",
+      "name": "财务预算",
+      "categories": [
+        "finance",
+        "business"
+      ],
+      "colors": {
+        "bg": "#FFFDF7",
+        "primary": "#4A3428",
+        "accent": "#854D0E",
+        "text": "#292524",
+        "muted": "#57534E"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "Distinguish actuals, budgets and forecasts, showing units and assumptions.",
+      "provenance": {
+        "repository": "https://github.com/SlideSpeak/presentation-design-prompts",
+        "commit": "aba875b3cd64e9505fc995aabe7a52985f1a1a7e",
+        "path": "prompts/ledger/PROMPT.md",
+        "sha256": "70f759a216a80d36304c9c349c968aeb75c7123439628196726003ef7bdd12e7",
+        "license": "MIT",
+        "adaptations": [
+          "CJK typography and readable sizes",
+          "content-independent source labels",
+          "task-driven page structure",
+          "GeneLoop execution and review policy"
+        ]
+      }
+    },
+    {
+      "id": "slide-maker-editorial",
+      "name": "杂志叙事",
+      "categories": [
+        "personal",
+        "marketing"
+      ],
+      "colors": {
+        "bg": "#F4EFE6",
+        "primary": "#1C1A17",
+        "accent": "#9E2F20",
+        "text": "#1C1A17",
+        "muted": "#6B655C"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "安静的杂志感：大幅出血照片、衬线标题和引语，围绕你自己的照片排版。 用当前用户内容和图片，保持版面留白。",
+      "provenance": {
+        "repository": "https://github.com/addsumtech/slides_maker",
+        "commit": "f7316d1c399235823e78b01b6d547897f6dcdbc4",
+        "path": "skills/slide-maker/scripts/vl_specs/editorial.py",
+        "sha256": "8b7780765303ecd33308902416315221702cfcc85ca08cfec20162d25c87f06e",
+        "license": "MIT",
+        "adaptations": [
+          "CJK font calibration",
+          "source-supported content",
+          "GeneLoop shared authoring and review",
+          "no upstream critic or checkpoint workflow"
+        ]
+      }
+    },
+    {
+      "id": "slide-maker-soft",
+      "name": "柔和教学",
+      "categories": [
+        "education",
+        "personal"
+      ],
+      "colors": {
+        "bg": "#F7EFE6",
+        "primary": "#2E2A27",
+        "accent": "#8E4430",
+        "text": "#2E2A27",
+        "muted": "#6E625A"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "温暖柔和：照片放进拱形和圆润的有机形相框，粉彩底色配圆角卡片，围绕你自己的照片排版。 用当前用户内容和图片，保持版面留白。",
+      "provenance": {
+        "repository": "https://github.com/addsumtech/slides_maker",
+        "commit": "f7316d1c399235823e78b01b6d547897f6dcdbc4",
+        "path": "skills/slide-maker/scripts/vl_specs/soft.py",
+        "sha256": "200604782b2a1d8051e7375808486bb10a2a6b2f76ba125c17f57ee960d2947a",
+        "license": "MIT",
+        "adaptations": [
+          "CJK font calibration",
+          "source-supported content",
+          "GeneLoop shared authoring and review",
+          "no upstream critic or checkpoint workflow"
+        ]
+      }
+    },
+    {
+      "id": "slide-maker-journal",
+      "name": "期刊图文",
+      "categories": [
+        "research",
+        "education"
+      ],
+      "colors": {
+        "bg": "#FBFAF6",
+        "primary": "#1B1B1B",
+        "accent": "#1F5C46",
+        "text": "#1B1B1B",
+        "muted": "#5A5A55"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "围绕你的图表：期刊论文版式——页眉、摘要、带编号和图注的插图、页边注。适合学术报告、组会、答辩。 用当前用户内容和图片，保持版面留白。",
+      "provenance": {
+        "repository": "https://github.com/addsumtech/slides_maker",
+        "commit": "f7316d1c399235823e78b01b6d547897f6dcdbc4",
+        "path": "skills/slide-maker/scripts/vl_specs/journal.py",
+        "sha256": "16218149ebbc2a45be6f8704884bfff83e0ec0064a7aa2ad2032ad10e8c65dff",
+        "license": "MIT",
+        "adaptations": [
+          "CJK font calibration",
+          "source-supported content",
+          "GeneLoop shared authoring and review",
+          "no upstream critic or checkpoint workflow"
+        ]
+      }
+    },
+    {
+      "id": "presenton-general",
+      "name": "商务通用图文",
+      "categories": [
+        "business",
+        "product",
+        "general"
+      ],
+      "colors": {
+        "bg": "#FFFFFF",
+        "primary": "#111827",
+        "accent": "#9333EA",
+        "text": "#111827",
+        "muted": "#4B5563"
+      },
+      "font_sizes_pt": {
+        "title": 32,
+        "heading": 24,
+        "body": 22,
+        "secondary": 18,
+        "source": 12
+      },
+      "guidance": "使用88px外边距和宽图文分栏，依据内容选择数据、图文或对比页。",
+      "provenance": {
+        "repository": "https://github.com/presenton/presenton",
+        "commit": "bf5179fc712c4e5d225511f46960478f80879da7",
+        "path": "templates/general/template.json",
+        "sha256": "cf84c907a38bb50595f9afa3197888d7d40e9c889626da4789bf3bf068c7418a",
+        "license": "Apache-2.0",
+        "adaptations": [
+          "white content canvas",
+          "CJK typography",
+          "content-free layout geometry",
+          "no embedded stock assets or placeholder facts"
+        ]
+      }
+    }
+  ]
+}

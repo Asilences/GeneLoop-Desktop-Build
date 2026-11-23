@@ -12,14 +12,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.adapters.dsh_trajectory import DshTrace, ToolContract, ToolRecord
-from src.motif_core.offline.dynamic_code_nodes import certify_dynamic_code_node
-from src.motif_core.offline.library_builder import library_from_certified
-from src.motif_core.offline.trace_compiler import (
+from src.adapters.harness.dsh_trajectory import DshTrace, ToolContract, ToolRecord
+from src.motif_core.offline.compilation.dynamic_code_nodes import certify_dynamic_code_node
+from src.motif_core.offline.compilation.library_builder import library_from_certified
+from src.motif_core.offline.compilation.trace_compiler import (
     artifact_signature, certify_read_motif, compile_read_motif,
 )
-from src.motif_core.pure_code import evaluate, run_isolated
-from src.motif_core.read_executor import _validate_artifact, run_read_motif
+from src.motif_core.runtime.pure_code import evaluate, run_isolated
+from src.motif_core.runtime.read_executor import _validate_artifact, run_read_motif
 
 
 CONTRACTS = {
@@ -144,7 +144,7 @@ class DynamicCodeNodeTests(unittest.TestCase):
                 "node", "--input-type=module", "-e",
                 "import fs from 'node:fs'; "
                 "import {validateOnlineManifest} from "
-                "'./src/motif_core/online_skill_runtime.mjs'; "
+                "'./src/motif_core/runtime/online_skill_runtime.mjs'; "
                 "validateOnlineManifest(JSON.parse(fs.readFileSync(process.argv[1])));",
                 str(path)], cwd=Path(__file__).resolve().parents[1],
                 capture_output=True, text=True)

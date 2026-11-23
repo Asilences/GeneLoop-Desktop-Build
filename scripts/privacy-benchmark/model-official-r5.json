@@ -1,0 +1,28 @@
+{
+  "comparison_id": "privacy-r5-official-opf-credsweeper-20261108",
+  "baseline": "R4 frozen public contract and original results; no overwrites",
+  "selection": {"seed":"privacy-candidate-selection-v1","sort":"sha256(seed:dataset:id)","per_dataset":200,"development":100,"confirmation":100},
+  "data_already_seen_in_r1_r2_r3_r4": true,
+  "independent_unseen_evaluation": false,
+  "gold_passed_to_detector": false,
+  "cloud_model_requests": 0,
+  "inference_device": "cpu",
+  "torch_threads_per_worker": 1,
+  "cohort_workers": 8,
+  "full_workers": 16,
+  "per_call_timeout_seconds": 120,
+  "opf": {
+    "source_revision":"f7f00ca7fb869683eb732c010299d901457f19c3",
+    "model_revision":"7ffa9a043d54d1be65afb281eddf0ffbe629385b",
+    "checkpoint_subtree":"original",
+    "decode":"published viterbi/calibration; no tuning",
+    "context_window_length":4096,
+    "coverage":"official overlapping windows across entire text; no silent prefix scoring",
+    "runtime_policy":"seven labels mapped to frozen project categories; private_date remains excluded and separately reported",
+    "all_labels_map":{"private_person":"PERSON","private_address":"LOCATION","private_email":"EMAIL_ADDRESS","private_phone":"PHONE_NUMBER","private_url":"PRIVATE_REFERENCE","private_date":"DATE_TIME","account_number":"FINANCIAL_ACCOUNT","secret":"CREDENTIAL"}
+  },
+  "credsweeper":{"version":"1.19.6","threshold":"official medium","filters":"official defaults","ml_providers":"CPUExecutionProvider","ml_threads":1,"training_overlap":"CredData used by upstream; historical regression only"},
+  "comparisons":["native OPF all labels","policy-scoped OPF","R4 plus policy-scoped OPF","native Gitleaks","native CredSweeper","Gitleaks plus CredSweeper through public admission","R4 plus both through public admission"],
+  "adoption_gates":{"existing_fully_covered_entities_lost":0,"max_added_non_pii_masking_percentage_points":0.1,"max_context_retention_drop_percentage_points":0.5,"required_retained_semantic_invariants":120,"required_available_cohort_inputs":624},
+  "adoption":"default remains R4 unless all quality and boundary gates pass; candidate configurations are opt-in and server-isolated"
+}

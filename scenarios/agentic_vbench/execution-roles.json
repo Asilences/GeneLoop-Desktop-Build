@@ -1,0 +1,21 @@
+{
+  "study": "agentic-vbench-fixed-decision-execution-20261110-v1",
+  "evaluation_scope": "configured_full_clip_plan_v1",
+  "evaluation_role": "fixed_decision_execution_successor_paired",
+  "tasks": {"agentic-vbench-assembly-task16": "sealed_successor_paired"},
+  "selection_basis": "Next unexposed Assembly material ID after completed Task15, selected before inspecting Task16 materials. All MP4 filenames in ascending numeric order define a new explicit editing request, independently of pixels, storyboard, Oracle and official expected order.",
+  "source_scope": "Unmodified normal Task2 plan program SHA08f511b3, independently certified on Task6. Public core commit2f8586e recompiles actual source default semantics through the original compiler/certifier; no Task15 or Sequencing3 input enters learning.",
+  "library_policy": "Controlled single current certified plan C versus same-owner empty Store. Preserve historical libraries separately. This does not measure natural retrieval among a large library.",
+  "order": ["baseline_empty_store", "single_current_certified_C"],
+  "quality": "Exact supplied clip IDs/order, measured full video-stream intervals, contiguous manifest, actually rendered complete video, unchanged generic frame samples and complete decode/clock. Plan consumption and native C output provenance reported separately. No official storyboard/order success or unmeasured audio claim.",
+  "shared_policy": "Same provided decision JSON, raw material/measurement inputs, ordinary tools/schema order, model/prefix, media guidance and final quality. Only certified-operation catalog differs. Operations are optional. No extra generic-framework requirement for Baseline.",
+  "model": "gpt-6-luna",
+  "reasoning_effort": "none",
+  "max_completion_tokens": 128000,
+  "budget_usd": null,
+  "request_limit": null,
+  "reset_cumulative_ledger": false,
+  "timeout_seconds_per_arm": 900,
+  "learning_from_successor": false,
+  "expansion": "One pair only. Preserve negative/fallback/unknown cost; no retuning from either side or adding tasks before results."
+}

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const source = readFileSync(new URL('../src/adapters/harless_account_link.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../src/adapters/web/account/harless_account_link.js', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function flush() { for (let i = 0; i < 5; i++) await tick(); }
 const user = { username: 'researcher', displayName: '研究员', role: 'member', createdAt: 0 };

@@ -7,29 +7,29 @@ import sys
 
 import pytest
 
-from src.adapters.capability_contract import capability_ref, create_capability_snapshot
-from src.adapters.capability_program_encoding import freeze_program_composition
-from src.adapters.capability_scene import reference
+from src.capability.graph.capability_contract import capability_ref, create_capability_snapshot
+from src.capability.builder.capability_program_encoding import freeze_program_composition
+from src.adapters.harness.capability.capability_scene import reference
 from tests.test_capability_contract import leaf
 
 
 @pytest.mark.parametrize('legacy,shared,symbols', [
-    ('learn', 'capability_script_learning', ['function_module', 'executable_source', 'learn']),
-    ('execute', 'capability_script_execution', ['execute']),
-    ('program_training', 'capability_program_training', ['TrainingEvidenceUnavailable', 'prepare_program_cases']),
+    ('learn', 'src.adapters.harness.capability.capability_script_learning', ['function_module', 'executable_source', 'learn']),
+    ('execute', 'src.adapters.harness.capability.capability_script_execution', ['execute']),
+    ('program_training', 'src.rsi.learning.capability_program_training', ['TrainingEvidenceUnavailable', 'prepare_program_cases']),
 ])
 def test_legacy_import_is_the_same_shared_implementation(legacy, shared, symbols):
     old = importlib.import_module('scenarios.paper_proofreading.frontier.' + legacy)
-    public = importlib.import_module('src.adapters.' + shared)
+    public = importlib.import_module(shared)
     assert old is public
     for symbol in symbols:
         assert getattr(old, symbol) is getattr(public, symbol)
-        assert getattr(public, symbol).__module__ == 'src.adapters.' + shared
+        assert getattr(public, symbol).__module__ == shared
 
 
 def test_legacy_prefix_injection_reaches_the_shared_function_globals(monkeypatch):
     old = importlib.import_module('scenarios.paper_proofreading.frontier.program_training')
-    public = importlib.import_module('src.adapters.capability_program_training')
+    public = importlib.import_module('src.rsi.learning.capability_program_training')
     sentinel = object()
     monkeypatch.setattr(old, 'execute', sentinel)
     assert public.prepare_program_cases.__globals__['execute'] is sentinel
@@ -39,16 +39,16 @@ def test_fresh_public_imports_do_not_load_a_scenario():
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run([sys.executable, '-c', """
 import sys
-from src.adapters.capability_script_learning import learn, executable_source
-from src.adapters.capability_script_execution import execute
-from src.adapters.capability_program_training import prepare_program_cases
+from src.adapters.harness.capability.capability_script_learning import learn, executable_source
+from src.adapters.harness.capability.capability_script_execution import execute
+from src.rsi.learning.capability_program_training import prepare_program_cases
 assert not [name for name in sys.modules if name == 'scenarios' or name.startswith('scenarios.')]
 """], cwd=root, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
 
 
 def test_shared_training_accepts_an_unrelated_host_task_without_paper_examples(tmp_path, monkeypatch):
-    from src.adapters import capability_program_training as training
+    from src.rsi.learning import capability_program_training as training
     cap = leaf('warehouse-diagnostic')
     snapshot = create_capability_snapshot('owner', [capability_ref(cap)], [cap])
     record = {'type': 'object', 'properties': {'quantity': {'type': 'integer'}},

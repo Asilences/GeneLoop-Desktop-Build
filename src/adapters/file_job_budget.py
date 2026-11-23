@@ -2,7 +2,12 @@
 from __future__ import annotations
 import hashlib,json,subprocess
 from pathlib import Path
-from src.adapters.file_cost_gate import reservation,observed_peak_cost
+from src.adapters.deepseek_cost_gate import (
+    CACHE_HIT_PEAK_USD_PER_MILLION,
+    PEAK_USD_PER_MILLION,
+    file_reservation as reservation,
+    observed_peak_cost,
+)
 ROOT=Path(__file__).resolve().parents[2]
 
 def job_command(path,command,payload=None):
@@ -13,6 +18,9 @@ def job_command(path,command,payload=None):
     return value
 
 class FileJobBudget:
+    rates = PEAK_USD_PER_MILLION
+    cache_rates = CACHE_HIT_PEAK_USD_PER_MILLION
+
     def __init__(self,path,record):
         self.path=Path(path);self.record=Path(record);self._state=job_command(path,'state')['state']
         self.output_cap=self._state['limits']['max_output'];self.cap_usd=self._state['limits']['budget_usd']
@@ -21,12 +29,16 @@ class FileJobBudget:
     @property
     def reserved_usd(self):return job_command(self.path,'state')['state']['spent_units']/1e9
     def book(self,body):
-        model,cost,ceiling=reservation(body,max_output=self.output_cap)
+        model,cost,ceiling=reservation(body, max_output=self.output_cap, rates=self.rates)
         value=job_command(self.path,'reserve',{'model':model,'upper_usd':cost,'request_sha256':hashlib.sha256(body).hexdigest()})
         return (value['request_id'],model,cost,ceiling) if value['admitted'] else None
     def settle(self,request_id,model,status,usage):
-        try:observed=observed_peak_cost(model,usage) if status==200 else None
-        except ValueError:observed=None
+        try:
+            observed = observed_peak_cost(
+                model, usage, rates=self.rates, cache_rates=self.cache_rates
+            ) if status == 200 else None
+        except ValueError:
+            observed = None
         value=job_command(self.path,'settle',{'request_id':request_id,'model':model,'observed_usd':observed})
         return value['observed_usd'],value['released_usd']
     def log(self,row):

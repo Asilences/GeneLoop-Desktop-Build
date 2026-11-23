@@ -12,8 +12,8 @@ import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
-import {WebDeepSeekAdapter} from '../../src/adapters/harless_reasoning.ts';
-import {executeRsiOperation,bytesSha256} from '../../src/adapters/rsi_protocol.ts';
+import {WebDeepSeekAdapter} from '../../src/adapters/web/tasks/harless_reasoning.ts';
+import {executeRsiOperation,bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
 import {diagnosticHost,fixtures} from './host.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));

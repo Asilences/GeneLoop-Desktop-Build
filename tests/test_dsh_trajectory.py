@@ -10,15 +10,15 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from src.adapters.dsh_trajectory import (
+from src.adapters.harness.dsh_trajectory import (
     ToolContract, extract_dsh_trace, infer_dsh_provenance, mine_dsh_traces,
     mine_witnessed_parameter_edges,
 )
 from tests.test_trace_compiled_read_motif import event_pair
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.trace_compiler import compile_read_motif, certify_read_motif
-from src.motif_core.offline.library_builder import build_read_motif_library
-from src.motif_core.read_executor import run_read_motif
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.trace_compiler import compile_read_motif, certify_read_motif
+from src.motif_core.offline.compilation.library_builder import build_read_motif_library
+from src.motif_core.runtime.read_executor import run_read_motif
 
 
 def call(index: int, name: str, *, arguments: dict | str | None = None,

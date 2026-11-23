@@ -25,14 +25,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
-from src.adapters.tool_contract_loader import parse_tool_contracts
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
 from src.adapters.paper_bibliography import bib_records
-from src.motif_core.offline.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
-from src.motif_core.offline.library_builder import library_from_certified, _digest
+from src.motif_core.offline.compilation.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified, _digest
 
 
 def module(name, path):
@@ -164,7 +164,7 @@ def run(exp, inputs, case, mode, budget_record, label, library_tag=''):
     env={'DSH_HOME':str(out/'dsh'),'DSH_TELEMETRY_MODE':'none','DSH_MAX_TOKENS_AS_SUCCESS':'false',
          'SSS_ONLINE_MOTIF_MANIFEST':'','SSS_NATIVE_MOTIF_MANIFEST':'','DSH_PERMISSION_MODE':'danger-full-access'}
     if BOUNDED_EVIDENCE:
-        save(out/'evidence-policy.patch.yml','- insert:\n    - id: paper-evidence-policy\n      name: '+json.dumps((ROOT/'src/adapters/dsh_paper_evidence_policy.ts').as_uri())+'\n')
+        save(out/'evidence-policy.patch.yml','- insert:\n    - id: paper-evidence-policy\n      name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_paper_evidence_policy.ts').as_uri())+'\n')
         patches.append(str(out/'evidence-policy.patch.yml'))
         env.update(SSS_PAPER_BOUNDED_EVIDENCE='1',SSS_PAPER_CASE_ID=case)
         if FLOW_DELIVERY:env.update(SSS_PAPER_FLOW_DELIVERY='1',SSS_PAPER_ARTIFACT_READ='1')
@@ -176,14 +176,14 @@ def run(exp, inputs, case, mode, budget_record, label, library_tag=''):
             'work':str(work),'source_root':str(source),'source_version':version,
             'source_files':{str(p.relative_to(source)):sha(p) for p in source.rglob('*') if p.is_file()},
             'code_files':{str(p):sha(p) for p in [ROOT/'scenarios/paper-submission/checks.py',
-                ROOT/'src/adapters/paper_triage_validation.ts',ROOT/'src/adapters/dsh_paper_delivery_check.ts',
+                ROOT/'src/adapters/paper_triage_validation.ts',ROOT/'src/adapters/harness/paper/dsh_paper_delivery_check.ts',
                 ROOT/'schemas/paper-citation-triage.schema.json']}}
         if FLOW_DELIVERY:check_config.update(citation_flow=True,require_preprint_metadata=True,read_artifact=True)
         if QUERY_RECOVERY_LIBRARY is not None:
             check_config['code_files'].update({str(ROOT/'src/adapters/paper_query_recovery.py'):sha(ROOT/'src/adapters/paper_query_recovery.py'),
                 str(out/'query-recovery-library.json'):sha(out/'query-recovery-library.json')})
         save(out/'delivery-check-config.json',check_config)
-        save(out/'delivery-check.patch.yml','- insert:\n    - id: paper-delivery-check\n      name: '+json.dumps((ROOT/'src/adapters/dsh_paper_delivery_check.ts').as_uri())+'\n')
+        save(out/'delivery-check.patch.yml','- insert:\n    - id: paper-delivery-check\n      name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_paper_delivery_check.ts').as_uri())+'\n')
         patches.append(str(out/'delivery-check.patch.yml'))
         env['SSS_PAPER_CHECK_CONFIG']=str(out/'delivery-check-config.json')
         if COMPOSITE_EVIDENCE:env['SSS_PAPER_COMPOSITE_EVIDENCE']='1'
@@ -194,7 +194,7 @@ def run(exp, inputs, case, mode, budget_record, label, library_tag=''):
             'source_version':version,'work':str(work),'project_root':str(ROOT),'source_root':str(source),'source_files':check_config['source_files'],
             'code_files':check_config['code_files'],'library_path':str(out/'flow-shadow-library.json'),
             'track_completed_frontier':TRACK_COMPLETED_FRONTIER})
-        save(out/'flow-shadow.patch.yml','- insert:\n    - id: paper-flow-shadow\n      name: '+json.dumps((ROOT/'src/adapters/dsh_paper_flow_shadow.ts').as_uri())+'\n')
+        save(out/'flow-shadow.patch.yml','- insert:\n    - id: paper-flow-shadow\n      name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_paper_flow_shadow.ts').as_uri())+'\n')
         patches.append(str(out/'flow-shadow.patch.yml'));env['SSS_PAPER_FLOW_SHADOW_CONFIG']=str(out/'flow-shadow-config.json')
     if mode!='baseline' and not COMPOSITE_EVIDENCE and not FLOW_DELIVERY:
         library_dir=exp/'libraries'/library_tag if library_tag else exp
@@ -204,7 +204,7 @@ def run(exp, inputs, case, mode, budget_record, label, library_tag=''):
               'input_version':version,'source_versions':{n:version for n in contracts()},
               'bindings':{PREFIX+'pin_paper_citations':{'case_id':case}}}
         save(out/'task.json',task)
-        save(out/'motif.patch.yml','- insert:\n    - id: paper-citation-motif\n      name: '+json.dumps((ROOT/'src/adapters/dsh_paper_motif.ts').as_uri())+'\n')
+        save(out/'motif.patch.yml','- insert:\n    - id: paper-citation-motif\n      name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_paper_motif.ts').as_uri())+'\n')
         patches.append(str(out/'motif.patch.yml'))
         env.update(SSS_PAPER_MOTIF_DIAGNOSTIC='1',SSS_ONLINE_MOTIF_MANIFEST=str(out/'online-manifest-snapshot.json'),
                    SSS_ONLINE_MOTIF_TASK=str(out/'task.json'),SSS_ONLINE_MOTIF_MODE=mode,
@@ -236,11 +236,11 @@ def run(exp, inputs, case, mode, budget_record, label, library_tag=''):
         'flow_shadow_library_digest':frozen['manifest_digest'] if FLOW_SHADOW_LIBRARY is not None else None,
         'learned_motif_interceptor_loaded':mode!='baseline' and not COMPOSITE_EVIDENCE and not FLOW_DELIVERY,
         'code_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [Path(__file__),ROOT/'scenarios/paper-submission/checks.py',
-            ROOT/'scenarios/paper-submission/server.py',ROOT/'src/adapters/paper_bibliography.py',ROOT/'src/adapters/dsh_online_motif.mjs',
-            ROOT/'src/adapters/dsh_paper_motif.ts',ROOT/'src/motif_core/online_skill_runtime.mjs',ROOT/'src/adapters/arxiv_metadata.py',
-            ROOT/'src/adapters/dsh_paper_evidence_policy.ts',ROOT/'src/adapters/paper_triage_validation.ts',
-            ROOT/'src/adapters/dsh_paper_delivery_check.ts',ROOT/'schemas/paper-citation-triage.schema.json',
-            ROOT/'src/adapters/crossref_metadata.py',ROOT/'src/adapters/dsh_paper_flow_shadow.ts',
+            ROOT/'scenarios/paper-submission/server.py',ROOT/'src/adapters/paper_bibliography.py',ROOT/'src/adapters/harness/motif/dsh_online_motif.mjs',
+            ROOT/'src/adapters/harness/paper/dsh_paper_motif.ts',ROOT/'src/motif_core/runtime/online_skill_runtime.mjs',ROOT/'src/adapters/arxiv_metadata.py',
+            ROOT/'src/adapters/harness/paper/dsh_paper_evidence_policy.ts',ROOT/'src/adapters/paper_triage_validation.ts',
+            ROOT/'src/adapters/harness/paper/dsh_paper_delivery_check.ts',ROOT/'schemas/paper-citation-triage.schema.json',
+            ROOT/'src/adapters/crossref_metadata.py',ROOT/'src/adapters/harness/paper/dsh_paper_flow_shadow.ts',
             ROOT/'src/adapters/paper_flow_shadow_compiler.py',ROOT/'src/adapters/paper_query_recovery.py']}})
     events=[]
     def observe(notification):

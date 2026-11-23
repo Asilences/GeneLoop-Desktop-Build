@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {validateScript,createScriptController} from '../src/adapters/dsh_learned_script.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validateScript,createScriptController} from '../src/adapters/harness/learning/dsh_learned_script.ts';
 const prefix='mcp__file_management__',hex='a'.repeat(64),names=['read_task','list_files','pin_file','read_file','hash_files','preview_actions','execute_plan','submit_report'];
 function fixture(){
  const spec={objective:'copy sources',report_contract:{kind:'task_result'},initial_snapshot:{'.experiment-copy':hex,'source/a.txt':hex},workflow_contract:{workflow_id:'FM17',source_paths:['source/a.txt'],destination_prefixes:['backup-set/','recovery-drill/'],required_reads:[],context_paths:[]},allowed_operations:['copy']};

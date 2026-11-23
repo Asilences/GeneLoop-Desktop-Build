@@ -3,8 +3,8 @@ from copy import deepcopy
 import hashlib,json,subprocess
 from pathlib import Path
 import pytest
-from src.adapters.rsi_protocol import envelope
-from src.adapters.rsi_quality import quality_status,verify_quality_files
+from src.rsi.protocol.rsi_protocol import envelope
+from src.rsi.feedback.rsi_quality import quality_status,verify_quality_files
 
 
 def sample(scene='paper'):
@@ -53,7 +53,7 @@ def test_reviewed_evidence_is_verified_against_actual_bytes(tmp_path):
 
 def test_python_and_authoritative_typescript_agree():
     r=sample('video');binding={k:r['payload'][k] for k in ('task_sha256','artifact_sha256','rubric_sha256')}
-    script="import {qualityStatus} from './src/adapters/rsi_quality.ts'; const x=JSON.parse(process.argv[1]); console.log(qualityStatus(x.r,x.binding,['requirements']));"
+    script="import {qualityStatus} from './src/rsi/feedback/rsi_quality.ts'; const x=JSON.parse(process.argv[1]); console.log(qualityStatus(x.r,x.binding,['requirements']));"
     for expected in ('passed','failed','unknown'):
         r['payload']['checks'][0]['status']=expected
         actual=subprocess.check_output(['node','--experimental-strip-types','--input-type=module','-e',script,json.dumps({'r':r,'binding':binding})],

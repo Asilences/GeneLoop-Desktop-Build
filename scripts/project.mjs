@@ -38,7 +38,9 @@ if (action === 'setup') {
 } else if (action === 'scenario') {
   run(python, ['scripts/run-scenario.py', ...args]);
 } else if (action === 'web') {
-  run(python, ['scripts/harness-web.py', ...args]);
+  const entry = env.SSS_FILE_PROVIDER_CONFIG && args.includes('--real-model')
+    ? 'scripts/file-provider-web.py' : 'scripts/harness-web.py';
+  run(python, [entry, ...args]);
 } else if (action === 'service') {
   run(python, ['scripts/geneloop_service.py', ...args]);
 } else if (action === 'smoke') {

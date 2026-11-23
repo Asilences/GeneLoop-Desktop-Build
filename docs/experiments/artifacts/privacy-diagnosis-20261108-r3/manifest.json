@@ -1,0 +1,19 @@
+{
+  "public_aggregates_only": true,
+  "raw_data_and_predictions_published": false,
+  "independent_unseen_evaluation": false,
+  "files_sha256": {
+    "ablation-summary.json": "39ae645e0e47a38531550e106f353c2f895eba255dc4a360d04121a6b8e100d1",
+    "model-comparison.json": "9e8b04fe3bf7eee99d168e228d4fc05afeb92bf2e70142160cf47d79a69a7808",
+    "card-validation.json": "0c23c463d2d2c4adafba04c1e1e2a8893e161137e06b29f60548a0b5313a56d4",
+    "model-input-reproduction.json": "2372216de73497a65a9ba390a3450480b852c1262fe541c97fe55820c55926e6",
+    "dependencies-gliner.txt": "881dff7cd98a41b2c5816e8aa51ef7f4ca4db89845a79425051abe3fc7a20e20",
+    "dependencies-openmed.txt": "ac62b2d2296b93209536301695b18fcdbe95374cde331fe1dc6ded1d94ff7881",
+    "resource-snapshot.json": "2d8e876af76265a76f73c5f928dfea0e9179e8a1abc332a6867feb422a498f10",
+    "config-and-runner-verification.json": "e6c9b95f9df8113b6a55d57e6a66864c36051a2f7ce727c4f32b7702dd177e3f"
+  },
+  "r2_baseline_rule_commit": "d832be12fabc76fc995b358e15a110a506ba4711",
+  "r3_rule_commit": "ea819fc6ecb1f32d69d61a3f5619419e181f947e",
+  "transport_runtime_commit": "4f6adedbc1f854f9f9bbd9e323fb3f460bd65afa",
+  "source_scope": "individual artifacts record actual configuration/source hashes; ablation and candidate comparisons use frozen R2 baseline"
+}

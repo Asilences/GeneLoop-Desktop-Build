@@ -13,9 +13,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.efficiency_rsi_measurement import _cost
-from src.adapters.evolution_benchmark import _model_scoreable, benchmark_evaluation_role
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from src.rsi.feedback.efficiency_rsi_measurement import _cost
+from benchmarks.evolution.evolution_benchmark import _model_scoreable, benchmark_evaluation_role
 
 
 IGNORED_DIRECTORIES = {'artifacts', 'environment', 'verifier', 'node_modules', '.git',

@@ -3,9 +3,9 @@ import copy
 
 import pytest
 
-from src.adapters.capability_authoring import aliases, diagnose, expand_draft
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_composition_source import (
+from src.capability.builder.capability_authoring import aliases, diagnose, expand_draft
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.builder.capability_composition_source import (
     CompositionSourceError, compile_composition_source,
 )
 from tests.test_capability_builder import setup

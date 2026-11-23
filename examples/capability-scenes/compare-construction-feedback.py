@@ -15,9 +15,9 @@ import sys
 import time
 
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT))
-from src.adapters.capability_improvement import read,save,evidence,run_improvement
-from src.adapters.capability_scene import reference
-from src.adapters.capability_construction_history import capture,build_history,amount
+from src.rsi.learning.capability_improvement import read,save,evidence,run_improvement
+from src.adapters.harness.capability.capability_scene import reference
+from src.rsi.learning.capability_construction_history import capture,build_history,amount
 from scenarios.paper_proofreading.frontier.adapter import FrontierAdapter
 from scenarios.paper_proofreading.frontier.budget import FrontierGate
 

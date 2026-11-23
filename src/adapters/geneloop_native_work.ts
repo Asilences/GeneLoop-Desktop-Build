@@ -2,7 +2,6 @@
 import {readFileSync,existsSync,lstatSync,realpathSync} from 'node:fs';
 import {join,resolve,relative,isAbsolute,posix} from 'node:path';
 import {createHash} from 'node:crypto';
-import {fileURLToPath} from 'node:url';
 import {parse} from 'yaml';
 import {pptMasterInstallation} from './geneloop_skill_installation.mjs';
 const sha=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex');
@@ -14,17 +13,27 @@ export function registerApprovedSkill(ctx:any,resources:{pptMasterRoot?:string;p
   if(!installation)return ()=>{};
   const raw=readFileSync(join(installation.source,'SKILL.md'));
   // Recheck the loaded bytes even if the installation's immutable mount was cached.
-  const project=resources.projectRoot??fileURLToPath(new URL('../..',import.meta.url));
-  const lock=JSON.parse(readFileSync(join(project,'scenarios/ppt_master/skill-lock.json'),'utf8'));
-  if(sha(raw)!==lock.files['SKILL.md'])throw Error('approved skill bytes changed');
+  if(sha(raw)!==installation.entrySha256)throw Error('approved skill bytes changed');
   const matched=/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/.exec(raw.toString('utf8'));
   if(!matched)throw Error('approved skill metadata missing');
   const meta=parse(matched[1]);
   if(meta?.name!=='ppt-master'||typeof meta.description!=='string'||!meta.description.trim())throw Error('approved skill metadata invalid');
-  const profile=readFileSync(new URL('../../scenarios/ppt_master/runtime-policy.md',import.meta.url),'utf8');
-  return ctx.skills.register({name:'ppt-master',description:meta.description.trim(),source:'runtime',provider:'geneloop-approved',
-    resourceBase:{kind:'directory',path:installation.target},content:profile+'\n\n## 官方参考正文\n\n'+matched[2].trim(),
+  const adapted=readFileSync(new URL('../../scenarios/ppt_master/SKILL.md',import.meta.url),'utf8');
+  const entry=/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/.exec(adapted);
+  if(!entry)throw Error('GeneLoop presentation entry metadata missing');
+  const own=parse(entry[1]);
+  return ctx.skills.register({name:'ppt-master',description:own.description,source:'runtime',provider:'geneloop-approved',
+    resourceBase:{kind:'directory',path:installation.target},content:entry[2].trim(),
     invocation:{modelInvocable:true,userInvocable:true}});
+}
+
+/** Agent contexts do not inherit the Web plugin's service injections. */
+export function bindApprovedSkill(ctx:any,resources:{pptMasterRoot?:string;projectRoot?:string}={}) {
+  let unregister:(()=>void)|undefined,disposed=false;
+  const binding=ctx.inject(['skills'],(scoped:any)=>{
+    if(!disposed)unregister=registerApprovedSkill(scoped,resources);
+  });
+  return ()=>{disposed=true;unregister?.();return binding.dispose();};
 }
 
 export type NativeTodo={content:string;status:'pending'|'in_progress'|'completed'};
@@ -55,15 +64,22 @@ export function nativePresentationPath(path:unknown):string {
 export function installNativePresentation(ctx:any) {
   ctx.tools.guard((exec:any)=>{
     if(exec.name!=='present')return;
-    try {if(!exec.agent||!Array.isArray(exec.arguments?.files))throw Error();
+    if(!Array.isArray(exec.arguments?.files)||exec.arguments.files.some((file:any)=>!file||typeof file!=='object'||typeof file.path!=='string'))
+      return 'present参数必须是{files:[{path:"/work/outputs/folder/presentation.pptx"},{path:"/work/outputs/folder/presentation.pdf"}]}；files里的每项是带path的对象，不是字符串。保留/work/outputs/前缀。';
+    try {if(!exec.agent)throw Error();
       for(const file of exec.arguments.files)nativePresentationPath(file.path);
-    }catch{return 'Only files in this conversation’s /work/outputs can be presented.';}
+    }catch{return 'Only files in this conversation’s /work/outputs can be presented. Use {files:[{path:"/work/outputs/folder/file.pptx"}]}; keep the /work/outputs/ prefix.';}
   });
   ctx.on('tools/execute',async(exec:any,next:any)=>{
     if(exec.name!=='present')return next();
     const result=await next();if(result.isError)return result;
     const files=[];
-    for(const file of exec.arguments.files){
+    // A scene may delegate a subset to native present when an optional preview
+    // is unavailable. Hash only files the native result actually delivered.
+    const delivered=result.value?.files??exec.arguments.files;
+    if(!Array.isArray(delivered)||delivered.some((file:any)=>!exec.arguments.files.some((requested:any)=>requested.path===file.path)))
+      throw Error('present result contains unrequested files');
+    for(const file of delivered){
       const logical=nativePresentationPath(file.path),target=await ctx.fs.resolve(logical,{signal:exec.signal});
       const bytes=await ctx.fs.readBytes(target,exec.signal,maxFileBytes);
       files.push({path:file.path,name:'outputs/code/'+logical.slice('/work/outputs/'.length),sha256:sha(bytes),bytes:bytes.byteLength});

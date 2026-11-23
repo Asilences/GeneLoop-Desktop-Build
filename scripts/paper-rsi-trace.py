@@ -17,15 +17,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.trace_tool_evidence import (SourceReplay, bounded_read, digest, trace_run,
+from src.motif_core.trajectory.trace_tool_evidence import (SourceReplay, bounded_read, digest, trace_run,
     counterfactuals, project_inputs, project_outputs)
 
 DEFAULT_EXP = '.local/paper-reference/paper-rsi-trace-tools-20261011-v3'
 DEFAULT_RUNS = ['.local/paper-reference/paper-rsi-sequential-20261010-v1/runs/continuation-shadow-round-2-shadow',
                 '.local/paper-reference/paper-rsi-sequential-20261010-v1/runs/continuation-shadow-round-3-shadow']
 FILES = ['scripts/paper-rsi-trace.py', 'scripts/check-trace-rsi-tool.mjs',
-         'src/adapters/trace_tool_evidence.py', 'src/adapters/trace_rsi_program.ts',
-         'src/adapters/paper_rsi_program.ts', 'src/adapters/dsh_trace_rsi_learning.ts',
+         'src/motif_core/trajectory/trace_tool_evidence.py', 'src/adapters/trace_rsi_program.ts',
+         'src/adapters/paper_rsi_program.ts', 'src/adapters/harness/paper/dsh_trace_rsi_learning.ts',
          'scenarios/paper-submission/trace-rsi-learning.prompt.md', 'scenarios/paper-submission/trace-rsi-server.ts']
 
 def parent():
@@ -213,7 +213,7 @@ def learn(exp, label):
     template = (ROOT/'scenarios/paper-submission/trace-rsi-learning.prompt.md').read_text()
     config = {'mode':'learning','experiment_path':str(exp),'trace_bundle_path':str(exp/'trace-bundle.json'),
         'trace_bundle_sha256':digest(data),'python_command':sys.executable,'controller_path':str(ROOT/'scripts/paper-rsi-trace.py')}
-    policy = '\n- insert:\n    - name: "@deepseek-ai/dsh-cordis-host-runner"\n      config:\n        vmTimeoutMs: 5000\n    - name: "@deepseek-ai/dsh-tool-cordis"\n    - name: '+json.dumps((ROOT/'src/adapters/dsh_trace_rsi_learning.ts').as_uri())+'\n'
+    policy = '\n- insert:\n    - name: "@deepseek-ai/dsh-cordis-host-runner"\n      config:\n        vmTimeoutMs: 5000\n    - name: "@deepseek-ai/dsh-tool-cordis"\n    - name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_trace_rsi_learning.ts').as_uri())+'\n'
     return legacy.paid(label,template,policy,config,['SSS_TRACE_RSI_LEARNING'])
 
 def freeze(exp, label):

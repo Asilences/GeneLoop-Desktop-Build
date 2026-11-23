@@ -1,0 +1,67 @@
+{
+  "rule_commit": "ea819fc6ecb1f32d69d61a3f5619419e181f947e",
+  "latest_runtime_commit": "4f6adedbc1f854f9f9bbd9e323fb3f460bd65afa",
+  "checkout_clean": true,
+  "pii_records": 13000,
+  "pii_gold_spans": 44584,
+  "credential_files": 11030,
+  "credential_sources": 337,
+  "credential_annotation_rows": 67896,
+  "metadata_and_inputs_unchanged": true,
+  "all_module_calls_new": true,
+  "native_prediction_locations_unchanged": true,
+  "actual_core_matches_ablation_per_record": true,
+  "semantic_originals_unchanged": true,
+  "entry_originals_unchanged": true,
+  "regression_unique_cases": 3357,
+  "full_input_hash_audit": true,
+  "method_source_and_config_hashes_match_execution": true,
+  "detector_source_equivalence": {
+    "rule_commit": "ea819fc6ecb1f32d69d61a3f5619419e181f947e",
+    "transport_runtime_commit": "4f6adedbc1f854f9f9bbd9e323fb3f460bd65afa",
+    "python_files_equal_sha256": {
+      "src/adapters/rsi_text_privacy.py": "37bbe14beb55cc7f9679b0bd34eea71173da044b0becc8c77f655aaa9366c69b",
+      "src/adapters/geneloop_privacy.py": "ab74619cc9ca0d0185db00ab50fd297308e6b4806d5f6f25ede6f9f9e2008650",
+      "src/adapters/geneloop_learning_trace.py": "774f212c96c2bc810638400b529f970bfb80aa3970efb6f72b10c7d8844513d1",
+      "src/adapters/rsi_learning_trace.py": "81a559aa6779fd34bdab8006a3d6224026c8f0f210b2a3a3ef60bfac3a4f00e0"
+    }
+  },
+  "earlier_stress_failures_preserved": {
+    "node_failed": 3,
+    "node_cancelled": 2,
+    "entry_equal": 13,
+    "entry_total": 14
+  },
+  "source_sha256": "0daaae966a7849ee2177407456784165b219f85b8c2608dc49f51d32966aac4d",
+  "raw_receipts_sha256": {
+    "execution": "2917d62aabb211ca655e3d6bb7403b1d1e81d5dabbd553aafbcf73924025a5d2"
+  },
+  "configs": {
+    "protocol-r3.json": {
+      "executed_bytes_sha256": "f8c1e3d6b77b7c8b5d352bab5259074def701d017db9be4f9a9a344b52fbb6c6",
+      "json_semantic_sha256": "db112538ac4aaaadc2ba0b71452b7ffc074b5ce11eadf52f85be30d8cb621fa0"
+    },
+    "credential-budget-r3.json": {
+      "executed_bytes_sha256": "1eae298f4ae07187f624d417a91b1c90ae44e4c698f8e54e59379811a1cfa2dd",
+      "json_semantic_sha256": "8a30f5ad0b858558c4ac982696d9f89cb66c86b32a5e6e239f1ae8c0084b8882"
+    },
+    "model-comparison-r3.json": {
+      "executed_bytes_sha256": "6c480fdcadfdca4522083cfa4c9b0f3a3eb0b11b8efcc85e877c859d6f8c9337",
+      "json_semantic_sha256": "1d7f1c75ced312d127609401a76895af9a64cec7667d66a737dfbddd9091581e"
+    },
+    "runner_revision_audit": {
+      "gliner_detection_and_main_loop_ast_unchanged": true,
+      "unchanged_functions": [
+        "digest",
+        "verify_sources",
+        "load_gliner",
+        "main"
+      ],
+      "changed_function": "load_openmed: official simple aggregation argument; JSON serialization of upstream empty sets",
+      "original_runner_sha256": "13476d3100174458682bf447c50160cd6807fcae13134961bcab1f0f4757c805",
+      "fixed_runner_sha256": "a3ee1bce7596d38086f312c280f655de3cd5776ff99373c18d5925556f3af692"
+    }
+  },
+  "cloud_requests": 0,
+  "production_service_touched": false
+}

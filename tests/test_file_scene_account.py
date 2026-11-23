@@ -4,8 +4,8 @@ from pathlib import Path
 from uuid import uuid4
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 import pytest
-from src.adapters.file_cost_gate import State,create_server
-from src.adapters.file_web_task_budget import TaskBudgetRegistry
+from src.adapters.deepseek_cost_gate import FileState as State, create_file_server as create_server
+from src.adapters.web.web_task_budget import FileTaskBudgetRegistry as TaskBudgetRegistry
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -17,7 +17,7 @@ def scoped_file_platform(tmp_path):
     from concurrent.futures import ThreadPoolExecutor
     from types import SimpleNamespace
     from src.adapters.deepseek_cost_gate import State as MainState,create_server as main_gate
-    from src.adapters.web_task_budget import TaskBudgetRegistry as MainRegistry,create_control_server
+    from src.adapters.web.web_task_budget import TaskBudgetRegistry as MainRegistry,create_control_server
     node=shutil.which('node')
     if not node:pytest.skip('Node is required for the actual scoped gateway diagnostic')
     seen=[];servers=[];threads=[];barriers=[]
@@ -93,7 +93,7 @@ def test_web_file_profile_inherits_uncapped_policy_without_resetting_existing_st
     code="""import sys,json,os;sys.path.insert(0,'scenarios/file-management')
 from management_web import default_config
 from src.adapters.continuous_rsi import load_config,read
-from src.motif_core.offline.experience_registry import durable
+from src.motif_core.reuse.experience_registry import durable
 from pathlib import Path
 os.environ.pop('SSS_WEB_POLICY',None)
 old=default_config(False);before=load_config(old);pool=Path(before['state_root'])/'pool.json'
@@ -110,7 +110,7 @@ print('uncapped-policy-and-original-accounting-preserved')"""
 
 
 def test_unlimited_platform_meter_is_still_required_for_semantic_calls(monkeypatch):
-    from src.adapters.dsh_client import require_budget_gate
+    from src.adapters.harness.dsh_client import require_budget_gate
     monkeypatch.setenv('DEEPSEEK_BASE_URL','http://127.0.0.1:37724/v1')
     monkeypatch.setenv('SSS_BUDGET_GATE_ACTIVE','1');monkeypatch.setenv('SSS_BUDGET_LEDGER','private-ledger.jsonl')
     monkeypatch.setenv('SSS_BUDGET_CAP_USD','null');require_budget_gate()
@@ -210,7 +210,7 @@ def test_additive_meter_header_transform_preserves_the_platform_route(tmp_path):
 def test_file_sdk_uses_existing_platform_model_port_and_settles_both_ledgers(tmp_path):
     """Actual nested HTTP meters, deterministic fake cloud; zero paid calls."""
     from src.adapters.deepseek_cost_gate import State as MainState, create_server as main_gate
-    from src.adapters.web_task_budget import TaskBudgetRegistry as MainRegistry, create_control_server
+    from src.adapters.web.web_task_budget import TaskBudgetRegistry as MainRegistry, create_control_server
     from src.adapters.management_platform_budget import PlatformBudget
     seen=[]
     class Cloud(BaseHTTPRequestHandler):

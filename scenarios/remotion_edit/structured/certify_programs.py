@@ -17,7 +17,7 @@ from PIL import Image,ImageChops,ImageStat
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT))
 from src.adapters.source_program_compiler import source_library,program_identity
-from src.adapters.script_motif_compiler import digest,sha
+from src.motif_core.offline.compilation.script_motif_compiler import digest,sha
 
 
 def write(path,value):

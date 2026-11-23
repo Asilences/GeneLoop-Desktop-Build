@@ -9,8 +9,8 @@ from management_prepare import prepare,PROMPT
 from management_tools import ManagementScene,execution_version,tree
 from src.adapters.continuous_rsi import STATE_HOME,PRIVATE_HOME,load_config,initialize,private,writer_lock,enroll,seal,launch_worker
 from src.adapters.operation_runner import initialize_job
-from src.adapters.file_scenario import prepare_scenario
-from src.motif_core.offline.experience_registry import durable,read
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.motif_core.reuse.experience_registry import durable,read
 
 def task_events(directory):
     enrollment=Path(directory)/'enrollment.json'

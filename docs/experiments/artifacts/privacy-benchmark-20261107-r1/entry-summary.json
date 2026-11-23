@@ -1,0 +1,163 @@
+{
+  "rows": [
+    {
+      "scene": "paper-proofreading",
+      "case_id": "zh_formal-0",
+      "source_sha256": "8d685fe7f88bd1e2f7adcefd58574d122e6eb1e5f4e9f4d96443c72111c23ab9",
+      "web_accepted": false,
+      "offline_accepted": false,
+      "equal": true,
+      "web_ms": 10766.381748,
+      "offline_ms": 11544.099763999999,
+      "original_unchanged": true
+    },
+    {
+      "scene": "paper-proofreading",
+      "case_id": "zh_formal-1",
+      "source_sha256": "bd5f7fb814235c54433be2e8f0874a0473a89efbbf36477bf275d47530154287",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 12435.936306000003,
+      "offline_ms": 11796.719165000002,
+      "original_unchanged": true
+    },
+    {
+      "scene": "paper-proofreading",
+      "case_id": "zh_chat-0",
+      "source_sha256": "6a5885eb2287fcbfc88ffae1c59c4b7833fa75692ddb4abb98716cf5b326891f",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 11833.801458000002,
+      "offline_ms": 11681.977619999998,
+      "original_unchanged": true
+    },
+    {
+      "scene": "paper-proofreading",
+      "case_id": "zh_chat-1",
+      "source_sha256": "241843d95b095319d759e7f631b6fbe869a67cfb32e288caf6587cc01d816b3c",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 11951.503937000001,
+      "offline_ms": 11795.106971000001,
+      "original_unchanged": true
+    },
+    {
+      "scene": "paper-proofreading",
+      "case_id": "en_test-0",
+      "source_sha256": "ab0f4da0f8cc231eade9f9837c488c1f5cd463e663d3b481535aebd2a8ebb4ef",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 11833.251264000006,
+      "offline_ms": 10546.836583000011,
+      "original_unchanged": true
+    },
+    {
+      "scene": "paper-proofreading",
+      "case_id": "en_test-1",
+      "source_sha256": "a12c8d28b38150e868b9d3d2e3563a5a0ccecfbaaeccce0382a58b2312b9f7b0",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 10717.387688999996,
+      "offline_ms": 10589.334060000008,
+      "original_unchanged": true
+    },
+    {
+      "scene": "paper-proofreading",
+      "case_id": "secret-field-control",
+      "source_sha256": "cec748f3f83aad27511776077cf0822b8e892afcb5a98e02175ace4a65994c2c",
+      "web_accepted": false,
+      "offline_accepted": false,
+      "equal": true,
+      "web_ms": 9790.617591999995,
+      "offline_ms": 9928.093911000004,
+      "original_unchanged": true
+    },
+    {
+      "scene": "ppt",
+      "case_id": "zh_formal-0",
+      "source_sha256": "8d685fe7f88bd1e2f7adcefd58574d122e6eb1e5f4e9f4d96443c72111c23ab9",
+      "web_accepted": false,
+      "offline_accepted": false,
+      "equal": true,
+      "web_ms": 11367.777824999997,
+      "offline_ms": 10636.903594000003,
+      "original_unchanged": true
+    },
+    {
+      "scene": "ppt",
+      "case_id": "zh_formal-1",
+      "source_sha256": "bd5f7fb814235c54433be2e8f0874a0473a89efbbf36477bf275d47530154287",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 12263.788975000003,
+      "offline_ms": 12858.75094899998,
+      "original_unchanged": true
+    },
+    {
+      "scene": "ppt",
+      "case_id": "zh_chat-0",
+      "source_sha256": "6a5885eb2287fcbfc88ffae1c59c4b7833fa75692ddb4abb98716cf5b326891f",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 10444.781279999996,
+      "offline_ms": 10473.935413999978,
+      "original_unchanged": true
+    },
+    {
+      "scene": "ppt",
+      "case_id": "zh_chat-1",
+      "source_sha256": "241843d95b095319d759e7f631b6fbe869a67cfb32e288caf6587cc01d816b3c",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 11942.935385999997,
+      "offline_ms": 12648.168321999983,
+      "original_unchanged": true
+    },
+    {
+      "scene": "ppt",
+      "case_id": "en_test-0",
+      "source_sha256": "ab0f4da0f8cc231eade9f9837c488c1f5cd463e663d3b481535aebd2a8ebb4ef",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 11094.969941000018,
+      "offline_ms": 11167.450141999987,
+      "original_unchanged": true
+    },
+    {
+      "scene": "ppt",
+      "case_id": "en_test-1",
+      "source_sha256": "a12c8d28b38150e868b9d3d2e3563a5a0ccecfbaaeccce0382a58b2312b9f7b0",
+      "web_accepted": true,
+      "offline_accepted": true,
+      "equal": true,
+      "web_ms": 10184.113115000015,
+      "offline_ms": 10658.45527200005,
+      "original_unchanged": true
+    },
+    {
+      "scene": "ppt",
+      "case_id": "secret-field-control",
+      "source_sha256": "cec748f3f83aad27511776077cf0822b8e892afcb5a98e02175ace4a65994c2c",
+      "web_accepted": false,
+      "offline_accepted": false,
+      "equal": true,
+      "web_ms": 10155.407887000008,
+      "offline_ms": 9876.513489000034,
+      "original_unchanged": true
+    }
+  ],
+  "total": 14,
+  "equal": 14,
+  "accepted": 10,
+  "cloud_requests": 0,
+  "cloud_api_cost": 0
+}

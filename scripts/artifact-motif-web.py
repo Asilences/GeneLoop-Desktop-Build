@@ -17,7 +17,7 @@ def prepare(args, output, endpoint):
     path = output / 'host.patch.yml'
     patch = json.loads(path.read_text(encoding='utf-8'))
     replacements = {
-        (ROOT / 'src/adapters/harless_web_client/index.mjs').as_uri(): (ROOT / 'src/adapters/artifact_motif_web.ts').as_uri(),
+        (ROOT / 'src/adapters/web/client/index.mjs').as_uri(): (ROOT / 'src/adapters/artifact_motif_web.ts').as_uri(),
         (ROOT / 'src/adapters/geneloop_shell.ts').as_uri(): (ROOT / 'src/adapters/artifact_motif_shell.ts').as_uri(),
     }
     for row in patch:

@@ -20,20 +20,23 @@ import {LocalFileSystem} from '@deepseek-ai/dsh-fs-local';
 import {apply as skillTool} from '@deepseek-ai/dsh-tool-skill';
 import {apply as todoTool} from '@deepseek-ai/dsh-tool-todo';
 import {apply as presentTool} from '@deepseek-ai/dsh-tool-present';
-import {registerApprovedSkill,projectNativeTodos,nativePresentationPath,installNativePresentation,nativePresentedFiles} from '../src/adapters/geneloop_native_work.ts';
-import {createTaskProgress} from '../src/adapters/harless_task_progress.ts';
-import {comparisonArtifacts,captureComparisonDeliveries} from '../src/adapters/harless_comparison_artifacts.ts';
+import {registerApprovedSkill,bindApprovedSkill,projectNativeTodos,nativePresentationPath,installNativePresentation,nativePresentedFiles} from '../src/adapters/geneloop_native_work.ts';
+import {createTaskProgress} from '../src/adapters/web/tasks/harless_task_progress.ts';
+import {comparisonArtifacts,captureComparisonDeliveries} from '../src/adapters/web/tasks/harless_comparison_artifacts.ts';
+import {deliveryDependencies,registerPptDeliveryTool} from '../src/adapters/ppt/delivery/ppt_delivery_pipeline.ts';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 
-async function fixture(){
+async function fixture({skillPlugin=false}={}){
  const root=realpathSync(mkdtempSync(join(tmpdir(),'geneloop-native-work-'))),ctx=new Context();
- new SessionStore(ctx);new AgentRegistry(ctx);new SessionProjectionRegistry(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx,{});new LlmRuntime(ctx);new SkillRegistry(ctx);
+ new SessionStore(ctx);new AgentRegistry(ctx);new SessionProjectionRegistry(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx,{});new LlmRuntime(ctx);
+ if(skillPlugin)await ctx.plugin(SkillRegistry).await();else new SkillRegistry(ctx);
  const loop=new AgentLoop(ctx,{agents:[]});
  // Test-only logical mapping; production uses GeneLoopFileSystem's pinned no-follow descriptors.
  class DiagnosticFileSystem extends LocalFileSystem {
    resolve(path,opts){return super.resolve(path.startsWith('/work/outputs/')?join(root,'outputs/code',path.slice('/work/outputs/'.length)):
      path.startsWith('outputs/')?join(root,'outputs/code',path.slice(8)):path,opts);}
-   lstat(path,opts,signal){return super.lstat(path.startsWith('outputs/')?join(root,'outputs/code',path.slice(8)):path,opts,signal);}
+   lstat(path,opts,signal){return super.lstat(path.startsWith('/work/outputs/')?join(root,'outputs/code',path.slice('/work/outputs/'.length)):
+     path.startsWith('outputs/')?join(root,'outputs/code',path.slice(8)):path,opts,signal);}
  }
  new DiagnosticFileSystem(ctx,{cwd:root,diffBasisMaxBytes:1024*1024});
  skillTool(ctx);todoTool(ctx,{allowParallelInProgress:true});presentTool(ctx,{maxFiles:8});installNativePresentation(ctx);
@@ -46,13 +49,45 @@ async function fixture(){
    async close(){await ctx.fiber.dispose();rmSync(root,{recursive:true,force:true});}};
 }
 function packageFixture(root){
- const project=join(root,'project'),skill=join(root,'approved');mkdirSync(join(project,'scenarios/ppt_master'),{recursive:true});mkdirSync(skill);
+ const project=join(root,'project'),skill=join(root,'approved'),assets=join(project,'scenarios/ppt_master/third_party/ppt-master-desktop');mkdirSync(assets,{recursive:true});mkdirSync(skill);
  const body='---\nname: ppt-master\ndescription: Make editable presentations\n---\n# Approved instructions\nUse scripts/build.py.\n';
  writeFileSync(join(skill,'SKILL.md'),body);
- const files={'SKILL.md':sha(Buffer.from(body))},lock={schema_version:1,version:'6.6.0',files,package_sha256:sha(Buffer.from(JSON.stringify(files)))};
- writeFileSync(join(project,'scenarios/ppt_master/skill-lock.json'),JSON.stringify(lock));
+ const files={'SKILL.md':sha(Buffer.from(body))};
+ writeFileSync(join(assets,'PROVENANCE.json'),JSON.stringify({schema_version:1,file_count:1,bundle_sha256:sha(Buffer.from(JSON.stringify(files)))}));
  return {pptMasterRoot:skill,projectRoot:project};
 }
+
+test('PPT optional preview omission delivers the valid main files through native present once with real download evidence',async()=>{
+ const f=await fixture();
+ try{
+  const project=join(f.root,'code/projects/deck'),output=join(f.root,'task');
+  mkdirSync(join(project,'svg_output'),{recursive:true});mkdirSync(join(output,'ppt-delivery-receipts'),{recursive:true});
+  mkdirSync(join(f.root,'outputs/code'),{recursive:true});
+  writeFileSync(join(project,'spec_lock.md'),'spec');writeFileSync(join(project,'delivery.json'),'{}');writeFileSync(join(project,'svg_output/one.svg'),'<svg/>');
+  const artifacts=['deck.pptx','deck.pdf','one.png'].map(name=>{
+   writeFileSync(join(f.root,'outputs/code',name),name);
+   return {path:'/work/outputs/'+name,bytes:name.length,sha256:sha(Buffer.from(name))};
+  });
+  const task={workspace:f.root,output,status:'running',request:{task_id:'a'.repeat(32)},
+   scene:{id:'ppt',ppt_execution_strategy:'ppt_master'},scene_options:{allow_output:true}};
+  const receipt={project:'/work/projects/deck',delivery_id:'current',mechanical_status:'passed',artifacts,
+   dependencies:deliveryDependencies(f.root,'/work/projects/deck','/work/projects/deck/delivery.json')};
+  writeFileSync(join(output,'ppt-delivery-receipts','a'.repeat(64)+'.json'),JSON.stringify(receipt));
+  registerPptDeliveryTool(f.ctx,()=>({task}));
+  const files=[...artifacts.map(({path})=>({path})),{path:'/work/outputs/missing-detail.png'}];
+  const result=await f.execute('present',{files},'ppt-main-with-missing-crop');
+  assert.equal(result.isError,false,JSON.stringify(result));assert.deepEqual(result.value.files,files.slice(0,3));
+  assert.match(JSON.stringify(result.content),/附加预览/);
+  const delivered=f.agent.session.snapshotEvents().filter(event=>event.type==='deliverables/presented');
+  assert.equal(delivered.length,1);assert.equal(delivered[0].data.callId,'ppt-main-with-missing-crop:current-files');
+  assert.deepEqual(delivered[0].data.files,files.slice(0,3));
+  assert.ok(f.events.some(event=>event.type==='geneloop/presented-proof'&&event.data.callId===delivered[0].data.callId&&event.data.files.length===3));
+  assert.doesNotMatch(JSON.stringify(f.events.filter(event=>event.type==='geneloop/presented-proof')),/missing-detail/);
+  writeFileSync(join(f.root,'outputs/code/deck.pptx'),'changed');
+  assert.equal((await f.execute('present',{files:files.slice(0,3)})).isError,true,'a changed main file still cannot be delivered');
+  assert.equal(f.agent.session.snapshotEvents().filter(event=>event.type==='deliverables/presented').length,1);
+ }finally{await f.close();}
+});
 
 test('only locked administrator ppt-master is published through the actual native skill tool',async()=>{
  const f=await fixture();try{
@@ -61,7 +96,8 @@ test('only locked administrator ppt-master is published through the actual nativ
   const resources=packageFixture(f.root),dispose=registerApprovedSkill(f.ctx,resources);
   assert.deepEqual((await f.ctx.skills.list({cwd:f.root})).map(row=>row.name),['ppt-master']);
   const loaded=await f.execute('skill',{name:'ppt-master'});assert.equal(loaded.isError,false);
-  assert.equal(loaded.value.resourceBase.path,'/opt/geneloop/ppt-master');assert.match(loaded.value.content,/Approved instructions/);
+  assert.equal(loaded.value.resourceBase.path,'/opt/geneloop/ppt-master');assert.match(loaded.value.content,/start_ppt/);
+  assert.doesNotMatch(loaded.value.content,/Approved instructions/);
   assert.doesNotMatch(JSON.stringify(loaded),new RegExp(f.root.replaceAll('\\','\\\\')));
   assert.equal((await f.execute('skill',{name:'unapproved'})).isError,true);
   dispose();assert.deepEqual(await f.ctx.skills.list(),[]);
@@ -77,6 +113,22 @@ test('approved PPT skill is scoped and disappears when its scene binding is disp
   assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(chat.ctx)}),[]);
   assert.deepEqual(await f.ctx.skills.list(),[]);
   dispose();assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(ppt.ctx)}),[]);
+ }finally{await ppt.dispose();await chat.dispose();await f.close();}
+});
+
+test('scene binding acquires skills in an injected agent plugin without leaking to chat',async()=>{
+ const f=await fixture({skillPlugin:true}),ppt=createScope(f.ctx,{}),chat=createScope(f.ctx,{});
+ let dispose;
+ try{
+  const plugin=ppt.ctx.plugin({name:'uninjected-agent-skill-binding',inject:[],apply(scoped){
+   assert.throws(()=>scoped.skills,/without inject/);
+   dispose=bindApprovedSkill(scoped,packageFixture(f.root));
+  }});
+  await plugin.await();
+  assert.deepEqual((await f.ctx.skills.list({scope:scopeOf(ppt.ctx)})).map(row=>row.name),['ppt-master']);
+  assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(chat.ctx)}),[]);
+  await dispose();
+  assert.deepEqual(await f.ctx.skills.list({scope:scopeOf(ppt.ctx)}),[]);
  }finally{await ppt.dispose();await chat.dispose();await f.close();}
 });
 
@@ -100,6 +152,8 @@ test('native todo_write permits parallel work and projects the latest list witho
 
 test('present only accepts output paths and emits immutable task-bounded proof paired with its native event',async()=>{
  const f=await fixture();try{
+  const invalid=await f.execute('present',{files:['/work/outputs/report.docx']});
+  assert.equal(invalid.isError,true);assert.match(JSON.stringify(invalid),/files.*path/,'wrong item shape must not be misreported as a file outside the workspace');
   const output=join(f.root,'outputs/code');mkdirSync(output,{recursive:true});writeFileSync(join(output,'report.docx'),'first bytes');
   for(const path of ['/home/private','/work/inputs/a.csv','/work/script.py','outputs/../inputs/a','C:\\secret','file:///work/outputs/a']){
    assert.throws(()=>nativePresentationPath(path));assert.equal((await f.execute('present',{files:[{path}]})).isError,true);

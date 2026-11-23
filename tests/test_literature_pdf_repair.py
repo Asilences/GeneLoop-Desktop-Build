@@ -189,7 +189,7 @@ def test_collection_requires_native_receipt_and_binds_audit(review_scene, monkey
     scene = repair(base)
     receipt = scene.submit_claim_repair(decisions(scene), 'A fixture hypothesis.')
     launcher = module(ROOT / 'scenarios/literature-notes/repair-pdf.py', 'repair_test_collector')
-    import src.adapters.dsh_trajectory as trajectory
+    import src.adapters.harness.dsh_trajectory as trajectory
     records = []
     monkeypatch.setattr(trajectory, 'extract_dsh_trace', lambda *a, **kw: SimpleNamespace(records=records))
     with tempfile.TemporaryDirectory(dir=ROOT / '.local/runs') as temporary:

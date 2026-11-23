@@ -15,8 +15,8 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.file_lock import exclusive_lock
-from src.adapters.trace_rsi_motif_compiler import compile_trace_rsi_motifs, CONFIG_FIELDS
-from src.adapters.trace_tool_evidence import digest
+from src.motif_core.offline.compilation.trace.trace_rsi_motif_compiler import compile_trace_rsi_motifs, CONFIG_FIELDS
+from src.motif_core.trajectory.trace_tool_evidence import digest
 import importlib.util
 spec=importlib.util.spec_from_file_location('trace_task_parent',ROOT/'scripts/paper-rsi-tool-learning.py')
 parent=importlib.util.module_from_spec(spec);spec.loader.exec_module(parent)
@@ -24,11 +24,11 @@ EXP=ROOT/'.local/paper-reference/paper-rsi-generated-task-shadow-20261011-v3'
 ORIGIN=ROOT/'.local/paper-reference/paper-rsi-overnight-20261011-v2'
 FROZEN=ROOT/'.local/paper-reference/paper-rsi-trace-tools-20261011-v3/frozen-tool.json'
 FILES=['src/adapters/file_lock.py','scripts/paper-rsi-generated-task.py','scripts/check-trace-rsi-task.mjs',
- 'scripts/paper-rsi-tool-learning.py','src/adapters/dsh_trace_rsi_shadow.ts',
- 'src/adapters/trace_rsi_motif_compiler.py','scenarios/paper-submission/trace-rsi-task-server.ts',
+ 'scripts/paper-rsi-tool-learning.py','src/adapters/harness/paper/dsh_trace_rsi_shadow.ts',
+ 'src/motif_core/offline/compilation/trace/trace_rsi_motif_compiler.py','scenarios/paper-submission/trace-rsi-task-server.ts',
  'src/adapters/trace_rsi_program.ts','src/adapters/paper_rsi_program.ts',
- 'src/adapters/paper_triage_validation.ts','src/adapters/dsh_online_motif.mjs',
- 'src/motif_core/online_skill_runtime.mjs','src/adapters/trace_tool_evidence.py']
+ 'src/adapters/paper_triage_validation.ts','src/adapters/harness/motif/dsh_online_motif.mjs',
+ 'src/motif_core/runtime/online_skill_runtime.mjs','src/motif_core/trajectory/trace_tool_evidence.py']
 PROMPT='''请修订本任务的论文参考文献分诊报告副本，目标是配对覆盖与当前稿件范围一致、没有重复或范围外条目。以当前冻结来源目录中的 query_items 为本轮范围；目录只代表源稿标识，不代表真实性已核验。已有条目除 arxiv_id 配对修正外，其余字段、字符串、数组内容和顺序必须原样保留，不重写 differences、source_urls、status、priority、formal_version 或 next_action；重复条目保留一份即可，报告其他顶层字段原样保留。缺失条目只新增 key、arxiv_id、status="待进一步核验" 的最小占位对象，不凭空生成事实、网址、正式版本或修复建议。自行检查修订结果。只操作本任务副本，不检查完整文献真实性，不联网。最终简短说明结构检查和语义限制。'''
 def load(p):return json.loads(Path(p).read_text())
 save,sha=parent.save,parent.sha
@@ -95,7 +95,7 @@ def task(case,mode,label):
         c['shadow_library']=str(EXP/'shadow-library.json')
         if not Path(c['shadow_library']).is_file():raise ValueError('freeze_library_before_evaluation')
     config_path=EXP/'runs'/label/'config.json'
-    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_trace_rsi\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/trace-rsi-task-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_TRACE_RSI_TASK_CONFIG: '+json.dumps(str(config_path))+'\n    - name: '+json.dumps((ROOT/'src/adapters/dsh_trace_rsi_shadow.ts').as_uri())+'\n'
+    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_trace_rsi\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/trace-rsi-task-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_TRACE_RSI_TASK_CONFIG: '+json.dumps(str(config_path))+'\n    - name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_trace_rsi_shadow.ts').as_uri())+'\n'
     parent.EXP=EXP;parent.FILES=FILES
     run=parent.paid(label,PROMPT,policy,c,['SSS_TRACE_RSI_TASK_CONFIG'])
     # Append actually effective bindings for evidence validation. Existing

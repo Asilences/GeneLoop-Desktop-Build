@@ -3,9 +3,9 @@ import copy
 
 import pytest
 
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import create_capability, create_capability_snapshot, capability_ref
-from src.adapters.capability_shape_diagnostics import composition_shape_advisories, diagnose_step_argument_shapes
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import create_capability, create_capability_snapshot, capability_ref
+from src.capability.builder.capability_shape_diagnostics import composition_shape_advisories, diagnose_step_argument_shapes
 
 
 def obj(fields):

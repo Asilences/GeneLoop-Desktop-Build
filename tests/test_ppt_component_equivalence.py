@@ -1,7 +1,7 @@
 """A small rendering drift cannot hide changed scientific text."""
 from PIL import Image
 
-from src.adapters.ppt_component_equivalence import compare_component_pages
+from src.adapters.ppt.learning.ppt_component_equivalence import compare_component_pages
 
 
 def page(directory, text, color='white'):
@@ -23,6 +23,31 @@ def test_identical_text_and_pixels_accept_svg_formatting_difference(tmp_path):
 def test_changed_number_fails_even_if_supplied_pixels_are_identical(tmp_path):
     result = compare_component_pages(page(tmp_path / 'reference', 'Accuracy 93.2'), page(tmp_path / 'actual', 'Accuracy 99.2'))
     assert result['passed'] is False and result['visible_text_exact'] is False
+    assert result['visible_text_differences'] == [
+        {'index': 0, 'reference': 'Accuracy 93.2', 'actual': 'Accuracy 99.2', 'truncated': False}]
+
+
+def test_functional_trial_records_quality_differences_without_pretending_source_preservation(tmp_path):
+    reference = page(tmp_path/'reference','Accuracy 93.2')
+    actual = page(tmp_path/'actual','Accuracy 99.2','black')
+    result = compare_component_pages(reference,actual,'functional_trial_v1')
+    assert result['passed'] and result['quality_deferred']
+    assert not result['source_preservation_passed'] and not result['visible_text_exact']
+    assert result['pixel_mae']==255 and result['visible_text_mismatch_count']==1
+    assert not compare_component_pages(reference,actual)['passed']
+
+
+def test_feedback_reports_missing_nodes_and_bounds_long_example_text(tmp_path):
+    reference = page(tmp_path / 'reference', 'x' * 900)
+    actual = page(tmp_path / 'actual', 'changed')
+    path = reference / 'page.svg'
+    path.write_text(path.read_text().replace('</svg>', '<text>required qualifier</text></svg>'))
+    result = compare_component_pages(reference, actual)
+    assert not result['passed'] and result['visible_text_node_counts'] == [2, 1]
+    assert result['visible_text_mismatch_count'] == 2
+    assert len(result['visible_text_differences'][0]['reference']) == 512
+    assert result['visible_text_differences'][0]['truncated']
+    assert result['visible_text_differences'][1]['actual'] is None
 
 
 def test_changed_page_render_fails_with_identical_text(tmp_path):

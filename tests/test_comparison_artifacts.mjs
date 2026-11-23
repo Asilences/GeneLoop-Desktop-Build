@@ -3,8 +3,26 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync,symlinkSync,utimesSync} from 'node:fs';
 import {join,resolve,sep} from 'node:path';
 import {tmpdir} from 'node:os';
-import {comparisonArtifacts,verifiedReportFiles,verifiedReviewFiles,captureComparisonDeliveries} from '../src/adapters/harless_comparison_artifacts.ts';
+import {comparisonArtifacts,verifiedReportFiles,verifiedReviewFiles,captureComparisonDeliveries} from '../src/adapters/web/tasks/harless_comparison_artifacts.ts';
 import {createHash} from 'node:crypto';
+
+test('host verified PPT outputs survive scratch-file limits without a model present call',()=>{
+ const root=mkdtempSync(join(tmpdir(),'paired-managed-ppt-'));try{
+  const work=join(root,'work'),code=join(work,'outputs/code');mkdirSync(code,{recursive:true});
+  for(let i=0;i<40;i++)writeFileSync(join(code,`a-${i}.png`),'scratch');
+  const pptx=join(code,'z-final.pptx'),pdf=join(code,'z-final.pdf');writeFileSync(pptx,'deck');writeFileSync(pdf,'preview');
+  const hash=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
+  const proof=new Map([[pptx,hash(pptx)],[pdf,hash(pdf)]]);
+  const service=comparisonArtifacts(root),context={lane:'baseline',attempt:0,workspace:work,adapter:'ppt',status:'completed',
+   startedAt:new Date(0).toISOString(),finishedAt:new Date(Date.now()+1000).toISOString(),managedPptFiles:proof};
+  const rows=captureComparisonDeliveries(service,{...context,turn:'managed'});
+  assert.deepEqual(rows.map(r=>r.name),['outputs/code/z-final.pptx','outputs/code/z-final.pdf']);
+  assert.equal(service.read('managed','baseline',rows[0]).toString(),'deck');
+  writeFileSync(pptx,'tampered');
+  assert.ok(captureComparisonDeliveries(service,{...context,turn:'changed'}).every(r=>!r.name.endsWith('.pptx')));
+  assert.equal(service.read('managed','baseline',rows[0]).toString(),'deck','old snapshots stay immutable');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
 
 test('Fresh command outputs are downloadable across scenes without certifying drafts or exposing runtime JSON',()=>{
  const root=mkdtempSync(join(tmpdir(),'paired-code-output-'));try{

@@ -5,11 +5,11 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
-import {artifactLocks,identity,hash} from '../src/adapters/artifact_motif_runtime.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {artifactLocks,artifactRuntimePolicy,identity,hash} from '../src/adapters/artifact_motif_runtime.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {buildArtifactCapabilities,runArtifactCapability} from '../src/adapters/artifact_capability_runtime.ts';
-import {capabilityDigest,capabilityRef} from '../src/adapters/capability_contract.ts';
-import {pptPublicCapabilities,pptPublicCatalog} from '../src/adapters/ppt_capability_online.ts';
+import {capabilityDigest,capabilityRef} from '../src/capability/graph/capability_contract.ts';
+import {pptPublicCapabilities,pptPublicCatalog} from '../src/adapters/ppt/runtime/ppt_capability_online.ts';
 const root=resolve(import.meta.dirname,'..');
 const save=(path,value)=>writeFileSync(path,JSON.stringify(value));
 function fixture(){
@@ -41,6 +41,27 @@ test('native catalog checks original code locks, exact bytes and owner identity'
  assert.throws(()=>buildArtifactCapabilities(f.library,'owner','0'.repeat(64)),/library_changed/);
  const changed=JSON.parse(before);changed.code_locks[artifactLocks[0]]='0'.repeat(64);
  const {digest:old,...body}=changed;save(f.library,{...body,digest:digest(body)});
+ assert.throws(()=>buildArtifactCapabilities(f.library,'owner'),/artifact_code_changed/);
+});
+test('the reviewed original library admits the same certified program and requires exact source hashes',()=>{
+ const f=fixture(),{digest:unused,...body}=JSON.parse(readFileSync(f.library,'utf8'));
+ const {transitions}=artifactRuntimePolicy();
+ assert.ok(transitions.length>=3);
+ const replacements=new Set();
+ for(const {path,current_path=path,from_sha256,to_sha256} of transitions){
+  if(replacements.has(current_path))continue;
+  assert.equal(body.code_locks[current_path],to_sha256);
+  delete body.code_locks[current_path];
+  body.code_locks[path]=from_sha256;
+  replacements.add(current_path);
+ }
+ const put=()=>save(f.library,{...body,digest:digest(body)});put();
+ const historical=readFileSync(f.library);
+ const catalog=buildArtifactCapabilities(f.library,'owner',hash(historical));
+ assert.equal(catalog.capabilities[0].implementation.legacy_ref.object_id,f.catalog.capabilities[0].implementation.legacy_ref.object_id);
+ assert.deepEqual(readFileSync(f.library),historical);
+ const unrelated=artifactLocks.find(path=>!replacements.has(path));
+ body.code_locks[unrelated]=transitions[0].from_sha256;put();
  assert.throws(()=>buildArtifactCapabilities(f.library,'owner'),/artifact_code_changed/);
 });
 test('revoked permission, changed input and foreign registry fail before native dispatch',async()=>{

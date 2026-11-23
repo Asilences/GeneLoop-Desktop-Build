@@ -1,7 +1,7 @@
 /** Explicit experiment wrapper; ordinary production entry and libraries stay intact. */
 import {readFileSync,readdirSync,appendFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import * as native from './harless_web_client/index.mjs';
+import * as native from './web/client/index.mjs';
 import {loadArtifactLibrary,registerArtifactContext,provideArtifactPrograms,artifactProgramPath} from './artifact_motif_runtime.ts';
 import {createArtifactTrace} from './artifact_motif_trace.ts';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';

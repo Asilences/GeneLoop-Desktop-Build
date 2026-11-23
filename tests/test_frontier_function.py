@@ -3,7 +3,7 @@ import pytest
 import os,sys,json
 from pathlib import Path
 from scenarios.paper_proofreading.frontier.learn import executable_source
-from src.adapters.script_motif_compiler import compile_script
+from src.motif_core.offline.compilation.script_motif_compiler import compile_script
 
 
 def test_host_encodes_json_IO_and_preserves_the_model_function_body():
@@ -60,7 +60,7 @@ native=(sys.platform=='linux' and Path('/usr/bin/bwrap').exists() and os.environ
 @pytest.mark.parametrize('mode',['json','paths'])
 def test_function_entrypoint_is_actually_sandboxed_and_certified_on_distinct_inputs(tmp_path,mode):
     from scenarios.paper_proofreading.frontier.learn import learn
-    from src.adapters.capability_scene import reference
+    from src.adapters.harness.capability.capability_scene import reference
     cases=[]
     for i in range(2):
         inputs=[]

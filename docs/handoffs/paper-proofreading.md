@@ -1,3 +1,7 @@
+## 2026-11-22 论文 Motif 运行库整理
+
+当前注册的论文 Web Motif 运行包为 `motif-libraries/paper-web`，发布验证使用这个版本。历史版本留在 Git 提交 `b4ddf02c`，历史兼容重导出脚本已退役，复现旧发布时使用对应 Git 提交的完整检出。以后升级在同一次变更中替换旧包和更新引用。
+
 ## 2026-11-05 组合输入与反馈连续性审议
 
 - 修正 `bf15185a` 的过度启动限制。真实执行经历可以独立调查，Capability/Builder清单可选；`--require-builder-evidence`仅用于专项输入检查。当前论文入口准确标为Task Strategy Pilot，`construction_strategy`仍等待真实Builder评价器。
@@ -26,6 +30,8 @@
 - 证据与权限。见[正式实验](../experiments/paper-evolution-20261105-001.md)及[集中调试](../debug/evolution-artifact-routing-20261105.md)。费用/请求null授权、账本与生产不改；GitHub job因付款/消费额度未启动，不能标CI通过。
 
 # 论文校对 当前交接
+
+> 2026-11-08 本地原生接入候选：Web 的 24 项论文工具由 Harness 注册，Session preset 无论文 MCP；检查业务按需 Python，结构修订直接 TypeScript。合成稿 Kouri Baseline 3 次真实工具调用/0 错误、4 请求，引用原句和来源哈希、给出正确修订；引用批次跨调用与报告导出另经零模型验证。旧证书需按新执行器重新认证，尚未验证后继复用与净收益，正式服务未切换。详见[主线交接](main.md)。
 
 ## 2026-11-05 当前审议入口（修订3，待用户核查）
 

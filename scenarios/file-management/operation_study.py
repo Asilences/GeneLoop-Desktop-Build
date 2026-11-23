@@ -7,7 +7,7 @@ sys.path.insert(0,str(ROOT))
 from operation_prepare import prepare_case
 from experiment import accounting
 from src.adapters.continuous_rsi import source_map,records
-from src.motif_core.offline.experience_registry import read
+from src.motif_core.reuse.experience_registry import read
 
 def prepare():
     exp=ROOT/'.local/file-management'/('fm-operation-rsi-20261015-'+uuid4().hex[:8]);exp.mkdir(mode=0o700)

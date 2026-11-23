@@ -1,0 +1,79 @@
+{
+  "total": 9,
+  "passed": 9,
+  "rows": [
+    {
+      "id": "builder-semantic",
+      "passed": true,
+      "test_doubles": [],
+      "seconds": 9.50239170808345
+    },
+    {
+      "id": "builder-reject",
+      "passed": true,
+      "test_doubles": [],
+      "seconds": 1.7003768403083086
+    },
+    {
+      "id": "goal-semantic",
+      "passed": true,
+      "test_doubles": [
+        "model Provider",
+        "budget gate"
+      ],
+      "seconds": 3.079363763332367
+    },
+    {
+      "id": "goal-reject",
+      "passed": true,
+      "test_doubles": [
+        "model Provider",
+        "budget gate"
+      ],
+      "seconds": 1.5756056094542146
+    },
+    {
+      "id": "construction-history",
+      "passed": true,
+      "test_doubles": [],
+      "seconds": 3.292178940027952
+    },
+    {
+      "id": "evolution-request-and-tool-result",
+      "passed": true,
+      "test_doubles": [
+        "model callback"
+      ],
+      "seconds": 17.404186913743615
+    },
+    {
+      "id": "online-manifest-public-gate",
+      "passed": true,
+      "test_doubles": [
+        "certified artifact assembly"
+      ],
+      "seconds": 2.9186358684673905
+    },
+    {
+      "id": "efficiency-registry-public-gate",
+      "passed": true,
+      "test_doubles": [
+        "prepared registry assembly"
+      ],
+      "seconds": 1.5138998366892338
+    },
+    {
+      "id": "operation-library-export-before-write",
+      "passed": true,
+      "test_doubles": [
+        "synthetic registry and workspace root"
+      ],
+      "seconds": 2.986202633008361
+    }
+  ],
+  "source_sha256": "428b5d883ad53206940f46d0239ac8b397a4b684f8a2894ce2f7942fa662b2c6",
+  "scope": "supplemental entry wiring; real privacy kernel; synthetic inputs and declared test doubles",
+  "benchmark_records_added": 0,
+  "cloud_requests": 0,
+  "production_service_touched": false
+}

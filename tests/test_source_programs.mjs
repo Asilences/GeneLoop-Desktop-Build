@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 const options={skip:!process.features?.typescript};
 test('source program binds new structured parameters and preserves literal strings',options,async()=>{
- const {materializeSource,sourceProgramIdentity}=await import('../src/adapters/source_program_runtime.ts');
+ const {materializeSource,sourceProgramIdentity}=await import('../src/capability/runtime/source_program_runtime.ts');
  const p={format:'parameterized_source_program_v1',language:'tsx',template:'const p=__GENELOOP_PARAMETERS__; console.log(p);',
   parameters_schema:{type:'object',properties:{label:{type:'string'},start:{type:'number'}},required:['label','start'],additionalProperties:false}};
  p.id='source_'+digest(sourceProgramIdentity(p)).slice(0,24);
@@ -15,7 +15,7 @@ test('source program binds new structured parameters and preserves literal strin
  assert.throws(()=>materializeSource({...p,template:p.template+'changed'},args),/source_program_changed/);
 });
 test('default binding replaces complete current fields while preserving frozen style defaults',options,async()=>{
- const {materializeSource,sourceProgramIdentity}=await import('../src/adapters/source_program_runtime.ts');
+ const {materializeSource,sourceProgramIdentity}=await import('../src/capability/runtime/source_program_runtime.ts');
  const p={format:'parameterized_source_program_v1',language:'tsx',template:'const p=__GENELOOP_PARAMETERS__;',
   default_parameters:{label:'old',segments:[1,2],style:{size:10,color:'blue'}},
   parameters_schema:{type:'object',properties:{label:{type:'string'},segments:{type:'array',items:{type:'number'}},style:{type:'object'}},required:['label','segments','style'],additionalProperties:false}};
@@ -28,13 +28,13 @@ test('default binding replaces complete current fields while preserving frozen s
  assert.throws(()=>materializeSource(p,{segments:'wrong'},'defaults'),/parameters_invalid/);
 });
 test('implementation evidence exposes actual control flow only when the form requests it',options,async()=>{
- const {sourceCatalog}=await import('../src/adapters/source_program_runtime.ts');
+ const {sourceCatalog}=await import('../src/capability/runtime/source_program_runtime.ts');
  const program={id:'fixture',description:'Two examples',language:'tsx',template:'P.items.map(render)',parameters_schema:{type:'object'},default_parameters:{items:[1,2]}};
  assert.equal(sourceCatalog({programs:[program]})[0].template,undefined);
  assert.equal(sourceCatalog({programs:[program]},true)[0].template,'P.items.map(render)');
 });
 test('nullable schemas use the Harness supported oneOf contract with clear dialect errors',options,async()=>{
- const {materializeSource,sourceProgramIdentity}=await import('../src/adapters/source_program_runtime.ts');
+ const {materializeSource,sourceProgramIdentity}=await import('../src/capability/runtime/source_program_runtime.ts');
  const p={format:'parameterized_source_program_v1',language:'tsx',template:'const p=__GENELOOP_PARAMETERS__;',
   parameters_schema:{type:'object',properties:{maximum:{type:['number','null']}},required:['maximum']}};
  p.id='source_'+digest(sourceProgramIdentity(p)).slice(0,24);
@@ -46,7 +46,7 @@ test('nullable schemas use the Harness supported oneOf contract with clear diale
  assert.throws(()=>materializeSource(p,{maximum:'24'}),/parameters_invalid/);
 });
 test('library exposure retrieves by task metadata without changing the certified pool',options,async()=>{
- const {selectSourcePrograms}=await import('../src/adapters/source_program_runtime.ts');
+ const {selectSourcePrograms}=await import('../src/capability/runtime/source_program_runtime.ts');
  const programs=[
   {id:'table',description:'Aggregate numeric table totals',parameters_schema:{properties:{rows:{type:'array'}}}},
   {id:'photo',description:'Crop images into a chosen rectangle',parameters_schema:{properties:{width:{type:'number'}}}},
@@ -59,7 +59,7 @@ test('library exposure retrieves by task metadata without changing the certified
  assert.equal(selectSourcePrograms({programs},'Crop images','all'),programs);
 });
 test('unmatched retrieval retains the pool and unsupported scopes have clear errors',options,async()=>{
- const {selectSourcePrograms}=await import('../src/adapters/source_program_runtime.ts');
+ const {selectSourcePrograms}=await import('../src/capability/runtime/source_program_runtime.ts');
  const programs=[{id:'a',description:'Crop images',parameters_schema:{}},{id:'b',description:'Mix audio',parameters_schema:{}}];
  assert.equal(selectSourcePrograms({programs},'zebra','lexical_top1'),programs);
  assert.throws(()=>selectSourcePrograms({programs},'zebra','unknown'),/scope_unsupported/);

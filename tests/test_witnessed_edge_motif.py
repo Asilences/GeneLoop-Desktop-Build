@@ -6,13 +6,13 @@ import unittest
 import hashlib
 import json
 
-from src.adapters.dsh_trajectory import DshTrace, ToolContract, ToolRecord
-from src.motif_core.offline.edge_compiler import (
+from src.adapters.harness.dsh_trajectory import DshTrace, ToolContract, ToolRecord
+from src.motif_core.offline.compilation.edge_compiler import (
     certify_witnessed_edge_motif, compile_witnessed_edge_motif,
     count_safe_edge_witnesses,
 )
-from src.motif_core.handoff import SemanticResolution
-from src.motif_core.read_executor import resume_read_motif, run_read_motif
+from src.motif_core.runtime.handoff import SemanticResolution
+from src.motif_core.runtime.read_executor import resume_read_motif, run_read_motif
 
 
 CONTRACTS = {

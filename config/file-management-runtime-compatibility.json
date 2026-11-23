@@ -3,10 +3,67 @@
   "new_certification": false,
   "original_catalog_sha256": "f10c3a221aeb27f6846f35c4a6d2dcae07ba5a4da092cca92b29684fd0fda262",
   "runtime_validators": {
-    "src/motif_core/online_skill_runtime.mjs": "7d26af278af8e231fea1e28ddad4b9ce75afdbf871e85ee85892a9419fe2ef2d",
-    "src/motif_core/collection_read_policy.ts": "87fff039cc317364c3ab85cd240e7d7bef321c76d87de103f1fdb480ba183a9d",
-    "src/motif_core/collection_reentry_policy.ts": "caaa25beb2a41714e14b7501673c8e579e391819d02d7e22cc7f2d5844364355",
-    "src/motif_core/authorized_plan_policy.ts": "7cda12b995586cdab57d176b214f139c3661f24f94bafa5f11d1c9052b2c6632"
+    "src/motif_core/online_skill_runtime.mjs": {
+      "path": "src/motif_core/runtime/online_skill_runtime.mjs",
+      "sha256": "878efa7c83c7a9a0dfd8c44082838bba247f6d59d7a62fb3f3acd0c96175dbc0"
+    },
+    "src/motif_core/collection_read_policy.ts": {
+      "path": "src/motif_core/runtime/policies/collection_read_policy.ts",
+      "sha256": "2a27a24f67e1634a03c486c96ff29f2ad4f677aa934c5d8861bb3e7a327b0b1a"
+    },
+    "src/motif_core/collection_reentry_policy.ts": {
+      "path": "src/motif_core/runtime/policies/collection_reentry_policy.ts",
+      "sha256": "519dcc0e5a907c006c3f0baa733668fa96fea8f74780efe47568bb3aadfb23b4"
+    },
+    "src/motif_core/authorized_plan_policy.ts": {
+      "path": "src/motif_core/runtime/policies/authorized_plan_policy.ts",
+      "sha256": "2dc551062cdc594b9b237e4a33470de0e5a10bcbd07c890d50ef62c2c42bed69"
+    },
+    "src/adapters/file_approval_bridge.ts": {
+      "path": "src/adapters/file_management/file_approval_bridge.ts",
+      "sha256": "3fc266c9aafc1adf2fcd8997b6e8bb298f7378d7b403df9172a5827ac53284bd"
+    },
+    "src/adapters/file_decision_checkpoint.ts": {
+      "path": "src/adapters/file_management/file_decision_checkpoint.ts",
+      "sha256": "0178bac4327e889b9aa6a0b15be1d382e4d687fba2ab5bd98b35f60e3af4b08d"
+    },
+    "src/adapters/file_event_projection.ts": {
+      "path": "src/adapters/file_management/file_event_projection.ts",
+      "sha256": "875191cf53fca2ed509466aac7fc4af87783a6d2a39791114458ce18965fcda9"
+    },
+    "src/adapters/file_recovery_state.ts": {
+      "path": "src/adapters/file_management/file_recovery_state.ts",
+      "sha256": "696c1d48bd82bd6ca885102d83c13372514832c0b1d420cc947d039278f02b4b"
+    }
   },
-  "validation": "Original signed payloads preserved; current validators re-export and validate unchanged programs; no new execution certificate or activation. See docs/experiments/motif-matching-cleanup-20261030-v1.md."
+  "validation": "Original signed payloads preserved. Runtime validator paths and SHA-256 values reflect the reviewed relocation into Motif Core.",
+  "execution_versions": {
+    "c02443e00133680a56ebb816f7a3704f9ffa746929ba9413bdce72ad8b3e6ffc": "808adb2200365ef27fe06a3cf8c059047bd6c1b40002f0c43cfc8061bc356f49",
+    "725e402d4f06ee97139a7b89881efe48e7425c1c899696a226e44550d780a1d5": "2c5d8c98936c3113c02a86f8fbc1c8276bce894cd6b64a08a9099e7bcaca3b41",
+    "9bbae92e665d2ad6583092f34643c2d7880633923349c50356a7b27868a0e338": "f9dbd06c425d7e184fc133640b586c0ae02af09c1285b72278a2c95d8ed3b632",
+    "2586e9d28773a87e31c681ad301023f62d2ab449256869c9a4b6366cd067f95d": "808adb2200365ef27fe06a3cf8c059047bd6c1b40002f0c43cfc8061bc356f49"
+  },
+  "durable_plan": {
+    "schema_version": 1,
+    "current_entry_sha256": "f3a204aefd4ea1b940cc910800f47b7b1c9d4911e4d254411c2f92f8a72c3229",
+    "current_gate_sha256": "d998d329385ad073c7e695a992263ad6cc64023fe369994ef123d2c974a1b7f1"
+  },
+  "enrollment_source_relocations": [
+    {
+      "before_sha256": "6d28351c3d9c331ae0db52b0a0a60883cef12644ba2f05f1834d1850b293ca64",
+      "after_sha256": "3add78d0dcf4bb44eb0062d00d62d3bd8a0f01388698e96804c85da090f855db"
+    },
+    {
+      "before_sha256": "f37c76066e3e49d4c8ae43b37b19cd629d4e88a8789525dc22a429ec2d938234",
+      "after_sha256": "3add78d0dcf4bb44eb0062d00d62d3bd8a0f01388698e96804c85da090f855db"
+    },
+    {
+      "before_sha256": "481531fac189a648fc89122b2dad157883c6d4914fb9630663116c58aa6b4ff3",
+      "after_sha256": "3add78d0dcf4bb44eb0062d00d62d3bd8a0f01388698e96804c85da090f855db"
+    },
+    {
+      "before_sha256": "f93f93202209ccccbe55d55270097a05dbf44234393242ae70bfa1756e080025",
+      "after_sha256": "4f2567c7194bf3d54b9e8d76cfff62363361c1dcdfad6f67a8adcc4334a3fa93"
+    }
+  ]
 }

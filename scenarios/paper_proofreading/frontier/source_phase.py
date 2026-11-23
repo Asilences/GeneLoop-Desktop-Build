@@ -1,8 +1,8 @@
 """Initial L0 primitive construction; real model, then actual native admission."""
 import argparse,json,sys
 from pathlib import Path
-from src.adapters.capability_scene import reference,ROOT
-from src.adapters.capability_improvement import save,evidence
+from src.adapters.harness.capability.capability_scene import reference,ROOT
+from src.rsi.learning.capability_improvement import save,evidence
 from scenarios.paper_proofreading.frontier.author import propose
 from scenarios.paper_proofreading.frontier.budget import FrontierGate
 from scenarios.paper_proofreading.frontier.learn import learn

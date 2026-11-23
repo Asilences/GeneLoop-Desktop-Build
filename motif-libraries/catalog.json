@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
   "scenes": {
-    "ppt": "ppt-master-v3",
+    "ppt": "ppt-master",
     "research-data-analysis": "data",
-    "paper-proofreading": "paper-web-v8"
+    "paper-proofreading": "paper-web",
+    "files": "file-management"
   },
-  "notice": "三种网页对照场景的 Motif 默认 Execute；PPT 与 Paper 使用经独立轨迹认证的读取库，Data 使用已有回执续接库。历史 Shadow 库保留。结构与兼容认证不构成科研质量或节省效果认证。"
+  "notice": "当前公共运行包索引。工具接线、运行许可和认证状态以场景注册表及实际部署为准。"
 }

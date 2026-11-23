@@ -2,8 +2,8 @@
 import argparse,json,signal,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from src.adapters.capability_improvement import read,run_improvement,validate
-from src.adapters.capability_scene import load_scene_adapter
+from src.rsi.learning.capability_improvement import read,run_improvement,validate
+from src.adapters.harness.capability.capability_scene import load_scene_adapter
 
 
 def main():

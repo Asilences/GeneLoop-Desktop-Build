@@ -8,9 +8,9 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.adapters.dsh_trajectory import DshTrace
+from src.adapters.harness.dsh_trajectory import DshTrace
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.motif_core.offline.library_builder import (
+from src.motif_core.offline.compilation.library_builder import (
     build_read_motif_library, validate_read_motif_library,
 )
 

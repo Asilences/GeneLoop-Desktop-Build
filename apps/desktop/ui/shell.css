@@ -1,5 +1,8 @@
-:root { color-scheme: light; --chrome-bg:#f7f7f8; --chrome-ink:#171719; --surface:#fff; --muted:#73737b; --line:#e1e1e5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; color:var(--chrome-ink); background:var(--chrome-bg); }
-:root[data-dark=true] { color-scheme:dark; --surface:#242424; --muted:#a1a1a8; --line:#3b3b3e; }
+@font-face{font-family:'GL Sans';src:url('../assets/brand/IBMPlexSans-Roman.ttf') format('truetype');font-weight:100 900;font-display:swap}
+@font-face{font-family:'GL Chinese';src:url('../assets/brand/NotoSansSC.ttf') format('truetype');font-weight:100 900;font-display:swap}
+:root { color-scheme: light; --chrome-bg:#f5f7f7; --chrome-ink:#272b2e; --surface:#fafbfb; --muted:#6b7378; --line:#d9dddf; font-family:'GL Sans','GL Chinese',"Segoe UI",sans-serif; font-synthesis:none; color:var(--chrome-ink); background:var(--chrome-bg); }
+:root[data-dark=true] { color-scheme:dark; --surface:#191e20; --muted:#a2aaae; --line:#383f43; }
+:root[data-dark=true] .logo{filter:brightness(0) invert(.93)}
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; padding-top: 32px; display: grid; place-items: center; }
 header { position: fixed; top: 0; left: 0; right: 0; height: 32px; padding: 0 144px 0 10px; display: flex; align-items: center; background:var(--chrome-bg); -webkit-app-region: drag; }
@@ -18,7 +21,7 @@ p { line-height: 1.65; }
 button { width:100%; border:0; border-radius:12px; padding:13px 18px; background:var(--chrome-ink); color:var(--chrome-bg); font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
 button:hover { opacity:.85; }
 button:disabled { opacity: .55; cursor: wait; }
-button:focus-visible, input:focus-visible { outline: 2px solid #82b6ff; outline-offset: 4px; }
+button:focus-visible, input:focus-visible { outline: 2px solid #ad4c39; outline-offset: 4px; }
 .text-button { color:var(--muted); background:transparent; margin-top:10px; font-weight:400; }
 .text-button:hover { color:var(--chrome-ink); background:var(--surface); }
 form { text-align: left; margin-top: 28px; }
@@ -30,3 +33,6 @@ input { width:100%; background:var(--surface); color:var(--chrome-ink); border:1
 [hidden] { display: none !important; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .progress { animation: none; } }
+
+@font-face{font-family:"GL Mono";src:url("../assets/brand/IBMPlexMono-Regular.ttf");font-weight:400;font-display:swap}
+header nav{font-family:"GL Mono","GL Chinese",monospace}header button{border-radius:0}button,input{border-radius:2px}

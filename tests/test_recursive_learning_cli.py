@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_contract import capability_ref
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref
-from src.adapters.capability_motif_learning import learn_capability_motifs
+from src.capability.graph.capability_contract import capability_ref
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref
+from src.rsi.learning.capability_motif_learning import learn_capability_motifs
 from tests.test_capability_evolution_runtime import graph, native, put
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,7 +38,7 @@ def test_preview_checks_evidence_without_mining_and_freezes_actual_sources(tmp_p
     assert result['status'] == 'preview' and result['model_requests'] == 0 and result['candidates'] == []
     effective = json.loads(Path(result['effective']['path']).read_bytes())
     assert effective['execute'] is False and effective['owner'] == 'rae-cli'
-    assert 'src/motif_core/offline/trace_compiler.py' in effective['code_sha256']
+    assert 'src/motif_core/offline/compilation/trace_compiler.py' in effective['code_sha256']
     assert not (tmp_path / 'preview' / 'learning.json').exists()
     with pytest.raises(FileExistsError):
         entry.run_manifest(manifest, tmp_path / 'preview', private_root=tmp_path)

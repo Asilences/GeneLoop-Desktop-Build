@@ -6,11 +6,11 @@ import {join,resolve,dirname} from 'node:path';
 import {tmpdir} from 'node:os';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {artifactLocks,identity,hash} from '../src/adapters/artifact_motif_runtime.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {buildArtifactCapabilities} from '../src/adapters/artifact_capability_runtime.ts';
-import {capabilityRef,capabilityDigest} from '../src/adapters/capability_contract.ts';
-import {publicPptValidationTask} from '../src/adapters/ppt_capability_broker.ts';
-import {preparePptProgramJob} from '../src/adapters/ppt_program_broker.ts';
+import {capabilityRef,capabilityDigest} from '../src/capability/graph/capability_contract.ts';
+import {publicPptValidationTask} from '../src/adapters/ppt/runtime/ppt_capability_broker.ts';
+import {preparePptProgramJob} from '../src/adapters/ppt/runtime/ppt_program_broker.ts';
 import {startCommandBroker} from '../src/adapters/geneloop_command_broker.ts';
 
 const root=resolve(import.meta.dirname,'..'),python=process.env.SSS_PURE_CODE_PYTHON??process.env.SSS_PYTHON;
@@ -37,7 +37,7 @@ function fixture(t){
  const proposal={format:'capability_compose_proposal_v1',owner,contract:native.contract,
   steps:[{id:'page',capability:capabilityRef(native),arguments:{kind:'input',path:[]}}],output:{kind:'step',step_id:'page',path:[]}};
  const compiled=JSON.parse(execFileSync(python,['-c',
-  'import json,sys;from src.adapters.capability_builder import compile_proposal;x=json.load(sys.stdin);print(json.dumps(compile_proposal(x["proposal"],x["snapshot"],x["owner"])))'],
+  'import json,sys;from src.capability.builder.capability_builder import compile_proposal;x=json.load(sys.stdin);print(json.dumps(compile_proposal(x["proposal"],x["snapshot"],x["owner"])))'],
   {cwd:root,input:JSON.stringify({proposal,snapshot:catalog.snapshot,owner}),encoding:'utf8'}));
  const proof=join(output,'host-proof.json');save(proof,{diagnostic:true});
  const pointer={user:owner,scope,phase:'probation',library:'program-'+'b'.repeat(24)+'/library.json',library_sha256:sha(library),

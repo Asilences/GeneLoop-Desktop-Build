@@ -2,11 +2,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureBrowser } from '@remotion/renderer';
 import {installNativePythonDeps} from './native-python-deps.mjs';
+import {prepareNativeExtras} from './prepare-native-extras.mjs';
+import {stageRsiPrivacy} from './stage-rsi-privacy.mjs';
 
 assert.equal(process.platform,'darwin','此准备步骤必须在真实 macOS 上执行。');
 const app = fileURLToPath(new URL('../',import.meta.url)),repo = resolve(app,'../..');
@@ -17,10 +19,6 @@ const targets = {
   x64:{cpu:'x86_64',officeCpu:'x86-64',officeSha:'0af062779cc17f6f852918b2424c745f7dd2d20d51d7fb8a0925eb92ec0417a7',sha:'37c38fda76fec1fbf310adcbafb7f0d96af13b5511bf8ea954c3aa8eec185734'},
 };
 const target=targets[process.arch];assert.ok(target,'不支持此 Mac 架构。');
-// The installable skill lives under skills/ppt-master, not the repository root.
-// Preserve the existing byte lock instead of replacing it with a nearby tag.
-const pptMaster={commit:'440557b8dc7c7257b69c04a0b014d5c50a78e6cb',
-  archiveSha256:'080565fa68ab0cf4c8f75dbb3e0095a8ddd636298766bea394a9daf21c94de4d'};
 function run(bin,args,options={}) {
   const result=spawnSync(bin,args,{cwd:repo,stdio:'inherit',...options});
   if(result.error) throw result.error;
@@ -32,37 +30,54 @@ async function download(url,path,expected) {
   assert.equal(hash,expected,'下载包校验和不匹配');
 }
 const pythonArchive=join(root,'python.tar.gz');
+const reusePython=process.env.GENELOOP_REUSE_VERIFIED_PYTHON==='1';
+if(reusePython){
+  // Reuse only the earlier published, per-file verified Python for this exact
+  // platform. The current dependency profile below still checks every pin.
+  const {prepareInstallerCodec}=await import('./prepare-installer-codec.mjs');
+  const {ToolPackStore}=await import('../dist/tool-pack-store.js');
+  const catalog=JSON.parse(readFileSync(join(repo,'.github/desktop-tool-inputs/darwin-'+process.arch+'-tool-packs.json'),'utf8'));
+  assert.equal(catalog.platform,process.platform);assert.equal(catalog.arch,process.arch);
+  const codecRoot=join(root,'python-input-codec');await prepareInstallerCodec(app,codecRoot);
+  const store=new ToolPackStore(catalog,{home:join(root,'verified-python-input'),codecDirectory:codecRoot,change(){}});
+  await store.prepare(['python']);
+  cpSync(join(store.tools,'python'),join(root,'python'),{recursive:true,verbatimSymlinks:true});
+  writeFileSync(join(root,'python-input-receipt.json'),JSON.stringify({toolsetId:catalog.toolsetId,
+    python:catalog.packages.find(p=>p.id==='python').sha256,filesVerified:true,source:catalog.baseUrl}));
+}else{
 await download('https://github.com/astral-sh/python-build-standalone/releases/download/20261026/'+
   'cpython-3.12.16%2B20261026-'+target.cpu+'-apple-darwin-install_only_stripped.tar.gz',pythonArchive,target.sha);
 if(!existsSync(join(root,'python')))run('python3',['-c',
   "import tarfile,sys;tarfile.open(sys.argv[1]).extractall(sys.argv[2],filter='data')",pythonArchive,root]);
-const python=join(root,'python/bin/python3');
-installNativePythonDeps(python,app);
-
-const skill=join(root,'ppt-master');
-if(!existsSync(skill)) {
-  const archive=join(root,'ppt-master-'+pptMaster.commit+'.tar.gz');
-  await download('https://codeload.github.com/hugohe3/ppt-master/tar.gz/'+pptMaster.commit,archive,pptMaster.archiveSha256);
-  const extracted=join(root,'upstream');mkdirSync(extracted,{recursive:true});
-  run(python,['-c',"import tarfile,sys;tarfile.open(sys.argv[1]).extractall(sys.argv[2],filter='data')",archive,extracted]);
-  run(python,['scripts/install-ppt-master.py','--source',join(extracted,'ppt-master-'+pptMaster.commit,'skills/ppt-master'),'--destination',skill]);
 }
-const officeArchive=join(root,'libreoffice.dmg');
-const officeUrl='https://download.documentfoundation.org/libreoffice/stable/26.8.2/mac/'+target.cpu+
-  '/LibreOffice_26.8.2_MacOS_'+target.officeCpu+'.dmg';
-const officeHash=target.officeSha;
-await download(officeUrl,officeArchive,officeHash);
-const mount=join(root,'office-mounted');mkdirSync(mount,{recursive:true});
-run('hdiutil',['attach','-nobrowse','-readonly','-mountpoint',mount,officeArchive]);
-try {
-  const browser=await ensureBrowser({logLevel:'error'});assert.ok(browser.path);
+const python=join(root,'python/bin/python3');
+if(!reusePython)installNativePythonDeps(python,app);
+
+run('npm',['ci','--ignore-scripts','--prefix','scenarios/ppt_master/third_party/dsh-ppt']);
+const officeEngine=process.env.GENELOOP_DESKTOP_OFFICE_ENGINE??'kit';
+assert.ok(['kit','libreoffice'].includes(officeEngine),'未知 Office 引擎');
+const browser=await ensureBrowser({logLevel:'error'});assert.ok(browser.path);
+function stageTools(office){
   run(process.execPath,[join(app,'scripts/stage-desktop-tools.mjs')],{env:{...process.env,
-    GENELOOP_DESKTOP_PYTHON_ROOT:join(root,'python'),GENELOOP_PPT_MASTER_ROOT:skill,
-    GENELOOP_DESKTOP_LIBREOFFICE_ROOT:join(mount,'LibreOffice.app'),
+    GENELOOP_DESKTOP_PYTHON_ROOT:join(root,'python'),
+    ...(office?{GENELOOP_DESKTOP_LIBREOFFICE_ROOT:office}:{}),
     GENELOOP_FFMPEG_DIRECTORY:join(app,'node_modules/@remotion/compositor-darwin-'+process.arch),
     GENELOOP_DESKTOP_BROWSER:browser.path,
   }});
-} finally {run('hdiutil',['detach',mount]);}
+}
+if(officeEngine==='kit')stageTools();
+else{
+  // Explicit build-only rollback. Native Kit builds do not download full LO.
+  const officeArchive=join(root,'libreoffice.dmg');
+  await download('https://download.documentfoundation.org/libreoffice/stable/26.8.2/mac/'+target.cpu+
+    '/LibreOffice_26.8.2_MacOS_'+target.officeCpu+'.dmg',officeArchive,target.officeSha);
+  const mount=join(root,'office-mounted');mkdirSync(mount,{recursive:true});
+  run('hdiutil',['attach','-nobrowse','-readonly','-mountpoint',mount,officeArchive]);
+  try{stageTools(join(mount,'LibreOffice.app'));}finally{run('hdiutil',['detach',mount]);}
+}
+prepareNativeExtras(join(app,'desktop-tools-bundle/python/bin/geneloop-python'),join(app,'desktop-tools-bundle'));
+stageRsiPrivacy(join(app,'desktop-tools-bundle'));
 writeFileSync(join(root,'build-inputs.json'),JSON.stringify({platform:process.platform,arch:process.arch,
-  python:{version:'3.12.16+20261026',sha256:target.sha},libreoffice:{version:'26.8.2',sha256:officeHash},
-  remotion:'4.0.539',pptMaster:{version:'6.6.0',...pptMaster}},null,2)+'\n');
+  python:{version:'3.12.16+20261026',sha256:target.sha},
+  office:officeEngine==='kit'?{engine:'libreoffice-kit',version:'0.2.3',lock:'apps/desktop/office-kit/package-lock.json'}:{engine:'libreoffice',version:'26.8.2',sha256:target.officeSha},
+  remotion:'4.0.539',pptResources:JSON.parse(readFileSync(join(app,'desktop-tools-bundle/manifest.json'),'utf8')).ppt_master},null,2)+'\n');

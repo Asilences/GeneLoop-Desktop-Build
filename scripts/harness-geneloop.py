@@ -24,12 +24,22 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key, model_ids
-from src.adapters.file_scenario import prepare_scenario
-from src.adapters.file_scenarios import prepare_scene_registry
-from src.adapters.harless_product_prompt import product_persona, product_system_prompt
-from src.adapters.file_cost_gate import (State, create_server, normalize_request_limit,
-    request_limit_argument, cost_cap_argument, PEAK_USD_PER_MILLION, CACHE_HIT_PEAK_USD_PER_MILLION)
-from src.adapters.file_web_task_budget import TaskBudgetRegistry, create_control_server
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.adapters.web.scenes.harless_scenarios import prepare_scene_registry
+from src.adapters.web.tasks.harless_product_prompt import product_persona, product_system_prompt
+from src.adapters.deepseek_cost_gate import (
+    FileState as State,
+    create_file_server as create_server,
+    normalize_request_limit,
+    request_limit_argument,
+    cost_cap_argument,
+    PEAK_USD_PER_MILLION,
+    CACHE_HIT_PEAK_USD_PER_MILLION,
+)
+from src.adapters.web.web_task_budget import (
+    FileTaskBudgetRegistry as TaskBudgetRegistry,
+    create_file_control_server as create_control_server,
+)
 from src.adapters.persistent_web_budget import PersistentState
 from src.adapters.process_state import process_exists
 
@@ -163,7 +173,7 @@ def prepare(args, output, endpoint):
     if not args.frozen:
         registry = Path(args.scene_registry)
         if not registry.is_absolute(): registry = ROOT / registry
-        scenes = prepare_scene_registry(ROOT, registry, default_id=policy['capability_profile'],
+        scenes = prepare_scene_registry(ROOT, registry, default_id=policy['capability_profile'], profile='file',
             prepared_default=prepared, output=output, embedding_endpoint=args.embedding_endpoint,
             embedding_model=args.embedding_model)
         for scene in scenes:
@@ -178,7 +188,7 @@ def prepare(args, output, endpoint):
         policy.update(scenes=scenes, scene_registry_sha256=hashlib.sha256(registry.read_bytes()).hexdigest())
     save(output / 'policy.json', policy)
     disabled = ['llm-deepseek', 'session-title-llm', 'llm-retry',
-                'compaction-basic', 'command-compact', 'session-log-deepseek', 'goal', 'goal-round-driver']
+                'compaction-basic', 'command-compact', 'session-log-deepseek', 'session-telemetry-otel', 'goal', 'goal-round-driver']
     patch = [{'id': name, 'disabled': True} for name in disabled]
     patch.extend([{'id': 'system-prompt', 'config': product_system_prompt()},
                   # Upstream overlays replace the whole config, so preserve
@@ -200,8 +210,8 @@ def prepare(args, output, endpoint):
     patch += [{'id': 'agent-presets', 'config': {'default': 'sss-task',
         'includeShippedRoot': False, 'includeUserRoot': False,
         'roots': [{'path': str(output / 'presets'), 'trust': 'system'}]}},
-        {'insert': [{'id': 'sss-web-policy', 'name': (ROOT / 'src/adapters/dsh_web_policy.ts' if args.frozen else
-            ROOT / 'src/adapters/harless_web_client/index.mjs').as_uri()}]}]
+        {'insert': [{'id': 'sss-web-policy', 'name': (ROOT / 'src/adapters/web/dsh_web_policy.ts' if args.frozen else
+            ROOT / 'src/adapters/web/client/index.mjs').as_uri()}]}]
     save(output / 'host.patch.yml', patch)
     (output / 'prompt.md').write_text(prepared['prompt'], encoding='utf-8'); (output / 'prompt.md').chmod(0o600)
     snapshot = {**public, 'host': '127.0.0.1', 'port': args.port,
@@ -229,17 +239,17 @@ def prepare(args, output, endpoint):
         git_diff_sha256=hashlib.sha256(subprocess.check_output(['git', 'diff', '--binary'], cwd=ROOT)).hexdigest())
     snapshot['host_patch_sha256'] = hashlib.sha256((output / 'host.patch.yml').read_bytes()).hexdigest()
     snapshot['files_sha256'] = {str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else 'private-scenario-config': hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in [scenario, ROOT / 'config/harness-web.json', ROOT / 'src/adapters' /
+        for path in [scenario, ROOT / 'config/harness-web.json', ROOT / 'src/adapters/web' /
                      ('dsh_web_policy.ts' if args.frozen else 'dsh_web_tasks.ts'),
-                     ROOT / 'src/adapters/file_cost_gate.py', ROOT / 'scripts/harness-web.py',
-                     ROOT / 'config/geneloop-persona.json', ROOT / 'src/adapters/harless_product_prompt.py',
+                     ROOT / 'src/adapters/deepseek_cost_gate.py', ROOT / 'scripts/harness-web.py',
+                     ROOT / 'config/geneloop-persona.json', ROOT / 'src/adapters/web/tasks/harless_product_prompt.py',
                      ROOT / 'scripts/motif-example.py', ROOT / 'package-lock.json',
-                     *([] if args.frozen else [ROOT / 'src/adapters/web_task_request.ts',
-                       ROOT / 'src/adapters/file_web_task_budget.py', ROOT / 'src/adapters/harless_product_prompt.ts',
-                       ROOT / 'src/adapters/file_settings.ts', ROOT / 'src/adapters/file_scenarios.py',
-                       ROOT / 'src/adapters/harless_web_client/index.mjs',
-                       ROOT / 'src/adapters/harless_web_client/package.json',
-                       ROOT / 'src/adapters/harless_web_client/client.js',
+                     *([] if args.frozen else [ROOT / 'src/adapters/web/web_task_request.ts',
+                       ROOT / 'src/adapters/web/web_task_budget.py', ROOT / 'src/adapters/web/tasks/harless_product_prompt.ts',
+                       ROOT / 'src/adapters/web/scenes/harless_scenarios.py',
+                       ROOT / 'src/adapters/web/client/index.mjs',
+                       ROOT / 'src/adapters/web/client/package.json',
+                       ROOT / 'src/adapters/web/client/client.js',
                        registry])]}
     if policy.get('manifest'):
         snapshot['manifest_sha256'] = hashlib.sha256(Path(policy['manifest']).read_bytes()).hexdigest()
@@ -382,7 +392,7 @@ def main():
     for server in servers:
         threading.Thread(target=server.serve_forever, daemon=True).start()
     prepare(args, output, f'http://127.0.0.1:{gate.server_port}/v1')
-    env = {**os.environ, 'DSH_HOME': str(output / 'dsh'), 'SSS_WEB_POLICY': str(output / 'policy.json'),
+    env = {**os.environ, 'DSH_TELEMETRY_DISABLED': '1', 'DSH_HOME': str(output / 'dsh'), 'SSS_WEB_POLICY': str(output / 'policy.json'),
            'DEEPSEEK_API_KEY': model_sdk_key() if args.real_model and model_api_key_configured() else 'sss-mock-only',
            'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{gate.server_port}/v1',
            'SSS_ONLINE_MOTIF_MANIFEST': '', 'SSS_ONLINE_MOTIF_TASK': ''}

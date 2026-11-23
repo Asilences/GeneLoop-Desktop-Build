@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 import tempfile
 import pytest
-from src.adapters.file_scenario import ROOT, prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.scenario import ROOT, prepare_file_scenario as prepare_scenario
+from src.adapters.harness.harness_runtime import create_harness
 
 
 def scenario(tmp_path):

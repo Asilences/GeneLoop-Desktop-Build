@@ -139,6 +139,16 @@ account storage, auth, limits and ledgers. Existing presets and libraries remain
 The recipe supports registered product libraries; custom private replacements
 need an explicit reviewed preparation recipe.
 
+To enable local desktop execution for existing accounts, run
+`python scripts/prepare-desktop-accounts.py --plan SCENE_RELEASE_PLAN --output
+NEW_PRIVATE_DIRECTORY --account-id ACCOUNT_ID` once, repeating `--account-id`
+for each approved account. The recipe checks the existing account database and
+model controller configuration, keeps previous approved IDs, and uses the same
+upstream ledger.
+Run `npm run service -- check --config NEW_PLAN` before promotion. After deployment,
+an unauthenticated GET to `/api/harless/rsi-collected-objects` should return JSON
+401. Verify a signed-in desktop task and its collection receipt separately.
+
 New starts and restart candidates reject stale scene registry digests, prompt
 snapshots, selected product bundles and source locks before stopping a healthy
 service. Status/adoption and recovery of the previous recorded generation remain

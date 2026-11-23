@@ -4,7 +4,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {paperPdfDelivered,paperReferenceReportRequired} from '../src/adapters/harless_paper_delivery.ts';
+import {paperPdfDelivered,paperReferenceReportRequired} from '../src/adapters/web/scenes/harless_paper_delivery.ts';
 
 test('general proofreading stays compatible; reference output is task/source/hash bound', () => {
   const work=mkdtempSync(join(tmpdir(),'paper-delivery-'));

@@ -14,12 +14,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.harless_paper_renderer import configure_paper_renderer
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.library_builder import library_from_certified, validate_read_motif_library
-from src.motif_core.read_executor import _validate_artifact
-from src.motif_core.offline.trace_compiler import artifact_signature, contract_signature
+from src.adapters.web.scenes.harless_paper_renderer import configure_paper_renderer
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.library_builder import library_from_certified, validate_read_motif_library
+from src.motif_core.runtime.read_executor import _validate_artifact
+from src.motif_core.offline.compilation.trace_compiler import artifact_signature, contract_signature
 
 import importlib.util
 spec = importlib.util.spec_from_file_location('export_paper_motif', ROOT / 'scripts/export-online-motif-manifest.py')
@@ -172,7 +171,7 @@ def compile_runtime(citation_dir: Path, uploaded_dir: Path, schemas_path: Path,
     flow_count = 0
     if flow_shadow is not None:
         bridge = read(flow_shadow)
-        from src.adapters.native_motif_compiler import digest
+        from src.motif_core.offline.compilation.trace.native_motif_compiler import digest
         body = {k: v for k, v in bridge.items() if k != 'manifest_digest'}
         if (bridge.get('schema_version') != 1 or bridge.get('kind') != 'paper_flow_current_shadow' or
                 bridge.get('execution_policy') != 'shadow_only' or
@@ -198,19 +197,19 @@ def compile_runtime(citation_dir: Path, uploaded_dir: Path, schemas_path: Path,
         'legacy_flow_shadow_candidates': flow_count,
         'legacy_report_migrations': 3 if flow_count else 0,
         'quality_cost_promoted': False})
-    code = ['src/adapters/harless_rsi_binding.ts', 'src/adapters/harless_rsi_bundle.py',
-            'src/adapters/harless_task_scope.ts', 'src/adapters/harless_paper_renderer.py',
-            'src/adapters/harless_paper_delivery.ts', 'src/adapters/session_report.py',
-            'src/adapters/harless_attachment_text.py', 'scenarios/data_analysis/table_inputs.py',
-            'src/adapters/paper_renderer.py', 'src/adapters/session_files.py',
-            'src/adapters/paper_archive.py', 'src/adapters/paper_static_checks.py',
+    code = ['src/adapters/web/learning/harless_rsi_binding.ts', 'src/adapters/web/learning/harless_rsi_bundle.py',
+            'src/adapters/web/attachments/harless_task_scope.ts', 'src/adapters/web/scenes/harless_paper_renderer.py',
+            'src/adapters/web/scenes/harless_paper_delivery.ts', 'src/adapters/session_report.py',
+            'src/adapters/web/attachments/harless_attachment_text.py', 'scenarios/data_analysis/table_inputs.py',
+            'scenarios/paper_proofreading/document_tools/paper_renderer.py', 'src/adapters/session_files.py',
+            'scenarios/paper_proofreading/document_tools/paper_archive.py', 'scenarios/paper_proofreading/document_tools/paper_static_checks.py',
             'scenarios/paper_proofreading/server.py', 'scenarios/paper-submission/checks.py',
             'src/adapters/paper_bibliography.py', 'src/adapters/arxiv_metadata.py',
             'src/adapters/crossref_metadata.py', 'src/adapters/paper_query_recovery.py',
-            'src/adapters/dsh_web_tasks.ts', 'src/adapters/harless_scenarios.py',
-            'src/adapters/harless_paper_flow_shadow.ts',
-            'src/adapters/dsh_online_motif.mjs',
-            'src/motif_core/online_skill_runtime.mjs']
+            'src/adapters/web/dsh_web_tasks.ts', 'src/adapters/web/scenes/harless_scenarios.py',
+            'src/adapters/web/scenes/harless_paper_flow_shadow.ts',
+            'src/adapters/harness/motif/dsh_online_motif.mjs',
+            'src/motif_core/runtime/online_skill_runtime.mjs']
     evidence = {'citation_library_sha256': sha(citation_dir / 'library.json'),
                 'uploaded_library_sha256': sha(uploaded_dir / 'library.json'),
                 'bibliography_library_sha256': sha(bibliography_dir / 'library.json') if bibliography_dir else None,

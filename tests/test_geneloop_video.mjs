@@ -31,6 +31,13 @@ test('Video recipe uses fixed runtime and only the owning Session; caller cannot
   assert.ok(!argv.some(s=>s.includes('docker.sock')||s.includes('accounts.json')||s.includes('DEEPSEEK_API_KEY')));
   assert.ok(argv.includes(`type=bind,source=${root}/sessions/${session}/work/remotion/public,target=/work/public,readonly`));
   assert.ok(argv.includes('geneloop.session='+session));
+  const workbench='sss-'+'1'.repeat(32);
+  mkdirSync(join(root,'sessions',workbench,'work'),{recursive:true});
+  const workbenchRecipe=videoCommand(root,workbench,'node --version',config);
+  assert.equal(workbenchRecipe.project,join(root,'sessions',workbench,'work/remotion'));
+  assert.ok(workbenchRecipe.argv.includes('geneloop.session='+workbench));
+  assert.throws(()=>videoCommand(root,'sss-'+'2'.repeat(32),'node --version',config));
+  assert.throws(()=>videoCommand(root,'sss-../outside','node --version',config));
   const desktop=videoProjectCommand(recipe.project,'node --version',config);
   assert.ok(desktop.argv.includes(`type=bind,source=${recipe.project},target=/work,readonly`));
   assert.throws(()=>videoCommand(root,'session-22222222-2222-4222-8222-222222222222','true',config));
@@ -43,7 +50,7 @@ test('Video recipe uses fixed runtime and only the owning Session; caller cannot
  }finally{cleanup(root);}
 });
 test('桌面 Remotion 只接受固定素材名称、字节摘要和入口源码',typed,async()=>{
- const {desktopVideoInput}=await import('../src/adapters/geneloop_desktop_video.ts');
+ const {desktopVideoInput}=await import('../src/adapters/desktop/geneloop_desktop_video.ts');
  const bytes=Buffer.from('sample');
  const asset={name:'asset-1.png',bytes:bytes.toString('base64'),sha256:createHash('sha256').update(bytes).digest('hex')};
  const parse=(assets,extra={})=>desktopVideoInput(Buffer.from(JSON.stringify({source:'registerRoot(Entry)',assets,...extra})));
@@ -112,7 +119,7 @@ test('A gateway without video installation rejects the video endpoint',typed,asy
  }finally{broker.close();cleanup(root);}
 });
 test('Video artifacts need current task, actual decode receipt and unchanged media/source; copies stay immutable',typed,async()=>{
- const {verifiedVideoFiles,comparisonArtifacts,captureComparisonDeliveries}=await import('../src/adapters/harless_comparison_artifacts.ts');
+ const {verifiedVideoFiles,comparisonArtifacts,captureComparisonDeliveries}=await import('../src/adapters/web/tasks/harless_comparison_artifacts.ts');
  const root=temporary(),work=join(root,'work'),task='a'.repeat(32),folder=join(work,'outputs/video',task);
  mkdirSync(folder,{recursive:true});const eventsPath=join(root,'tasks',task,'events.jsonl');mkdirSync(join(root,'tasks',task),{recursive:true});writeFileSync(eventsPath,'');
  try{

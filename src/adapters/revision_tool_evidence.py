@@ -12,8 +12,9 @@ import json
 from pathlib import Path
 import re
 
-from .trace_tool_evidence import bounded_read, digest
-from .trace_rsi_motif_compiler import (_actions, _root_events, load_provider_tools,
+from src.motif_core.trajectory.trace_tool_evidence import bounded_read, digest
+from src.motif_core.offline.compilation.trace.trace_rsi_motif_compiler import (
+    _actions, _root_events, load_provider_tools,
     _registered_hashes, file_sha256, PREFIX)
 
 

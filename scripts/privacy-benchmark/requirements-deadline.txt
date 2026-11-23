@@ -1,0 +1,2 @@
+# Optional offline evaluation controller only; not a product dependency.
+Pebble==5.2.1 --hash=sha256:154feb48f187ffff842cbc2fe0768ed1524d6fa72e90577a78bcea21a2f929f9

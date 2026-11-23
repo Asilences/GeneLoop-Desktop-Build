@@ -9,8 +9,8 @@ from uuid import uuid4
 import pytest
 from test_literature_pdf import POPPLER, module
 from test_literature_pdf_evidence import HERE, ROOT, CHECK, evidence_corpus
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
-from src.adapters.tool_contract_loader import parse_tool_contracts
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
 
 REVIEW = module(HERE / 'review-evidence.py', 'mechanical_evidence_review_test')
 

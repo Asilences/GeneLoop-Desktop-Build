@@ -1,0 +1,19 @@
+{
+  "model": "jev",
+  "state": "以下是用于接口验证的构造资料正文，不是真实票据：文件名 doc-01.txt；正文：增值税电子普通发票。开票日期：2026年11月08日。购买方：样例客户。销售方：样例商店。合计金额：128.00元。",
+  "questions": {
+    "has_date": {
+      "type": "noul",
+      "instructions": "正文是否包含明确的开票日期？仅依据给出的正文判断。"
+    },
+    "category": {
+      "type": "choice",
+      "instructions": "依据已读取正文选择文件类别；信息不足时选择 uncertain。",
+      "criteria": {
+        "invoice": "发票、票据、开票日期与金额",
+        "contract": "合同条款、甲方乙方与签署",
+        "uncertain": "正文不足以确定类别"
+      }
+    }
+  }
+}

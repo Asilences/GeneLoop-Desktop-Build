@@ -1,0 +1,28 @@
+{
+  "format": "geneloop.gitleaks-worker-tools/v1",
+  "gitleaks": "8.30.0",
+  "go": "go1.25.4",
+  "go_archive_sha256": "9fa5ffeda4170de60f67f3aa0f824e426421ba724c21e133c1e35d6159ca1bec",
+  "rules_sha256": "e163e53b9e7e8a8511e77271e2b323ed057759542a6d988258afe3a1fa329caf",
+  "regex_engine": "github.com/wasilibs/go-re2",
+  "source": "https://github.com/gitleaks/gitleaks/tree/v8.30.0",
+  "build_tags": [
+    "gore2regex"
+  ],
+  "license": "MIT",
+  "platforms": {
+    "Linux-x64": {
+      "binary": "gitleaks-worker-linux-x64",
+      "binary_sha256": "8b59c2740f92ce70979f3967cf2ea656845295db7c506f0e1a94ef2015b1b86f"
+    },
+    "Windows-x64": {
+      "binary": "gitleaks-worker-windows-x64.exe",
+      "binary_sha256": "8ac42a7b391bf25ceb01110fa35298abc51cb23936facb22860f68ee2c1b2768"
+    }
+  },
+  "source_files": {
+    "tools/gitleaks-worker/go.mod": "3acd474ac5d4460a33417131a462c5b14f68d650f3a392a66c0da3a92991cc27",
+    "tools/gitleaks-worker/go.sum": "d24d1b9ff53bfacc38be210b345e0b044ee7d3111e0006ef32e68fa4cac894c2",
+    "tools/gitleaks-worker/main.go": "e06646865e84ae4c3dae2e678b2f39bcecb85c5b8b5ed6f8289aba618f0f4b93"
+  }
+}

@@ -3,10 +3,10 @@ import {readFileSync,mkdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
-import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../src/adapters/capability_contract.ts';
-import {bytesSha256} from '../../src/adapters/rsi_protocol.ts';
-import {completeCapabilityCycle} from '../../src/adapters/capability_cycle.ts';
-import {createCapabilityStore} from '../../src/adapters/capability_store.ts';
+import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../src/capability/graph/capability_contract.ts';
+import {bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
+import {completeCapabilityCycle} from '../../src/rsi/learning/capability_cycle.ts';
+import {createCapabilityStore} from '../../src/capability/runtime/capability_store.ts';
 import {execute} from './rae_runtime.mjs';
 
 const source=fileURLToPath(new URL('./rae_arithmetic.py',import.meta.url));

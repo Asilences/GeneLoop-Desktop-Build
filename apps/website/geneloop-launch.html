@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="lattice">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fafbfb">
+  <meta name="description" content="GeneLoop：面向 LLM Agent 的效率自进化系统">
+  <title>静态的 Agent，与会生长的计算结构 — GENELOOP</title>
+  <link rel="canonical" href="https://geneloop.ai/geneloop-launch.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="静态的 Agent，与会生长的计算结构">
+  <meta property="og:description" content="GeneLoop：面向 LLM Agent 的效率自进化系统">
+  <meta property="og:url" content="https://geneloop.ai/geneloop-launch.html">
+  <link rel="icon" href="./assets/brand/geneloop-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./site.css">
+  <link rel="stylesheet" href="./shared/layouts.css">
+  <link rel="stylesheet" href="./themes/lattice/theme.css">
+  <link rel="stylesheet" href="./shared/readability.css">
+  <link rel="stylesheet" href="./shared/type-and-navigation.css?v=7c7764dce6f6">
+  <link rel="stylesheet" href="./shared/research.css?v=6ee5a04f7b9b">
+  <script src="./shared/site-i18n.js?v=db0f8b7eef0e" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-banner">
+  <div class="header wrap">
+    <a class="brand" href="./?home" aria-label="GENELOOP home">
+      <img class="brand-mark" src="./assets/brand/geneloop-mark.svg" alt="">
+      <span>GENELOOP</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a class="nav-blog" href="./journal.html" aria-current="location">Blog</a>
+    </nav>
+  </div>
+</header>
+<main class="journal wrap" id="main">
+<a class="text-link research-link" href="./journal.html">Back to Blog</a>
+<article class="published-article article-copy" lang="zh-CN" data-no-translate="" data-article-locale="zh"><h1 id="静态的-agent与会生长的计算结构">静态的 Agent，与会生长的计算结构</h1>
+<p class="lead"><strong>GeneLoop：面向 LLM Agent 的效率自进化系统</strong></p>
+<p>过去两年，通用 Agent 的进步大多沿着同一条直观的路径展开：更强的基座模型、更长的上下文窗口、更多的外部工具。这些努力让 Agent 能处理越来越棘手的工作，却也暴露出一个耐人寻味的反差——今天的 Agent 已经很聪明，可一旦把十项结构相似的任务依次交给它，到了第十次，它依然像第一天面对陌生问题那样，从零开始组织思路、重头编写代码，再顺手调试一遍似曾相识的边界错误。</p>
+<p>人们很容易把这归因于“缺少记忆”，于是把历史对话塞进上下文，或把过往轨迹总结成若干条 Prompt 经验。然而，留在自然语言里的经验，充其量只是模型在思考时顺手翻阅的笔记；下一次遇到新输入，它依然要动用昂贵的概率推理，把整套工作流程重新想一遍、写一遍。问题的根源不在记性，而在于<strong>许多 Agent 的执行结构并不会随着任务经验自动演化</strong>。</p>
+<p><strong>GeneLoop 是一个面向 LLM Agent 的效率自进化系统（Efficiency-Oriented Self-Improving Agent System）。</strong> 它关心的是一个更底层的问题：Agent 能否通过积累和重组过去的工作经验，持续改变自己解决问题所依赖的计算结构，从而降低后继任务的计算成本，并逐渐获得新的能力？它不动模型权重，也不满足于抄存旧答案，而是借助核心机制 <strong>Motif</strong>，让真实工作经历转化为能够直接参与后续执行的可复用能力。</p>
+<hr>
+<h2 id="同样的模型为什么下一次执行不同">同样的模型，为什么下一次执行不同？</h2>
+<p>道理说起来总是抽象的，不如看一件真实发生过的事。</p>
+<p>在一组连续的论文书目核查任务中，Agent 每次收到一份不同公开论文的参考文献文件，需要精确盘点文献总数、排查重复引用键、标出缺失的标题、作者或年份，将标题归一化后相同的疑似重复著录归组，并指出可能影响读取的格式问题。这类活既不能交给大模型凭印象估算——几十上百条记录极易漏数——也很难靠一条写死的规则一劳永逸，因为不同论文的书目总有办法展现出五花八门的写法习惯与人类笔误。</p>
+<p>在一次正常的核查里，Agent 像常见的 Coding Agent 一样，先现场写了一段脚本对全文件做统计和字段检查。跑完一看，模型立刻察觉了不对劲：原文件混用了花括号与双引号两种字段写法，第一段脚本漏掉了将近一半的标题。模型随即补写第二段脚本，修好两种写法下的标题抽取与归一化分组，顺利通过独立验收。对大多数系统而言，故事到这里便戛然而止，一切随着会话关闭烟消云散；但在 GeneLoop 里，任务结束后，系统从这段真实轨迹中自动提取出前后配合的两段操作，将它们参数化并经独立认证，转化为两个可接受不同输入文件的可执行程序。</p>
+<p>随后，三份完全不同的新论文书目陆续到来。刚学出的程序在三次任务中全部得到实际调用，三次交付也均通过独立验收。</p>
+<p>其中一组双方均通过独立验收的典型配对案例，清楚地展示了两次执行之间的差别（这是单个案例的剖面，全部批次的统计将在后文给出）：面对同一份新书目，对照 Agent 与 GeneLoop 使用完全相同的模型、终端和编程工具，对照侧消耗了 <strong>23 次模型请求</strong>、用时 <strong>180.1 秒</strong>；GeneLoop 侧则用了 <strong>12 次模型请求</strong>、<strong>91.5 秒</strong>完成交付。</p>
+<p>对照 Agent 并非不会写代码，它多花出的十一次模型往返和将近九十秒等待，几乎全用在了“一切从头组织”上——重新编写并修补解析器，又为了交叉核对在环境兼容与另写备用解析器之间来回周旋，把大量推理时间消耗在了重造确定性脚手架上。而在 GeneLoop 一侧，新书目一到，模型先判断此前学出的程序适用于眼前的文件，随后交由 Runtime 绑定新输入并连续执行，直接将全量条目统计、字段缺失与同标题归组的结果送回上下文。真正留给语言模型的，是程序无法代劳的判断：当一个较早学出的旧程序与新程序在两条双引号记录上给出矛盾结论时，模型迅速察觉分歧，直接翻开原文件定位了原因，接着确认文件里两处真实的人为笔误，补完其余格式排查后干净交卷。</p>
+<p>同样面对一份陌生书目，模型既没有背下旧答案，也没有放弃思考，只是不再把一半精力花在重造昨天已经造好的工具上。</p>
+<hr>
+<h2 id="核心洞察计算结构的分工可以改变">核心洞察：计算结构的分工可以改变</h2>
+<p>这个案例背后，是 GeneLoop 的核心判断：<strong>一次复杂的 Agent 工作，从来不是单一性质的计算。</strong></p>
+<p>把求解过程拆开来看，里面通常同时混合着三种性质截然不同的计算结构：语言模型（LLM）擅长处理不确定性与开放语义，负责理解灵活约束、判断适用性、诊断冲突与应对意外；可执行程序擅长处理规则明确、可重复的确定性操作，能在极低成本下精确完成全量遍历、归组或按参数生成，不会因为输入变长而走神漏项；独立核验逻辑则提供外部质量判断，将“结果确实达标”与“模型自认为做对了”分开。</p>
+<p>在许多 Agent 系统中，即便 Coding Agent 可以在单次任务里动态写出代码，这些临时产生的执行结构通常也难以自动沉淀为跨任务可复用的能力；而如果全靠工程师提前手写专用工具来压低模型请求，那终究是人工工程优化，而不是 Agent 自身的自我改进。</p>
+<blockquote>
+<p><strong>效率自进化意味着：计算结构的边界会随着 Agent 自身的真实工作经历不断移动。</strong></p>
+</blockquote>
+<p>当某段操作在正常工作中被证明有效且规则稳定，它便有机会离开大模型的概率推理循环，沉淀为可复用的程序结构；当新任务中冒出旧程序覆盖不了的格式或语义冲突，语言模型则接管现场，完成诊断与修复。从这个意义上说，<strong>GeneLoop 改变的不只是任务执行得有多快，而是谁在执行哪些计算。</strong></p>
+<p>也因此，判断效率自进化是否真正发生，不能只看程序有没有被写出来，或者提示词是不是变短了。程序被实际调用并留下可核验的执行回执，说明计算确实发生了交接；在质量不降的前提下，模型重复承担的工作与实际执行成本随之下降，才是这种结构变化产生真实价值的证据。</p>
+<hr>
+<h2 id="从-autotool-到-geneloop让结构生长">从 AutoTool 到 GeneLoop：让结构生长</h2>
+<p>GeneLoop 延续了我们团队沿着同一条主线推进的三代研究工作，呈现出一个从“发现结构”到“执行结构”再到“生长结构”的演进脉络。</p>
+<p><strong>AutoTool — Discover（AAAI 2026）</strong> 观察到 Agent 工具调用中的工具调用惯性（Tool Usage Inertia）：历史轨迹中的工具调用并非彼此独立，而是存在大量可以用结构预测和复用的调用模式，因此不必让语言模型在每一步都重复参与工具选择。</p>
+<p><strong>MotifAgent — Execute（ATC 2026）</strong> 在此基础上提出结构–语义分离（Structure-Semantic Separation），将可复用的工具操作编译为可执行 Motif，交由 Runtime 推进重复的结构计算，把语言模型留给真正需要上下文理解的语义判断。</p>
+<p><strong>GeneLoop — Evolve</strong> 则顺着这一思想继续追问：除了让已有结构替代重复的模型推理，这些可执行能力能否从 Agent 的日常工作中自动产生，经独立认证后用于新的任务，并在后继执行中持续演化？三项工作共享同一脉研究思想，而非同一套代码的简单延续。从发现结构到执行结构，再到让结构从经验中生长，GeneLoop 将这条研究思路落实为一个可持续运行的能力学习闭环：</p>
+<p><strong>Observe → Abstract → Verify → Reuse → Evolve</strong></p>
+<p>对熟悉 Coding Agent 的读者而言，一个很自然的问题是：这与现有的 Skill 系统有什么区别？不少 Skill 机制如今也支持脚本复用、测试甚至版本管理；GeneLoop 的不同，在于把<strong>自动学习、独立验证、真实改变后继执行路径，以及将新任务经验持续回流</strong>连成了一个完整的实验闭环。</p>
+<p>在 GeneLoop 中，能力直接从正常完成的任务轨迹中产生，并依任务性质采用不同抽象：只读分析类任务（如书目核查）可确定性地提取多步脚本与参数槽位，生成类任务（如程序化视频剪辑）则将通过独立检查的源码抽象为可按新参数重新渲染的程序。新能力在进入版本化能力库前，必须通过独立认证，确认它在原输入上等价复现，并在预设的跨输入测试中验证其执行行为与边界约束。当然，通过测试的程序并不因此获得对一切未知输入的豁免权——现实世界的数据总爱发明一些程序从未见过的写法，所以最终的判断依然留在模型手里。</p>
+<p>到了后继任务，由模型判断已有能力是否适用并绑定参数，Runtime 连续执行已选能力以减少中间的模型往返，同时留下可核验的执行回执作为真实复用的证据。一旦新任务暴露出旧程序的盲区，模型现场补写的修复方案会在交付后重新流回学习流程，让能力库随经验继续生长。</p>
+<hr>
+<h2 id="从真实任务中观察效率自进化">从真实任务中观察效率自进化</h2>
+<p>为了在单个案例之外检验这套机制，我们在相同模型配置、对称底层工具与独立自动验收下，分别在<strong>论文核查</strong>与<strong>视频剪辑</strong>两个差异显著的场景中进行了配对在线学习评测。下表汇总了任务执行阶段的主要结果（不含交付后的学习与认证耗时）：</p>
+<figure class="article-table"><div class="table-scroll" role="region" tabindex="0" aria-labelledby="zh-CN-metrics-1">
+<table>
+<thead>
+<tr>
+<th id="zh-CN-metrics-1" scope="col">执行阶段主跑指标（对照 → Motif）</th>
+<th scope="col">论文核查（50 题，25 份书目各跑两轮）</th>
+<th scope="col">视频剪辑（展示 45 题）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">独立验收通过</th>
+<td>31/50 → 36/50</td>
+<td>38/45 → 45/45</td>
+</tr>
+<tr>
+<th scope="row">主跑模型请求</th>
+<td>705 → 467（−33.8%）</td>
+<td>322 → 254（−21.1%）</td>
+</tr>
+<tr>
+<th scope="row">主跑累计执行时间</th>
+<td>9,442.0 → 7,391.2 秒（−21.7%）</td>
+<td>5,802.8 → 4,644.5 秒（−20.0%）</td>
+</tr>
+</tbody>
+</table>
+</div></figure><p>这两组结果呈现了两个清楚的事实。第一，两个场景的独立验收通过数量均有所提高，且复用建立在可核验的实际程序执行之上——这一结果与减少临时代码生成和返工的机制相一致，说明把确定性操作移交已认证程序，能够在压缩模型请求的同时提升交付稳定性。第二，不同任务各有自己的成本下限：书目核查的时间主要由模型串行写脚本的往返占据，移交程序直接削减了关键路径；而在视频剪辑中，即便复用了参数化程序，换上新参数后仍必须实际渲染新成片并做画面核验，程序可以压缩重复推理与返工，却无法绕过必要的物理渲染计算。</p>
+<p>上表统计的是任务执行阶段的开销（论文为 25 份书目各执行两轮，视频为原 54 题在线学习批次中展示的 45 题，沿用原批次学习历史）。交付后的在线学习与认证另计成本；把全部学习开销一并算入总账后，两场景仍保持净时间收益，只是幅度小于纯执行阶段。完整的实验范围、成本摊销与方法细节，见独立文章 <a href="./geneloop-evaluation.html">Evaluation &amp; Methodology</a>。</p>
+<hr>
+<h2 id="当能力开始创造新的能力">当能力开始创造新的能力</h2>
+<p>回到最初的问题：一个 Agent 做过一次工作之后，下一次具体哪里不同？在 GeneLoop 当前验证的闭环里，它不再把语言模型的推理预算重复花在重造昨天的工具上，而是借由经验完成了一轮双向循环——<strong>From Specific to General</strong>（从具体任务经历中形成可复用的一般能力），再 <strong>From General to New Specifics</strong>（利用已有一般能力，更稳妥、更高效地求解新的具体问题）。</p>
+<p>顺着“计算结构自我生长”的思路再往前推进一步，一个更具挑战性的长期方向自然浮现出来——<strong>递归自进化（Recursive Self-Improvement）</strong>。</p>
+<p>如果那些经过认证的能力，不再只停留在直接服务用户任务这一层，而是能够进一步彼此组合、形成更高层级的抽象，甚至反过来参与发现、构造和验证下一代能力，会发生什么？这个问题可以收敛为一个清晰、可在实验台上正面检验的研究假设：</p>
+<blockquote>
+<p><strong>已有能力是否能够持续降低构造下一代能力的计算成本？</strong></p>
+</blockquote>
+<p>这目前是一个留给下一阶段的研究问题，而不是当前批次实验已经交出的答案。它同样要在严格的独立质量验收与全成本账本下接受检验，看看已有抽象能否切实降低下一代能力的构造成本，并提高其可靠性。</p>
+<p>但至少今天，我们已经在一个真实的切面上看到了开端：Agent 不必永远停留在工程师预先划定的静态计算边界里。如果智能体真的能从每一次工作中重塑自己的计算结构，那么今天省下的一半模型往返，或许只是起点。</p>
+<hr>
+<h2 id="research-references-zh">Research &amp; References</h2>
+<p>[1] Jingyi Jia and Qinbin Li. <em>AutoTool: Efficient Tool Selection for Large Language Model Agents</em>. Proceedings of the AAAI Conference on Artificial Intelligence, 2026. <a href="https://doi.org/10.1609/aaai.v40i37.40389">Paper</a></p>
+<p>[2] Jingyi Jia, Jiale Wang, Haoyi Zhang, Qinbin Li, Xiaofei Liao, and Hai Jin. <em>Make Graphs Great Again: Rethinking LLM Agent Architecture via Structure-Semantic Separation</em>. ACM SIGOPS ATC, 2026. <a href="https://atc.sigops.org/2026/accepted.html">Paper</a></p>
+</article>
+<article class="published-article article-copy" lang="en" data-no-translate="" data-article-locale="en" hidden="hidden"><h1 id="static-agents-and-computational-structures-that-grow">Static Agents, and Computational Structures That Grow</h1>
+<p class="lead"><strong>GeneLoop: An Efficiency-Oriented Self-Improving System for LLM Agents</strong></p>
+<p>Over the past two years, progress in general-purpose agents has followed a remarkably uniform path: stronger foundation models, longer context windows, and larger collections of external tools. These advances have enabled agents to tackle increasingly intricate work, yet putting one into a real, recurring workflow quickly reveals a curious paradox. Today's agents are impressively capable, yet hand the same agent ten structurally similar tasks in a row and, on the tenth, it will still behave much as it did on the first—organizing its plan from scratch, rewriting code from a blank slate, and debugging the same familiar edge cases all over again.</p>
+<p>It is tempting to blame this on a lack of memory, and to answer it by stuffing past conversations into context or summarizing old trajectories into prompt guidelines. Experience that stays in natural language, however, remains merely a set of notes the model glances over while thinking; when a new input arrives, the model must still rely on expensive probabilistic inference to re-derive, rewrite, and re-run the entire procedure step by step. The root problem is not forgetfulness. It is that <strong>the execution structure of many agents does not automatically evolve with task experience</strong>.</p>
+<p><strong>GeneLoop is an efficiency-oriented self-improving system for LLM agents.</strong> It investigates a foundational question: can an agent accumulate and reorganize its past work experience to continuously reshape the computational structures it relies on—reducing the computational cost of subsequent tasks while gradually acquiring new capabilities? GeneLoop does not modify model weights, nor does it settle for caching past answers. Through its core mechanism, <strong>Motif</strong>, it turns real working experience into reusable capabilities that directly participate in future execution.</p>
+<hr>
+<h2 id="same-model-same-toolswhy-does-the-next-run-look-different">Same Model, Same Tools—Why Does the Next Run Look Different?</h2>
+<p>Abstract claims are easier to judge once we watch something concrete happen.</p>
+<p>Consider a sequence of bibliography-auditing tasks. In each task, the agent receives the complete reference file of a different public research paper and must perform a strict, exacting audit: count every bibliographic entry accurately, identify duplicate citation keys, flag entries missing a title, author, or year, group potentially duplicate records whose normalized titles match, and report formatting issues that could interfere with parsing. Work of this kind sits in an awkward middle ground. A language model cannot simply eyeball dozens or hundreds of entries without miscounting, yet no single hard-coded rule lasts long either—real bibliography files have a quiet talent for inventing formatting quirks and human typos.</p>
+<p>During one normal audit, the agent behaved much like any capable coding agent: it wrote an ad-hoc script to scan the file and inspect fields. Looking at the output, the model immediately noticed something amiss—the file mixed braces and double quotes for field values, and its first script had missed nearly half the titles. It promptly wrote a second script to handle both formats for title extraction and grouping, and passed independent verification cleanly. For most systems, the story ends there, dissolving the moment the session closes. In GeneLoop, once the task finished, the system automatically extracted those two complementary steps from the real execution trace, parameterized them, and independently verified them as two executable programs capable of operating on different input files.</p>
+<p>Three completely different paper bibliographies arrived next. In all three tasks, the newly learned programs were actually invoked, and all three deliveries passed independent verification.</p>
+<p>One representative paired case in which both arms passed independent verification illustrates what changed (this is a profile of a single paired case rather than the average across all tasks, which appears later). Facing the exact same unseen bibliography with the exact same model, terminal, and coding tools, the baseline agent spent <strong>23 model requests</strong> and <strong>180.1 seconds</strong>; GeneLoop delivered in <strong>12 model requests</strong> and <strong>91.5 seconds</strong>.</p>
+<p>The baseline agent was hardly lacking in coding skill. Those extra eleven model round-trips and nearly ninety seconds went to organizing everything from zero: writing and patching a parser, then wrestling with package compatibility and writing a second parser in another language just to cross-check its own script. Much of its reasoning went into rebuilding deterministic scaffolding. On the GeneLoop side, once the new bibliography arrived, the model judged that the previously learned programs applied and handed the new file to the Runtime, which executed them consecutively and returned full entry counts, missing fields, and same-title groups directly into context. What remained for the language model was the judgment no program could replace: when an older learned program and the newly learned one disagreed on two double-quoted records, the model spotted the discrepancy at once, checked the raw file to trace its cause, confirmed two genuine human typos in the entries, finished the remaining format checks, and delivered cleanly.</p>
+<p>Facing an unfamiliar bibliography, the model neither memorized an old answer nor surrendered its judgment—it simply stopped spending half its effort reforging the tools it had already forged yesterday.</p>
+<hr>
+<h2 id="core-insight-the-division-of-computational-structures-can-change">Core Insight: The Division of Computational Structures Can Change</h2>
+<p>Behind this contrast lies GeneLoop's central thesis: <strong>a complex agent task is rarely a single kind of computation.</strong></p>
+<p>Take a real workflow apart and you will usually find at least three distinct computational structures working side by side. A <strong>language model (LLM)</strong> excels at uncertainty and open-ended semantics—interpreting flexible requirements, judging applicability, diagnosing conflicts, and handling unexpected edge cases. <strong>Executable programs</strong> excel at deterministic, rule-bound operations—scanning every record, counting accurately, grouping systematically, or rendering structured outputs from explicit parameters at negligible cost, without drifting as inputs grow. <strong>Independent verification logic</strong> supplies external quality judgment, separating "the result actually satisfies objective criteria" from "the model feels confident it succeeded."</p>
+<p>In many agent systems, even though a coding agent can write code dynamically inside a single session, those ad-hoc execution structures rarely crystallize automatically into reusable capabilities across tasks. Conversely, when engineers pre-build a dedicated tool to cut model calls from 23 to 12, that is valuable manual engineering—not an agent improving itself.</p>
+<blockquote>
+<p><strong>Efficiency-driven self-improvement means that the boundary between computational structures moves continuously with an agent's real work experience.</strong></p>
+</blockquote>
+<p>When an operation proves effective and rule-bound during normal work, it can leave the model's probabilistic inference loop and settle into a reusable program structure; when a new task surfaces an unfamiliar format or semantic conflict that existing programs miss, the language model steps in to diagnose and repair it. In this sense, <strong>GeneLoop changes not merely how fast a task runs, but <em>who</em> executes <em>which</em> computations.</strong></p>
+<p>For the same reason, measuring efficiency-driven self-improvement requires more than counting generated scripts or shorter prompts. Actual invocation backed by verifiable execution receipts shows that computation genuinely changed hands; reduced model workload and execution cost without sacrificing delivery quality show that the change paid off.</p>
+<hr>
+<h2 id="from-autotool-to-geneloop-letting-structure-grow">From AutoTool to GeneLoop: Letting Structure Grow</h2>
+<p>GeneLoop continues a three-stage research trajectory pursued by our team along a single thread: from discovering structure, to executing structure, to letting structure grow.</p>
+<p><strong>AutoTool — Discover (AAAI 2026)</strong> examined structural regularities in agent tool use. It identified <em>Tool Usage Inertia</em>: tool invocations in historical trajectories are not independent decisions made fresh at every step, but contain predictable, reusable patterns that spare the language model from repeatedly deciding every selection.</p>
+<p><strong>MotifAgent — Execute (ATC 2026)</strong> pushed further into <em>Structure-Semantic Separation</em>, compiling reusable tool operations into executable Motifs so that a Runtime can advance repetitive structural computation while the language model focuses on semantic judgment.</p>
+<p><strong>GeneLoop — Evolve</strong> asks the next question along this path: beyond letting existing structures replace repeated model inference, can executable capabilities emerge automatically from an agent's everyday work, pass independent verification, serve new tasks, and evolve through subsequent execution? The three projects share a continuous lineage of ideas rather than a single codebase. From discovering structure, to executing structure, to letting structure grow from experience, GeneLoop turns this research trajectory into a continuous capability-learning loop:</p>
+<p><strong>Observe → Abstract → Verify → Reuse → Evolve</strong></p>
+<p>Readers familiar with coding agents will naturally ask how this differs from existing Skill systems. Many Skill frameworks today already support saving scripts, running tests, and managing versions. GeneLoop's distinction lies in connecting <strong>automatic learning from normal execution, independent verification, genuine alteration of subsequent execution paths, and continuous feedback from new tasks</strong> into a single end-to-end closed loop.</p>
+<p>In GeneLoop, capabilities emerge directly from completed normal trajectories and adopt abstractions suited to the task: read-only analysis tasks (such as bibliography auditing) deterministically extract multi-step scripts with parameterized input slots, whereas generative tasks (such as programmatic video editing) abstract independently verified source code into re-renderable programs with explicit parameter interfaces. Before entering the versioned capability library, every new capability undergoes independent verification to confirm equivalent reproduction on its original input and to validate execution behavior and boundary constraints on preset cross-input tests. Passing tests, of course, grants no immunity against every unseen input—real-world data is endlessly inventive in producing formats no prior program anticipated, which is precisely why final judgment stays with the model.</p>
+<p>In subsequent tasks, the model decides whether existing capabilities apply and binds the new parameters; the Runtime executes selected capabilities consecutively to cut intermediate model round-trips while recording verifiable execution receipts as evidence of genuine reuse. Whenever a new task exposes a blind spot in an older program, the fix the model writes on the spot flows back into learning after delivery, allowing the library to keep growing with experience.</p>
+<hr>
+<h2 id="observing-efficiency-driven-self-improvement-on-real-tasks">Observing Efficiency-Driven Self-Improvement on Real Tasks</h2>
+<p>To test this mechanism beyond a single favorable case, we ran paired online-learning evaluations under identical model configurations, symmetric underlying tools, and independent automatic verification across two markedly different domains: <strong>bibliography auditing</strong> and <strong>video editing</strong>. The table below summarizes the main-run results for the <strong>task execution phase</strong> (excluding post-delivery learning and certification time):</p>
+<figure class="article-table"><div class="table-scroll" role="region" tabindex="0" aria-labelledby="en-metrics-1">
+<table>
+<thead>
+<tr>
+<th id="en-metrics-1" scope="col">Execution-Phase Main-Run Metrics (Baseline → Motif)</th>
+<th scope="col">Bibliography Audit (50 tasks, 25 files × 2 rounds)</th>
+<th scope="col">Video Editing (45 tasks shown)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Independent Verification Passed</th>
+<td>31/50 → 36/50</td>
+<td>38/45 → 45/45</td>
+</tr>
+<tr>
+<th scope="row">Main-Run Model Requests</th>
+<td>705 → 467 (−33.8%)</td>
+<td>322 → 254 (−21.1%)</td>
+</tr>
+<tr>
+<th scope="row">Main-Run Cumulative Execution Time</th>
+<td>9,442.0 → 7,391.2 s (−21.7%)</td>
+<td>5,802.8 → 4,644.5 s (−20.0%)</td>
+</tr>
+</tbody>
+</table>
+</div></figure><p>Two clear patterns emerge from these results. First, the number of independently verified passing deliveries increased in both domains, backed by verifiable program execution—an outcome consistent with reducing ad-hoc code generation and rework, showing that offloading deterministic operations to verified programs can improve delivery stability alongside efficiency. Second, different tasks carry different cost floors. Bibliography auditing is dominated by serial model round-trips spent writing and debugging scripts, so handing parsing to programs cuts straight through the critical path. In video editing, even when a parameterized program is reused, new parameters still require actually rendering a new video and inspecting its frames; programs reduce repeated reasoning and rework, but cannot wish away necessary physical rendering computation.</p>
+<p>The table above reports execution-phase costs (the 50 bibliography tasks consist of 25 public bibliographies run across two rounds; the 45 video tasks come from an original 54-task online-learning batch and retain that batch's learning history). Post-delivery online learning and certification are accounted for separately; including all learning overhead still yields net time savings in both domains, though smaller in magnitude than the execution-phase reductions. Full experimental scope, cost amortization, and methodology are detailed in the companion article, <a href="./geneloop-evaluation.html">Evaluation &amp; Methodology</a>.</p>
+<hr>
+<h2 id="when-capabilities-begin-to-create-new-capabilities">When Capabilities Begin to Create New Capabilities</h2>
+<p>Returning to our opening question: once an agent has done a piece of work, what actually changes the next time? Within the loop GeneLoop has validated so far, the agent no longer spends its language-model budget repeatedly reforging yesterday's tools. Instead, experience drives a two-way cycle: <strong>From Specific to General</strong>—distilling reusable general capabilities from concrete task trajectories—and <strong>From General to New Specifics</strong>—applying those capabilities to solve new, specific problems more reliably and efficiently.</p>
+<p>Follow the idea of self-growing computational structures one step further, and a deeper long-term research direction comes into view: <strong>Recursive Self-Improvement</strong>.</p>
+<p>What happens when verified capabilities no longer stop at serving end-user tasks directly, but can compose into higher-order abstractions and even participate in discovering, constructing, and verifying the next generation of capabilities? That question sharpens into a concrete, testable research hypothesis:</p>
+<blockquote>
+<p><strong>Can existing capabilities continuously reduce the computational cost of constructing the next generation of capabilities?</strong></p>
+</blockquote>
+<p>For now, this remains a question for the next stage of research rather than a conclusion established by the current batch of experiments. It will need to stand up to the same independent quality gates and full-cost accounting to test whether existing abstractions can genuinely lower the construction cost of next-generation capabilities while raising their reliability.</p>
+<p>Even today, however, we can see a real starting point: an agent need not remain trapped inside the static computational boundaries drawn for it in advance. If an intelligent agent can genuinely reshape its own computational structure from every piece of work it performs, then cutting model round-trips in half today may be only the beginning.</p>
+<hr>
+<h2 id="research-references-en">Research &amp; References</h2>
+<p>[1] Jingyi Jia and Qinbin Li. <em>AutoTool: Efficient Tool Selection for Large Language Model Agents</em>. Proceedings of the AAAI Conference on Artificial Intelligence, 2026. <a href="https://doi.org/10.1609/aaai.v40i37.40389">Paper</a></p>
+<p>[2] Jingyi Jia, Jiale Wang, Haoyi Zhang, Qinbin Li, Xiaofei Liao, and Hai Jin. <em>Make Graphs Great Again: Rethinking LLM Agent Architecture via Structure-Semantic Separation</em>. ACM SIGOPS ATC, 2026. <a href="https://atc.sigops.org/2026/accepted.html">Paper</a></p>
+</article>
+</main>
+<footer class="footer wrap"><a class="brand" href="./?home">GENELOOP</a><span class="footer-motto">Take intelligence beyond the known.</span><span class="footer-copyright">© 2026 GENELOOP</span></footer>
+</body>
+</html>

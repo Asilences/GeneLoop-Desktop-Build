@@ -1,0 +1,40 @@
+:root{--paper:#f8f7f2;--ink:#262521;--muted:#77746c;--line:#d5d2c8;--accent:#ba3d2c;--serif:Space,Arial,sans-serif;}
+body{background:var(--paper)}
+body:before{display:none}
+.header{border-color:var(--line)}
+.header .brand{font-weight:600;letter-spacing:-1.2px}
+.header .brand-mark{width:35px;height:35px}
+.hero{min-height:max(820px,calc(100svh - 96px));grid-template-columns:.95fr 1.05fr}
+.hero-copy h1{font-family:Space,Arial,sans-serif;font-weight:400;font-size:clamp(78px,8vw,132px);line-height:1.04;letter-spacing:-7px}
+.hero-copy h1 em{font-style:normal;color:var(--accent)}
+.hero-description{color:#68665d;font-size:20px;line-height:1.6}
+.hero-copy .button{background:var(--ink);color:var(--paper);border-color:var(--ink);border-radius:0}
+.button{background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:0}
+.button:hover,.hero-copy .button:hover{background:var(--accent);border-color:var(--accent)}
+.text-link{border-color:#bbb7ad}
+.artwork{isolation:isolate;margin:0;padding:0;border:0;box-shadow:none;border-radius:0}
+.canvas-frame{overflow:hidden;border-radius:0;background:transparent}
+.art-fallback{color:var(--ink);font-family:Georgia,serif;opacity:.15}
+.research-body>p{color:#726f66}
+.research h2{font-family:Space,Arial,sans-serif;font-weight:400;letter-spacing:-2.7px;line-height:1.13}
+.research h2 em{font-style:normal;color:var(--accent)}
+.loop-line{font-family:Space,Arial,sans-serif;font-size:24px}
+.join h2{font-family:Space,Arial,sans-serif;font-weight:400;letter-spacing:-4px}
+.join h2 em{font-style:normal}
+.motion-button{background:var(--paper);border-color:var(--line);color:var(--ink)}
+.footer .brand{color:var(--ink)}
+.design-options button{border-radius:0}
+.design-options button[aria-pressed=true]{color:var(--paper);background:var(--ink);border-color:var(--ink)}
+@media(max-width:1100px){.hero-copy h1{font-size:clamp(74px,8.3vw,98px);letter-spacing:-5px}
+.loop-line{font-size:21px}}
+@media(max-width:800px){.hero-copy h1{font-size:69px;letter-spacing:-4px}
+.research h2{font-size:37px}}
+@media(max-width:580px){.hero{min-height:0;display:flex}
+.hero-copy h1{font-size:clamp(58px,15vw,83px);letter-spacing:-3.4px}
+.hero-description{font-size:18px}
+.header .brand-mark{width:28px;height:28px}
+.research h2{font-size:37px}
+.loop-line{font-size:18px}
+.join h2{font-size:53px;letter-spacing:-2px}}
+:root{--banner:#ece9e0}
+:root{--brand-bg:#d6d7d0;--brand-ink:#262521}

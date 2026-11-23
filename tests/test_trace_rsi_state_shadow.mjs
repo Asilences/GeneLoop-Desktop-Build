@@ -7,7 +7,7 @@ import {join,resolve} from 'node:path';
 import {digest} from '../src/adapters/paper_rsi_program.ts';
 import {sha256} from '../src/adapters/paper_triage_validation.ts';
 import {createTraceRsiTaskTools} from '../scenarios/paper-submission/trace-rsi-task-server.ts';
-import {createStateShadowInterceptor,validateStateShadowLibrary} from '../src/adapters/dsh_trace_rsi_state_shadow.ts';
+import {createStateShadowInterceptor,validateStateShadowLibrary} from '../src/adapters/harness/paper/dsh_trace_rsi_state_shadow.ts';
 
 const P='mcp__paper_trace_rsi__',FEATURE='prior_same_input_check',clone=x=>JSON.parse(JSON.stringify(x));
 const rehash=value=>{const {manifest_digest,...body}=value;return {...body,manifest_digest:digest(body)};};
@@ -23,8 +23,8 @@ function fixture(t){
     provenance_sha256:digest(provenance),certification,certification_sha256:digest(certification)});
   const libraryPath=join(work,'tool.json'),catalogPath=join(work,'catalog.json');
   writeFileSync(libraryPath,JSON.stringify(frozen));writeFileSync(catalogPath,'{}');writeFileSync(join(work,'triage.json'),JSON.stringify({rows:['a']}));
-  const paths=['scenarios/paper-submission/trace-rsi-task-server.ts','src/adapters/paper_rsi_program.ts','src/adapters/trace_rsi_program.ts','src/adapters/dsh_trace_rsi_shadow.ts'].map(p=>resolve(p));
-  const extra=Object.fromEntries(['src/adapters/trace_rsi_state_compiler.py','src/adapters/dsh_trace_rsi_state_shadow.ts','scripts/paper-rsi-state-shadow.py'].map(p=>[resolve(p),sha256(readFileSync(p))]));
+  const paths=['scenarios/paper-submission/trace-rsi-task-server.ts','src/adapters/paper_rsi_program.ts','src/adapters/trace_rsi_program.ts','src/adapters/harness/paper/dsh_trace_rsi_shadow.ts'].map(p=>resolve(p));
+  const extra=Object.fromEntries(['src/motif_core/offline/compilation/trace/trace_rsi_state_compiler.py','src/adapters/harness/paper/dsh_trace_rsi_state_shadow.ts','scripts/paper-rsi-state-shadow.py'].map(p=>[resolve(p),sha256(readFileSync(p))]));
   const baseCodes=Object.fromEntries(paths.map(p=>[p,sha256(readFileSync(p))]));
   const config={work,library_path:libraryPath,catalog_path:catalogPath,catalog_sha256:sha256(readFileSync(catalogPath)),source_version:'c'.repeat(64),
     session_id:'heldout',case_id:'synthetic-heldout',tool_digest:frozen.manifest_digest,candidate_sha256:frozen.candidate_sha256,

@@ -50,7 +50,7 @@ def test_one_file_model_addition_reaches_web_catalog_and_budget_gate():
             'input_usd_per_million':2.0,'cache_hit_usd_per_million':0.5,
             'output_usd_per_million':8.0},)
         from src.adapters.deepseek_cost_gate import PEAK_USD_PER_MILLION, reservation
-        from src.adapters.harless_models import model_options
+        from src.adapters.web.tasks.harless_models import model_options
         options = model_options(model_api.model_catalog_snapshot(), budget_usd=None)
         assert [row['model'] for row in options] == ['deepseek-flash','kouri-diagnostic']
         assert options[1]['context_window'] == 16000
@@ -73,7 +73,7 @@ def test_env_model_addition_reaches_catalog_route_and_budget_gate():
     script = textwrap.dedent('''
         from src.adapters import model_api
         from src.adapters.deepseek_cost_gate import PEAK_USD_PER_MILLION
-        from src.adapters.harless_models import model_options
+        from src.adapters.web.tasks.harless_models import model_options
         rows = model_api.model_catalog_snapshot()['data']
         assert [row['id'] for row in rows] == ['deepseek-flash', 'example-model']
         assert rows[1]['input_modalities'] == ['text']

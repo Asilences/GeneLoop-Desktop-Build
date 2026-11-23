@@ -23,7 +23,7 @@
       "properties": {
         "entry_id": {"$ref": "#/$defs/sha"},
         "artifact_digest": {"$ref": "#/$defs/sha"},
-        "kind": {"enum": ["script_v1", "script_v2", "read_library", "collection", "reentry", "plan", "operation_graph"]},
+        "kind": {"enum": ["script_v1", "script_v2", "read_library", "collection", "reentry", "plan", "operation_graph", "management_program", "file_script"]},
         "payload": {"$ref": "#/$defs/relative"},
         "sha256": {"$ref": "#/$defs/sha"},
         "runtime_source": {"type": "object", "additionalProperties": {"$ref": "#/$defs/sha"}},
@@ -35,7 +35,7 @@
           "properties": {"file": {"$ref": "#/$defs/relative"}, "sha256": {"$ref": "#/$defs/sha"}}
         }
       },
-      "allOf": [{"if": {"properties": {"kind": {"enum": ["script_v1", "script_v2", "operation_graph"]}, "state": {"const": "active"}}}, "then": {"required": ["certificate"]}}],
+      "allOf": [{"if": {"properties": {"kind": {"enum": ["script_v1", "script_v2", "operation_graph", "management_program", "file_script"]}, "state": {"const": "active"}}}, "then": {"required": ["certificate"]}}],
       "additionalProperties": false
     }
   }

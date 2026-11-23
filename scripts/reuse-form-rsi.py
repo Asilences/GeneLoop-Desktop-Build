@@ -8,7 +8,7 @@ from pathlib import Path
 import argparse,json,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.reuse_form_rsi import evaluate_form,publish_form,resolve_form,interface_variants
-from src.motif_core.offline.experience_registry import read,durable
+from src.motif_core.reuse.experience_registry import read,durable
 
 
 def main():

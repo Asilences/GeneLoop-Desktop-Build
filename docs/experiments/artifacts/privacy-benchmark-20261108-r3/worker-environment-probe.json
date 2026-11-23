@@ -1,0 +1,106 @@
+{
+  "same_source_and_synthetic_material": true,
+  "per_process_deadline_seconds": 120,
+  "results": [
+    {
+      "arm": "current",
+      "status": 0,
+      "seconds": 13.085062496364117,
+      "stages": [
+        {
+          "phase": "import_contract",
+          "seconds": 0.14962227828800678,
+          "threads": 1
+        },
+        {
+          "phase": "load_presidio",
+          "seconds": 9.155090233311057,
+          "threads": 56
+        },
+        {
+          "phase": "learning_view",
+          "seconds": 2.9762808978557587,
+          "threads": 56
+        },
+        {
+          "output_sha256": "0dd6c59444a56df07b970cadfded6e94586a1be54826e5b86b1d401c26139e2f"
+        }
+      ]
+    },
+    {
+      "arm": "bounded",
+      "status": 0,
+      "seconds": 23.608302868902683,
+      "stages": [
+        {
+          "phase": "import_contract",
+          "seconds": 0.15349931828677654,
+          "threads": 1
+        },
+        {
+          "phase": "load_presidio",
+          "seconds": 19.68484445102513,
+          "threads": 1
+        },
+        {
+          "phase": "learning_view",
+          "seconds": 2.9367835139855742,
+          "threads": 1
+        },
+        {
+          "output_sha256": "0dd6c59444a56df07b970cadfded6e94586a1be54826e5b86b1d401c26139e2f"
+        }
+      ]
+    },
+    {
+      "arm": "current-repeat",
+      "status": 0,
+      "seconds": 45.49595176335424,
+      "stages": [
+        {
+          "phase": "import_contract",
+          "seconds": 0.13443410396575928,
+          "threads": 1
+        },
+        {
+          "phase": "load_presidio",
+          "seconds": 41.336789914406836,
+          "threads": 56
+        },
+        {
+          "phase": "learning_view",
+          "seconds": 3.1206285832449794,
+          "threads": 56
+        },
+        {
+          "output_sha256": "0dd6c59444a56df07b970cadfded6e94586a1be54826e5b86b1d401c26139e2f"
+        }
+      ]
+    },
+    {
+      "arm": "bounded-repeat",
+      "status": 0,
+      "seconds": 64.47644760552794,
+      "stages": [
+        {
+          "phase": "import_contract",
+          "seconds": 0.14010116923600435,
+          "threads": 1
+        },
+        {
+          "phase": "load_presidio",
+          "seconds": 60.16165696363896,
+          "threads": 1
+        },
+        {
+          "phase": "learning_view",
+          "seconds": 2.9581934306770563,
+          "threads": 1
+        },
+        {
+          "output_sha256": "0dd6c59444a56df07b970cadfded6e94586a1be54826e5b86b1d401c26139e2f"
+        }
+      ]
+    }
+  ]
+}

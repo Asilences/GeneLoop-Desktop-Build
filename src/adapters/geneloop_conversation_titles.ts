@@ -1,7 +1,7 @@
 /** Account-local, extractive conversation names. No auxiliary model call or budget bypass. */
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { publicText } from './harless_public_output.ts';
+import { publicText } from './web/tasks/harless_public_output.ts';
 
 type Snapshot = { meta: any; events: any[] };
 type Host = {

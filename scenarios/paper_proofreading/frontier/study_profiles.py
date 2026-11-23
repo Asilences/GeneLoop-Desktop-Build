@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 import re
 
-from src.adapters.capability_contract import create_capability_snapshot, validate_capability_snapshot
+from src.capability.graph.capability_contract import create_capability_snapshot, validate_capability_snapshot
 
 
 CREATION_VALUE_ARMS = ('flat_without_C', 'description_only_C', 'hierarchical_with_C')

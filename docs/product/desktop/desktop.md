@@ -1,8 +1,8 @@
 # GeneLoop Desktop
 
-0.3.0-preview.13 沿用独立桌面前端，提供 Windows x64、macOS ARM64 和 Intel 预览包。窗口、页面、组件、样式和交互状态由 `apps/desktop/` 实现，参考 GeneLoop 网页的视觉与场景。绑定本机文件夹的新会话由本机 DSH Agent 和工具执行，模型联网调用云端；原云端工作区仍由服务器执行。早期 0.2.0 只提供服务器执行入口。
+0.3.0-preview.14 沿用独立桌面前端，提供 Windows x64 EXE、macOS ARM64 DMG 和 Intel DMG 预览包。本轮接入 Draft PR161 `998cb505` 的 Motif 库、工作区展示及独立右栏，以及 Draft PR162 `7fbe8874` 的数据隐私接口；保留本机文件夹、草稿及统一对话输入框。两个 PR 的核心模块与正式服务仍由原负责方维护，本轮不代表远端 PR 合并或正式部署。窗口、页面、组件、样式和交互状态由 `apps/desktop/` 实现。绑定本机文件夹的新会话由本机 DSH Agent 和工具执行，模型联网调用云端；原云端工作区仍由服务器执行。
 
-DMG 打包入口已准备，尚未生成新 DMG。Mac 构建工作流的 `dmg-delivery` 模式从已核验 `.app` 制作映像，Finder 窗口显示应用与「应用程序」链接；用户拖入后推出映像。构建端还会验证映像、只读挂载及 ASAR 字节。此格式转换不代替 Apple Developer 签名、公证或人工安装验收。原 ZIP 仍可直接解压后拖入应用程序。
+两个架构的 DMG 均已生成，并通过映像验证、只读挂载、「应用程序」链接和包内 ASAR 字节比对。双击 DMG，将应用拖入右侧「应用程序」，复制完成后推出映像。Apple Silicon 使用 ARM64，Intel Mac 使用 x64。此格式转换不代替 Apple Developer 签名、公证或人工安装验收。旧 preview.13 ZIP 原样保留。
 
 ## 本机工作区 Windows / macOS 预览
 
@@ -95,11 +95,11 @@ npm --prefix apps/desktop run smoke:packaged
 
 本机工具构建另需 `GENELOOP_DESKTOP_BROWSER` 指向 Remotion `ensureBrowser()` 准备的配套浏览器。纯 JS 封入运行时 ASAR，原生 compositor、esbuild、FFmpeg、Office、Python 和浏览器保留实体文件。包内 `manifest.json` 记录平台、架构、浏览器摘要和 ppt-master 锁。Windows 本机复杂渲染使用 Chromium 渲染沙箱，固定工具进程由 DSH 管理取消，不能将其称为全面文件/网络隔离。
 
-Mac 在目标平台原生执行 `node scripts/prepare-macos-tools.mjs`（工作目录 `apps/desktop`），再运行 `npm run dist`。它获取固定版本与校验和的便携 Python/LibreOffice，验证锁定 ppt-master，并准备配套 Chromium 和 Remotion 原生组件；输出 ARM64 或 x64 的 DMG/ZIP。`.github/workflows/desktop-native.yml` 在两类 Mac 构建机上运行原生文件、PPT/PDF、实际 Remotion、取消及 ASAR 检查；没有安装包上传步骤。2026-11-06 两种架构的原生与包内检查均已通过；最终复验采用 `.app` 模式，前一轮候选的 DMG/ZIP 构建成功不替代最终版本的安装验收。尚未完成 Apple Developer 签名、公证、人工界面与 Mac 真实模型场景验收。六个 Windows 合成小任务的真实模型证据见 [preview.11 记录](experiments/desktop-preview11-20261106.md)。
+Mac 在目标平台原生执行 `node scripts/prepare-macos-tools.mjs`（工作目录 `apps/desktop`），再运行 `npm run dist`。它获取固定版本与校验和的便携 Python/LibreOffice，验证锁定 ppt-master，并准备配套 Chromium 和 Remotion 原生组件；输出 ARM64 或 x64 的 DMG/ZIP。preview.14 的 `dmg-delivery` 从已检查 `.app` 封装 DMG，两架构通过包内实际 Remotion、核心 MCP、Agent 启动／读写／取消和映像检查，均不调用真实模型。专用构建仓库仅按用户授权临时中转产物，取回后删除，不发布 Release。Intel 首轮媒体超时及第二轮封装限时失败保留在交接，不当作验收成功。尚未完成 Apple Developer 签名、公证、人工界面与 Mac 真实模型场景验收。六个 Windows 合成小任务的真实模型证据见 [preview.11 记录](../../experiments/desktop-preview11-20261106.md)。
 
 ppt-master 构建来源固定为上游提交 `440557b8dc7c7257b69c04a0b014d5c50a78e6cb` 的 `skills/ppt-master/` 子目录，逐字节保持既有 13,016 文件锁；仓库根目录和同名版本标签不能替代该安装来源。Mac 的 FFmpeg/FFprobe 及相邻动态库在构建时重定位为 `@loader_path` 并恢复 ad-hoc 签名，避免依赖当前工作目录。系统动态库路径保留。该签名不是 Apple Developer 签名或公证。
 
-Mac 包内的 Agent 启动与工具探针使用 `node scripts/probe-local-runtime.mjs --installed "<GeneLoop Desktop.app 路径>"`，Windows 使用同一入口并传入安装目录。探针启动真实 DSH SDK、读取/搜索文本、写报告、拒绝越界访问、取消等待及正常关闭；模型响应来自回环协议夹具，真实模型请求为零。手动 Mac CI 可选择 `app` 模式，只生成 `.app` 并执行包内检查；`installers` 模式继续生成 DMG/ZIP，两种模式都不上传安装包。
+Mac 包内的 Agent 启动与工具探针使用 `node scripts/probe-local-runtime.mjs --installed "<GeneLoop Desktop.app 路径>"`，Windows 使用同一入口并传入安装目录。探针启动真实 DSH SDK、读取/搜索文本、写报告、拒绝越界访问、取消等待及正常关闭；模型响应来自回环协议夹具，真实模型请求为零。手动 Mac CI 可选择 `app` 模式，只生成 `.app` 并执行包内检查；`installers` 模式生成 DMG/ZIP。这两种模式默认不上传安装包；仅专用构建仓库的 `delivery`／`dmg-delivery` 按已授权范围临时中转，并在本地完整校验后删除。
 
 ## preview.13 原场景 MCP 工具
 

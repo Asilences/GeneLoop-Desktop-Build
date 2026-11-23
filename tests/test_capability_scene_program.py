@@ -13,11 +13,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters import capability_scene as scene,capability_proposal as pilot
-from src.adapters.capability_contract import capability_ref,create_capability_snapshot,capability_digest
-from src.adapters.capability_improvement import evidence
-from src.adapters.capability_materials import CapabilityMaterials
-from src.adapters.capability_source_authoring import prepare_capability_source_request
+from src.adapters.harness.capability import capability_scene as scene,capability_proposal as pilot
+from src.capability.graph.capability_contract import capability_ref,create_capability_snapshot,capability_digest
+from src.rsi.learning.capability_improvement import evidence
+from src.capability.runtime.capability_materials import CapabilityMaterials
+from src.capability.builder.capability_source_authoring import prepare_capability_source_request
 from tests.test_capability_improvement import put
 from tests.test_capability_program_composition import data
 from tests.test_capability_proposal_loop import DiagnosticGate,fake_harness
@@ -52,7 +52,8 @@ def setup_request(tmp_path):
 
 
 def stub_native(monkeypatch,d,calls,*,fail=False):
-    from src.adapters import capability_program_training,capability_script_learning
+    from src.rsi.learning import capability_program_training
+    from src.adapters.harness.capability import capability_script_learning
     def prepare(task,snapshot,program_ref,intent_ref,cases,libraries,directory,*,source_refs):
         calls.append(('prefix',copy.deepcopy(cases),json.loads(evidence(intent_ref))))
         Path(directory).mkdir();ref=put(Path(directory)/'result.json',{'diagnostic':True})
@@ -89,7 +90,7 @@ def test_default_acquire_routes_exact_source_intent_through_existing_learner_and
 
 @pytest.mark.parametrize('outer,inner',[(False,True),(True,False),(True,True)])
 def test_builder_learning_is_forwarded_only_when_both_host_flags_are_enabled(tmp_path,monkeypatch,outer,inner):
-    from src.adapters import capability_program_training
+    from src.rsi.learning import capability_program_training
     d,adapter,job,result,attempt,_=setup_request(tmp_path);calls=[]
     stub_native(monkeypatch,d,calls)
     original=capability_program_training.prepare_program_cases;seen=[]
@@ -133,7 +134,7 @@ def test_only_located_model_source_rejection_enters_the_existing_repair_protocol
 @pytest.mark.parametrize('kind',['compile','verified-data','unknown-runtime','permission','timeout'])
 def test_prefix_diagnostics_do_not_authorize_repair_of_unknown_environment_failures(tmp_path,monkeypatch,kind):
     d,adapter,job,result,attempt,_=setup_request(tmp_path);calls=[]
-    from src.adapters import capability_program_training
+    from src.rsi.learning import capability_program_training
     stub_native(monkeypatch,d,calls)
     error=ValueError('diagnostic_prefix_failure')
     if kind=='compile':
@@ -214,8 +215,8 @@ def test_existing_scene_override_delegates_new_source_program_to_common_acquire(
 native=sys.platform=='linux' and Path('/usr/bin/bwrap').exists() and os.environ.get('RUN_SCRIPT_CAPABILITY_SANDBOX')=='1'
 @pytest.mark.skipif(not native,reason='explicit Linux native public acquisition diagnostic')
 def test_public_default_acquire_certifies_registers_refreshes_and_executes_new_algorithm(tmp_path,monkeypatch):
-    from src.adapters.capability_script_learning import learn
-    from src.adapters.capability_script_execution import execute
+    from src.adapters.harness.capability.capability_script_learning import learn
+    from src.adapters.harness.capability.capability_script_execution import execute
     construction=[];old_cases=[]
     for i,n in enumerate((2,8)):
         path=tmp_path/('input-'+str(i)+'.json')

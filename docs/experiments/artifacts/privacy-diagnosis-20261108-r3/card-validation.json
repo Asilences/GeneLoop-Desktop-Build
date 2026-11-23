@@ -1,0 +1,68 @@
+{
+  "purpose": "post-hoc upstream card validation attribution; not a detection score",
+  "gold_selected_values_passed_to_validator_only": true,
+  "gold_changed": false,
+  "detector_predictions_changed": false,
+  "validator_source_sha256": "47b916f146c6f25d9f64891b1ec2b0ea42b847799863064a4ee34d85d965d59f",
+  "source_sha256": "bf50c859a3ef8cd49d46b1a185b946c3b465fe81c26d1ec3e0a81b379b302255",
+  "datasets": {
+    "zh_formal": {
+      "counts": {
+        "gold_entities": 862,
+        "valid_luhn": 80,
+        "invalid_luhn": 782,
+        "validation_error": 0,
+        "upstream_full_pattern_on_value": 862,
+        "upstream_exact_pattern_in_document": 89,
+        "pattern_value_but_not_document": 773,
+        "native_fully_covered": 433,
+        "r2_core_fully_covered": 202
+      },
+      "combinations": {
+        "invalid:pattern_value=True:pattern_document=False": 704,
+        "valid:pattern_value=True:pattern_document=False": 69,
+        "invalid:pattern_value=True:pattern_document=True": 78,
+        "valid:pattern_value=True:pattern_document=True": 11
+      }
+    },
+    "zh_chat": {
+      "counts": {
+        "gold_entities": 504,
+        "valid_luhn": 60,
+        "invalid_luhn": 444,
+        "validation_error": 0,
+        "upstream_full_pattern_on_value": 504,
+        "upstream_exact_pattern_in_document": 268,
+        "pattern_value_but_not_document": 236,
+        "native_fully_covered": 282,
+        "r2_core_fully_covered": 100
+      },
+      "combinations": {
+        "invalid:pattern_value=True:pattern_document=True": 232,
+        "valid:pattern_value=True:pattern_document=True": 36,
+        "invalid:pattern_value=True:pattern_document=False": 212,
+        "valid:pattern_value=True:pattern_document=False": 24
+      }
+    },
+    "en_test": {
+      "counts": {
+        "gold_entities": 663,
+        "valid_luhn": 438,
+        "invalid_luhn": 225,
+        "validation_error": 0,
+        "upstream_full_pattern_on_value": 555,
+        "upstream_exact_pattern_in_document": 554,
+        "pattern_value_but_not_document": 1,
+        "native_fully_covered": 522,
+        "r2_core_fully_covered": 367
+      },
+      "combinations": {
+        "invalid:pattern_value=True:pattern_document=True": 193,
+        "invalid:pattern_value=False:pattern_document=False": 32,
+        "valid:pattern_value=True:pattern_document=True": 361,
+        "valid:pattern_value=False:pattern_document=False": 76,
+        "valid:pattern_value=True:pattern_document=False": 1
+      }
+    }
+  }
+}

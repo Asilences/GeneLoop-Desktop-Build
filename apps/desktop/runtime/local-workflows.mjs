@@ -2,12 +2,12 @@
 // managed process lifetime, discovery and publication into the native writer.
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {createHash,randomUUID} from 'node:crypto';
-import {mkdirSync,mkdtempSync,readFileSync,writeFileSync,lstatSync,realpathSync,readdirSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,readFileSync,writeFileSync,lstatSync,realpathSync,readdirSync,cpSync,existsSync,renameSync} from 'node:fs';
 import {basename,dirname,join,relative,resolve,sep} from 'node:path';
 import JSZip from 'jszip';
 import {NativeMcpTransport} from './local-mcp-transport.mjs';
 import {removeScratchDirectory,publishArtifacts} from './local-artifacts.mjs';
-import {workflowTools,workflowKinds as kinds,workflowToolName} from './native-workflow-catalog.mjs';
+import {workflowTools,workflowKinds as kinds,workflowToolName,extendedWorkflowKinds} from './native-workflow-catalog.mjs';
 import {ocrData} from './native-ocr-data.mjs';
 import {ensureNativeFonts,nativeFontEnvironment} from './local-fonts.mjs';
 
@@ -16,7 +16,7 @@ const sha=data=>createHash('sha256').update(data).digest('hex');
 const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':
   value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}':JSON.stringify(value);
 const deliveredBy=new Set(['deliver_report','deliver_deck','build_delivery','render_delivery','revise_delivery',
-  'export_current_audit_pdf','export_review_report','export_input_review','submit_report','create_text','edit_text','execute_code']);
+  'export_current_audit_pdf','export_review_report','export_input_review','submit_report','create_text','edit_text','execute_code','export_revision_report','execute_tool_call','inspect_tool_result']);
 const extensions=new Set(['md','txt','json','pdf','pptx','csv','zip','docx','xlsx','png']);
 const maxSource=32*1024*1024,maxTotal=128*1024*1024;
 function object(value){return value!==null&&typeof value==='object'&&!Array.isArray(value);}
@@ -25,17 +25,41 @@ function payload(result) {
   const text=result.content?.filter(x=>x.type==='text').map(x=>x.text).join('\n');
   try{return JSON.parse(text);}catch{return {text};}
 }
-function plainFile(root,path) {
+function plainFile(root,path,{privateLinks,allowEmpty=false}={}) {
   const full=resolve(path),rel=relative(root,full);
   if(rel==='..'||rel.startsWith('..'+sep)||resolve(root)===full)throw Error('场景产物超出当前任务。');
   for(let at=full;at!==root;at=dirname(at))if(lstatSync(at).isSymbolicLink())throw Error('场景产物不能通过链接读取。');
   const info=lstatSync(full);
-  if(!info.isFile()||info.nlink!==1||info.size<1||info.size>80*1024*1024||realpathSync(full)!==full)throw Error('场景产物类型或大小无效。');
+  const identity=lstatSync(full,{bigint:true}),key=identity.dev+':'+identity.ino;
+  const ownedLinks=identity.nlink===1n||privateLinks?.get(key)===identity.nlink;
+  if(!info.isFile()||!ownedLinks||info.size<(allowEmpty?0:1)||info.size>80*1024*1024||realpathSync(full)!==full)throw Error('场景产物类型或大小无效。');
   return full;
 }
 
-export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onReport,onCatalog) {
-  const active=new Map(),parent=realpathSync(process.cwd());let pending=false,closed=false;
+function privateLinkCounts(root) {
+  const counts=new Map();
+  const walk=directory=>{for(const entry of readdirSync(directory,{withFileTypes:true})){
+    const path=join(directory,entry.name);if(entry.isSymbolicLink())throw Error('私有整理目录出现链接');
+    if(entry.isDirectory())walk(path);
+    else {const stat=lstatSync(path,{bigint:true});if(stat.nlink>1n){const key=stat.dev+':'+stat.ino;counts.set(key,(counts.get(key)??0n)+1n);}}
+  }};walk(root);return counts;
+}
+
+export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onReport,onCatalog,extended=true,persistentDirectory) {
+  const active=new Map();
+  const store=persistentDirectory?join(persistentDirectory,'file-workflows'):undefined;
+  if(store)mkdirSync(store,{recursive:true,mode:0o700});
+  const parent=realpathSync(store??process.cwd()),journal=store?join(parent,'workflows.json'):undefined;
+  let pending=false,closed=false,restoring=false;
+  const engine=()=>sha(readFileSync(join(tools.sourceRoot,'src/adapters/desktop/desktop_workflow_server.py')));
+  const persist=()=>{
+    if(!journal||restoring)return;
+    const items=[...active].map(([id,row])=>({id,rootName:basename(row.root),kind:row.kind,task:row.task,
+      sources:row.sources,request:row.request,settings:row.settings,engine:row.engine,
+      catalogHash:row.catalogHash,initialization:row.initialization,published:[...row.published],previews:[...(row.previews??new Map())]}));
+    writeFileSync(journal+'.tmp',JSON.stringify({version:1,items})+'\n',{mode:0o600});
+    renameSync(journal+'.tmp',journal);
+  };
   function checkSources(sources){
     signal.throwIfAborted();
     const root=join(dirname(tools.sourceRoot),'ocr');
@@ -43,19 +67,23 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
       if(sha(readFileSync(plainFile(root,join(root,name))))!==version)throw Error('本机OCR资源版本已变化。');
     for(const source of sources)if(sha(reader.readBytes(source.path,maxSource))!==source.sha256)throw Error('工作区来源已变化，请重新打开该工作流。');
   }
-  async function closeOne(row) {
+  async function closeOne(row,remove=!store) {
     await row.client?.close().catch(()=>{});
+    if(!remove)return;
     try{removeScratchDirectory(row.root,parent);}catch{/* The worker parent retries cleanup after exit. */}
   }
   const workflows={
-    async open(sourcesJSON,request,settingsJSON='{}') {
+    async open(sourcesJSON,request,settingsJSON='{}',restored) {
       if(closed||pending)throw Error('工作流正在打开或已关闭。');
-      if(active.size>=3)throw Error('本轮最多同时打开三个场景工作流。');
       if(typeof request!=='string'||!request.trim()||Buffer.byteLength(request)>256*1024)throw Error('请输入本轮实际任务说明。');
       const settings=JSON.parse(settingsJSON),sources=JSON.parse(sourcesJSON);
       if(!object(settings)||Object.keys(settings).some(k=>!['workflow','slides','template','operation'].includes(k)))throw Error('工作流设置包含未知字段。');
-      const kind=settings.workflow??kinds[scene]?.[0];
+      const kind=settings.workflow??(extended&&scene==='ppt'?'skill':kinds[scene]?.[0]);
       if(!kinds[scene]?.includes(kind))throw Error('该工作流不在当前场景内。');
+      const previous=[...active.entries()].find(([,row])=>row.kind===kind);
+      if(previous?.[1].busy)throw Error('请等待该工作流完成当前操作。');
+      if(active.size>=2&&!previous)throw Error('本轮最多同时打开两个场景工作流，请先关闭不再使用的工作流。');
+      if(!extended&&extendedWorkflowKinds.has(kind))throw Error('当前网关尚未启用新版工具集；已有场景工具仍可使用。');
       if(!Array.isArray(sources)||sources.length>16||sources.some(s=>!object(s)||Object.keys(s).sort().join(',')!=='path,sha256'||typeof s.path!=='string'||!/^[a-f0-9]{64}$/.test(s.sha256)))throw Error('来源必须为最多16项的路径和SHA-256数组。');
       const aliases=new Map();let total=0;
       const snapshots=sources.map(source=>{
@@ -65,27 +93,47 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
         if(name.startsWith('.')||name.includes(':')||aliases.has(name.toLowerCase()))throw Error('来源文件名重复或无效，请分批打开。');
         aliases.set(name.toLowerCase(),source.path);return {...source,name,bytes};
       });
-      const root=mkdtempSync(join(parent,'workflow-')),work=join(root,'.local','turn','work'),inputs=join(work,'inputs');
-      mkdirSync(inputs,{recursive:true,mode:0o700});mkdirSync(join(work,'outputs'),{mode:0o700});
-      const task=randomUUID(),approved={},mapping={};let client;
-      const row={root,work,kind,sources:snapshots.map(({path,sha256})=>({path,sha256})),published:new Map()};
+      if(restored&&(!store||!/^workflow-[A-Za-z0-9]+$/.test(restored.rootName)||restored.engine!==engine()))throw Error('原文件工作流或本机工具版本已变化，请核对后新建任务。');
+      const root=restored?join(parent,restored.rootName):mkdtempSync(join(parent,'workflow-'));
+      if(restored&&(!existsSync(root)||lstatSync(root).isSymbolicLink()||realpathSync(root)!==root))throw Error('原文件工作流目录已变化。');
+      // The original manager owns journals below ROOT/.local. A private copy of
+      // public code preserves that contract without writing into the install.
+      const codeRoot=kind==='management'?join(root,'source'):tools.sourceRoot;
+      if(kind==='management'&&!restored)cpSync(tools.sourceRoot,codeRoot,{recursive:true,filter:path=>{
+        const parts=relative(tools.sourceRoot,path).split(/[\\/]/);
+        return !parts.some(name=>['.local','.git','__pycache__'].includes(name)||name==='.env'||name.startsWith('.env.'));
+      }});
+      const work=join(kind==='management'?codeRoot:root,'.local','turn','work'),inputs=join(work,'inputs');
+      mkdirSync(inputs,{recursive:true,mode:0o700});mkdirSync(join(work,'outputs'),{mode:0o700,recursive:true});
+      const task=restored?.task??randomUUID(),approved={},mapping={};let client;
+      const row={root,work,kind,task,request,settings,engine:engine(),
+        sources:snapshots.map(({path,sha256})=>({path,sha256})),
+        initialization:restored?.initialization,published:new Map(restored?.published??[]),previews:new Map(restored?.previews??[])};
       pending=true;
       try {
+        // Release the old same-kind process before starting its replacement,
+        // rather than temporarily exceeding the live workflow limit.
+        if(previous){onCatalog?.(kind,previous[0],[]);active.delete(previous[0]);await closeOne(previous[1],true);persist();}
         await ensureNativeFonts(ctx,tools,root,signal);
         // A TeX tree is supplied as one approved archive to preserve includes.
-        if(kind==='paper'&&snapshots.some(s=>s.name.endsWith('.tex'))&&snapshots.some(s=>s.path.includes('/')||s.path.includes('\\'))) {
+        if(!restored&&kind==='paper'&&snapshots.some(s=>s.name.endsWith('.tex'))&&snapshots.some(s=>s.path.includes('/')||s.path.includes('\\'))) {
           const archive=new JSZip();for(const item of snapshots)archive.file(item.path.replaceAll('\\','/'),item.bytes);
           const bytes=await archive.generateAsync({type:'nodebuffer',compression:'DEFLATE'});
           writeFileSync(join(inputs,'paper-sources.zip'),bytes,{flag:'wx',mode:0o600});approved['paper-sources.zip']=sha(bytes);
           mapping['paper-sources.zip']=row.sources;
         } else for(const item of snapshots) {
-          writeFileSync(join(inputs,item.name),item.bytes,{flag:'wx',mode:0o600});approved[item.name]=item.sha256;mapping[item.name]=item.path;
+          if(!restored)writeFileSync(join(inputs,item.name),item.bytes,{flag:'wx',mode:0o600});approved[item.name]=item.sha256;mapping[item.name]=item.path;
         }
-        const save=(name,value)=>writeFileSync(join(work,name),JSON.stringify(value,null,2),{flag:'wx',mode:0o600});
+        const save=(name,value)=>{
+          const path=join(work,name);
+          if(restored){
+            if(canonical(JSON.parse(readFileSync(path,'utf8')))!==canonical(value))throw Error('原任务授权或来源绑定已变化。');
+          }else writeFileSync(path,JSON.stringify(value,null,2),{flag:'wx',mode:0o600});
+        };
         save('approved-inputs.json',{files:approved});save('paper-output-grant.json',{schema_version:1,task_id:task,allow_output:true});
         save('general-task.json',{allow_output:true});
-        if(kind==='report') {mkdirSync(join(work,'report'));writeFileSync(join(work,'report','request.txt'),request,{mode:0o600});}
-        if(kind==='ppt') {
+        if(!restored&&(kind==='report'||kind==='gateway')) {mkdirSync(join(work,'report'));writeFileSync(join(work,'report','request.txt'),request,{mode:0o600});}
+        if(kind==='ppt'||kind==='gateway'||kind==='management') {
           const slides=settings.slides??8;
           if(!Number.isInteger(slides)||slides<1||slides>30||!['academic','lab'].includes(settings.template??'academic')||!['generate','restyle'].includes(settings.operation??'generate'))throw Error('PPT设置需要1至30页、academic/lab模板和generate/restyle操作。');
           save('job.json',{job_id:task,instruction:request,slides,template:settings.template??'academic',operation:settings.operation??'generate',
@@ -93,8 +141,8 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
             inputs:Object.entries(approved).map(([name,version_sha256],i)=>({document_id:'document-'+(i+1),name,version_sha256,path:join(inputs,name)}))});
         }
         const nativeSettings={};
-        if(kind==='files') {
-          writeFileSync(join(inputs,'.experiment-copy'),'native-scene-snapshot',{flag:'wx',mode:0o600});
+        if(kind==='files'||kind==='management') {
+          if(!restored)writeFileSync(join(inputs,'.experiment-copy'),'native-scene-snapshot',{flag:'wx',mode:0o600});
           const initial={...approved,'.experiment-copy':sha(Buffer.from('native-scene-snapshot'))};
           nativeSettings.file_task={scope_kind:'harless_web_task',task_id:task,workspace:inputs,family:'native_workspace',objective:request,
             rules:['只整理当前任务副本；原工作区资料不会被移动、覆盖或删除。','先preview_actions，再由用户确认，最后执行。'],
@@ -102,22 +150,51 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
             write_grant:{schema_version:1,allow_restore:true,max_actions:6,allowed_ops:['copy','move','quarantine'],
               source_paths:Object.keys(approved),destination_prefixes:['整理/','quarantine/']}};
         }
+        if(kind==='management')nativeSettings.management_task={task_id:task,owner:'native-task',workspace_id:task,workspace:inputs,objective:request,
+          workspace_marker_sha256:sha(Buffer.from('native-scene-snapshot')),rules:{read_only:false},external_roots:{},
+          initial_tree:{workspace:{files:nativeSettings.file_task.initial_snapshot,directories:[]}}};
         save('native-settings.json',nativeSettings);
         const bootstrap="import runpy,sys;sys.path.insert(0,sys.argv.pop(1));runpy.run_module(sys.argv.pop(1),run_name='__main__')";
-        let argv=[tools.python,'-E','-s','-B','-X','utf8','-c',bootstrap,tools.sourceRoot,'src.adapters.desktop_workflow_server',kind,work];
-        const env={PATH:[dirname(tools.python),dirname(tools.soffice)].join(process.platform==='win32'?';':':'),
+        let argv=[tools.python,'-E','-s','-B','-X','utf8','-c',bootstrap,codeRoot,'src.adapters.desktop.desktop_workflow_server',kind,work];
+        const toolRoot=dirname(tools.sourceRoot);
+        const env={PATH:[dirname(tools.python),dirname(tools.soffice),join(toolRoot,'ffmpeg'),join(toolRoot,'extras','pandoc')].join(process.platform==='win32'?';':':'),
           HOME:root,USERPROFILE:root,APPDATA:root,LOCALAPPDATA:root,TEMP:root,TMP:root,TMPDIR:root,PYTHONUTF8:'1',
-          SSS_PPT_NODE_EXECUTABLE:process.execPath,
+          SSS_PPT_NODE_EXECUTABLE:process.execPath,GENELOOP_OFFICE_NODE:process.execPath,
           ELECTRON_RUN_AS_NODE:'1',NODE_OPTIONS:undefined,NODE_PATH:undefined,FM_NATIVE_PDF:'1',GENELOOP_PPT_MASTER_ROOT:tools.skill,
-          GENELOOP_PDF_OCR_ROOT:join(dirname(tools.sourceRoot),'ocr'),GENELOOP_DESKTOP_OCR_LOCK:'1'};
+          GENELOOP_PDF_OCR_ROOT:join(dirname(tools.sourceRoot),'ocr'),GENELOOP_DESKTOP_OCR_LOCK:'1',
+          GENELOOP_NATIVE_SKILL_RUNTIME:'1',GENELOOP_NATIVE_WORKSPACE:work,GENELOOP_NATIVE_SOFFICE:tools.soffice,
+          PLAYWRIGHT_BROWSERS_PATH:join(toolRoot,'chromium'),
+          TIKTOKEN_CACHE_DIR:join(toolRoot,'python-data','tiktoken'),RL_renderPMBackend:'_renderPM',PYTHONDONTWRITEBYTECODE:'1'};
         Object.assign(env,nativeFontEnvironment(tools,root));
         const {fileURLToPath}=await import('node:url');
         env.GENELOOP_NATIVE_CODE_RUNNER=join(dirname(fileURLToPath(import.meta.url)),'local-code.mjs');
+        if(kind==='gateway'||kind==='management') {
+          const nativeEntry=join(tools.sourceRoot,'src/adapters/desktop/desktop_workflow_server.py'),runtime=dirname(fileURLToPath(import.meta.url));
+          const environment={...Object.fromEntries(Object.entries(env).filter(([key,value])=>value!==undefined&&!key.startsWith('DEEPSEEK_'))),HARLESS_REPORT_WORKSPACE:'${SESSION_WORKSPACE}',HARLESS_PRIVATE_ROOT:root,
+            GENELOOP_PPT_SOURCE_ROOT:tools.sourceRoot,SSS_PPT_DELIVERY_PYTHON:tools.python,SSS_PPT_NODE_ROOT:runtime,SSS_PPT_JOB:'${SESSION_WORKSPACE}/job.json'};
+          const providers=[['workspace-runtime','general'],['paper-checks','paper'],['data-report','report'],['presentations','ppt']].map(([id,kind])=>({
+            id,description:'本机复用网页版'+id+'工具',transport:'stdio',command:kind==='ppt'?process.execPath:tools.python,
+            args:kind==='ppt'?[join(runtime,'research-ppt/mcp-adapter.js'),'--web-session']:[nativeEntry,kind,'${SESSION_WORKSPACE}'],cwd:'${SESSION_WORKSPACE}',env:environment,
+            policy:id==='paper-checks'?'read_only':'provider_guarded',cost:'local_no_model',timeout_seconds:180,
+          }));
+          save('native-providers.json',{format:'sss-general-tools-v1',providers});
+          if(tools.nativeProviders)env.GENELOOP_NATIVE_PROVIDER_CONFIG=Buffer.from(JSON.stringify(tools.nativeProviders)).toString('base64');
+        }
+        // Management relocates the public source so its journal stays private.
+        // Embedded Python's sitecustomize would otherwise import src/scenarios
+        // from the installed bundle before bootstrap selects that private copy.
+        // The manager needs no PPT import hook; nested providers keep their own
+        // environment above, including the normal Skill binding when required.
+        if(kind==='management')env.GENELOOP_NATIVE_SKILL_RUNTIME='0';
         // The top-level PPT proxy is the same typed delivery/recovery adapter as Web.
         if(kind==='ppt') {
           const runtime=dirname(fileURLToPath(import.meta.url));env.SSS_PPT_NODE_ROOT=runtime;
           env.GENELOOP_PPT_SOURCE_ROOT=tools.sourceRoot;env.SSS_PPT_DELIVERY_PYTHON=tools.python;env.SSS_PPT_JOB=join(work,'job.json');env.HARLESS_PRIVATE_ROOT=work;
           argv=[process.execPath,join(runtime,'research-ppt','mcp-adapter.js'),'--web-session'];
+        }
+        if(kind==='revision') {
+          const runtime=dirname(fileURLToPath(import.meta.url));env.GENELOOP_NATIVE_SOURCE_ROOT=tools.sourceRoot;env.HARLESS_PRIVATE_ROOT=join(root,'.local');
+          argv=[process.execPath,join(runtime,'paper-revision.mjs'),work];
         }
         client=new Client({name:'geneloop-native-scene',version:'1.0.0'},{capabilities:{}});row.client=client;
         row.transport=new NativeMcpTransport(ctx,argv,work,env,signal);
@@ -126,14 +203,28 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
         do {const page=await client.listTools(cursor?{cursor}:undefined,{signal,timeout:60000});catalog.push(...page.tools);cursor=page.nextCursor;
           if(cursor&&seen.has(cursor))throw Error('场景工具目录分页无效。');if(cursor)seen.add(cursor);
         }while(cursor);
+        if(kind==='management'){
+          const hidden=catalog.findIndex(tool=>tool.name==='_native_authorize_plan');if(hidden<0)throw Error('本机文件确认入口缺失');catalog.splice(hidden,1);
+        }
         if(catalog.some(tool=>!workflowTools[kind].includes(tool.name))||new Set(catalog.map(t=>t.name)).size!==workflowTools[kind].length)throw Error('场景工具目录与锁定版本不一致。');
         checkSources(row.sources);row.catalog=catalog;row.allowed=new Set(catalog.map(tool=>tool.name));
         for(const [previousId,previous]of active)if(previous.kind===kind){if(previous.busy)throw Error('请等待该工作流完成当前操作。');await closeOne(previous);active.delete(previousId);}
-        const id=randomUUID();active.set(id,row);
+        if(restored?.initialization&&['files','management'].includes(kind)){
+          const tool=catalog.find(tool=>tool.name==='read_task');
+          if(!tool||Object.keys(tool.inputSchema.properties??{}).length||(tool.inputSchema.required??[]).length)throw Error('原文件初始化协议已变化。');
+          const initialized=await client.callTool({name:'read_task',arguments:{}},undefined,{signal,timeout:60000});
+          const value=payload(initialized);
+          if(initialized.isError||!value._sss_scope||canonical(value._sss_scope)!==canonical(restored.initialization))throw Error('原文件任务授权已变化。');
+        }
+        row.catalogHash=sha(canonical(catalog));
+        if(restored&&restored.catalogHash!==row.catalogHash)throw Error('原文件工具协议已变化。');
+        const id=restored?.id??randomUUID();active.set(id,row);
         try {onCatalog?.(kind,id,catalog);}catch(error){active.delete(id);throw error;}
+        persist();
         return {workflow_id:id,workflow:kind,source_mapping:mapping,tools:catalog.map(tool=>({...tool,public_name:workflowToolName(kind,tool.name)})),execution:'local',originals_modified:false};
       } catch(error) {
         const diagnostic=row.transport?.child?.collected.stderr?.readFrom(0).text;
+        if(store)writeFileSync(join(root,'workflow-error.txt'),diagnostic||String(error?.stack??error),{mode:0o600});
         await closeOne({...row,client});
         throw Error('本机场景连接未就绪。',{cause:diagnostic?Error(diagnostic):error});
       }
@@ -154,21 +245,32 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
             if(!preview||!approve||!await approve({kind:'files',preview:{operation:name==='restore_plan'?'restore':'execute',...preview}}))throw Error('用户尚未确认该文件整理方案。');
           }
         }
+        if(row.kind==='management'&&['execute_plan','restore_plan'].includes(name)) {
+          const preview=row.previews?.get(args.plan_id);
+          if(!preview||!approve||!await approve({kind:'files',preview:{operation:name==='restore_plan'?'restore':'execute',...preview}}))throw Error('用户尚未确认本轮副本操作');
+          const confirmed=await row.client.callTool({name:'_native_authorize_plan',arguments:{plan_id:args.plan_id,approval_event_id:randomUUID(),session_id:row.task,direction:name==='restore_plan'?'restore':'execute'}},undefined,{signal,timeout:60000});
+          if(confirmed.isError)throw Error('本机方案确认已失效');
+        }
         const result=await row.client.callTool({name,arguments:args},undefined,{signal,timeout:450000});
         checkSources(row.sources);
         const value=payload(result);
         if(result.isError)return {isError:true,...value};
-        if(row.kind==='files'&&name==='preview_actions'&&value.plan_id){row.previews??=new Map();row.previews.set(value.plan_id,value);}
+        if(name==='read_task'&&value._sss_scope)row.initialization=value._sss_scope;
+        if(['files','management'].includes(row.kind)&&name==='preview_actions'&&value.plan_id){row.previews??=new Map();row.previews.set(value.plan_id,value);}
         const artifacts=[];
-        if(row.kind==='files'&&name==='execute_plan'&&value.status==='executed_verified') {
+        if(['files','management'].includes(row.kind)&&name==='execute_plan'&&value.status==='executed_verified') {
           const archive=new JSZip(),inputRoot=join(row.work,'inputs');
+          // ManagementScene atomically publishes by hard-linking its journaled
+          // staging files. Accept only groups wholly contained in this private
+          // task tree, then read bytes into a new ZIP; never mutate a linked file.
+          const privateLinks=row.kind==='management'?privateLinkCounts(row.root):undefined;
           const walk=(directory,prefix='')=>{
             for(const entry of readdirSync(directory,{withFileTypes:true})) {
               if(entry.name==='.experiment-copy')continue;
               const path=join(directory,entry.name),name=prefix+entry.name;
               if(entry.isSymbolicLink())throw Error('整理结果出现链接，停止交付。');
               if(entry.isDirectory())walk(path,name+'/');
-              else archive.file(name,readFileSync(plainFile(inputRoot,path)));
+              else archive.file(name,readFileSync(plainFile(inputRoot,path,{privateLinks,allowEmpty:true})));
             }
           };
           walk(inputRoot);archive.file('GeneLoop-整理回执.json',JSON.stringify({receipt:value,source_versions:row.sources,originals_modified:false},null,2));
@@ -193,6 +295,8 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
             }
           };
           visit(value);
+          if(row.kind==='revision'&&value.artifact_name&&value.artifact_sha256)
+            add('outputs/paper/'+value.artifact_name,value.artifact_sha256);
           for(const [candidate,declared]of candidates) {
             const path=plainFile(declared.boundary,candidate),bytes=readFileSync(path),version=sha(bytes),key=relative(row.work,path);
             if(version!==declared.version)throw Error('已核验产物发生变化，停止交付。');
@@ -203,10 +307,25 @@ export function createNativeWorkflows(ctx,reader,writer,tools,scene,signal,onRep
         }
         // Keep the complete MCP blocks; never reconstruct authority from display text.
         return {result:value,content:result.content,artifacts,execution:'local'};
-      } finally {row.busy=false;}
+      } finally {row.busy=false;persist();}
     },
-    async release(id){const row=active.get(id);if(!row||row.busy)throw Error('工作流不存在或正在执行。');onCatalog?.(row.kind,id,[]);active.delete(id);await closeOne(row);return {closed:true};},
-    async close(){closed=true;await Promise.allSettled([...active.values()].map(closeOne));active.clear();},
+    async release(id){const row=active.get(id);if(!row||row.busy)throw Error('工作流不存在或正在执行。');onCatalog?.(row.kind,id,[]);active.delete(id);persist();await closeOne(row,true);return {closed:true};},
+    async restore(){
+      if(!journal||!existsSync(journal))return;
+      const saved=JSON.parse(readFileSync(journal,'utf8'));
+      if(saved.version!==1||!Array.isArray(saved.items)||saved.items.length>2)throw Error('原文件工作流记录无效。');
+      restoring=true;
+      try{
+        for(const row of saved.items){
+          if(!object(row)||typeof row.request!=='string'||!Array.isArray(row.sources)||
+              !/^[a-f0-9-]{36}$/.test(row.id)||!['files','management','gateway'].includes(row.kind))throw Error('原文件工作流记录已变化。');
+          await workflows.open(JSON.stringify(row.sources),row.request,JSON.stringify(row.settings),row);
+        }
+      }catch(error){await workflows.close();throw error;}
+      finally{restoring=false;}
+      persist();
+    },
+    async close(){closed=true;persist();await Promise.allSettled([...active.values()].map(row=>closeOne(row)));active.clear();},
   };
   return workflows;
 }

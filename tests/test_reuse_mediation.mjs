@@ -5,7 +5,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync,realpathSync,symlinkSync,read
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {createReuseMediation,patchValue,project,reuseSyntaxCorrection,reuseChangeSummary} from '../src/adapters/reuse_mediation.ts';
 const schema={type:'object',properties:{title:{type:'string'},sections:{type:'array',items:{type:'object'}}},required:['title','sections'],additionalProperties:false};
 const tool={name:'mcp__test__export',parameters:schema};

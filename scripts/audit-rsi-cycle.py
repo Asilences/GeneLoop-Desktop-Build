@@ -3,7 +3,7 @@ import argparse,json,hashlib,math,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scenarios/file-management'));sys.path.insert(0,str(ROOT))
 from common import digest,sha,save,snapshot,PREFIX
-from src.motif_core.offline.reentry_compiler import reentry_witness
+from src.motif_core.offline.compilation.reentry_compiler import reentry_witness
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--experiment',type=Path,required=True);a=p.parse_args();exp=a.experiment.resolve();protocol=json.loads((exp/'protocol.json').read_text());parent=json.loads((exp/'L1/policy.json').read_text());child=json.loads((exp/'L2/policy.json').read_text());learning=json.loads((exp/'L2/learning-result.json').read_text())

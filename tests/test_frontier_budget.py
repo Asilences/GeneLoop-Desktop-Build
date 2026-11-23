@@ -42,7 +42,7 @@ def test_reopening_runner_preserves_known_and_unsettled_costs(tmp_path):
 
 def test_outer_study_episode_books_all_inner_repairs_without_owner_reassignment(tmp_path):
     from scenarios.paper_proofreading.frontier.budget import StudyEpisodeRegistry
-    from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
+    from src.rsi.feedback.efficiency_rsi_registry import StudyRequestRegistry
     from tests.test_efficiency_rsi_measurement import example
     plan,_,_=example(tmp_path);registry=StudyRequestRegistry(plan,tmp_path/'trusted.jsonl',create=True)
     root=tmp_path/'episode';bridge=StudyEpisodeRegistry(registry,root,'baseline-episode','baseline');root.mkdir()

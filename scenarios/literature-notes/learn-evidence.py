@@ -18,12 +18,11 @@ from pdf_evidence_tools import PREFIX
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from mcp import Client, StdioServerParameters
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 
 def read(path):
@@ -105,7 +104,7 @@ def learn(split, output):
     exporter = module(ROOT / 'scripts/export-online-motif-manifest.py', 'evidence_exporter')
     manifest = exporter.export_manifest(library, contracts_raw,
                                        version_fields=read(HERE / 'pdf-evidence-version-fields.json'))
-    verifier = 'import fs from "node:fs"; import {validateOnlineManifest} from "./src/motif_core/online_skill_runtime.mjs"; validateOnlineManifest(JSON.parse(fs.readFileSync(0,"utf8")));'
+    verifier = 'import fs from "node:fs"; import {validateOnlineManifest} from "./src/motif_core/runtime/online_skill_runtime.mjs"; validateOnlineManifest(JSON.parse(fs.readFileSync(0,"utf8")));'
     subprocess.run(['node', '--input-type=module', '-e', verifier], input=json.dumps(manifest),
                    cwd=ROOT, text=True, capture_output=True, check=True)
     output.mkdir(parents=True, mode=0o700, exist_ok=False)

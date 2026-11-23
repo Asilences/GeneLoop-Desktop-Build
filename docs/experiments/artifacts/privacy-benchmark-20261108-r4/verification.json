@@ -1,0 +1,42 @@
+{
+  "frozen_benchmark_commit": "a4923292c874d2832bd10ed75fd42b4610d74a88",
+  "final_runtime_commit": "dcd1a99097ed831fe64408d3e1a5697fe7ced06d",
+  "integrity_checks_passed": true,
+  "privacy_quality_accepted": false,
+  "independent_unseen_evaluation": false,
+  "pii_rows": 13000,
+  "pii_gold_spans": 44584,
+  "credential_files": 11030,
+  "credential_annotation_rows": 67896,
+  "credential_repositories": 337,
+  "all_input_and_metadata_hashes_verified": true,
+  "all_module_calls_new": true,
+  "native_predictions_unchanged": true,
+  "old_fully_covered_entities_lost": 0,
+  "new_fully_covered_entities": 1150,
+  "frozen_and_final_kernel_equal_sha256": {
+    "src/adapters/geneloop_privacy.py": "a067dae1e8a750eb6600162fcacc05e127713d3b4ea5e540ff0269abc868ce21",
+    "src/adapters/rsi_text_privacy.py": "a64fd5931f6ce8a97b5f79ca091d2d9914512b9e517edf36b32b4c05910da8f8",
+    "src/adapters/rsi_privacy_policy.py": "45b2b0e8fcaf6cebd1353c94b24c43fe327c2b8b11937591500cea203a8570f9",
+    "src/adapters/rsi_privacy_tools.py": "7eb45efb6e7ac60d30163d9efcf4a7e70e142a8bcc6499bc2e3eb828fbd950de",
+    "src/adapters/rsi_privacy_recognizers.py": "e49c81766f11cf01cc8dab437c1a708eec5510f13c944da103915dd2b3edbf0b",
+    "config/geneloop-privacy-policy-v1.json": "0c7d51c684c37c850664d2b33b652268990b9914b8793388b37cb677d39530dc",
+    "config/rsi-privacy-tools.json": "d2104ae08b43c6c03a810d1806856d78f96e7114fe09dffbf826f518b252056b",
+    "schemas/geneloop-privacy-policy.schema.json": "45b3c50b2b7f69a233188d84a4e508568403f20233e27e98d1099f7ab4867176"
+  },
+  "configs": {
+    "protocol-r4.json": {
+      "executed_bytes_sha256": "350063327e522bfc3f4b11a6ed7679b823316ca1d3ac2862f83b20518fece92a",
+      "json_semantic_sha256": "95c289c445ed2e5ced30c3c880d3c8e9ffcf2e64d8db076020da84ab6dc82385"
+    },
+    "credential-budget-r4.json": {
+      "executed_bytes_sha256": "d0868c652c04421988bfa1dffb6707e5c5b8f44a2220569204d225326b84236a",
+      "json_semantic_sha256": "1c2362e80a6b0057a65a0a4fd246da35436d23e9e090552c0a0c6a8e002c7ad2"
+    }
+  },
+  "execution_receipt_sha256": "3ae4ef57668c5068e4bd2f0295c747654f0e16022342f49cce0dc392290d4737",
+  "comparison_sha256": "13e1c3df9b1104f0a38630c78c8e08af31ff84eca29938aaded9b123c99052fe",
+  "source_sha256": "624821e47cae199a35d6ee3900447f11b2a287045c1b5f287b588c926e32a81f",
+  "cloud_requests": 0,
+  "production_service_touched": false
+}

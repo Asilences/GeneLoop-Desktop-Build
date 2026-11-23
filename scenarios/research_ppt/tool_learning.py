@@ -32,9 +32,9 @@ from scenarios.research_ppt.accounting import lines, token_totals, version
 from scenarios.research_ppt.figure_catalog import catalog_input, expected_catalog, verify_catalog
 from scenarios.research_ppt.service import private_path
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.dsh_client import SemanticValidationError, call_bounded_prompt
-from src.adapters.dsh_event_projection import is_original_tool_result
-from src.adapters.dsh_trajectory import _observation_digest
+from src.adapters.harness.dsh_client import SemanticValidationError, call_bounded_prompt
+from src.adapters.harness.dsh_event_projection import is_original_tool_result
+from src.adapters.harness.dsh_trajectory import _observation_digest
 
 EXPERIMENT_ID = 'research-ppt-v6-tool-rsi-20261011'
 MODEL = 'deepseek-flash'
@@ -330,8 +330,8 @@ def _config(args, histories: list[dict]) -> dict:
             'budget_cap_usd': args.budget_usd, 'interval_seconds': args.interval_seconds,
             'code_hashes': {str((SCENE / name).relative_to(ROOT)): file_hash(SCENE / name) for name in names},
             'public_adapter_hashes': {name: file_hash(ROOT / name) for name in
-                ('src/adapters/dsh_client.py', 'src/adapters/deepseek_cost_gate.py',
-                 'src/adapters/harness_runtime.py', 'config/semantic-sdk.patch.yml')},
+                ('src/adapters/harness/dsh_client.py', 'src/adapters/deepseek_cost_gate.py',
+                 'src/adapters/harness/harness_runtime.py', 'config/semantic-sdk.patch.yml')},
             'commit': version(['git', 'rev-parse', 'HEAD']),
             'worktree_status': version(['git', 'status', '--porcelain', '--untracked-files=no']),
             'python': platform.python_version(), 'node': version(['node', '--version']),

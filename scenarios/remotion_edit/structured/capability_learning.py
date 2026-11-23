@@ -8,9 +8,9 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from src.adapters.capability_scene import ROOT,reference,run_child
-from src.adapters.capability_improvement import evidence,read,save
-from src.adapters.capability_contract import capability_digest
+from src.adapters.harness.capability.capability_scene import ROOT,reference,run_child
+from src.rsi.learning.capability_improvement import evidence,read,save
+from src.capability.graph.capability_contract import capability_digest
 from src.adapters.file_lock import exclusive_lock
 from scenarios.remotion_edit.structured.learn_programs import collect
 

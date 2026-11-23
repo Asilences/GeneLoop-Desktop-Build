@@ -1,0 +1,125 @@
+[
+  {
+    "name": "mcp__paper_trace_rsi__apply_revision_plan",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "report_sha256": {
+          "type": "string"
+        },
+        "plan": {
+          "type": "object",
+          "properties": {
+            "set_ids": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "arxiv_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "arxiv_id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "keep_once_keys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "remove_keys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "add_records": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "arxiv_id": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "待进一步核验"
+                    ]
+                  }
+                },
+                "required": [
+                  "key",
+                  "arxiv_id",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "set_ids",
+            "keep_once_keys",
+            "remove_keys",
+            "add_records"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "report_sha256",
+        "plan"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "mcp__paper_trace_rsi__export_revision_report",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "input_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "mcp__paper_trace_rsi__read_task_state",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "mcp__paper_trace_rsi__triage_revision_audit",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "input_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_id"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

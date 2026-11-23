@@ -4,10 +4,10 @@
 import {readFileSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../src/adapters/capability_contract.ts';
-import {completeCapabilityCycle} from '../../src/adapters/capability_cycle.ts';
-import {createCapabilityStore} from '../../src/adapters/capability_store.ts';
-import {bytesSha256} from '../../src/adapters/rsi_protocol.ts';
+import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../src/capability/graph/capability_contract.ts';
+import {completeCapabilityCycle} from '../../src/rsi/learning/capability_cycle.ts';
+import {createCapabilityStore} from '../../src/capability/runtime/capability_store.ts';
+import {bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
 import {execute} from './rae_runtime.mjs';
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
 const report=object({name:{type:'string'},records:{type:'array'}});

@@ -6,9 +6,9 @@ validation adapters and the task family, never a prewritten composition/DAG.
 from __future__ import annotations
 import json
 from pathlib import Path
-from src.adapters.capability_contract import capability_digest, validate_capability_snapshot
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.capability_discovery import read_context
+from src.capability.graph.capability_contract import capability_digest, validate_capability_snapshot
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from src.rsi.learning.capability_discovery import read_context
 
 
 def read(path):return json.loads(Path(path).read_text(encoding='utf-8'))
@@ -62,5 +62,5 @@ def inspect_run(entry,owner):
 
 
 def discover_jobs(entries,owner,directory,min_support=2):
-    from src.adapters.capability_discovery import discover_jobs as discover
+    from src.rsi.learning.capability_discovery import discover_jobs as discover
     return discover(entries,owner,directory,inspector=inspect_run,min_support=min_support)

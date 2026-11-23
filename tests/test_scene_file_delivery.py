@@ -7,7 +7,7 @@ import zipfile
 import pytest
 from scenarios.data_analysis.table_inputs import extract_tables
 from scenarios.data_analysis.report_intake import ReportIntake
-from src.adapters.harless_attachment_text import extract_attachment
+from src.adapters.web.attachments.harless_attachment_text import extract_attachment
 
 ROWS = [['sample','x','y'],['A','1','2.1'],['B','2',''],['C','3','6.3'],['D','4','7.7']]
 

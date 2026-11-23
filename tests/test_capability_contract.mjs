@@ -3,12 +3,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
-import {createCapability,capabilityIdentity,capabilityDigest,validateCapability,validateCapabilitySnapshot,mapLegacyLibrary,capabilityRef,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
+import {createCapability,capabilityIdentity,capabilityDigest,validateCapability,validateCapabilitySnapshot,mapLegacyLibrary,capabilityRef,createCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
 const python=process.env.SSS_PYTHON??(process.platform==='win32'?'python':'python3');
 function fixture(){
  const run=spawnSync(python,['-c',`import json,base64
 from tests.test_capability_contract import leaf,compose,legacy_fixture
-from src.adapters.capability_contract import create_capability_snapshot,capability_ref,map_legacy_library,capability_digest
+from src.capability.graph.capability_contract import create_capability_snapshot,capability_ref,map_legacy_library,capability_digest
 a,b=leaf(),leaf('b');c=compose([a,b]);d=compose([c])
 legacy=[]
 for backend in ['source_program','artifact_motif']:
@@ -50,7 +50,7 @@ test('native legacy decimals and non-BMP metadata keys share the authoritative m
  assert.match(fixture.raw,/1\.0/);assert.match(fixture.raw,/0\.1/);
  assert.deepEqual(mapLegacyLibrary(fixture.raw,'owner','source_program',fixture.sha),fixture.mapped);
  const bridge=spawnSync(python,['-c',`import json,sys
-from src.adapters.capability_contract import map_legacy_library
+from src.capability.graph.capability_contract import map_legacy_library
 f=json.load(sys.stdin)
 print(json.dumps(map_legacy_library(f['raw'],'owner','source_program',f['sha']),ensure_ascii=False))`],{input:result.stdout,encoding:'utf8'});
  assert.equal(bridge.status,0,bridge.stderr);assert.deepEqual(JSON.parse(bridge.stdout),fixture.mapped);
@@ -60,7 +60,7 @@ test("Python and TS have the same schema dialect and accept each other's wire ou
  const cases=JSON.parse(readFileSync(new URL('./fixtures/capability_dialect_cases.json',import.meta.url),'utf8'));
  const run=spawnSync(python,['-c',`import copy,json
 from tests.test_capability_contract import leaf
-from src.adapters.capability_contract import create_capability,capability_identity
+from src.capability.graph.capability_contract import create_capability,capability_identity
 cases=json.load(open('tests/fixtures/capability_dialect_cases.json'))
 results=[]
 for case in cases:
@@ -78,7 +78,7 @@ print(json.dumps(results,ensure_ascii=False,allow_nan=False))`],{encoding:'utf8'
   if(cap){assert.deepEqual(validateCapability(py[i].capability),py[i].capability);ts.push(cap);}
  }
  const reverse=spawnSync(python,['-c',`import json,sys
-from src.adapters.capability_contract import validate_capability
+from src.capability.graph.capability_contract import validate_capability
 for capability in json.load(sys.stdin):validate_capability(capability,'owner')
 print('accepted')`],{input:JSON.stringify(ts),encoding:'utf8'});
  assert.equal(reverse.status,0,reverse.stderr);assert.equal(reverse.stdout.trim(),'accepted');

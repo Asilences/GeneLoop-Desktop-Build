@@ -3,15 +3,15 @@ import {readFileSync,lstatSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 const root=resolve(fileURLToPath(new URL('../../',import.meta.url)));
 const sha=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
 export function validatePublicManagementSeed(policy:any,cert:any,raw:string,runtime:any){
   if(cert.format!=='sss-management-seed-attestation-v1'||!/^file-v[1-9][0-9]*$/.test(cert.release))throw Error('invalid public seed');
-  const release=join(root,'motif-libraries',cert.release);
+  const release=join(root,'motif-libraries','file-management');
   if(lstatSync(release).isSymbolicLink())throw Error('seed release symlink refused');
   const manifest=JSON.parse(readFileSync(join(release,'entry.json'),'utf8'));
-  if(manifest.format!=='sss-management-seed-release-v1'||manifest.digest!==digest(Object.fromEntries(Object.entries(manifest).filter(([k])=>k!=='digest')))
+  if(manifest.format!=='sss-management-seed-release-v1'||manifest.release!==cert.release||manifest.digest!==digest(Object.fromEntries(Object.entries(manifest).filter(([k])=>k!=='digest')))
     ||Object.entries(runtime).some(([n,h])=>sha(resolve(root,n))!==h))throw Error('seed source/manifest changed');
   for(const [name,h] of Object.entries(manifest.files)){
     if(!/^(?:policies|certificates)\/[a-f0-9]{64}\.json$/.test(name)||lstatSync(join(release,name)).isSymbolicLink()||sha(join(release,name))!==h)throw Error('seed object changed');

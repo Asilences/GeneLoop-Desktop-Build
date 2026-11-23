@@ -1,0 +1,71 @@
+{
+  "python_skipped": 214,
+  "python_reason_counts": {
+    "explicit Linux native public acquisition diagnostic": 1,
+    "real Windows read-handle deletion semantics": 1,
+    "explicit Linux native sandbox diagnostic": 3,
+    "Install pinned languages for real OCR integration test": 1,
+    "isolated Docker image not installed": 1,
+    "Windows 8.3 path alias regression": 1,
+    "macOS resume remains unsupported": 1,
+    "real PDF tests require external Poppler": 189,
+    "Poppler required": 4,
+    "Explicit Poppler diagnostic requires an installed pdftoppm": 1,
+    "Linux native sandbox diagnostic opt-in": 1,
+    "could not import 'cairosvg': No module named 'cairosvg'": 5,
+    "could not import 'pandas': No module named 'pandas'": 2,
+    "could not import 'scipy': No module named 'scipy'": 1,
+    "PPT renderer build required": 2
+  },
+  "node_skipped": 9,
+  "node_cases": [
+    {
+      "name": "public Runtime executes the certified native program on current bytes",
+      "source_file": "tests/test_artifact_capability_runtime.mjs",
+      "reason": "Linux bwrap user-namespace probe did not pass"
+    },
+    {
+      "name": "Actual upstream TypeScript backend preserves nested callback results and parallel completion",
+      "source_file": "tests/test_code_container.mjs",
+      "reason": "SSS_TEST_CONTAINER=1 opt-in not enabled"
+    },
+    {
+      "name": "Host private files/environment are not mounted, network is disabled, and program cannot write the mounted runtime",
+      "source_file": "tests/test_code_container.mjs",
+      "reason": "SSS_TEST_CONTAINER=1 opt-in not enabled"
+    },
+    {
+      "name": "Abort terminates the native worker/container and invalid images are rejected",
+      "source_file": "tests/test_code_container.mjs",
+      "reason": "SSS_TEST_CONTAINER=1 opt-in not enabled"
+    },
+    {
+      "name": "native filesystem fails closed on unsupported execution platforms",
+      "source_file": "tests/test_geneloop_fs.mjs",
+      "reason": "Negative unsupported-platform case intentionally skipped on Linux"
+    },
+    {
+      "name": "Windows catalog remains readable but native sandbox execution is explicitly unsupported",
+      "source_file": "tests/test_script_capability_runtime.mjs",
+      "reason": "Windows-only case; current platform is Linux"
+    },
+    {
+      "name": "JSON result flow accepts new array contents, composes, and retains original file guards",
+      "source_file": "tests/test_script_capability_runtime.mjs",
+      "reason": "Linux bwrap plus RUN_SCRIPT_CAPABILITY_SANDBOX=1 condition not satisfied"
+    },
+    {
+      "name": "native sandbox executes composition, preserves input, and binds exact leaf receipts",
+      "source_file": "tests/test_script_capability_runtime.mjs",
+      "reason": "Linux bwrap plus RUN_SCRIPT_CAPABILITY_SANDBOX=1 condition not satisfied"
+    },
+    {
+      "name": "a native data operation failure keeps its receipt and writes scoped diagnostics",
+      "source_file": "tests/test_script_worker_failure.mjs",
+      "reason": "Linux bwrap plus RUN_SCRIPT_CAPABILITY_SANDBOX=1 condition not satisfied"
+    }
+  ],
+  "raw_node_junit_skip_messages_are_boolean_true": true,
+  "relevant_common_privacy_tests_skipped": 0,
+  "scope": "Skipped optional dependencies and platform diagnostics are not counted as passed; raw per-case Python inventory remains private."
+}

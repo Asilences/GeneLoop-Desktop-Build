@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from src.adapters import capability_proposal as pilot
-from src.adapters.capability_contract import capability_ref
-from src.adapters.capability_source_authoring import source_authoring_context
+from src.adapters.harness.capability import capability_proposal as pilot
+from src.capability.graph.capability_contract import capability_ref
+from src.capability.builder.capability_source_authoring import source_authoring_context
 from tests.test_capability_proposal_source import inputs, INTEGER, RECORD
 from tests.test_capability_proposal_loop import DiagnosticGate, fake_harness
 
@@ -125,7 +125,7 @@ def test_summary_requires_host_contract_and_real_boolean_flag(tmp_path):
 
 @pytest.mark.parametrize('enabled,semantic,expected', [(True,True,True),(False,True,False),(True,False,False)])
 def test_scene_with_research_gate_honors_host_abstraction_view(tmp_path,monkeypatch,enabled,semantic,expected):
-    from src.adapters.capability_scene import CapabilityImprovementAdapter
+    from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter
     snapshot,task,*_=inputs()
     adapter=CapabilityImprovementAdapter.__new__(CapabilityImprovementAdapter)
     adapter.plan={'id':'view-test','output':str(tmp_path),'recursive_abstraction':{'enabled':enabled,'semantic_view':semantic}}

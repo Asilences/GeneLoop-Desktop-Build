@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -13,7 +14,7 @@ ENV_NAME = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
 def prepare_scenario(path: Path, *, case: str = '', session_workspace: str | None = None,
                      tool_presentation: str = 'native', entry_motif: bool = False,
-                     web_deployment: bool = False) -> dict:
+                     web_deployment: bool = False, _file_profile: bool = False) -> dict:
     if type(web_deployment) is not bool:
         raise ValueError('web_deployment must be boolean')
     if type(entry_motif) is not bool or entry_motif and tool_presentation != 'native':
@@ -31,22 +32,30 @@ def prepare_scenario(path: Path, *, case: str = '', session_workspace: str | Non
     substitutions = {'PROJECT_ROOT': str(ROOT), 'PYTHON': sys.executable, 'CASE': case}
     if session_workspace is not None:
         substitutions['SESSION_WORKSPACE'] = session_workspace
+    def substitute(text):
+        for name, replacement in substitutions.items():
+            text = text.replace('${' + name + '}', replacement)
+        return text
+
     references = {}
     required_env = []
+    literal_fields = substitute(json.dumps(scenario, ensure_ascii=False))
+    env_prefix = '__SSS_ENV_REFERENCE_'
+    while env_prefix in literal_fields:
+        env_prefix = '_' + env_prefix
 
     def value(item):
         if isinstance(item, dict) and set(item) == {'from_env'}:
             name = item['from_env']
             if not isinstance(name, str) or not ENV_NAME.fullmatch(name):
                 raise ValueError('invalid environment reference')
-            token = f'__SSS_ENV_REFERENCE_{len(references)}__'
+            token = f'{env_prefix}{len(references)}__'
             references[token] = '!!js ' + json.dumps(f'process.env[{json.dumps(name)}]')
             required_env.append(name)
             return token
         if not isinstance(item, str):
             raise ValueError('configuration values must be strings or from_env references')
-        for name, replacement in substitutions.items():
-            item = item.replace('${' + name + '}', replacement)
+        item = substitute(item)
         if '${' in item:
             raise ValueError('unsupported placeholder; use from_env for secrets')
         return item
@@ -87,13 +96,17 @@ def prepare_scenario(path: Path, *, case: str = '', session_workspace: str | Non
         raise ValueError('allowed_tools must explicitly name tools of the configured MCP servers')
     # Keep the profile's credential/provider plumbing; replace model-facing
     # native tools with a stable, ordered MCP surface and monotonic guard.
-    base = (ROOT / 'config/semantic-sdk.patch.yml').read_text(encoding='utf-8')
+    profile = ROOT / ('scenarios/file-management' if _file_profile else 'config')
+    base = (profile / 'semantic-sdk.patch.yml').read_text(encoding='utf-8')
     insert = {'insert': [*clients, {'id': 'sss-scenario-guard',
-                  'name': (ROOT / 'src/adapters/dsh_scenario_guard.mjs').as_uri()}]}
+                  'name': (ROOT / 'src/adapters/harness/dsh_scenario_guard.mjs').as_uri()}]}
     agent_plugins = []
     if entry_motif:
-        entry_plugin = {'id': 'sss-entry-motif', 'name': (ROOT / 'src/adapters/dsh_entry_motif.ts').as_uri()}
-        insert['insert'].append(entry_plugin)
+        entry = {'id': 'sss-entry-motif',
+                 'name': (ROOT / 'src/adapters/harness/motif/dsh_entry_motif.ts').as_uri()}
+        if _file_profile:
+            entry['config'] = {'durablePlan': True}
+        insert['insert'].append(entry)
     policy = scenario.get('completion_guard')
     if policy is not None:
         if (not isinstance(policy, dict) or set(policy) != {'tool', 'statuses', 'max_continuations'}
@@ -103,34 +116,59 @@ def prepare_scenario(path: Path, *, case: str = '', session_workspace: str | Non
                 or type(policy['max_continuations']) is not int or not 0 <= policy['max_continuations'] <= 2):
             raise ValueError('invalid bounded completion guard')
         agent_plugins.append({'id': 'sss-completion-guard',
-            'name': (ROOT / 'src/adapters/dsh_completion_guard.ts').as_uri(),
+            'name': (ROOT / 'src/adapters/harness/dsh_completion_guard.ts').as_uri(),
             'config': {**policy, 'artifact_root': str(ROOT / '.local')}})
     acceptance = scenario.get('acceptance_guard')
+    durable_job = False
     if acceptance is not None:
-        if (not isinstance(acceptance, dict) or set(acceptance) != {'kind', 'max_repairs'}
-                or acceptance['kind'] != 'file_management' or type(acceptance['max_repairs']) is not int
-                or not 0 <= acceptance['max_repairs'] <= 2 or tool_presentation != 'native'
-                or 'mcp__file_management__submit_report' not in allowed):
+        if not isinstance(acceptance, dict):
             raise ValueError('invalid bounded file acceptance guard')
-        agent_plugins = [{'id': 'sss-acceptance-guard',
-            'name': (ROOT / 'src/adapters/dsh_acceptance_guard.ts').as_uri(),
-            'config': {**acceptance, 'project_root': str(ROOT), 'python': sys.executable,
+        durable_job = _file_profile and acceptance.get('durable_job') is True
+        interruptible = durable_job and acceptance.get('interruptible') is True
+        fields = {'kind', 'max_repairs'}
+        if durable_job:
+            fields.add('durable_job')
+        if interruptible:
+            fields.add('interruptible')
+        repairs = acceptance.get('max_repairs')
+        if (set(acceptance) != fields or acceptance.get('kind') != 'file_management'
+                or not (durable_job and repairs is None or type(repairs) is int and 0 <= repairs <= 2)
+                or tool_presentation != 'native' or 'mcp__file_management__submit_report' not in allowed):
+            raise ValueError('invalid bounded file acceptance guard')
+        verifier = 'src/adapters/file_acceptance_guard.ts'
+        archive = Path(os.environ.get('HARLESS_MANAGEMENT_PRIVATE_ROOT', ROOT / '.local')) if _file_profile else ROOT / '.local'
+        acceptance_config = {'kind': acceptance['kind'], 'max_repairs': repairs} if _file_profile else acceptance
+        # The delivery verifier owns any continuation needed for a missing receipt.
+        agent_plugins = [{'id': 'sss-acceptance-guard', 'name': (ROOT / verifier).as_uri(),
+            'config': {**acceptance_config, 'project_root': str(ROOT), 'python': sys.executable,
                 'task_file': value({'from_env': 'FM_TASK_FILE'}),
                 'delivery_root': value({'from_env': 'FM_OUTPUT'}),
-                'archive_root': str(ROOT / '.local/task-acceptance')}}]
+                'archive_root': str(archive / 'task-acceptance'),
+                **({'job_file': value({'from_env': 'FM_JOB_FILE'})} if durable_job else {}),
+                **({'interruptible': True} if interruptible else {})}}]
     insert['insert'].extend(agent_plugins)
     if tool_presentation == 'ptc':
         base += '\n- id: tools\n  config:\n    mode: ptc\n- id: code-runtime\n  disabled: true\n'
         insert['insert'].append({'id': 'sss-container-code-runtime',
-            'name': (ROOT / 'src/adapters/dsh_code_container.ts').as_uri()})
+            'name': (ROOT / 'src/adapters/harness/dsh_code_container.ts').as_uri()})
     base += '\n- id: system-prompt\n  config:\n    personaPrefix: You complete the requested task using the permitted MCP evidence.\n    personaSuffix: Cite source IDs and versions. Do not invent evidence or perform unapproved writes.\n'
     if web_deployment:
-        from .harless_product_prompt import product_system_prompt
+        from src.adapters.web.tasks.harless_product_prompt import product_system_prompt
         base += '\n- ' + json.dumps({'id': 'system-prompt', 'config': product_system_prompt()}, ensure_ascii=False) + '\n'
+        if durable_job:
+            # This host-authored addition cannot be requested in a scenario's
+            # MCP allowlist. Todos only update the session, never managed files.
+            allowed = [*allowed, 'todo_write']
+            base += '\n- id: tool-todo\n  disabled: false\n  config:\n    allowParallelInProgress: true\n'
+            # Retry only a failed model request. The native loop keeps completed
+            # tool results; every HTTP attempt still passes the original gate.
+            base += '\n- id: llm-retry\n  disabled: false\n'
+            base += '\n- id: llm-deepseek\n  config:\n    retryPolicy:\n      mode: normal\n      maxRetries: 5\n      retryableCodes: [EMPTY_RESPONSE, RATE_LIMIT, SERVER, TIMEOUT, TRANSPORT]\n      backoff:\n        initialDelayMs: 500\n        maxDelayMs: 30000\n        jitterRatio: 0.2\n'
     # JSON is valid YAML; environment tags contain quoted JS expressions.
-    rendered = base + '\n- ' + json.dumps(insert, ensure_ascii=False, indent=2).replace('\n', '\n  ') + '\n'
+    plugin_patch = json.dumps(insert, ensure_ascii=False, indent=2).replace('\n', '\n  ')
     for token, expression in references.items():
-        rendered = rendered.replace(json.dumps(token), expression)
+        plugin_patch = plugin_patch.replace(json.dumps(token), expression)
+    rendered = base + '\n- ' + plugin_patch + '\n'
     digest = hashlib.sha256(rendered.encode()).hexdigest()
     target = ROOT / '.local/scenarios/patches' / (digest + '.patch.yml')
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -149,3 +187,11 @@ def prepare_scenario(path: Path, *, case: str = '', session_workspace: str | Non
             'server_names': [client['config']['serverName'] for client in clients], 'allowed_tools': allowed,
             'mcp_rows': clients, 'agent_plugins': agent_plugins, 'environment_references': references,
             'required_env': sorted(set(required_env)), 'case': case, 'acceptance_guard': acceptance}
+
+
+def prepare_file_scenario(path: Path, *, case: str = '', session_workspace: str | None = None,
+                          tool_presentation: str = 'native', entry_motif: bool = False,
+                          web_deployment: bool = False) -> dict:
+    return prepare_scenario(path, case=case, session_workspace=session_workspace,
+                            tool_presentation=tool_presentation, entry_motif=entry_motif,
+                            web_deployment=web_deployment, _file_profile=True)

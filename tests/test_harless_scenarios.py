@@ -3,15 +3,17 @@ import json
 import os
 from pathlib import Path
 import pytest
-from src.adapters.scenario import prepare_scenario, ROOT
-from src.adapters.harless_scenarios import prepare_scene_registry, _configure_attachment_parsers
+from src.adapters.scenario import ROOT, prepare_file_scenario, prepare_scenario
+from src.adapters.web.scenes.harless_scenarios import prepare_scene_registry, _configure_attachment_parsers
 
 
-def prepared(tmp_path, registry=None):
-    initial = prepare_scenario(ROOT / 'scenarios/example/scenario.json')
+def prepared(tmp_path, registry=None, *, profile='web'):
+    prepare = prepare_file_scenario if profile == 'file' else prepare_scenario
+    initial = prepare(ROOT / 'scenarios/example/scenario.json')
     output = tmp_path / 'run'; (output / 'presets').mkdir(parents=True)
     return prepare_scene_registry(ROOT, registry or ROOT / 'config/harless-diagnostics.json', default_id='example',
-        prepared_default=initial, output=output, embedding_endpoint='http://127.0.0.1:9876/v1/embeddings', embedding_model='diagnostic')
+        prepared_default=initial, output=output, embedding_endpoint='http://127.0.0.1:9876/v1/embeddings',
+        embedding_model='diagnostic', profile=profile)
 
 
 def test_registry_builds_separate_presets_without_using_task_prompt_as_instructions(tmp_path):
@@ -52,8 +54,10 @@ def test_product_scenes_bind_real_backends_or_explicit_unavailability(tmp_path):
     assert rows['ppt']['allowed_tools'] == [*ppt_tools, *common]
     assert 'mcp__ppt_master__read_skill_entry' in rows['ppt']['allowed_tools']
     assert not any(t.startswith('mcp__ppt__') for t in rows['ppt']['allowed_tools'])
-    assert rows['ppt']['instructions'].startswith('完成用户的 PPT 任务。')
-    lock=json.loads((ROOT/'scenarios/ppt_master/skill-lock.json').read_text(encoding='utf-8'))
+    assert rows['ppt']['instructions'].startswith((ROOT/'scenarios/ppt_master/prompt.md').read_text(encoding='utf-8'))
+    assert 'start_ppt' in rows['ppt']['instructions'] and 'read_ppt_design' in rows['ppt']['instructions']
+    from scenarios.ppt_master.package import bundled_root, runtime_lock
+    lock=runtime_lock(bundled_root())
     assert rows['ppt']['design_skill_sha256']==lock['files']['SKILL.md']
     assert rows['ppt']['skill_package_sha256']==lock['package_sha256']
     assert rows['ppt']['instructions_sha256']==hashlib.sha256(rows['ppt']['instructions'].encode()).hexdigest()
@@ -73,26 +77,64 @@ def test_product_scenes_bind_real_backends_or_explicit_unavailability(tmp_path):
     assert 'FM_WEB_WORKSPACE' in json.dumps(rows['files']['mcp_rows'])
     assert '__HARLESS_SESSION_WORKSPACE__' in json.dumps(rows['files']['mcp_rows'])
     assert 'examples/' not in rows['files']['scenario']
+    assert rows['video-editing']['mcp_rows'] == []
+    assert 'mcp__remotion__render_source' in rows['video-editing']['allowed_tools']
     for identity in ('paper-proofreading', 'research-data-analysis'):
         assert rows[identity]['allowed_tools']
         if identity == 'paper-proofreading': assert 'unavailable_reason' not in rows[identity]
         else: assert rows[identity].get('unavailable_reason') in (None, 'data_report_python_dependencies_missing')
         assert rows[identity]['adapter'] == ('data-report' if identity == 'research-data-analysis' else 'workspace')
-        assert '__HARLESS_SESSION_WORKSPACE__' in json.dumps(rows[identity]['mcp_rows'])
+        if identity == 'paper-proofreading':
+            assert rows[identity]['mcp_rows'] == []
+        else:
+            assert '__HARLESS_SESSION_WORKSPACE__' in json.dumps(rows[identity]['mcp_rows'])
         assert 'examples/' not in rows[identity]['scenario'] and 'portfolio' not in rows[identity]['scenario']
 
 
-def test_paper_default_library_and_generic_export_survive_without_private_deployment(tmp_path, monkeypatch):
+def test_file_registry_preserves_durable_management_and_paper_mcp(tmp_path):
+    entries = json.loads((ROOT / 'config/harless-scenes.json').read_text())['scenes']
+    paper = next(row for row in entries if row['id'] == 'paper-proofreading')
+    paper.pop('rsi')
+    file_scene = next(row for row in entries if row['id'] == 'files')
+    file_scenario = ROOT / file_scene['scenario']
+    scenario = json.loads(file_scenario.read_text())
+    scenario['prompt'] = str(file_scenario.parent / scenario['prompt'])
+    scenario['servers'][0]['args'] = [str(ROOT / 'scenarios/file-management/management_native.py')]
+    scenario['acceptance_guard'] = {'kind': 'file_management', 'max_repairs': 0, 'durable_job': True}
+    path = tmp_path / 'durable-file.json'
+    path.write_text(json.dumps(scenario), encoding='utf-8')
+    file_scene['scenario'] = str(path)
+    registry = tmp_path / 'registry.json'
+    registry.write_text(json.dumps({'schema_version': 1, 'scenes': [file_scene, paper]}), encoding='utf-8')
+
+    file, proof, _ = prepared(tmp_path, registry, profile='file')
+    assert (file['runtime_kind'], file['runtime_mode'], file['management_config']) == ('management_graph_v3', 'execute', {})
+    assert 'todo_write' in file['allowed_tools']
+    assert any('FM_JOB_FILE' in binding for binding in file['environment_references'].values())
+    servers = {row['config']['serverName']: row['config'] for row in proof['mcp_rows']}
+    assert 'paper_checks' in servers
+    assert servers['paper_trace_rsi']['env']['HARLESS_PRIVATE_ROOT'] == str((tmp_path / 'run').resolve())
+    assert 'native_environment' not in proof
+    with pytest.raises(ValueError, match='invalid bounded file acceptance guard'):
+        prepared(tmp_path / 'web', registry)
+
+
+def test_file_registry_rejects_video_adapter(tmp_path):
+    config = json.loads((ROOT / 'config/harless-scenes.json').read_text())
+    config['scenes'] = [row for row in config['scenes'] if row.get('adapter') == 'video']
+    registry = tmp_path / 'video.json'
+    registry.write_text(json.dumps(config), encoding='utf-8')
+    with pytest.raises(ValueError, match='unsupported scene adapter'):
+        prepared(tmp_path, registry, profile='file')
+
+
+def test_paper_native_candidate_keeps_generic_export_without_private_deployment(tmp_path, monkeypatch):
     monkeypatch.delenv('HARLESS_PAPER_RUNTIME_BUNDLE', raising=False)
     monkeypatch.delenv('HARLESS_PAPER_RENDERER_ROOT', raising=False)
     row = next(s for s in prepared(tmp_path, ROOT/'config/harless-scenes.json') if s['id']=='paper-proofreading')
-    assert row['runtime_kind'] == 'paper_document_read_v1'
-    assert row['runtime_mode'] == 'execute'
-    assert row['binding_policy'] == 'approved_uploaded_reads_v1'
-    registry=json.loads((ROOT/'config/harless-scenes.json').read_text(encoding='utf-8'))
-    current=next(item for item in registry['scenes'] if item['id']=='paper-proofreading')['rsi']['runtime_bundle']
-    assert row['runtime_library'] == str(ROOT/current/'library.json')
-    assert 'rsi_unavailable_reason' not in row and 'output_unavailable_reason' not in row
+    assert row['mcp_rows'] == []
+    assert row['rsi_unavailable_reason'] in ('native_runtime_recertification_required', 'existing_runtime_bundle_incompatible')
+    assert 'output_unavailable_reason' not in row
     assert row['paper_reference_output_unavailable_reason'] == 'paper_renderer_not_deployed'
     assert 'mcp__paper_checks__export_review_report' in row['allowed_tools']
     assert 'mcp__paper_checks__collect_current_local_citation_evidence' in row['allowed_tools']

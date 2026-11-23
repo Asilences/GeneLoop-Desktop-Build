@@ -2,7 +2,8 @@
 import argparse,hashlib,json,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from src.motif_core.offline.experience_registry import read,durable,sha,check_motif_certificate
+from src.adapters.file_management.experience_certification import check_motif_certificate
+from src.motif_core.reuse.experience_registry import read, durable, sha
 from src.adapters.geneloop_privacy import admit_publication
 
 def privacy(value):

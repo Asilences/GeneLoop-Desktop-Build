@@ -1,0 +1,17 @@
+import {spawn} from 'node:child_process';
+import {readFileSync,appendFileSync,mkdirSync} from 'node:fs';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {join} from 'node:path';
+import assert from 'node:assert/strict';
+const app=fileURLToPath(new URL('../',import.meta.url)),require=createRequire(import.meta.url);
+const plan=JSON.parse(readFileSync(process.env.GENELOOP_RSI_REAL_PLAN_FILE,'utf8'));assert.equal(plan.real_model_authorized,true);
+const asar=require('@electron/asar'),archive=join(plan.packaged,'resources/app.asar');
+assert.equal(JSON.parse(asar.extractFile(archive,'package.json')).version,'0.4.1');
+assert.ok(asar.extractFile(join(plan.packaged,'resources/geneloop-runtime.asar'),'local-rsi.mjs').toString().includes('stdout.setEncoding'));
+const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
+const child=spawn(require('electron'),[join(app,'test/local-rsi-real.cjs')],{cwd:app,env,windowsHide:true,stdio:['ignore','pipe','pipe']});
+const log=join(plan.output,'electron-private.log');for(const stream of [child.stdout,child.stderr])stream.on('data',data=>{appendFileSync(log,data);process.stdout.write(data);});
+const timeout=setTimeout(()=>child.kill(),12*60000);
+child.on('error',()=>{clearTimeout(timeout);process.exitCode=1;});
+child.on('exit',code=>{clearTimeout(timeout);process.exitCode=code??1;});

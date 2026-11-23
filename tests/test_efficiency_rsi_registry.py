@@ -5,9 +5,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters import capability_proposal as pilot
-from src.adapters.efficiency_rsi_measurement import digest, measure_study
-from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
+from src.adapters.harness.capability import capability_proposal as pilot
+from src.rsi.feedback.efficiency_rsi_measurement import digest, measure_study
+from src.rsi.feedback.efficiency_rsi_registry import StudyRequestRegistry
 from tests.test_efficiency_rsi_measurement import example
 
 

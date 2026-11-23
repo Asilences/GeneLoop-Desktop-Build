@@ -43,8 +43,10 @@ def prepare(parent,workflow_ids=None):
                       'pristine':str(pristine),'input_template_sha256':sha(td/'input-template.json'),'oracle_sha256':sha(td/'oracle.json'),'snapshot_sha256':digest(snapshot(pristine))})
     if not tasks:raise ValueError('no selected exploration material')
     paths=[*HERE.glob('*.py'),*HERE.glob('*.md')]+[ROOT/n for n in ('scripts/run-file-scenario.py','scripts/validate-file-delivery.py','scripts/check-file-workflow-sdk.py','scripts/check-file-workflows.py',
-        'src/adapters/file_job_budget.py','src/adapters/file_workflow_job.ts','src/adapters/file_acceptance_guard.ts','src/adapters/file_scenario.py',
-        'src/adapters/file_cost_gate.py','src/adapters/harness_runtime.py','src/adapters/dsh_trajectory.py','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt')]
+        'src/adapters/file_job_budget.py','src/adapters/file_workflow_job.ts','src/adapters/file_acceptance_guard.ts','src/adapters/scenario.py',
+        'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+        'src/motif_core/offline/mining/motif_miner.py',
+        'src/adapters/deepseek_cost_gate.py','src/adapters/harness/harness_runtime.py','src/adapters/harness/dsh_trajectory.py','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt')]
     for p in paths:
         dest=exp/'frozen-source'/p.relative_to(ROOT);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,dest);dest.chmod(0o600)
     protected={t['task_id']:{'snapshot_sha256':t['snapshot_sha256'],'template_sha256':t['input_template_sha256']} for t in base['tasks']}

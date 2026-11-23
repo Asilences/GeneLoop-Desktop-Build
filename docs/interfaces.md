@@ -1,10 +1,135 @@
 # DeepSeek Harless：场景、Motif 和 Harness 的接口
 
+## 账号内 RSI 结构学习
+
+`GET /api/harless/rsi-learning` 返回 `enabled`、`raw_retention_days`、`learning_retention_days`、`scope` 和 `native_history_retention`。认证后的 `POST` 接受唯一字段 `enabled`（布尔值）。启用仅覆盖后续启动的任务。开关控制账号内学习，单次可选共享继续使用既有预览和同意接口。任务副本生命周期和离线同口径导入见[账号内结构学习与留存](rsi-data-privacy.md#账号内结构学习与留存)。
+
+`POST /api/harless/session-trash` 使用 `{ "action": "clear", "revision": "…" }` 清空已核对的对话。`cleared` 统计本次撤销的用户对话，配置 DSH 持久存储的宿主返回 `native_pending`，统计仍待物理清理的原生会话（含私有子会话）。清空状态持久化后，应用读取、恢复及旧共享预览均不可用。网关在休眠成员和任务宿主启动时重试。
+
+## Desktop 默认完整离线分发（preview.21）
+
+正常 `npm run dist` 显式传 `build-installer.mjs --complete`，忽略遗留轻量环境开关，生成包含当前六场景工具的完整包。工具放在应用资源目录的 `geneloop-tools`；不附带激活延后准备的 `tool-packs.json`，因此现有 `localToolDirectory()` 直接定位随包工具，`ToolPreparation.offer()` 不弹出全量准备窗口，也不在首启调用 `ToolPackStore` 全目录扫描。Windows 沿用 NSIS 生命周期和经完整载荷 SHA 校验的 .NET 直接解压；没有新建执行器或改变场景／模型协议。
+
+`npm run dist:lite`／`--lightweight` 保留为显式可选分发；其清单、解码、权限及逐文件校验协议不变。两个参数同时出现时拒绝构建；低层 CI 的原有显式环境入口保持兼容。完整构建校验平台、当前 PPT 制作范围、GeneLoop Skill 和默认 Office Kit，并排除运行时生成缓存；不因包体目标削减六场景工具。既有用户目录工具缓存和旧安装器保留，不与完整包资源混用。Mac 使用相同默认构建入口，但须另外原生构建和验收，旧 DMG 保持其原版本分发方式。
+
+## Desktop 安装后工具准备（preview.20 候选）
+
+preview.20按已确认范围改为六包，取消speech，新增必需的GeneLoop PPT制作Skill；使用精简native Office Kit、共享Node／Chromium，保留NumPy正常导入依赖。构建拒绝旧范围、重复Playwright Node或缺少必需文件。新清单尚未绑定公开源，`baseUrl=null`，需从本机导入配套工具目录；不将旧七包地址套给新版本。三平台包体实测及原生检查见[preview.20记录](debug/desktop-preview20-tool-refresh-20261108.md)。以下清单安全协议不变，旧preview.19七包发布保持历史版本。
+
+小包模式的 `tool-packs.json` 是随应用固定的平台／架构工具清单，含包与逐文件 SHA-256；只允许该清单列出的工具包进入解码器。`ToolPackStore` 在应用数据目录按 toolset ID 保存下载、验证和完成标记；来源为固定 HTTPS 根地址或用户选择的本机工具包目录。独立隔离准备页仅向其自身主 frame 暴露 state/start/cancel/import/close，不能更改清单、凭证、下载源或启动任意进程。`tool-releases.json` 分别固定 Windows x64、Mac ARM64／Intel 的工具集和下载根；构建时仅完整摘要相符才自动绑定，不跨版本或平台套用地址。Mac 框架链接在解码阶段排除，再按固定清单恢复内部相对链接，拒绝链接目录下的成员；仍逐文件校验，不放宽解码器安全等级。原本机 Agent、场景 MCP、模型认证不变。旧完整离线构建保留；用户仅授权公开各平台七个工具包，安装包只留本地，Mac 按授权临时中转后删除。当前原生验收及边界见[本轮记录](debug/desktop-preview19-macos-delivery-20261107.md)。
+
+## Desktop 可选依赖与私有工具（preview.17 候选）
+
+原 Gateway 新增 `private_providers()` 读取接缝，注册校验、权限和回执协议不变。桌面 `NativeGateway` 只从宿主私有 IPC 的内存注册读取扩展；凭证引用保持为引用，秘密值不写入回执。Skill 原文件保持逐文件锁定，桌面绑定私有项目根和原生 Office 转换。构建、平台差异和外部条件见[工具说明](product/desktop/native-optional-tools.md)。
+
+## Windows 安装事务与工具复用（preview.15 安装提速修订2）
+
+`wrap-installer.mjs` 编译 `InstallTransaction.cs`。在同一磁盘的受限临时目录整体保留旧应用，原NSIS继续处理进程检查、卸载登记、快捷方式和安装注册。私有用户数据不在事务目录内；成功验证安装版本后清理备份，失败时恢复目录、相关注册表和快捷方式。多个不同路径的用户级／全机安装并存时沿用原NSIS处理。崩溃或恢复失败的备份保留恢复记录，不宣称断电自动恢复。
+
+解压器支持 `archive target [trace [previous reuseJournal]]`（2、3或5个参数）。宿主设置并在结束后恢复 `GENELOOP_INSTALL_TRACE`、`GENELOOP_INSTALL_PREVIOUS`、`GENELOOP_INSTALL_REUSE_JOURNAL`，调用方无需设置。构建时生成的 `payload-reuse.tsv` 仅含相对路径、长度和SHA-256并嵌入解压器；文件集及每个实际文件完全匹配后才整目录移动。变更／增删文件、链接、不同磁盘不走复用，继续从已校验的完整ZIP解压。移动前写入恢复意图；失败恢复先把复用目录归还备份，再还原旧应用。没有安装后下载。
+
+Windows诊断入口：`npm run check:installer-payload`、`npm run check:installer-transaction`（`apps/desktop`），均仅操作隔离夹具、不写应用注册表、模型请求0。完整覆盖计时与本地交付见[记录](debug/desktop-preview15-install-20261106.md#2026-11-07-完整覆盖实测与修订2)。
+
 ## Desktop 原场景工具接线（preview.13）
 
 桌面模型 lease `toolsetVersion:3` 与宿主共用 `apps/desktop/runtime/native-workflow-catalog.mjs` 白名单。版本 2 和未声明版本保持原工具集合。`local_workflow_open` 固定授权资料快照并发现原场景 MCP Schema，以 `mcp__native_*` 直接注册到现有 DSH scope；不新增 Agent 循环，不自动转云端。提供通用 4、报告 17、论文 20、文件 13、PPT 21、官方源材料 5 项入口，另有 11 项原生视频入口。`local_workflow_close` 释放本轮工具状态，已交付文件保留。
 
 纯代码执行只向 QuickJS WASM 提供固定输入/新文本输出绑定；图像回传使用 DSH 附件存储并核验模型图像能力。文件方案由主进程展示并确认，作用于任务副本，交付 ZIP；不会移动或删除工作区原件。Python/Office 子进程沿 DSH 生命周期，凭证不传入。源码存在不代表正式站已部署，跨平台旧 Motif 认证不自动继承。详情及当前验证边界见[preview.13 记录](debug/desktop-preview13-full-tools-20261106.md)。
+
+> 2026-11-11 当前候选PPT160/Paper162：`build_ppt.plan.sources`将公共引用写入各页备注；`patch_ppt.append_slides`在同稿追加1–5个内容页（表格可分页），保留已有页内容/备注，新增页数只更新全局页脚总数。原生revision从0开始，按稳定slide_id改页。精确字段错误不丢弃内容。新有限IR `observed_anchor_read_map`仅从不同长度的完整正常只读轨迹归纳，并由第三独立来源认证；在线绑定当前回执并保留模型视觉判断。现有执行器/权限/取消和Windows扩展路径沿用，不新增常驻MCP。当前宿主不因缺少无关的休眠组件工厂停用程序；程序真实依赖仍须匹配。未交付正常停止且有工具进展时最多续接一次，拒绝/澄清/取消不续接，费用归制作。真实采用及成本等待[15题对照](experiments/ppt-presentbench15-20261111.md)。以下为历史接口记录。
+
+> 2026-11-10本地PPT152/Paper154候选：PPT工具增加`edit_ppt_native`（inspect取得SHA/页码/shape_id/text，apply提交精确目标和改动，返回原生PPTX/PDF/PNG）及`prepare_ppt_asset`（已有PNG/JPEG/WebP的复制、裁剪、等比缩放）。两者属于普通/优化共有执行底座，不直接声明为Motif。PPT Master路径的场景页数支持1–200，旧host_delivery路径仍保留旧限制。明确制作/改页请求没有实际交付不能completed；当前完整回执可自动返回，成功present结束原生工具回合。RSI的`worker_mode=learning`和内部Judge的`worker_mode=review`使用不同request/锁/进程，均不参与前台交付成功条件；下载快照失败仍须报告。前端/正式服务未改，接口与验证边界见[稳定性修复](experiments/ppt-stable-delivery-audit-20261110.md)。
+
+> 2026-11-09隔离PPT147/Paper149：PPT任务的原生`web_fetch`名称、工具schema和顺序保持，执行限定到短子进程，完整HTTP获取/HTML转Markdown在子进程完成，原提供器/代理/SSRF继续生效；其他场景不变。任务级`pptFinalTaskAcceptance`以本轮成功present的宿主文件SHA选择最终稿，Generate仍核对当前导出及来源；未选探针不要求交付，原生PPTX编辑可沿共同present路径结束。该判断仅证明交付版本存在，不证明科学/视觉质量；不回写旧失败、不更换学得程序。前端及正式服务未动，完整回归与原15题监督中，见[记录](experiments/ppt-three-category-budget-plan-20261109.md)。
+
+> 2026-11-09当前隔离PPT145/Paper147：页面程序可用`functional_trial_v1`试用，`validation_scope/quality_deferred`明确区分功能执行与质量。原稿差异仍返回，`source_equivalent=false`可在PPT专用试用模式被接纳，其他场景不变；设计预检结果作为诊断，不必先调模型纠正。学习器在原严格候选被源稿/设计检查拒绝时对同代码尝试该路径。正常写页程序若已有独立观察绑定重放，可按既有`independent_observed_write_binding_replay`协议进入probation，后继使用决定效果；运行时解释器未另造或放宽任意工具执行。相同自然提示不排除不同材料，发现先于认证，改页与失败采集仅归入本轮新增事件。MCP schema不变。两条新连续程序已在唯一留出任务实际生成/改页，段内模型0，试用不等于全面质量/收益晋级。详见[结果与复现](experiments/ppt-practical-learning-20261109.md)。
+
+> 2026-11-08当前隔离源码PPT142/Paper144：PPT组件等价失败新增`visible_text_node_counts/visible_text_mismatch_count/visible_text_differences`，最多返回5处文字差异、每侧512字符并标记截断，缺失节点为null；原文字/渲染验收条件不变。纠正请求优先处理真实失败，保留正确代码/schema。三卡片程序经原Builder纠正和正常学习器登记`certified_probation`，TypeScript真实加载、重启读取与其他账号拒绝已核对；未新增后继模型任务、Judge或净降费证据。MCP工具schema不变，原失败保留，详见[追加纠正结果](experiments/ppt-external-skill-learning-20261108.md)。下方版本记录为历史状态。
+
+> 2026-11-08本轮隔离源码PPT141/Paper143：`read_ppt_design(guide=true)`按需返回`skill_references`（本地适配文本、来源ID、摘要、固定upstream commit、`adapted=true/executable=false`）；登记在`scenarios/ppt_master/skill-sources.json`。普通目录读取不展开第三方参考，不新增MCP工具。Python发现读取相同本地多源登记，文字仅提供搜索范围，顺序、参数绑定仍来自执行轨迹。成功交付对未退出学习且≤100KB的SVG核验SHA并冻结到所属任务的`reuse-evidence`，退出学习不额外归档训练源码。组件渲染允许经目标类型/唯一ID/无环核验的页内fragment，外部资源仍拒绝。对应候选因副标题内容错误未认证，不能把接口可用当新能力已晋级；见[本轮实际结果](experiments/ppt-external-skill-learning-20261108.md)。下方版本段落为历史状态。
+
+> 2026-11-08当前隔离版本PPT138/Paper140：PPT未交付且模型终止响应仅有DSML工具文本时，沿同一任务原生steer恢复；最多三次，再次恢复前必须出现不同callId的实际工具结果。文本不转换为执行参数，取消/有效交付/无进展不恢复，`provider_tool_format_recoveries`记入制作。`pptCurrentDeliveryFiles`将当前完整宿主回执对应的PPTX/PDF/预览优先纳入结果，旧下载快照不回写。已采用页通过原生版本化工具修订，任意覆盖重建拒绝；明确失败/不适用时保留退出路径与记录。
+>
+> 优化模式的原生写页自动入口现在支持已交付稿的`compose_ppt_page`单页修订：只有匹配且已认证的单页IR才交由现有`execute_ppt_program`执行，返回兼容的`page/sha256/layout`及`continued_by/workflow_program_id`，预览续回原调用。内部工具调用不再次接管；多页证书不能授权单页自动入口，多页仍由显式一次批量调用执行。固定宿主路由是工程接线，执行顺序与参数绑定来自原冻结轨迹候选。
+>
+> 已缓存交付的`review_pages=[]`只在当前完整PNG集、页面回执数量及各文件SHA可核验时绑定实际预览；相同已观测图像可复用，未观测图片仍执行学得读图步骤，缺失证据拒绝。独立原生/Office认证已增加单页自动入口分支。最终修复后未追加真实模型任务；不能用原生认证代替后继降费证明。见[修复记录](experiments/ppt-benchmark-repair-20261108.md)。以下日期段落为历史协议变更，当前状态以上述及交接为准；暂不PR或正式部署。
+
+> 2026-11-08 benchmark隔离候选PPT126/Paper128：`GENELOOP_PPT_LEARNING_READONLY=1`暂停后台发现/训练/评审调度，正常任务捕获和已认证程序读取保留，默认不开启。新连续程序证书使用`certification.independence_policy=ppt_distinct_source_decision_v2`，不同原始材料族和独立决定为必要条件；相同用户提示本身不否决不同论文的独立性。旧证书缺省时沿用原提示独立要求，未知策略拒绝。该调整不是质量/费用晋级。固定训练L01/L02、独立认证C01、最终留出E01–E03分开，不将所有样本轮流当训练；真实实验状态见[小闭环记录](experiments/ppt-benchmark-pilot-20261108.md)。
+
+> 2026-11-08本地PPT124/Paper126：Skill段落仅提供不可执行的搜索范围；PPT学习器从正常轨迹生成原有IR，绑定Skill版本并独立认证，失败回执作为反例单独采集。原生执行认证支持新稿/修订、内置页型/认证组件及已观察的多页结构。在线仍使用`execute_ppt_program`，一次传入本任务的完整`pages`参数，由PPT执行层续接写页/备注/导出/预览；不增加每候选一个MCP工具。普通单页写入不提前锁定整稿；自动初稿续接仅适用于明确的一页任务。学习和Judge费用独立，普通用户不依赖评分。前端未改、未部署/PR；见[本轮实现与证据](experiments/ppt-skill-guided-learning-20261108.md)。
+
+> 2026-11-08本地PPT120/Paper122：Python学习文件I/O统一复用`filesystem_paths.Path`。Windows仅在文件访问时使用扩展路径；`str/relative_to/resolve`及持久化引用保持正常路径，避免和TypeScript准入比较失配。Linux/Mac保留标准pathlib。公共质量记录、候选读取、编译子进程和PNG文件流支持深目录；账户/版本/哈希、独立认证和反馈撤销条件不变。无MCP/前端协议变更、存储布局迁移或系统配置修改。Windows原始深目录闭环4项、Python141项通过，Linux4＋3项通过；见[边界与复现](experiments/ppt-windows-learning-paths-20261108.md)。
+
+> 2026-11-08后端PPT119/Paper121：首次准入与重启统一通过`preparedTaskScene`组合PPT工具，避免把共同交付工具误当升级导致历史会话降级。已授权受管任务的固定outputs整理由`ppt_output_packaging.ts`直接执行，不启动Shell或模型。`GENELOOP_PPT_REVIEW_POLICY`仅显式启用内部评分，不再继承`SSS_WEB_POLICY`；usage-only记`review_unavailable`，不自动付费重试，不触发制作循环。正常轨迹学习保持独立。前端/单结果入口按用户要求不改：历史single槽名baseline仍需对接负责人确保实际优化模式，不能把原生prompt发送策略当任务execute模式。详见[修复、验证与未完成项](experiments/ppt-production-closure-20261108.md)。
+
+> 2026-11-08本地PPT117/Paper119：`finalize_ppt`成功或命中成功缓存时，原子登记`ppt-delivery-receipts/current-<project-digest>.json`。`present`核对当前登记、稿件源/图件/备注/清单/规范字节与源文件集合、所选输出字节，不重做运行环境/导出代码认证，不以mtime判断最新。导出缓存仍检查完整依赖。`pptPublicationPlan`筛除随有效PPTX/PDF返回的不合格附加PNG，宿主续接原生`present`并保留父调用、授权、取消、下载证明和跳过说明；旧/坏主稿仍拒绝。历史无登记回执兼容读取，有登记时不回退旧稿。正式页面预览和完成验收保留。无新增模型请求、部署或PR，见[验证及未收敛项](experiments/ppt-delivery-convergence-20261108.md)。
+
+> 2026-11-08范围约定：PPT场景仅制作/编辑PPT并在交付前检查PDF/图片，不提供旁白音频、TTS、演示视频、配乐或字幕制作流程。文字备注属于PPT内容，独立演讲稿属于普通聊天。现有5项来源MCP及PPT制作/交付/预览原生工具不增加媒体接口；上游锁定包中的可选文件不代表场景能力。此约定已写入本地适配入口PPT115/Paper117，隔离实例仍为PPT114/Paper116，未新增模型测试或PR。
+
+> 2026-11-08 隔离候选PPT114/Paper116新增`ppt-preview-receipts`宿主证明：`inspect_ppt_region`成功后固定记录`kind=ppt_preview_v1`、所属task、来源delivery/dependencies及原图/输出SHA。`present`仅接受仍绑定当前成功导出的该预览或同字节副本，不将它当完整页面导出，不放行任意PNG、篡改、跨任务或过期来源。真实优化初稿及同会话改页已交付，预览发布通过；普通组初稿失败、原会话冷恢复准入400和Judge协议失败仍保留，未证明降费。见[单组实测](experiments/ppt-delivery-fixed-pair-20261108.md)。新增工具为共同工程底座，非新学得Motif；完整Windows/Mac宿主仍待验收，未正式发布或PR。
+
+## 2026-11-08 PPT 预览与完成判定候选
+`inspect_ppt_region({path,crop?,scale?})` 为普通/优化两组共同的原生工具，不进入学得 Graph。`path` 必须是本轮当前有效 `finalize_ppt` 回执内的 PNG；`crop` 是原图像素整数 `{left,top,right,bottom}`，`scale` 为1–4、默认2。固定执行器生成新的会话输出预览，原生 `read_image` 返回图片，不改原图或PPT。沿用当前任务身份、输出授权、版本、取消和会话文件边界；受管组件允许字面量图片复制到本会话 `/tmp`，不授权任意脚本或项目写入。
+
+PPT Master任务记录 `ppt_initial_sources` 和 `stats.ppt_work_started`。发生制作/改稿时，只有当前完整宿主导出回执及其PPTX/PDF/逐页PNG和依赖均有效才可完成，否则 `failed` / `ppt_delivery_not_delivered`；不可核验时为 `ppt_delivery_unverifiable`。纯讨论和未改稿的演讲稿不强制导出。`stats.ppt_delivery_acceptance` 保留判定；交付快照失败改为 `failed` / `delivery_snapshot_failed`。不自动追加模型恢复，不回写旧任务状态。源码候选PPT113/Paper115，未部署；详见[修复与验证](experiments/ppt-delivery-repair-20261108.md)。
+
+> 2026-11-07 PPT112/Paper114计费证据候选未提交或正式发布，已在隔离开发实例启用并完成[带失败记录的真实回归](experiments/ppt-cache-enabled-pair-20261107.md)。Web/File模型回执新增`upstream_response`：`requested_model`为别名转换后的出站ID，`response_model`/`response_id`/`system_fingerprint`为上游声明，`request_ids`仅白名单短标识；`raw_usage`保留有限token/cost字段原值，过滤有显式状态，正文与凭证不记录。`reported_cost.amount`缺失为`null`，币种/单位缺失或不识别为`unknown`；上游报告不是账单。`http_status`和`outcome`区分上游HTTP状态与本机连接异常，截断时证据保留但原预算保护不变。新增`request_started_utc_epoch`，原`request_utc_epoch`不重定义。
+>
+> 任务统计新增`cost_accounting.budget_reservation/configured_estimate/upstream_reported`三域；上游金额只在响应完整、解析有效且币种和单位明确一致时分组合计，未知与不同单位不混成USD。`reported_accounting.upstream_reported_costs`提供同一上游汇总，`invoice_usd`仍为`null`。旧`estimated_cost_usd`兼容别名保留，新增`estimated_cost_usd_semantics`说明其仍是预算预留。取消回执和聊天公开投影不新增原usage/上游标识。Windows定向99项通过、无云请求，详见[记录](experiments/ppt-upstream-telemetry-20261107.md)。
+
+> 2026-11-07 PPT111/Paper113本地候选（未提交/部署）：共同交付层使用连接的实际图片限制、SDK请求图像变体和当前消息，保守复用Files API及内联退化两种路径都保留的同字节图片。只压缩后续重复图像为引用，不修改首次图片/历史消息；未知配置、图像卸载或压缩后不在上下文时重新正常提供。共享解释器新增可选宿主`previewObserved(artifact,receipt)`，缺省仍读全部当前预览，结果记录`reused_preview_sha256`；不跳过质量判断。已加载且逐字相同的Skill说明仅压缩模型可见副本，canonical value、版本和来源目录保留。受管页面的Bash保护仅放行受限字面量只读校验与outputs内整理；复杂Shell仍引向read/present，页面写入、取消及版本守卫不变。网关私有日志新增`request_fingerprint`（有序消息/body/envelope哈希、图片/字节数量和同会话前缀），不含正文或凭证，不等于上游缓存证据；诊断失败不阻断原转发。旧库/失败/账本保留，场景学习程序需按新环境再认证。见[审计记录](experiments/ppt-cache-context-audit-20261107.md)。
+
+> 2026-11-07 本地PPT110/Paper112修复候选，尚未提交或部署。连续页面匹配在执行前复用`componentProject`，唯一项目及简写路径与原工具一致；多项目不推断。Web/File统计新增`budget_reserved_usd`和`reported_accounting`，后者包含收到的模型响应计数、缓存拆分、已知组成的配置费率估费、未分类token条件上界、当前费率回算次数及`invoice_usd:null`。新回执保存当时费率；无快照旧记录使用当前费率时明确标记，不修改原账本。总量不一致仍保持未知结算及保守预算预留。Judge协议v5保存原字节与摘要，完整SSE可还原，usage-only不是评分，格式失败最多一次JSON对象重试；仅可忽略四维之外的null元数据且记录字段名。旧v4评分和失败不覆盖，不自动扩大评审或重做PPT。见[修复记录](experiments/ppt-three-interface-fixes-20261107.md)。
+
+后台评审使用单独的`task_info(...,review_only=True)`身份视图和任务集合，不要求制作费用已结算。它不含用于学习/收益认证的`totals`，不能用于baseline学习；默认学习入口仍走原严格核验。实际下载文件、所属用户、来源及成品版本仍须通过原检查。
+
+> 2026-11-07 PPT109/Paper111候选（沿main `1d1e16f4`）：`execute_ppt_program({id,project,pages,delivery?,resume?})`和`release_ppt_program`提供执行/准入接口。真实材料已产生已交付草稿的单页修订→交付→预览程序，经第三来源独立原生执行认证，并在后继模型任务中由宿主实际调用；后继任务交付失败，没有合格降本对照。它不是完整整稿生成程序。随后修复能力范围、临时输出、父回执缺陷和安装前溢出准入，修复后真实效果仍待验收。页面工具支持`notes`及当前SHA保护的修订，失败不自动重写成功页。桌面共享执行层做过诊断，真实本机页写入宿主/平台认证未完成。见[当前原生验收](experiments/ppt-write-native-replay-20261107.md)，此前失败保留在[前轮记录](experiments/ppt-write-workflow-20261106-results.md)。
+
+
+## PPT轨迹续接与跨宿主执行（2026-11-06）
+
+`ppt_execution.ts`是通用分发底座，继承原工具的父调用、权限、取消及失败结果，不负责语义规划。组件在沙箱和页面安装前完成证书、参数及容量准入；真实字体/对比预检仍由原渲染器执行。相同确定失败输入在同任务内不重复执行，版本化改页仍需当前页SHA。
+
+Python的`ppt_workflow_learning.py`从账户允许学习的正常调用发现相邻操作与结果字段绑定，编译JSON IR和来源证据。契约声明工具效应和可绑定输出字段，不声明操作顺序。候选需要两个不同决定/来源/题面的支持；第三个独立来源可以做历史绑定重放，或由`ppt_workflow_certification.py`和固定`certify-ppt-workflow.mjs`执行真实原生工具与编译IR并比较页面/备注、可编辑对象、Office PNG及未选页。两种认证scope分别保留，原生执行认证不等于第三条同形历史出现。原生缓存同时绑定页面引擎全部代码锁；环境变化要求新计划。并行调用、未完成调用、未知工具、失败或模糊绑定成为边界，只有依赖哈希未变的观察可以略过。`learning_eligible=false`不进入发现。当前除交付→看图外，已认证已交付草稿的单页组件修订→交付→当前预览，没有整稿生成编译或语义质量跳过。
+
+宿主加载账户`workflows/selected.json`及不可变digest库，任务开始时冻结选择。执行绑定当前返回值、实际原生schema、平台和代码锁。`suspended.json`使库失效；disabled指针不会被下一次后台学习重新启用。适用`create_ppt_page`在已存在`delivery.json`的修订中由宿主直接续接学得程序，初稿不因此提前导出。`tools/post-execute`通过公开结果替换接口将子读取图像返回同一父工具，保留原规范值和全部质量门槛；不能在around回调拼接图像后假定SDK会保留它。子读取异常保留已经导出的成品，取消仍传播。审计记录实际子调用和续接内模型请求0，不将它自动记成已证明省下一次LLM请求。组件试用与最终成品采用仍分别记录。
+
+桌面复用同一解释器，模型仍由既有服务器转发。本机包校验共享模块和已打包的原生工具代码，证书同时绑定平台、架构、Node版本、工具schema与包摘要。服务器回执不能直接用于桌面配方。桌面适配入口为`apps/desktop/runtime/local-ppt-workflow.mjs`，由`stage-ppt-workflow.mjs`打包同一解释器；main尚缺本机页写入后端，未自动接通桌面产品，也没有Mac原机验收。发现、真实对照和成本边界见[实施计划](experiments/ppt-learned-workflow-20261106-plan.md)。
+
+## 通用PPT集成候选（2026-11-04）
+
+2026-11-05补充。自动正常页面学习使用`text_content_only_v1`生成契约，几何和固定样式封装在程序内，后继模型只填写内容。旧通用程序decoder保留原接口。能力卡携带实际版式用途。认证拒绝最多触发一次可计量纠正，后续版本再认证优先复用已绑定请求/响应和生成契约的正确提案。
+
+后台评审v4同时读取最终PDF/PNG、原文页图像，以及PPTX原生文字/形状、实际备注和文件格式证据。`inspect_delivery(files, include_content=True)`按需提供内容证据，默认返回仍兼容。相同成品与协议版本复用结果，协议改变建立新评审记录。评审实现和交付校验纳入程序签名，旧证书需要重新认证。补评费用独立保存，旧评分和原制作费用保留。
+
+普通组与优化组共用原生`read_ppt_design({category?,theme?,component_ids?,guide?})`、`start_ppt({name,title,theme?,purpose?,slide_count?})`、`compose_ppt_page({project,page,layout,content,expected_page_sha256?})`、`prepare_ppt`和`finalize_ppt`。设计工具返回21套主题的短卡或指定契约，`guide=true`按需返回模板继承和设计约定。项目创建采用原子发布，重试保留已有页面。共同页面工具支持cover/section/bullets/two_column/image_text/bar_chart/closing，content承载当前title、body、columns、image、chart、source、notes。宿主测量实际字体、校验容量与图片，修订核对当前页SHA。`create_ppt_page`仅向有权限且启用RSI的优化任务开放，支持`parameters`和`parameters_file`二选一。
+
+集成项目的`geneloop-project.json`标识统一生成路线，底层调用官方quick-generate模块及共同Office验收。旧项目保留原路线。交付缓存绑定源页、关联资产、规范、备注、来源审阅、实现和环境版本。同PNG版本成功经`read_image`返回后记录观察，未把观察记录当作质量通过。
+
+公开工具中间件仅对可完整解析、字面明确的Generate导出命令自动续接`finalize_ppt`，保留父调用ID、参数摘要、取消信号和同任务授权。复杂Shell或自定义输出仍要求模型采用明确入口。后台评审队列通过现有worker继续处理不可变成品，并使用冷却唤醒恢复环境类错误。原论文PDF原文与原页图像共同参与事实和图件核对，未知请求先对账。
+
+任务API可提供布尔`learning_eligible`。`false`禁止该任务作为Graph、页面程序及公共能力构造来源，同时允许独立质量评价与已有能力采用统计。字段纳入`request_sha256`，同request_id改变它返回冲突，上传与重启继续保留。缺省沿服务策略，保留旧规范化摘要，`true`不提升账户权限或绕过资料与认证守卫。
+
+程序库`groups`按候选维护support、uses、pairs与phase。旧pointer仍兼容；两次独立单路采用可标为retained，费用优势为unknown，严格费用晋级继续要求同条件配对证据。学习与评审不计入B/O制作对照，制作中的尝试、弃用和恢复仍计对应组。
+
+成品质量失败页通过版本绑定记录返回候选评价。失败页与组件实际采用页重合才归因停用，其他页失败保持pending。已明确不合格的支持材料不能继续支持新候选，机械通过与模型辅助质量结论分别保留。
+
+可选后台评审由私有`GENELOOP_PPT_REVIEW_POLICY`指定策略，学习worker默认继承当前`SSS_WEB_POLICY`。使用原`PptCapabilityBudget`与独立`ppt_background_review`身份，保存版本绑定、请求、响应及费用。相同版本复用结果，环境故障冷却重试，响应不明的已发出请求等待对账。来源覆盖不足保留unknown，后台结果不自动开启修订循环。实现与未完成验收见[工程记录](experiments/ppt-engineering-audit-20261104.md)。
+
+## Gitleaks工具复用（2026-11-11，默认关闭）
+
+公共Python入口、Web/SDK/离线及未来Agent继续执行完整输入与派生输出的同一检查。宿主可配置`SSS_RSI_GITLEAKS_WORKER`选择固定Gitleaks8.30.0库适配器；版本、规则、官方release正则引擎和Linux/Windows二进制摘要在`config/rsi-gitleaks-worker-tools.json`。每个逻辑边界重新核验二进制字节；进程启动还核对固定握手，单请求8秒，故障不降级放行。配置不可由任务字段选择，worker不监听端口。
+
+`SSS_RSI_GITLEAKS_DEDUP`仅接受0/1，1时在单个公共脱敏事务内最多缓存64个已完成clear摘要；键绑定PID、工具/规则身份和完整UTF-8字节。原文和派生结果仍各自调用逻辑检查，只在字节相同且守卫重新通过时复用；内容改变、二进制改变、跨请求/进程、命中或失败均不能命中旧结果。工作进程只复用官方编译规则，每请求新建Detector，不保留findings。上述两个变量由原公共环境白名单统一传入。
+
+## 中文隐私候选与批处理（2026-11-11，默认关闭）
+
+Web、SDK、离线导入、学习读取和公开导出继续调用 `geneloop_privacy.py`，TypeScript 通过既有有界 worker 转发。宿主以 `SSS_RSI_PRIVACY_CANDIDATE_CONFIG` 与配置文件 SHA256 成对启用，场景和任务 JSON 均不能选择后端。配置格式 `geneloop.privacy-chinese/v1` 要求 `model_dir`（私有绝对真实目录）、`device`（cpu/cuda:0）、`threads`（1–4）、`batch_size`（1–32）、`replace_zh_ner`（布尔）。`replace_zh_ner` 控制中文 spaCy 的 PERSON/LOCATION 模型结果。
+
+中文配置可选 `credential_mode`，默认 `gitleaks`。显式选择 `gitleaks+credsweeper-review` 后，Gitleaks 与固定版本的本地 CredSweeper 扫描完整输入及脱敏输出。只有精确落在宿主 JSON 包装上的转义匹配、可解码回原始内容、且按来源文本和真实字段关联复扫清洁时，才将该命中视为序列化误报。其他凭证命中或待复核项阻止该副本进入学习。其他配置值和未知字段拒绝。
+
+`config/rsi-privacy-chinese-tools.json`固定Stanza代码和中文模型摘要。加载仅本地资产，设备不可用直接失败；固定CUDA Torch构建可显式执行CPU，不允许自动回退。`text_batch_context`仅对具备批接口的显式候选启用，最多32视图/128000字符预取，未预取内容仍按原标量路径完整检测；缓存、词表区和实体别名仅存活于该事务。诊断上下文`observe_privacy`只收集固定阶段、耗时和异常类型，外部错误仍是既有固定拒绝，不返回原始异常。配置、版本/字节守卫、正常原件和证书边界均保留。
+
 ## Recursive Abstraction Evolution（2026-11-04）
 
 规格、模块对应、T0–T8证据与研究边界见[实现记录](rae-implementation.md)。Capability IR、ID、Registry、账本不变；所有新增行为需要宿主显式启用。
@@ -296,7 +421,7 @@ PPT 的本轮兼容锁仅更新共享 `harless_task_scope.ts` 产品身份组合
 
 ## 官方 Web 与统一任务接口（0.1.5-rc.3）
 
-`npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`；浏览器通过 `src/adapters/harless_web_client/` 装饰原生 `/harless` 命令，选择场景/模式/RSI。独立 `/tasks`、`/sss` 与 `/harless` 页面已移除，旧地址跳转聊天首页；任务 API 保留，历史代码/环境变量标识保持兼容。
+`npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/web/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`；浏览器通过 `src/adapters/harless_web_client/` 装饰原生 `/harless` 命令，选择场景/模式/RSI。独立 `/tasks`、`/sss` 与 `/harless` 页面已移除，旧地址跳转聊天首页；任务 API 保留，历史代码/环境变量标识保持兼容。
 
 后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。官方聊天真实任务发送后直接执行；任务 API 仍支持显式 preview/submit，SDK 入口仍先预览。两者均保留原有预算代理。用户已授权此测试用途，Web 当前默认不限费用，外部副作用仍须另行授权；独立 SDK 实验按各自有效配置执行。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](debug/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
 
@@ -392,7 +517,7 @@ library/在线 manifest 新增可选 `certification_scope`（`independent_decisi
 
 ## 官方 Web 与统一任务接口（0.1.5-rc.3）
 
-`npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`，DeepSeek Harless 界面为同源 `/tasks`。旧 `/sss` 是兼容别名，历史代码/环境变量标识保持不变。
+`npm run web` → `scripts/harness-web.py` → 官方 `dsh --profile web --patch <私有 host overlay>`。执行、会话、队列、模型消息和工具调度归官方 Harness；SDK 的 `run-scenario.py` 与 `harness_runtime.py` 保留。场景配置定义能力，不再固定一次用户任务。默认动态策略为 `src/adapters/web/dsh_web_tasks.ts`，请求规范化在 `web_task_request.ts`，双层预算路由在 `web_task_budget.py`，DeepSeek Harless 界面为同源 `/tasks`。旧 `/sss` 是兼容别名，历史代码/环境变量标识保持不变。
 
 后续涉及模型的联调与场景验收统一走真实 API：`npm run web:real` 等价于 `npm run web -- --real-model`；`npm run scenario:real` 等价于 `npm run scenario -- --call-model`。前者仍通过工作台预览确认任务，后者直接执行预算预览后的一次场景；均保留原有预算代理。用户已授权此测试用途；当前共享服务器按 2026-10-16 授权取消任务、对照每侧及累计费用上限；Web 不额外限制单次文字输入或输出长度，其余独立入口按有效配置执行。外部副作用仍须另行授权。纯单元、无模型 smoke 和故障注入仅作开发诊断；真实调用失败不得用模拟成绩替代。SDK 真实最小场景已完成 3 次 HTTP 200 与 4 次 MCP，见[真实调用记录](debug/deepseek-real-api-smoke-20261009-v1.md)；现有 3080 模拟服务未重启，真实 Web 后端最小闭环已通过，浏览器交互仍待验收，见[恢复记录](experiments/web-real-recovery-20261009-v1.md)。
 
@@ -655,9 +780,9 @@ npm run scenario -- --scenario scenarios/my_scene/scenario.json --mode shadow --
 
 当前插件要求本机 embedding 配置。唯一闭合的部分读取链可直接使用结构证据；其他匹配可能调用本机 embedding 服务。其服务/模型是可选依赖，基础安装不下载权重。`scripts/local_embedding_server.py` 和下载脚本保留为可选参考；需另装 torch、transformers、huggingface_hub，使用固定权重和版本自行验证。
 
-Python 语义端口在 `motif_read_semantic.py`：接收明确的结构缺口，调用受预算代理保护的 `dsh_client.call_bounded_prompt`，校验输出，交回 `SemanticResolution` 恢复。`harness_runtime.py` 将 SDK 私有 `_launch_args` 接缝限制在一个文件；升级固定的 DSH/SDK 版本时必须重新验证。
+Python 语义端口接收明确的结构缺口，通过受预算代理保护的 `dsh_client.call_bounded_prompt` 获取和校验输出，再返回 `SemanticResolution` 恢复执行。`harness_runtime.py` 集中处理 SDK 私有 `_launch_args` 接口，升级固定的 DSH/SDK 版本时必须重新验证。[语义端口源码](../src/adapters/harness/motif/motif_read_semantic.py)
 
-`motif_output_projection.py` 与编译器的 evidence projection 只保留为可选机制及回归测试，不挂在新入口默认链路。旧 Distil/压缩启动器已归档。
+编译器的 evidence projection 由可选的独立代理使用。运行 `python -m src.adapters.harness.motif.motif_output_projection --help` 查看参数。旧 Distil/压缩启动器已归档。[代理源码](../src/adapters/harness/motif/motif_output_projection.py)
 
 
 ## `/harless` 场景与模式控制（2026-10-13）
@@ -805,7 +930,7 @@ Crossref 项为 `{item_id,query,source_path}`，目录新增 `metadata_query_ite
 
 `src/adapters/native_motif_compiler.py` 从五个新原生会话实际轨迹编译 `schema_version=1`、`certification_scope=same_task_repeated_runs` 的诊断库，三训练/两留出，拒绝配置或 schema 漂移。此 scope 不等同生产的独立科研决定认证，也不加载进普通生产插件。候选为带文件字节/输出证据的受限读取，或实际 `bash.value.jobId -> job_output.job_id`；后台 ID 在 Session 内有效，不是全局唯一。不能将任意生成程序直接重放。
 
-`src/adapters/dsh_native_motif.ts` 注入 `llm/agents/jobs` 服务，环境绑定 `SSS_NATIVE_MOTIF_MANIFEST/WORK/SESSION/PROMPT_SHA256/INPUT_SHA256`，复用 `dsh_online_motif.mjs` 的 `attachMotifInterceptor` 和标准工具 stream。绑定题面、会话、原始 ZIP、实际 schema；读取验证路径/字节/真实结果，后台结果只读已结束的本会话任务。`motif_bypass_attempt` 是尝试，真实结果通过才记录 `model_request_skipped_verified`；失效/错误/歧义回到模型。空库允许正常回退。诊断库不表示完整场景技能、科研语义认证或独立插件打包。
+`src/adapters/harness/motif/dsh_native_motif.ts` 注入 `llm/agents/jobs` 服务，环境绑定 `SSS_NATIVE_MOTIF_MANIFEST/WORK/SESSION/PROMPT_SHA256/INPUT_SHA256`，复用 `dsh_online_motif.mjs` 的 `attachMotifInterceptor` 和标准工具 stream。绑定题面、会话、原始 ZIP、实际 schema；读取验证路径/字节/真实结果，后台结果只读已结束的本会话任务。`motif_bypass_attempt` 是尝试，真实结果通过才记录 `model_request_skipped_verified`；失效/错误/歧义回到模型。空库允许正常回退。诊断库不表示完整场景技能、科研语义认证或独立插件打包。
 
 原生事件同时保留原始 `agent-events.jsonl` 与带 `session_id/event` 的 `session-events.jsonl`；文件快照使用 `session_id/call_id` 区分归属。编译仅挖掘根会话，不能拼接同一步骤号或同一个 job ID 的子会话。旧多 Agent 事件缺归属时拒绝认证。JSONL 仅按 ASCII 换行分隔，保留工具内容中的 Unicode 段落分隔符。预算重启核算恢复 `State.book` 持久收据中尚无终态用量的预留，结算后替换而不重复计数；旧入口局部文件序号不用于恢复预算 ID。
 
@@ -1398,7 +1523,7 @@ Runtime 构造时冻结内容/组件版本，每次 `execute(root, ...)` 首次�
 
 ## Capability 离线改进流程（2026-11-02）
 
-共同流程由 `src/adapters/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](research/capability/capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
+共同流程由 `src/rsi/learning/capability_improvement.py` 实现，契约见 `schemas/capability-improvement-v1.schema.json`，规则见[改进协议](research/capability/capability-improvement-v1.md)。`run_improvement(plan, adapter, execute=False)`默认预览；adapter提供读取构造库、真实提案、独立发布方法，Source适配器额外冻结宿主验证配置。没有在线Runtime规则分叉。
 
 Store新增`constructionLibrary(seed)`：读取并核验提交历史，保留原语和已发布根，输出`capability_construction_library_v1`及共用Capability Snapshot。完整证据验证失败则拒绝；新候选不能靠模型自报认证进入目录。每个新机会重新读取，修复链内冻结目录。新记录只用于实验改进流程，不伪装成旧`reuse_form`协议或授予生产权限。
 
@@ -1546,7 +1671,23 @@ context为`{format:"capability_opportunity_context_v1",owner,task_scope,allowed_
 
 公共 `geneloop_privacy.learning_view` / TypeScript `privacyLearningView` 处理任意场景的学习 JSON；`geneloop_learning_trace` v4 为两个 Web 宿主、公共 SDK 和离线导入生成脱敏派生视图，包含任务正文、模型回答和工具参数/结果。研究学习器的上下文与工具返回使用同一内核；`admit_publication` 提供保留认证字节的公开导出准入。已有 Paper/PPT 结构编译继续使用无语义值的 v2。入口与边界见 [公共脱敏模块](rsi-data-privacy.md)。
 
+R5可选宿主配置使用`SSS_RSI_PRIVACY_CANDIDATE_CONFIG`及该文件字节的`SSS_RSI_PRIVACY_CANDIDATE_SHA256`配对选择本地官方OPF/CredSweeper；两个变量进入既有worker白名单，任务JSON不能选择后端。未知配置、摘要/版本/软件包或模型漂移、检测器失败均不能放行学习包，凭证命中仍拒绝整包。日期标签按原策略排除，原生八标签仅用于独立评测。未配置时不加载附加模型，沿用默认Presidio/Gitleaks规则；候选质量门槛未通过，不能据接线宣称产品已启用或验收。配置/来源及边界见[R5实施说明](research/rsi/privacy-official-tools-r5.md)。
+
+异常后的NLP状态恢复依赖官方spaCy3.8.18及匹配的固定组合；`requirements-rsi-privacy.txt`和信任表同步锁定，两个模型仍为3.8.0。此前3.8.7缺陷及3.8.12兼容失败保留。默认检测规则仍为Presidio/Gitleaks，依赖版本已变，不能将历史R4成绩当作当前运行库的新验证；修复版须用相同依赖下的默认组合与候选分别复测。
+
+同一入口前后扫描 JSON 包和解码字符串；CLI/嵌套 JSON 一致拒绝重复键和解析深度失败。NFKC 识别跨度通过 Unicode 字素簇映射回原文，固定协议词保护不豁免显式身份字段或凭证扫描。公共函数参数、固定拒绝码及原任务读取原件的行为保持兼容。
+
+R4要求投影器首次读取事件JSONL、工具参数及catalog时使用公共严格解码器；text内容保留字符串类型。策略及schema为 `config/geneloop-privacy-policy-v1.json` / `schemas/geneloop-privacy-policy.schema.json`，依赖和扫描器资产信任表为 `config/rsi-privacy-tools.json`；离线评测核对同一策略语义SHA256。内部 `PrivacyRejected.reason` 是固定枚举，公开错误仍为 `geneloop_privacy_rejected`，不暴露原始异常或命中值。
+
+在线 `privacy_worker_pool.ts` 调用 `geneloop_privacy_worker.py` 的受限stdio协议，支持learning/publication/project；Python仍是唯一识别规则实现。每个解释器/白名单环境组合串行复用一个子进程，最多4组、每组最多32个等待项及约32MiB未完成材料；每个请求的120秒包含排队，空闲60秒退出。`privacyLearningView` / `projectPlatformLearningTrace` 可传 `AbortSignal`；取消或协议异常终止该模块拥有的子进程，拒绝未完成请求，下一请求重新启动。只有固定CPU/Home/临时目录和扫描器环境进入子进程。别名按包重建，spaCy推理在每次文本调用的memory zone内完成，不把包内别名当作跨包身份。
+
+SDK 的 `close()` 先释放原运行时，再由后台线程生成学习副本，避免 NLP 准入增加任务结束或取消的延迟。调用方需要立即读取时，使用 `harness.wait_for_privacy(timeout=...)`；返回值仅表示后台处理是否结束，仍须检查副本或拒绝标记。线程只持有有界内存批次，不落原始队列，正常退出时等待其结束。原 observer、任务结果和账本仍由原 SDK/宿主提供。
+
+该后台线程在R4中用同一Python worker的 `--once` 执行本批事件，120秒外层超时会终止拥有的处理子进程，不能用线程join时间冒充处理取消。离线导入CLI与 `capture_run` 复用相同单次边界；CLI先固定调用目录中的绝对来源路径，通过后才输出完整JSON。底层同步Python内核仍由调用者提供外层预算，离线评测使用明确的控制器，不能把函数直调误写为内建120秒期限。Web共享从一次不可变事件快照生成准入及结构对象；离线/SDK写入先完成序列化，再以私有临时文件和不覆盖已有目标的原子发布写入派生视图。拒绝或超时不发布半成品，原始事件和证据不改写。
+
 默认私有的 `/api/harless/rsi-sharing` 从账号内任何完成场景生成严格 v4 工具流程，场景和工具名使用样本内代号。完整预览、SHA256 绑定和逐次同意后才发送。十分钟失效、重启不恢复授权、异常无自动重传；桌面支持本地副本与取消。接口动作与边界见[可选共享](rsi-data-privacy.md#默认私有与可选共享)。
+
+R7私有学习视图也使用包内`tool-N`标识；相同原工具重复出现时使用相同编号，宿主从不可变原事件/catalog恢复绑定。元数据由宿主生成并进行不变量校验，正文值使用同一公共脱敏器；输入中的`format`、`trusted`等字段不授予豁免。已配置场景保留ID，自定义场景输出`generic`。可选GPU后端必须由宿主明确配置`device: "cuda:0"`和内存份额，核验Torch2.5.1+cu118及原始模型；默认仍为CPU。`decode_mode`仅允许官方`viterbi`（默认）或`argmax`，两者必须作为不同冻结配置评测，不能混报。GPU与新解码模式尚不代表桌面运行时已验收。
 
 ## Evidence-Grounded Evolution Agent（2026-11-04）
 
@@ -1583,9 +1724,11 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 
 ## 桌面本机模型授权
 
-本机 Agent 使用独立的 HTTPS 模型入口。账号网关默认关闭该入口，仅在隔离候选配置显式设置 `desktopLocalModel.accountIds` 时开放。桌面主进程通过已登录的同源 Cookie 向 `POST /api/harless/desktop-model/lease` 发送含可选字段的 JSON 对象（scene 可取 chat、files、data、paper、ppt 或 video，空对象默认 files），获得 `{token, model, expiresAt}`。凭证限一个账号的当前任务和十分钟，供应商密钥保留在网关。
+本机 Agent 使用独立的 HTTPS 模型入口。账号网关默认关闭该入口，服务计划通过 `desktopLocalModel.accountIds` 指定可用账号。桌面主进程通过已登录的同源 Cookie 向 `POST /api/harless/desktop-model/lease` 发送含可选字段的 JSON 对象（scene 可取 chat、files、data、paper、ppt 或 video，空对象默认 files），获得 `{token, model, expiresAt}`。凭证限一个账号的当前任务和十分钟，供应商密钥保留在网关。
 
-`POST /api/harless/desktop-model/v1/chat/completions` 校验 Bearer 凭证及其场景的工具白名单，使用现有模型传输容量。请求登记到原预算控制，网关替换计量绑定和上游认证，模型凭证不能调用控制接口。`DELETE /api/harless/desktop-model/lease` 撤销凭证并结束绑定。账号退出或凭证过期同样结束路由。Windows 上的本机工具、授权目录和报告均由桌面进程管理。 绑定本机目录的工作区通过桌面主进程启动新会话，既有云端会话沿用原有云端会话协议。配置与验收见[桌面说明](desktop.md#本机工作区-windows-预览)。
+准备正式发布时，可以在独立候选计划内为已注册账号配置模型租约。账号、预算控制和上游账本继续沿用现有服务，操作入口见[服务生命周期](operations/service-lifecycle.md)。
+
+`POST /api/harless/desktop-model/v1/chat/completions` 校验 Bearer 凭证及其场景的工具白名单，使用现有模型传输容量。若 `memberPolicy.max_output_tokens` 为正整数，网关在计量前用它补齐缺省的 `max_tokens`，并截断超出上限的请求值。请求登记到原预算控制，网关替换计量绑定和上游认证，模型凭证不能调用控制接口。`DELETE /api/harless/desktop-model/lease` 撤销凭证并结束绑定。账号退出或凭证过期同样结束路由。Windows 上的本机工具、授权目录和报告均由桌面进程管理。绑定本机目录的工作区通过桌面主进程启动新会话，既有云端会话沿用原有云端会话协议。配置与验收见[桌面说明](desktop.md#本机工作区-windows-预览)。
 
 开启 `desktopLocalModel.videoRendering` 的试用网关对视频授权额外返回 `videoRendering: true`。本机 Agent 在桌面确认后通过同一任务凭证向 `POST /api/harless/desktop-model/video/render` 提交 `{source, assets: [{name, bytes, sha256}]}`。素材使用固定安全文件名和 Base64。接口只执行固定 Remotion 入口，响应为 MP4 和 `X-Geneloop-Sha256`。断连、取消、授权回收或渲染超时会中止隔离渲染。服务端同时只接受一个桌面渲染请求。
 ## 原生桌面执行与构建（preview.11）
@@ -1595,6 +1738,10 @@ manifest 恰含 `snapshot / training / heldout / prior_candidate / scope / accep
 `local_video_render(plan)` 保留工具名和单字符串参数。JSON 数组沿用片段协议；JSON 对象 `{source,assets}` 为完整 Remotion TSX 与本机素材相对路径数组，注册 `Main`，素材顺序映射为 `asset-N.扩展名`。两种计划均在本机交付，不因依赖缺失或失败自动转服务器。读取源摘要、复制快照、渲染后复核、FFmpeg 完整解码与输出摘要继续保留。服务器路径仍需独立明确同意。
 
 Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使用自身渲染沙箱。macOS 使用平台原生目录句柄与 DSH Seatbelt；preview.11 已完成 macOS 15 ARM64/Intel 原生及包内无模型检查，不能据此宣称全面文件读取/网络隔离。构建用 Python、Office、FFmpeg、Chromium 在构建阶段获取并随工具资源打包，任务阶段不自动安装依赖。构建入口见 `apps/desktop/scripts/build-installer.mjs`，Mac 流程见 `.github/workflows/desktop-native.yml`；均不自动发布安装包。
+
+后续 Office 构建候选使用 `@deepseek-ai/libreoffice-kit@0.2.3` native；保留既有 `soffice.com`／`soffice` 路径与单文件转换契约，通过 `GENELOOP_OFFICE_NODE` 绑定可信桌面宿主。独立 RTF 明确拒绝；锁定 Skill 提取的内嵌 EMF／WMF 使用内部 `--geneloop-embedded-preview`，不作为独立输入入口。构建可显式选择 `GENELOOP_DESKTOP_OFFICE_ENGINE=libreoffice` 回退完整引擎。Kit 不替代完整 Office CLI／宏；Windows 原生回归已通过，Mac 新引擎和新交付尚待验证，见[接入记录](debug/desktop-office-kit-20261108.md)。
+
+桌面PPT最新范围仅制作／编辑和核验。`skills/geneloop-ppt/SKILL.md`作为默认Skill；上游旁白、配音、演示视频、字幕CLI明确拒绝，不新增语音服务器接口。新工具集仅六包，不分发speech；其余场景原接口保持。旧七包／安装器保留回退，新运行时要求配套新的PPT制作材料。范围与验证见[记录](debug/desktop-ppt-authoring-scope-20261108.md)。
 
 ## 桌面跨平台工具补齐（preview.12）
 
@@ -1650,7 +1797,7 @@ Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使
 - `run_investigation`沿原Harness接入有限工具/期限、显式局部范围、完成no_change重访及原件/笔记检查。原调用默认兼容，生产接管与候选认证沿旧入口。
 - `compare_research_outcomes`读取预冻FileRef策略，分别返回effect与研究发布建议。实际认证及生产默认版本沿旧权限，未知保持pending。
 - 首轮论文历史入口为`scripts/run-paper-evolution.py`。Linux加载原私有环境后传入`--history`、`--policy`、`--output`、原`--ledger-root`、`--max-tool-calls 100 --timeout-seconds 5400`，真实调用使用`--call-model`。有效配置冻结源码、能力、策略、评价任务摘要及数据角色，费用/请求null沿原账本。
-- 当前真实调查Prompt位于`src/adapters/capability_evolution_investigation.py`的`SYSTEM`及request构造处；每轮`agent/request.json`保留完整实际文本与工具。用户选择沿现有代码形式讨论。
+- 当前真实调查Prompt位于`src/rsi/evolution/capability_evolution_investigation.py`的`SYSTEM`及request构造处；每轮`agent/request.json`保留完整实际文本与工具。用户选择沿现有代码形式讨论。
 
 完整语义见[通用协议](evolution-context-protocol.md)，实际候选、失败、费用及接收器边界见[真实实验](experiments/paper-evolution-20261105-001.md)。
 
@@ -1660,7 +1807,7 @@ Windows 固定工具编译和进程树取消使用 DSH subprocess；Chromium 使
 
 ### 组合输入与后继连续性
 
-`src/adapters/evolution_cycle.py::run_evolution_cycle(investigation, call_agent=..., handlers=..., output=..., limits=..., followup_evaluator=None, load_current_capabilities=None, prior_results=())`是场景无关的薄编排。它沿原`run_investigation`接收候选结果，调用宿主后继评价，并将回调返回的entries、inspector、history和可选snapshot合入原调查。公共层不定义具体工具、benchmark、质量分数或产物后端。场景回调不能覆盖原调查status/submissions/identity，失败保留cycle-error及原调查证据。
+`src/rsi/evolution/evolution_cycle.py::run_evolution_cycle(investigation, call_agent=..., handlers=..., output=..., limits=..., followup_evaluator=None, load_current_capabilities=None, prior_results=())`是场景无关的薄编排。它沿原`run_investigation`接收候选结果，调用宿主后继评价，并将回调返回的entries、inspector、history和可选snapshot合入原调查。公共层不定义具体工具、benchmark、质量分数或产物后端。场景回调不能覆盖原调查status/submissions/identity，失败保留cycle-error及原调查证据。
 
 `accumulate_evolution_feedback`复用同一个反馈完成阶段，可在新目录中以原始调查结果FileRef恢复G5，不再调用模型或任务。原status与investigation_identity必须匹配，不能将原inconclusive改写为成功。开发暴露操作幂等；BenchmarkHost索引捕获时的不可变日志副本，晚到的请求结算留在原追加日志中，不改变已登记摘要。捕获点和源路径由独立索引保留，捕获时未知费用仍保持未知。
 
@@ -1678,9 +1825,286 @@ Paper Adapter位于`scenarios/paper_proofreading/evolution_adapter.py`，负责�
 
 ## 工作区 Motif 只读展示（2026-11-06）
 
+- Desktop 0.4.0默认使用原两个只读目录的账号可见全量响应，在客户端按能力ID合并去重，不新增接口/权限。详情按场景、来源、状态本地筛选；工作区任务/回执视图独立。执行回执按事件ID去重，来源不可用提示不完整，缺少回执保持未知。认证/本机可用性及结构层级不因聚合而改变。
+
 - `GET /api/harless/motif-library`：沿用网关账号 Cookie。可选 `workspaceId` 参数缩小范围，只返回该账号已由宿主绑定的工作区；未登录401、跨站403、无效查询400、其他方法405。无配置返回空目录。
 - 私有网关配置 `motifEvidence.sources` 的每项包含稳定 `accountId`、`workspaceId`、`executionLocation`（`cloud`/`local`）及物理绝对 `path`。客户端不能注册导出、指定路径、写入或执行能力；拒绝链接、硬链接和超过4MiB的文件。
 - 响应为 `geneloop-motif-catalog-v1`：`revision` 是响应数据摘要，`workspaces` 每项含范围ID、`status`（`ready`/`unavailable`）、来源执行位置、固定 `compatibility: unverified` 及 `evidence`。原件是同伴 `coding-motif-evidence-v1` 协议，复用 `config/motif-evidence-v1.schema.json` 与共享展示投影。读取失败不会返回物理路径。
 - 前端在已登录且页面可见时每10秒读取，退出清空。展示认证不授权执行；单项费用/完整耗时为null时保持未知，缺少配对质量与成本时不计算节省。公开样例不绑定账号或工作区。
-- 当前仅覆盖Coding v1，不推测缺失的组合、学习/发布事件或历史版本；来源执行位置不改变任务路由。正式服务及本机Runtime活证据桥未由本轮部署。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
+- 该工作区导出接口仍覆盖Coding v1，不推测缺失的组合、学习/发布事件或历史版本；来源执行位置不改变任务路由。正式服务及本机Runtime活证据桥未由本轮部署。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
 - 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。
+- Desktop preview.22额外消费[PR #161](https://github.com/jingyio/GeneLoop/pull/161)提供的`GET /api/harless/motif-catalog`（不传账号/路径/查询），读取`geneloop-runtime-motif-catalog-v1.libraries`及`geneloop-motif-evidence-v2`；后台端点仍由该PR部署，本分支本轮仅适配客户端。v2显示注册/账号学习来源、实际工具流和版本证据，Data旧回执不冒充认证；服务端已准入不代表本机已认证。桌面内兼容Schema/投影在`apps/desktop/motif/`，根目录后台共享模块未改。目录失败提示缓存可能过期，401清空全部来源；[接线与验证边界](debug/desktop-pr161-sync-20261108.md)。
+- Desktop preview.23已将PR161/162/163完整源码合入独立桌面分支，包括`harless_motif_catalog.ts`的实际后台路由、隐私准入与PPT工作流；客户端与后台共用投影器。成员宿主只读挂载明确列出的三个公共隐私配置，不挂整个config目录。随包携带所选库、当前公开实现与其代码闭包；源版本和本机平台认证仍分别校验。源码整合不表示正式服务已部署，见[整合记录](debug/desktop-preview23-integration-20261108.md)。
+- 完整离线包的`geneloop-complete-tool-roster-v1`名册与联网下载分包目录分开：在已核验平台/架构的生成副本中刷新公开源码、配置、注册库和代码锁依赖，再记录全部文件大小/SHA及受限相对链接。校验拒绝重复路径、越界、链接目标变化和字节篡改；不伪造旧下载压缩包摘要。原生工具保留原字节，Runtime另携带PR163共享PPT解释器；没有本平台程序认证时仍回退原普通工具，不跳过守卫或自动转云端。左右栏以窗口内容区齐顶满高，右栏内容独立滚动，窄窗口抽屉同样不留上下空隙。
+- Desktop preview.24保持DSH原生Function Calling和MCP接口：`discover_tools`只返回登记信息/已有目录提示，不建连接；`available:null`、`connection_status:not_started`表示尚未检测可用性，不能当成已成功连接。`describe_tool(provider_id, tool_name='')`才连接选中的提供方；空名称返回实际完整目录，原指定名称用法不变。准备和执行仍重新读取真实Schema与权限；缓存目录不授权执行。已有Gateway按任务限定连接（桌面2个、普通宿主默认4个），运行中的租约不被淘汰，空闲60秒退出；准备记录绑定具体连接代次，回收/重连后旧待执行请求须重新准备，已有完成/未知结果回执不重放。桌面每轮最多2个场景工作流，昂贵原生命令在同一DSH root跨作用域最多2条，取消/超时在排队中同样生效；有状态场景保留到显式关闭/任务结束，不为省内存擅自丢弃句柄或中间材料。不修改上游DSH核心。
+
+## Desktop 工具兼容补充（preview.16）
+
+`toolsetVersion:4` 在v3基础上启用官方DSH公共工具与原场景扩展。清单见 [desktop-tool-parity.json](desktop-tool-parity.json)，由 `node apps/desktop/scripts/audit-web-tool-parity.mjs --check` 核对。旧v2/v3网关保持原工具，不强行发送v4函数。
+
+PPT 的 v4 lease 可声明 `nativePptDeck: true`。桌面同时具备该标记和本机资源时，在当前 PPT 会话注册 `build_ppt`、`patch_ppt`。修改使用回执给出的 `project`、`slide_id` 与 `expected_revision`，实际 Office 渲染通过后发布 PPTX、PDF、逐页 PNG ZIP 和回执。旧网关仍可使用随包的 SVG 制作和已有 PPTX 编辑入口。构建与验收见 [桌面 PPT 接线](handoffs/ppt-desktop-install.md)。
+
+桌面模型转发沿用 `/api/harless/desktop-model` 账号/任务凭证与计量；`user.content` 支持官方DSH的 `text` 和内联 `image_url` 数组（PNG/JPEG/WebP/GIF），拒绝远程URL、外来file_id和未知块。`structured_output` 仅供原生子智能体驱动注册的输出工具。子智能体共享原任务计量，允许最多8条同时在途请求，撤销任务一并关闭；不限制累计模型次数。主Agent仍通过原DSH循环执行，网关不执行本地工具。
+
+PPT宿主 `prepare_ppt` / `finalize_ppt` 使用任务私有工程，读取锁定Skill并输出字体校准、PPTX/PDF和逐页图片；管理审批与补充资料沿用桌面宿主确认/问题事件，取消同时清理对应问题卡片。正式部署、Mac人工验收和Motif重新认证另计，见[验证记录](experiments/desktop-preview16-tool-parity-20261107.md)。
+
+- 此快照接口保留 Coding v1；来源执行位置不改变任务路由。正式服务及本机 Runtime 活证据桥未由本轮部署。其他场景现从下述 Runtime 目录读取，不必手动生成 Coding 快照。接入、限制和验证见[产品说明](product/desktop/motif-workspace.md)、[模块交接](handoffs/motif-visualization.md)。
+- 工作区执行台/独立右栏额外消费既有`GET /api/harless/tasks`的公开任务计划、轨迹、状态和用量，按当前工作区可见会话过滤，每4秒只读刷新。匿名Motif导出未提供会话关联时不绑定到最近任务；交付沿用既有受保护路由。没有新增任务提交、模型授权或演化写接口。
+
+### 现有运行库目录接线（2026-11-08）
+
+- `GET /api/harless/motif-catalog` 注册在原 DSH 任务插件，网关按既有账号转发。沿用 `connection.requestRejection`；不接受账号、文件路径或其他查询参数。响应 `geneloop-runtime-motif-catalog-v1` 的 `libraries` 来自当前宿主的 `scenes`，不扫描任意磁盘目录。
+- 通过原 `paperLearning.resolve` / `pptLearning.resolve` 选择账号当前版本，复用 `executeUnavailable` 的原准入结果。只读投影 `harless_motif_catalog.ts` 复核已绑定文件的字节，返回 `geneloop-motif-evidence-v2`，不新建 Store、不学习、不调用模型、不发放执行权限。未挂载或已失效的库返回不可读/不可用状态。
+- Paper/PPT 的原认证工具流、证书、来源文件摘要、原学习报告兼容版本进入目录；Data 的旧回执格式为 `registered`（旧格式已登记），不冒充 `independent_trace_structure` 认证。产品来源标为 `registered`，账号学习来源标为 `account_learning`；服务端准入结果不等于桌面电脑已准入。
+- 浏览器同时消费原 Coding 快照接口和此目录；支持逐来源切换，未配置 `motifEvidence.sources` 时仍可显示实际已挂载的场景库。单个接口失败提示并保留带过期警告的缓存；任一接口401清除所有来源。导入快照不显示为当前服务已核验。
+- 兼容版本记录只投影学习报告明确记载的旧版本和证书引用；不是新演化事件、可执行回滚或任意版本差异。当前库没有执行事件时，复用次数显示未知，不把空事件数组解释成任务未复用。
+- 评估页消费当前工作区原 tasks 用量，以及原 comparisons 接口的最近两侧原始用量。当前任务优先关联其真实会话，避免新近空对话遮住已有材料。没有同质量对照时不换算节省；右栏展示实际输入/输出 Tokens，导航标为「证据视图」，不提供未接通的自动演化操作。
+- Paper v86 / PPT v84 仅对 main 隐私/模型整合及本次只读目录重导出精确代码锁，并锁定新目录模块、v2 Schema 与导出脚本。旧版原件不改；IR、online manifest、task、工具 Schema、来源证据逐字节不变，零训练、零模型请求。
+
+
+## PPT 原生整稿与版本化patch（2026-11-11候选）
+
+- `build_ppt({name,plan:{title,slides,theme?,language?,target_slide_count?,strict_slide_count?}})`：模型填写内容。表格含表头，8行自动续页，严格页数在分页后检查；图片仅现有会话PNG/JPEG，图表是原生可编辑对象。返回`source_type=native_json`、`project`、整数`revision`、稳定`slides[].id`和当前PPTX/PDF/PNG。共同工程能力，模型跳过计数为0。
+- `patch_ppt({project,expected_revision,edits:[{slide_id,changes}]})`：0有效，同轮合并多页修改，保留其他页/备注。空edits读取当前版本并复用或恢复导出；冲突返回当前revision。工程JSON不导入任意PPTX或Office手工改动，外部变化不覆盖。
+- 两入口按原生工具注册，走既有PPT场景权限、取消和当前成品校验；普通/优化组同样提供。旧`compose_ppt_page`仍用页面SHA，不接受新整数revision。工具内部生成/分页/导出不登记为学得Motif。原生调用进入原轨迹，正常任务可保留不可变JSON源；留出设`learning_eligible=false`。新工具尚未产生独立学得证书。
+- 桌面可选`createLocalPptDeckTools(host)`复用相同执行源码；host必须提供`projectRoot/imagePath/theme/render/authorize`，render负责本机Office及已核验成品发布。`stagePptDeck(sourceRoot,destination)`仅构建时打包纯JS依赖和MIT归属，不在运行时安装包、请求模型或启动服务。此接缝未自动接入桌面前端，Mac真实Office未验。
+- 后台学习与内部可选Judge保持独立，不是前台制作/下载条件；成本分账不变。详见[实现与验收](experiments/ppt-native-deck-engine-20261111.md)。
+
+## PPT 附件索引和按需预览
+
+- PPT Master 对超过 12 页的 PDF 提供 `coverage=local_pdf_page_index`、逐页摘录和来源 ID。完整文本和指定页 OCR 走 `pin_source` 与 `read_source_page`。`inspect_ppt_region({path,source_page})` 返回一页紧凑 JPEG，`path` 必须是当前会话批准的 `/work/inputs/` PDF，页码从 1 开始，版本摘要须一致。已交付 PNG 的局部放大仍使用原 `crop` 与 `scale`。
+- 单份 PPTX 的明确单页逐字替换提供 `coverage=pptx_literal_edit_ooxml`、页数、目标形状 ID 和原文。`edit_ppt_native` 核对原件、精确替换、其余部件和渲染文字。全部满足且当前 PPTX、PDF、逐页 PNG 已登记时结束本轮。其他修改继续现有预览路径。
+- 宿主复用同一结果或模型已看过的相同图像。已有模型历史保留原样，图像读取回执只表明像素可用。交付请求仍要求当前成品，后台 Judge 与学习由各自入口运行。见[对照与账本口径](experiments/ppt-input-delivery-20261111.md)。
+
+## 原生工具接入原则
+
+2026-11-08 确定：GeneLoop 内置场景与新增 benchmark 采用 **Harness 原生工具调用**。工具通过公开插件接口直接注册，由 Harness 派发；论文与视频专用工具从常驻 MCP 服务迁到这一入口。MCP 也是工具调用的接入协议；本次迁移改变执行接入方式，业务能力继续复用。
+
+- **执行路径**：模型选择工具与参数 → Harness 原生工具 → 既有业务函数／按需程序 → 工具结果。在线接入层使用 TypeScript；既有 Python 解析、核验、渲染等实现可以按需调用，不为消除 MCP 重写算法，也不另起常驻 Python RPC 服务代替 MCP。
+- **学习路径**：实际工具调用、程序、输入版本与结果 → 原学习器与认证流程 → 后继原生工具执行。成功迁移应继续支持 Motif/Script/Capability 学习、匹配和复用；不能只改模型看到的工具名，底层仍为每个场景启动 MCP 进程。
+- **迁移范围**：论文检查、修订与报告，以及 Remotion 的素材、探测、源码、渲染与报告工具全部纳入。逐项核对原功能与新入口，保留来源、参数关系、成品质量和失败恢复。外部第三方已有 MCP 接入保留兼容能力，内置工具不依赖它启动。
+- **版本处理**：原工具名称、schema 或执行器变化时，通过既有兼容与重新认证机制处理旧能力库；保留历史版本与回退入口，不靠放宽校验让旧证书继续生效。
+- **验收目标**：先验证相同任务的功能与学习链连续，再比较工具初始化耗时、空闲／任务中进程数、内存和结束清理。减少常驻进程是设计目标，实际资源收益以测量为准。实现经隔离验收后再进入正式发布流程。
+
+当前本地 Web 候选已在 `harless_scenarios.py` 为论文与视频生成零场景 MCP 的 Session preset，`native_scene_tools.ts` 通过 Harness `ctx.tools.register` 登记现有论文 24 项、视频 11 项工具；新认证且部署的视频程序可由同一入口登记，当前旧 Execute 证书被拒绝。工具仍用旧名称和参数 schema，以便原 Motif/Script/Capability 消费真实调用关系；名称中的 `mcp__` 是兼容标识，实际由原生工具直接派发。论文检查与视频业务由 `native_scene_call.py` 按需启动单次 Python 进程，论文结构修订直接调用现有 TypeScript 程序。论文来源和引用句柄、视频渲染回执绑定任务私有状态，任务变化后失效；视频素材句柄仍由任务/素材版本确定。Web 的正常调用和回执继续进入原 Harness 工具轨迹。成员沙箱也接受零场景 MCP 的论文/视频 preset，并映射获准的论文解析依赖。
+
+旧 `scenario.json`、`web-scenario.json`、MCP server 仍为兼容/研究入口；正式服务未切换。旧证书所认证的是另一执行器，当前候选的 Execute 停在现有兼容/重新认证门槛，不能因工具名相同直接继承。2026-11-08 本地 Kouri `deepseek-v4.1-flash` Baseline 合成论文任务完成 3 次实际原生工具调用、0 工具错误、4 模型请求；准确引用原句和来源哈希并给出语法修订。视频已验证素材清单、绑定、源码写/读，完整渲染与已发布程序的独立后继验收待在具备钉住渲染器的隔离环境执行。本地三旧 MCP 初始化分别约 495/218/474 ms，空闲 RSS 合计 226608 KiB；候选场景空闲进程 0，一次论文按需调用 547 ms、抽样峰值 69120 KiB，一次视频素材清单调用 504 ms、抽样峰值 67616 KiB，两个进程均随调用退出。该抽样不含宿主与视频渲染容器。不能据此推断完整任务净降本。
+
+## Kouri JEV 结构化判断（2026-11-10）
+
+`src/adapters/kouri_jev.ts` 的 `judgeWithJev(request, options)` 通过独立 HTTPS `/v1/systemone` 调用 `model:jev`，支持 `noul` / `choice`，返回 `{result, accounting, record_directory}`。原样保留上游判断和用量，校验问题标识、类型及候选选择；失败抛出含本地记录目录的 `JevError`，不自动重试。凭证沿用私有 Kouri 文件，配置路径来自显式选项、`KOURI_JEV_CONFIG` 或 `SSS_FILE_PROVIDER_CONFIG`。命令入口为 `npm run jev -- --input <JSON>`。记录协议 `kouri-jev-call-v1`，费用不套用聊天费率，缺失及币种保持未知。此客户端可显式调用，也供 File 的已认证决策程序使用。详见[JEV使用说明](kouri-jev.md)。
+
+## File 源码复用、认证与反证维护（2026-11-10）
+
+File 的 `run_script` 复用分支只接受 `script_id`＋当前 `parameters`；新源码分支使用 `source`、`description` 与 `parameters_schema`，二者不能混传。程序可只覆盖读取、索引或检索等局部阶段，整项任务由普通 Harness 组合完成；脚本完成仍须正常提交报告。权限、当前文件身份、版本和实际工具回执保持强制核验。
+
+`certified_file_script_v3` 绑定一份普通参考、两份实际候选执行，以及必选的两份局部输出评审。仅整项任务被接受、未实际执行候选、发生验收修复、用量不完整，均不能激活。独立材料在调用前公开冻结的读取方法；`mode=text` 文档回执与普通全文文本回执是不同验收路径。File SDK 长正文关闭 spill，容器与 RPC 输出等待写入完成。
+
+后台维护新增 `sss-file-script-output-counterexample-v1`：从已验证的实际源码/回执发现截断 JSON，保留旧判定和证书，新增反证并停用，随后以新训练材料发起普通模型修订，再独立认证。没有把认证文档转为训练，也不由主机代写“修复后源码”。适用范围、真实失败和状态见本地实验记录。当前仅本地，canonical Web 入口和其他场景未改。
+
+明确授权的File私有配置可采用`accounting_policy=sss-file-conservative-cost-v1`，或从同一state_root的不可变私有授权载入。新`certified_file_script_v4`绑定每份执行/局部评审的原账本SHA、请求数、计入费用及不自洽原始用量；费用以原预留保守上界计入，`observed_usage_complete`不改成true。只接受已返回HTTP200的明确token计数不自洽；网络错误、缺失用量、无法核对的费用仍拒绝。质量、独立材料、实际复用、验收修复及权限约束不变；旧v1–v3证书不放宽。详细授权和兼容范围见[变更记录](changes/file-trace-script-rsi.md#2026-11-10-用户确认费用保守上界)。
+
+## 类型化决策与 File 实验端口（2026-11-10）
+
+新增共享 `src/adapters/typed_decisions.ts`，复用 `kouri_jev.ts` 传输，公共模块无 File目录/文件ID/pool布局依赖。`geneloop-typed-decision-v1` 请求包含 `scene/contract/owner/task_id/parent_call_id`、`evidence[{id,sha256,scope}]` 与原 `state/questions`。该最小版本尚不包含独立 workspace/session字段；File宿主通过真实任务及私有账号绑定补足归属，不以任意调用者传入的owner作为执行授权。
+
+`runTypedDecision(packet,{provider,recordRoot,config,threshold,signal,meter})` 支持 `jev` 和同题紧凑 `deepseek`，必须注入meter。网络调用前先登记 `started`，之后保存 completed/failed、原始响应、实际模型、用量、耗时及原父调用。无自动网络重试；中断或结果未知保留原准入，调用者不得据此自动重新付费。当前恢复为检查原记录/人工诊断，尚未完成跨进程未知决策自动对账和前端恢复验收。
+
+`acceptDecision` 检查完整选项概率表、取值范围、分布和、被选项为最大项及冻结阈值。`unknown/none/uncertain/not_applicable` 返回回退；`noul` 保留弃权带。DeepSeek分布标记 `text_generated_estimate`，JEV标记 `provider_distribution`。底层 `acceptDecision` 仍返回整包是否接受，并保留逐题有效值。可选通用 `typed_decision_resolution.ts` 在 JEV 部分接受时，只把待决题交给紧凑 DeepSeek，证据和父调用不变；已接受答案不得覆盖，仍未解决则回退。它不选择文件工作流、不合并工具准备，也不修改确定性权限判断。
+
+新增File专属 `decision_accounting.py` 和stdin桥 `scripts/decision-meter.py`。meter私有上下文绑定同账号 `private_root/state_root/original_config/owner`，在原 `writer_lock(STATE_HOME,'series')` 下向原pool追加 `decision_calls[call_id]` 和不可变 `decision-events`，不重写旧 `runs`、预留或累计成本。当前仅支持既有不限额授权；币种/价格未知时拒绝有限费用授权准入。JEV `usage.cost` 与未知币种原样保存，不能计作USD零费用。DeepSeek有完整自洽用量时另记参考USD，非提供方实付。协议失败已有原始完整DeepSeek用量时可追加 `decision_reconciliations`/`cost_reconciled`，绑定原失败事件及响应SHA；不把 failed改为completed。
+
+新增 `file_decision_port.ts`：D2只从实际认证的读取条目构造短候选名，宿主绑定唯一真实条目和当前文件；D1只读取当前SHA匹配且未截断的实际正文，并核对当前文件树后生成副本计划。首范围为全部当前授权的小型文本输入、显式类别/目录及copy-only；没有通用目标解析或PDF/视觉语义接管。参数漂移、覆盖、非法目标、模型版本变化或低置信度回到原Harness。确定性身份/权限检查不由模型替代。
+
+新增隔离插件 `dsh_typed_decisions.ts`。原 `llm/stream` 扩展点返回异步流；实际外部判断替代主循环根调用，`typed-jev-*`/`typed-deepseek-*` ID、显式来源说明及 `typed-decision-audit.jsonl` 关联该判断的实际响应与工具参数SHA。后继工具仍由原MCP/认证图执行，高风险确认不变。它不是DeepSeek原生决定；实验Task `learning_eligible=false`，不能冒充普通学习证据。canonical Web、其他场景及原原生学习器没有改动。
+
+离线 `typed_decision_certificate.py` 将 `geneloop-typed-decision-strategy-v1` 与证书通过已有 `ExperienceRegistry.object` 写入同一经验对象库和jobs，`synchronize`索引；不新增第二执行器/永久经验库，不增加原生图条目。证书核对冻结版本/阈值/独立决策结果、三份真实任务、原账本、实际根调用参数/作用域、图完成，以及D1原授权写入后继。read/stage根的`_sss_authorized=false`不冒充写授权；必须在实际 `execute_plan` 检查true。状态 `activated_for_opt_in_trial`、`default_frontend_enabled=false`。首版origin明确为宿主设计，非自主学出；最新main公共Capability Store不在本地checkout，本轮未声称完成该Store接入。
+
+`decision_trial_judge_v2.py` 与并发调度等价版本仅为离线实验评价，沿用原File Pro计量。v2补充初始文件树与宿主标记来源，整批重评，保留v1失败/费用；合格仍为硬验收＋两次独立新上下文Pro分数均≥8且无关键错误。完整试点和后续未完成项见本地实验记录。
+
+## File 有状态决策、局部语义回退与单份计划（2026-11-10）
+
+新增 `file_stateful_decisions.ts`、opt-in `dsh_stateful_decisions.ts`，旧模块保留。`file-stateful-decision-binding-v2` 由宿主冻结 `selection_scope`、是否明确要求阅读集合、可选字面query、分类规则及目录，不能从文件名或任务编号推断正确答案。初始授权输入按真实初始树及SHA固定，后续自己产生的副本不重新当作输入。
+
+准备步骤由当前状态确定：已有当前完整读取则不重新pin/read；已有当前pin则直接读；显式集合要求用原认证集合图；显式字面query在完整读取后建立当前索引、取得一个匹配query/index/snapshot的真实回执。这些步骤标记 `deterministic`、不调用JEV，原工具和权限检查照常执行；图进行中不插入新准备。准备指纹在原运行私有journal中登记，未知效果不自动新开同一效果。
+
+仅有限分类语义调用JEV。`unresolvedPacket` 从同一当前读取证据中排除已接受文档的正文/问题，只把待决文档交紧凑DeepSeek，其父调用绑定实际JEV call_id。合并逐文件判断后只生成一份预览计划，由原认证preview→execute图执行。审计标记 `jev+deepseek` 混合来源，并分别保存/计量两个真实调用，不能把整份计划声称为纯JEV决定。普通工具异常、协议错误或仍未解决的判断回原Harness；不把语义回退变成重复整项任务。
+
+高置信DeepSeek `unknown` 只在用户已明确要求 `unknown: pending/` 时按待确认分支处理，`unresolved_to_review=true`；原generic decision的弃权状态不改写，不将它算作已确定用途。低置信度、未知类别或非法目录仍不自动绑定。每个副本核对当前源SHA、新目标、无覆盖；写入权限由原MCP授予，语义模型不授予权限。
+
+模型可见状态通过官方、agent-scoped `systemPrompt.section` 注册，形成SDK记录的系统消息；File preset关闭runtime context，不能仅调用`systemPrompt.context`就声称已送达模型。不得修改冻结的 `GenerateOptions`，也不伪造用户消息。状态列出完整读取、实际检索回执、分类来源、证据是否仍当前和副本是否已核验；原始正文、工具结果和journal保留。空命中仅证明对应字面查询/当前索引范围，不证明语义不存在。
+
+离线 `stateful_decision_certificate.py` 复用原experience对象/jobs及pool，证书要求原生参考＋两份真实独立候选，含JEV部分接受、仅待决文档的实际DeepSeek回退及按用户规则待确认的见证，仍要求干净交付、0次验收修复和原授权执行。新策略为宿主设计的实验经验，未自动学出、未默认接入前端；原生Motif registry保持。初始冻结对象修改错误和普通回退产生多余目录的两份失败保留在原任务中，不能拿后续认证覆盖旧失败。结果与口径见本地实验记录。
+
+本轮最终评审使用 `decision_trial_judge_v3.py`：Pro仅给原goal/correctness/usability/honesty四项分数，宿主按原4/3/2/1上限求和。提供完整实验输入/上游摘录范围，防止将未提供的上游全文当作读取义务。最终18份交付整批统一双评，旧v2评分/失败/费用全部保留，不选择性替换低分。r4证书的 `require_visible_execution_notice` 强制核对真实系统消息日志；仅注册提示provider不够。
+
+
+## 自动学习的决策契约实验接口（2026-11-10，opt-in）
+
+`dsh_learned_decisions.ts` 是不改提示、不增加准备步骤的原生流记录/替换插件。`mode=capture` 只记录当前目标、真实工具回执、工具表和实际原始返回；离线编译器核对封存事件、真实付费用量、工具调用ID和成功回执，不把 Motif/JEV 生成步骤伪装成原生 DeepSeek 决定。学习以 Harness+Motif 真实语义轨迹为主，普通 Harness 补充。实验见本地实验记录。
+
+`learned_decision_learning.py` 让模型选择真实候选并生成 `geneloop-learned-decision-v1` 的 `guard/request/bind` 三段纯JSON程序。复用现有 `paper_rsi_program.ts` 解释器，不改变其他场景；通用程序只处理JSON，不授予文件、网络或执行权限。参数来自当前回执，语义判断调用现有 `typed_decisions.ts`。JEV `noul` 返回二值判断，不能作为目录名、ID或自由文本提取；编译器检查训练答案类型、源决定参数重放（只允许工具schema显式默认值等价）和可变身份记忆。源码、编译失败和付费生成记录保留，重放不等于认证。
+
+`learned_decision_certificate.py` 要求新材料上的原生参考＋两次真实JEV替换、零验收修复、原权限/累计计量、独立局部判断评审及每任务两次交付盲评。通过后才可发布原账号 `experience/objects` 和 `experience/jobs`，激活类型为 `learned_decision_recipe`，不增加另一持久库、不改变原生Motif注册表。
+
+`mode=execute` 在任务开始冻结的原经验目录中检索同owner的已认证契约，校验原对象/证书/runtime/schema后运行当前guard。无命中、多候选歧义、失配、低置信或错误返回原Harness同一检查点。`candidate_file` 仅内部认证角色允许；新任务不得传正确候选ID或实验profile。每次付费替换持久保存当前上下文、原始判断、绑定参数和真实工具执行证明；未知中断不冷启动重复付费。
+
+此接口仍为隔离实验，**默认前端未启用新的自动学习JEV插件**；其他场景未接线，不能从接口通用性推断跨场景已通过。没有修改/合入上游Harness；初期生成JSON/程序失败、费用和是否真正复用以实验记录为准。
+
+
+### 自动决策契约 r6：认证、部分补全与来源链
+
+`geneloop-learned-decision-certificate-v2` 支持实际 `jev` 或 `jev+deepseek` 根；混合分支还须有真实执行见证，不能只凭单元测试。已知训练材料上的分支集成见证与两份新材料独立认证分别标记，不把前者算作独立成绩。`geneloop-learned-decision-execution-v2` 保存 `decision_result_files` 和完整合并 `resolution`；离线验证用原概率验收函数重新计算每个付费判断，检查待决题集合、原证据、父调用和答案不被覆盖，再核对实际工具根。旧 v1 证明保留兼容。
+
+通用组件修订仅应用学习模型实际返回的完整 `candidate_patch`，绑定原 base、原始响应及每步哈希；可以限制只修改 request。宿主不代写工作流 AST。认证脚本发布到原账号 experience 对象与 jobs，仍是 `activated_for_opt_in_trial`；本轮一份学习决策程序不计作新增原生操作图，原注册表第12代7图不变。默认前端尚未启用本插件。
+
+三组任务执行经用户确认统一暂用 Pro；局部判断 B 为 Flash，C 为 JEV（仅待决题可用 Flash）。因此 A/B 同时包含决策模型从 Pro 到 Flash 的变化，不能称为纯接口收益；B/C 使用同一契约及任务执行器。评审 v4 沿用原 v3 四项 4/3/2/1、两次独立上下文与质量门，仅显式非流式传输和原始响应存档。真实评估中发现的错误保留，不能反馈评估材料修改候选后仍称同一留出结果。
+
+
+### v5 学习视图：重复工具的真实回执历史
+
+`source_opportunities(..., include_history=True)` 新增 `geneloop-native-decision-opportunities-v2`，可向模型提供原 capture 的有序 `context.history`。默认仍是原v1最新回执视图，原快照/程序/证书不追改。每条历史的 call_id、工具名、参数、输出和结果时序必须与封存原生事件一致，不能加入未来结果、重复句柄或虚构页面；无作用域的哈希等真实JSON回执也按原事件验证，不凭scope缺失伪造或丢失它们。候选根仍要求成功且属于当前作用域的真实模型工具决定，历史中Motif机械回执仅作证据，不变成原生语义决定。
+
+现有在线capture本来就记录完整history，本次没有修改上游Harness或在线执行步骤。编译模型可从真实历史中读取重复PDF/OCR调用，而非只能看每种工具的最后一份正文；原始长内容保留，不截断为新的交付证据。纯JSON解释器既有容量/操作保护不变，超出可执行范围必须普通回退，不能声称支持任意长工作流。
+
+历史型候选新增训练诊断：同时移除所有读取证据、将各历史/最新回执中的读取与覆盖改为不完整、加入无读取证据的新目录成员、只读目标。它们是明确合成的守卫反例，不是独立认证；原旧式单次读集合诊断保持。源等价评审额外收到原完整context，真实独立执行/两次交付盲评/费用/权限门不降低。详见本地实验记录。
+
+### v5 异构来源盲评、候选诊断与不限修复
+
+`decision_trial_judge_v5.py`使用原4/3/2/1评分与8分无重大错误门槛，新增 `file-jev-blind-packet-v5`：从原任务封存的pristine/final-workspace/delivery取完整实验材料，核对输入SHA，解码Word/Excel、PDF全页及独立本地OCR，并包含真实外部产物正文。OCR不冒称视觉评审；明确构造的图像字段真值须绑定当前文件哈希，执行Agent不会收到评审真值。第二轮附前轮封存目标/快照/报告。传输失败保留并另存下一次；有效低分不能为刷分重评。认证发布器只接受注册的v3或v5数据包，同一任务两评必须绑定完全相同的实际证据。
+
+编译器先校验候选恰有 format/description/scope_description/guard/request/bind/training_witnesses；缺组件给出具体missing/extra，不能将其误报为来源数量不足。`diagnose-learned-decision.mjs`仅离线执行纯表达式，逐项呈现let绑定和守卫条件；组件缺失／非法也返回诊断，既不修改候选也不执行文件工具。组件修订继续核验模型原始JSON及哈希链，非法JSON不由宿主修复。
+
+验收CLI移除独立的 `round<=2`，仅拒绝负数，原任务执行器继续拥有有限或null修复额度。质量检查和不可覆盖轮次档案保持；源码改变继续触发旧恢复／认证的版本守卫。此次仅对File实验离线编译／验收作改动，没有启用日常前端JEV、切换服务或修改其他场景。费用、失败和版本影响见本地实验记录。
+
+组件修订额外采用单一patch返回协议，禁止在request/bind字段内嵌完整candidate或占位stub。`validate-learned-components.mjs`只校验本次允许字段、完整纯表达式及布尔／choice见证值，不执行工具、不推导任务答案、不修复模型JSON；非法组件不会物化为下一版，原响应与失败仍留存。认证器将此脚本哈希纳入certifier_sources。最新付费验证与无命中／自由报告拒绝反例见v5记录，不把编译成功当成独立认证或已降本。
+
+### 语义必要性检查与源复制等价 v2（本地学习实验）
+
+`generate_from_selection(..., require_semantic_necessity=True)`在新程序生成前，用实际原生调用、工具schema与当前回执独立判断是否还有有界语义缺口。哈希、字面检索、排序和显式状态字段查表不应仅为使用JEV而增加模型调用。不通过返回 `semantic_candidate_rejected`，不发送程序生成请求；按来源集合和必要性策略哈希缓存，原计费／失败不覆盖。它不是执行正确性或认证评审；规划预览也可以包含真正的语义分类。该参数默认保持旧行为，仅新实验显式启用，未加到日常任务的每次调用。
+
+独立源比较契约 `explicit_schema_defaults_and_disjoint_workspace_copies_v2` 必须在实际模型生成前声明；旧式严格顺序结果不能事后改标。`decision_source_equivalence.py`只计算比较证明，不修改模型程序、参数或实际执行顺序。允许的差异仅是同一mkdir前缀之后的单文件copy排列：每个字段/来源版本/目标/数量相同，目标为工作区内互不重叠的新文件，来源均已授权且原件不变。外部根、移动、覆盖、删除、批量来源、相互依赖或不同mkdir前缀继续严格拒绝。旧式schema默认值比较为默认，所有旧失败仍按原契约保留。
+
+数学证明只覆盖文件系统效果，不能解释自然语言时序。源等价评审额外必须明确返回 `unordered_copy_order_permitted:true`，确认实际目标没有丢失的复制时序；否则禁止认证／激活。新版payload记录逐来源证明，认证器记录比较器哈希。实际新任务中的 `answers → binding → tool arguments` 仍逐项严格一致，不对运行轨迹排序或重写。新材料、原件/读取/文件集合/权限、零验收修复、两次8分以上无重大错误等独立质量标准保持。
+
+新契约在后续CE-CLASS认证前单独冻结；不是将旧交付失败改成合格。对应旧顺序拒绝、必要性误评／超时及新证明诊断均见本地实验记录。
+
+### 模型程序修订与原始响应（本地学习实验）
+
+离线 `model_json(..., response_schema=...)` 可使用原生 `submit_learning_result` 函数参数承载学习产物，默认JSON正文协议保持。该函数只记录响应，不执行任务工具；原始HTTP/SSE、函数名、参数、schema摘要和费用保留，函数名错误或非JSON直接拒绝，不自动修复。`request` 的choice必须经过实际JEV请求校验器，分类选项为 `criteria:{option_id:字符串含义}`。
+
+`recover_syntax_valid_components`只复用一次实际模型响应中**所有且仅语法有效**的已请求字段；未采用字段及失败原样留存。它不是语义筛选，完整编译／源重放／独立认证仍需通过。原始响应、base、校验器及采用字段均哈希绑定，不能由宿主挑选有利任务结果。
+
+`revise_program_subtrees`允许模型输出互不重叠的子树替换，或显式的数组成员move（先删除再插入，路径顺序解释）。宿主只应用原始表达式／路径，不生成任务路线、分类规则或修正内容。模型可从自己先前语法错误的原始组件修订，原响应及允许字段须可核验。每次修订仍须完整AST校验、双源回放与独立认证；路径越界、重叠、循环、宿主改写和未声明组件拒绝。后续组件修订从原始生成链根部恢复学习契约，避免子树修订输入遗失生成前声明的源等价策略。
+
+以上均为离线显式实验接口，不增加日常File模型调用或扩大MCP权限。线上解释器及其输入、表达式、操作数保护未修改。
+
+类别守卫反例新增版本 `geneloop-file-history-guard-checks-v2`。当四个带引号的目标目录被固定映射为四种语义角色时，准入还检查类别换序和陌生分类体系是否在付费前退出；goal与read_task/history中的objective别名同时变换，原正文不变。它是明确的合成训练检查，不是独立认证。新v2源复制契约发布要求当前守卫版本；通过旧检查的分数／候选及后发现的反例均保留，后续修订使用新认证材料。
+
+### 决定边界完整性与参数结构检索（本地v5扩展，2026-11-11）
+
+`complete_file_read_evidence(context)`只核对已认证回执的当前文件身份、版本及完整读取，返回逐项证据和complete标志，不读取新文件、不执行工具、不评价内容理解。`generate_from_selection(..., require_complete_file_reads=True, structured_output=True)`在任何生成费用之前拒绝不完整边界，随后把读取policy记录在实际生成输入；编译器从原生成链根部取回policy，再核验每个所选当前见证。默认参数保留旧行为。`training_witnesses`不得引用未在当前实际选取来源中的旧库实例ID。
+
+`rank_repeated_source_pairs(bundle)`按跨会话、相同工具schema与参数结构检索；输出标量新颖度结合目标相似度排序，目标数字参数规范化，数组长度和分类取值不作为固定模板。它只返回证据候选，不证明语义必要、兼容或质量；零新颖度不等于没有语义。实际选择文件明确标记为计算检索而非模型调用，绑定来源/算法哈希，0 API；后续完整上下文必要性、编译重放、源评审与独立认证仍保留。本轮尚无因此激活的新条目。
+
+当前历史守卫profile为`geneloop-file-history-guard-checks-v3`：在v2类别／时序反例上逐个移除一个文件的完整读取证据，保留其它文件完整，禁止仅以最后一个PDF的coverage代表全体。source_equivalence新增可选`http_timeout`／`structured_output`；默认180秒及旧正文格式保持，格式不改变评分标准。上述都是离线准入接口，TypeScript在线解释器、MCP工具表和权限不变。
+
+整份候选的`refine_from_compiler`修订也继承原生成链声明的完整读取及源比较策略和结构化响应格式，调用者省略默认参数不会降回旧准入条件。源码与费用不改写；这一继承检查包含在最终59项Python专项内。
+
+
+### File 实用准入与程序修复 v6（2026-11-11，本地实验）
+
+`empirical_decision_certificate.py` 提供显式 `empirical-task-outcomes-v1`，严格旧发布器默认保持。`execution_evidence` / `local_review` 增加默认 false 的 `allow_task_repairs`，后者可显式传入 `review_system`；原认证路径不变。新 profile 将训练叙述一致性和局部完整读取反例列为诊断，按两份新材料的实际替换与最终任务结果认证；最终全文义务、当前身份、分类含义、明确时序及权限继续核验。任务发生修复不自动拒绝正确局部调用，费用全部计入；每配方不再强制触发混合补全分支。不修改旧失败或放松最终质量分数。
+
+`decision_program_lowering.py` 的 `lexical-bindings-v2` 只将顺序词法块、对象和字面值机械降为原AST；`lit` 不解释，旧 v1 模块归档并按证据版本校验。`revise_components` 的 `program_notation` / `empirical`、`compile_candidate(empirical=False)` 均为显式离线选项，默认旧准入。`repair_compile_candidate` 保存每次原模型修订／错误，不设额外次数配额；必须真实产生请求和绑定，恒不匹配不能算修好。`generation_root` / `generated_candidate` 用路径循环检查替代固定八层；重复同一 patch/error 进入待修，reason 文案不计为程序进步，重复见证错误允许修复请求范围。宿主不代写语义脚本。
+
+共享 `runProgram(program,input,limits={})` 新增可选 `ProgramDataLimits`：`inputBytes` / `outputBytes` 省略保持原192000，`null` 表示不加字节限制。只有File `runLearnedProgram` 显式选择null，其他场景默认行为保持；纯算子／宿主能力不变。`decision_capacity_migration.py` 只接受两项容量依赖变化、原程序和工具schema不变，核验旧源档案并重放两次实际认证调用，保存父证书和新兼容版本；旧评审不冒充新付费试验。大上下文真实新任务另外记录。
+
+以上仅本地学习试验。新分类契约进入原账号经验库，但日常前端不默认启用JEV，旧不兼容版本保留且过滤。实际激活、供应商失败与全部费用见本地实验记录。
+
+### File 判断请求、实用认证与局部参数修复 v7（2026-11-11，本地实验）
+
+`typed_decisions.ts` 显式发送 `stream:false`，并提供 `decodeDecisionChat` 兼容供应商仍返回 SSE 的情况。保留原响应，拼接实际内容、读取最后用量；只有usage没有答案仍返回 `empty_model_answer`，不会伪造判断。`decisionReferenceCost` 对自洽计数计算原参考费率，失败事件也保留 `reported_usage` / `reference_cost_usd`；不能将失败都记零，也不将JEV未知币种当美元。默认393216容量及原账号累计账本保持。
+
+离线 `decode_model_json` 允许 Markdown JSON 包装或完全相同的重复 JSON；不同对象或附带任意正文仍报错，不挑选有利结论。`recover_duplicate_model_json` 从原付费响应生成派生解码记录，绑定原失败／响应哈希，保留原始失败和计费，0额外API。它只解码实际原响应，不另写评审意见。
+
+实验认证新版本 `empirical-task-outcomes-v2`：当前局部读取范围与额外无关文件检查是诊断，最终任务自身的读取／集合要求继续验收；只读目标与完全缺失阅读证据仍核验。复制排序反例仅在候选声明无依赖复制排列等价契约时要求退出，不强迫本来能保留顺序的程序拒绝所有有序任务。`file_source_guard_checks(..., preparation_probe=True)` 仅在明确的准备阶段错误上记录“付费前回普通Harness”，不是通过语义或绑定检查；原严格调用默认保持。桥接脚本记录失败阶段，准备probe不执行绑定，所有scope错误另列留存。
+
+`repair_components` 可按实际纯程序运行诊断定位 guard/request/bind，优先只修出错组件，防止一次request格式错误反复改坏本来可用的guard。接口诊断明确request的state/questions必须为同级字段，questions在程序边界为数组。`revise_program_subtrees` 新增显式 `repair_kind='parameter_binding'` 和 `empirical=False`，允许模型仅替换有缺陷的绑定子树，原syntax模式默认保持。宿主只定位历史实例常量、应用模型实际返回的路径和AST；不生成任务路线、答案或参数规则，随后仍完整编译／重放和新材料认证。
+
+真实结果见本地实验记录。这些功能仅用于本地opt-in实验，未改变Paper/PPT/Data场景、日常前端默认策略或服务进程。
+
+
+### File 规范化读取证据与无模型程序端口 v8（2026-11-11，本地实验）
+
+`file_read_evidence.ts` 从真实原生 history 与最新 receipts 构造 `file-read-evidence-v1`，同时支持 `read_file`、`read_files`，按当前 inventory 身份/SHA绑定，并保留 document source/coverage。元数据预览或截断文本不记为完整读取；派生证据不修改原回执，不替代 OCR 内容或批准任何操作。
+
+`prepareLearnedAction` 兼容原 typed questions；若学习程序返回 `{mode:"direct", evidence?:...}`，运行时以空 answers 执行同一 bind。成功直接路径记录 `geneloop-learned-direct-execution-v1`、provider `deterministic`、0 upstream attempts，并交给原 toolStream/权限/恢复日志执行。一个适用直接程序优先；多个直接匹配仍回普通 Harness，不按任务编号选择。实际内容判断保持 Flash/JEV 及必要补全端口。
+
+离线编译接受 direct 见证的空 values；独立认证仍核实际原生工具替换、当前身份、任务交付及新材料独立审阅。模型局部 AST 修订即使仍有语法错误也保留带原响应哈希的派生文件以供后续修订，不生成合格 payload 或激活。source_opportunities 的实验显式参数 `allow_auxiliary_todo=True` 仅容许一个File根调用与内部todo共存；默认不变，原整条assistant消息与todo记录保留，不过滤其它File效果。
+
+读取端口兼容迁移只对不变IR及明确依赖差异重放父证书真实调用，保存父版本；不是新付费认证。新直接程序已通过两份独立任务认证，后继4个B/C任务中实际替换3次；另一题完整chunk缺少显式coverage回执而未命中，保留普通Harness结果。此证据不表示任意流程已能无需模型执行。所有改动仅本地 File 实验，原生图指针和正式服务不变。
+
+
+### File 真实语义配对与经验片段链接 v9（2026-11-11，本地实验）
+
+读取规范化器新增实际open/chunk链的派生覆盖：要求当前源SHA/文档/模式一致、从第一页offset0顺序覆盖全部页、续接request_id连续且末段结束；错误链或末页孤立回执不算全文。派生项标记actual_open_and_chunk_chain并保存原回执摘要，原生回执不改写。读取接口扩展可能扩大旧guard的命中范围，兼容重放旧调用不足以证明新路径的bind正确；本轮确实发现并保留一个反例。
+
+学习语义job可追加`geneloop-learned-decision-suspension-v1`私有suspension.json，绑定payload_sha256及反例证据。在线loader在加载旧activation时检查并跳过；旧证书与activation字节保留。当前反例暂停程序不进入正式语义配对view。
+
+`revise_components(..., source_extension_file=...)`允许在旧模型经验上用新真实轨迹修订，新增来源必须与原始paid input逐字匹配。`generation_root`指向真正收到新来源的paid patch；不把旧模板的witness当新训练实例。仅语法有效的模型组件可无新API费派生复用，原拒绝及无效组件保留。
+
+`decision_program_construction.py`是离线纯数据语法前端：解析赋值/字典/推导式等为原有IR，不exec Python；`prototype(name)`只链接已验证基模型bind的原词法子表达式及其依赖。程序控制/类别判断仍由模型生成，编译器不填任务路径/类别/答案。构造器版本/源码哈希及旧v3归档参与provenance核验。
+
+实用认证新增显式`allowed_providers`，默认原集合不变；本轮允许deepseek独立核验契约机械正确性，与JEV效果分开。实际原生替换、原权限/费用、至少两个新材料、局部和整任务独立审阅均保留。Flash或JEV低置信度回退照计入实验，不降低阈值强迫通过。三族九对已完成36次双评，实际primary输入逐对一致、JEV9次；完整质量/成本及失败见v9实验记录，未证明整组净降本。日常前端未默认启用。
+
+`decision_trial_judge_v5.judge(..., http_timeout=180)`新增显式HTTP等待参数；本轮后续调用传900秒以保留长评审，原评分体系、盲评包及已完成低分不变。失败传输在新index追加，不覆盖旧响应/费用。此参数不是费用或任务配额。
+
+本轮中断的隔离实验驱动通过原`operation_runner.execute(rsi_resume=...)`续接相同job/session/权限/累计账本，并复用原冻结capture patch以保留同一学习插件和语义provider。原中断`result.json`不覆盖，续接另存`final-result.json`，新命名空间仅供同一封存任务双评。通用恢复入口目前重建公共场景patch，对任意额外实验插件的自动持久化尚未在正式入口实现；不能把本轮专用驱动等同于该通用能力。
+
+严格替换证据解析遇到原生重复空callId时仍拒绝，统计另列实际tool_bound审计与严格证据错误，不伪造替换或修改认证结果。公共种子、默认前端与其它场景未因这轮实验切换。
+
+
+## File 日常决策程序后台（2026-11-11）
+
+Linux/macOS 的真实 management_v3 任务在 learn 模式且配置私有 SSS_FILE_PROVIDER_CONFIG 时，将 geneloop-learned-decisions 冻结进原 rsi.patch。内部可选 decision_programs 布尔值默认 true。账号、学习和实际任务费用授权均为 null 时启用 JEV 执行，有任一有限费用授权只捕获轨迹。插件冻结经验目录、运行时摘要与原账号计量上下文；恢复沿同一 patch。
+
+原launch_worker保留结构后台，并启动rsi-worker --programs；独立decision-worker锁、同一pool。daily_decision_learning 只取已封存、对账完整且原任务获不限额许可的可学习普通任务，记录完整选择暴露集合。后续材料与训练哈希不交集才在原授权目录内复制认证，不能继承浏览器高风险批准。两份实际替换、局部审核及整任务独立双评通过后，publish_empirical(daily_file=True)以activated_for_daily_file发布到原长期库。旧调用默认false，证据和失败不追改。
+
+候选须匹配至少两个真实独立来源的原生工具根及schema；执行核心/阈值/schema/runtime去重。后台源码的单文件变化只有在在线hook AST、顶层导入/常量、纯runtime、工具及认证器均不变时允许追加兼容包装；保留父证书，new_independent_certification=false，不冒充新质量认证。实际执行或工具变化需重认证。真实交付失败且程序已执行追加暂停证据；候选失败不影响无关已认证程序。persistent_file_rsi.status新增decision_programs状态及active_programs。
+
+原生观察解析跳过空callId畸形调用，保留原事件；非空重复身份仍拒绝。候选模型输入分开predecision_context与observed_model_decision_output，避免把后来答案视为已知输入。任意新流程生成不保证成功，源码/结构图学习仍沿既有路径。本轮普通入口集成隔离旧结构后台、未更新运行中前端；实际质量、失败、费用和兼容边界见本地实验记录。
+
+## File 原生会话恢复与冻结插件（2026-11-11）
+
+`operation_runner` 为新任务保留同一 `out/dsh`，每次尝试的原始事件/结果继续在独立 attempts 目录。第一次运行将实际 scene patch（含额外插件和provider配置引用）冻结为私有 `scene.patch.yml`＋哈希；恢复核验后使用该文件和原rsi.patch，而不重建丢掉额外插件的公共patch。原任务、权限、provider binding、版本、库快照和累计账本不清零。旧任务没有原patch快照时明确要求迁移，不能以冷启动替代恢复。
+
+File恢复专用 `dsh_file_resume.ts` 复用上游公开SDK `apply`，只为原session的创建请求适配到公开 `agents.resume`，不修改上游server或Agent核心。其余路由、通知、关停继续由原server负责；新进程恢复完整原生模型历史，再接短的原任务续接提示，不重新插入完整用户目标。该组合边界已用实际SDK/持久化及本地假Provider诊断，再由真实Kouri任务验证。其他场景不使用此适配器。
+
+`file_recovery_state.completedToolHistory` 从公开 `session.snapshotEvents()` 读取真实成功call/result配对，在决策插件创建时恢复receipts/history/last_tool；跳过未知结果、错误和空身份，非空重复身份拒绝。只重建状态，不读取文件或重新调用判断。原attempted记录继续阻止同一程序判断重复付费。已支付判断但工具遭中断取消仍记录为未完成替换；不因最终任务被普通Harness修好就伪称程序已认证成功。新运行依赖须用新材料独立认证后激活，原证书/失败保留。新九对比较将正常、完整读取后中断、成功写入后中断分别统计，不把报告用量缺失记为零。
+
+## File 已付判断的待执行恢复（2026-11-11）
+
+`file_decision_checkpoint.ts` 与决策插件在绑定后、派发前保存 `file-paid-decision-checkpoint-v1`：原任务/权限摘要、完整当前工作区文件和目录版本、程序/runtime/模型及schema摘要、决定前真实history、原request/resolution/binding、原执行proof及付费result文件哈希。原决定文件不可覆盖，派发/完成/失效状态另存并追加审计。新运行依赖仍须新材料独立认证后激活。
+
+同一原生任务恢复时，先核验原库仍提供同一程序、原付费证据不变、工作区/权限/工具契约/进度未变，并用原纯程序重新绑定同一结果。MCP进程的 `read_task` 初始化通过一次真实、无模型的工具调用完成；只允许将这个同作用域、无参数的初始化回执加入原进度。随后为原决定生成新调用身份、保留前驱proof，不再请求JEV/Flash。任务已经执行过的调用只标为完成，不重做效果。状态失配回普通Harness；外部根及需副作用日志的authorized_write不自动重放，仍由原执行/恢复日志处理。支持范围由工具effect契约决定，不写入任务类别或固定文件路线。
+
+严格执行证据增加可选 `superseded_unexecuted`：只有原调用没有实际结果、原paid/request/binding未变、文件版本一致、真实初始化回执与原权限一致，且继任调用最终确有原生成功回执时，才将前驱标为“未执行并被接续”。前驱不计成功；继任仍过原概率、参数、scope、局部及整任务审核。实际旧失败不能被链接隐藏，循环/未知前驱/改答案或文件版本继续拒绝。旧失败记录和旧认证不会追改为通过。
+
+初始化兼容补充：旧File契约将read_task标为semantic；这个标签不决定生命周期初始化能否机械调用。恢复初始化要求原登记的空参数schema、原任务中真实成功的同作用域回执以及当前相同工具表。此兼容点已经用真实旧checkpoint/schema复验和新独立任务验证；没有修改MCP的active检查。结果和失败见本地实验记录。
+
+
+## 桌面 File 私有判断与恢复（0.4.0 / 2026-11-17）
+
+File 任务 lease 在账号配置了 `desktopLocalModel.jev.accounts[accountId]` 时声明 `fileJev:true`。`POST /api/harless/desktop-model/v1/systemone` 复用同一任务 Bearer，接收 `{request_id,packet}`，服务端注入账号 owner 并调用 #170 现有单次判断 CLI、私有账本；返回原 `result`、`decision`、`accounting`、`reused`。相同请求仅复用原判断，未知结果 409，不能自动再次付费。桌面私有 IPC `localWorkspace.recover({workspaceId,threadId,taskId})` 校验当前账号/工作区，续接已开始的原 File 任务，不改变文件授权。完整配置、验证与未部署边界见[接线说明](debug/desktop-file-judgement-recovery-20261117.md)。
+
+
+## Desktop 0.4.1：本机学习与自动收集
+
+- 桌面本机任务的原生事件只写入本机账号隔离目录。任务结束后调用现有隐私投影与 RSI 编译/结构认证/只读执行模块；没有学习、收集开关。源文件、原始参数、正文和原始轨迹不发送到收集接口。
+- `POST /api/harless/rsi-collected-objects` 使用现有账号会话、同源 Origin 和 JSON；请求头 `X-GeneLoop-Object-Id` 为独立生成 UUID，`X-GeneLoop-Object-Sha256` 为请求体 SHA256。请求体最多 256 KiB，仅接受 `geneloop.rsi-collected-object/v1`，工具为对象内顺序编号，保留完成、失败、取消或中断终态。
+- 桌面 `rsiCatalog()` 通过可信窗口的只读 IPC 查询当前登录账号的本机学习库。返回能力 ID、适用场景、已登记的只读工具、证书摘要、独立见证数量及已完成复用次数。正式站和本机学习库分别读取，本机目录不经模型网关或收集接口传送。
+- 接收端成功返回 `{accepted:true,object_id,sha256,receipt_id}`。同账号同 ID 同摘要重试返回原回执，不重复落库；同 ID 不同摘要返回 409。`GET` 同路径的 `object_id` 查询参数复核持久回执，其他账号不可读取。
+- 桌面只发送到当前登录服务器的 HTTPS 根地址；HTTP 限显式回环诊断。未知响应在重启后先核对同一对象 ID；未部署接口的服务器返回等待状态，不回退为原始轨迹上传。
+- 桌面模型 lease 新增 `localRsiTools:true`，声明允许 `local_motif_list` 与 `local_motif_run`。旧网关不声明时客户端保留学习/脱敏，但不发送未授权的新工具定义。新工具仅可执行当前账号、当前场景、已绑定实际来源和代码版本的只读结构能力；结构认证不宣称质量或效率收益。
+- 接收接口源码随桌面 PR171 提供，合入或打包不等于正式服务已经部署。Windows 本轮交付与验证见桌面交接。

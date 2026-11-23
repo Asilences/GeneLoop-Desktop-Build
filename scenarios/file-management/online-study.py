@@ -51,7 +51,7 @@ def prepare(parent,families=()):
     if without!=old:raise ValueError('capability export changed certified artifacts or other contracts')
     save(out/'online-manifest.json',manifest)
     subprocess.run(['node','--input-type=module','-e',
-        "import fs from 'node:fs';import {validateOnlineManifest} from './src/motif_core/online_skill_runtime.mjs';validateOnlineManifest(JSON.parse(fs.readFileSync(process.argv[1])));",str(out/'online-manifest.json')],cwd=ROOT,check=True,capture_output=True)
+        "import fs from 'node:fs';import {validateOnlineManifest} from './src/motif_core/runtime/online_skill_runtime.mjs';validateOnlineManifest(JSON.parse(fs.readFileSync(process.argv[1])));",str(out/'online-manifest.json')],cwd=ROOT,check=True,capture_output=True)
     tasks=[]
     for i,origin in enumerate(c for c in original['tasks'] if c['role']=='evaluate' and (not families or c['family'] in families)):
         source=json.loads((Path(origin['task_dir'])/'input.json').read_text())

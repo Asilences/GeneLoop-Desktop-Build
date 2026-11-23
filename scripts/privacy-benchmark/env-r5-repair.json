@@ -1,0 +1,33 @@
+{
+  "id": "privacy-r5-official-memory-zone-repair-20261108",
+  "reason": "Preserved 137-task replay reproduces spaCy3.8.7 Vocab.get assertion after a rejected record; upstream PR13932 fixes exception cleanup",
+  "source": {
+    "repository": "https://github.com/explosion/spaCy",
+    "fix_pr": "https://github.com/explosion/spaCy/pull/13932",
+    "fix_merge": "cfa1d3a59abd8ebb859070f97d681120ac9d07a7",
+    "chosen_release": "3.8.12",
+    "selection": "first inspected stable3.8.x tag with both Vocab and StringStore cleanup in finally; no application monkey patch",
+    "cp312_linux_x64_wheel_sha256": "7b760e02029138709df71e88c8a1fc610d48519a7c9213d3ae168d3ef6a6340a",
+    "abi": "manylinux2014/manylinux2_17; host glibc2_27"
+  },
+  "build": {
+    "python": "3.12.15",
+    "official_wheel_target": "new isolated directory, no dependency upgrades without an explicit recorded pin",
+    "candidate_environment": "copy contract-env-v3 to contract-env-v4, new spaCy overlay first; original paths read-only",
+    "regression_environment": "copy canonical project interpreter to regression-env-v4, same new overlay first; original paths read-only",
+    "models": "en_core_web_sm/zh_core_web_sm3.8.0 unchanged",
+    "other_tools": "Presidio2.2.365, OPF0.1.0/Torch2.5.1+cpu, CredSweeper1.19.6/ORT1.26 unchanged"
+  },
+  "resources": {"gpu": 0, "benchmark_threads": 1, "witness_threads": 4, "validation_workers": 1},
+  "validation": [
+    "actual wheel and imported version/ABI/dependency constraints",
+    "normal and credential-exception memory-zone cleanup plus subsequent Chinese processing",
+    "seeded official CPU/real CredSweeper ML witness",
+    "fresh reader follows the exact documented invocation",
+    "original137-task prefix replay on new package without changing rules or gold",
+    "new frozen full benchmark and full regression with separate run IDs"
+  ],
+  "r5_baseline_environment_or_results_modified": false,
+  "production_modified": false,
+  "cloud_api_requests": 0
+}

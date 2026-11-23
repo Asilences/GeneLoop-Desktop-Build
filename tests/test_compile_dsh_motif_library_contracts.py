@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.adapters.dsh_trajectory import ToolContract
+from src.adapters.harness.dsh_trajectory import ToolContract
 from tests.test_trace_compiled_read_motif import event_pair
 
 ROOT = Path(__file__).resolve().parents[1]

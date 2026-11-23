@@ -1,0 +1,21 @@
+{
+  "zh_formal": {
+    "accepted_to_accepted": 200,
+    "same_admitted_old_literal_residuals": 186,
+    "same_admitted_candidate_literal_residuals": 154,
+    "same_admitted_gold_entities": 615
+  },
+  "zh_chat": {
+    "accepted_to_accepted": 200,
+    "same_admitted_old_literal_residuals": 202,
+    "same_admitted_candidate_literal_residuals": 194,
+    "same_admitted_gold_entities": 489
+  },
+  "en_test": {
+    "accepted_to_accepted": 199,
+    "same_admitted_old_literal_residuals": 481,
+    "same_admitted_candidate_literal_residuals": 480,
+    "same_admitted_gold_entities": 864,
+    "rejected_to_rejected": 1
+  }
+}

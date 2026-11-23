@@ -60,8 +60,8 @@ test('member composition maps top-level and inserted modules and refuses stale/t
  assert.deepEqual(composeNativeHost(patch,join(f.source,'src'),{member:true}),patch);
  assert.ok(flat(patch).filter(row=>row.name?.startsWith('file:')).every(row=>row.name.startsWith('file:///app/src/')));
  assert.equal(flat(patch).find(row=>row.id==='geneloop-fs-search').name,'file:///app/src/adapters/geneloop_fs_search.ts');
- for(const name of ['file:///foreign/source/plugin.ts',pathToFileURL(join(f.source,'src')).href+'/../escape.ts'])
-  assert.throws(()=>composeNativeHost([{id:'other',name}],join(f.source,'src'),{member:true}),/source|URI/);
+ for(const name of ['file:///foreign/source/plugin.ts',...['..','%2e%2e','.%2e'].map(segment=>pathToFileURL(join(f.source,'src')).href+'/'+segment+'/escape.ts')])
+  assert.throws(()=>composeNativeHost([{id:'other',name}],join(f.source,'src'),{member:true}),/source|URI/,name);
 });
 
 test('installed official patch engine disables shipped providers and inserts exactly one GeneLoop provider',t=>{

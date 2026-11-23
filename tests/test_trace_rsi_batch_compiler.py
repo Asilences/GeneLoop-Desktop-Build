@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.trace_rsi_batch_compiler import ADDITIONS, compile_trace_rsi_batches, _readonly_result
-from src.adapters.trace_rsi_motif_compiler import PREFIX, file_sha256
-from src.adapters.trace_tool_evidence import digest
+from src.motif_core.offline.compilation.trace.trace_rsi_batch_compiler import ADDITIONS, compile_trace_rsi_batches, _readonly_result
+from src.motif_core.offline.compilation.trace.trace_rsi_motif_compiler import PREFIX, file_sha256
+from src.motif_core.trajectory.trace_tool_evidence import digest
 from test_trace_rsi_motif_compiler import make_run, events, write_events, save, change_metadata
 
 

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AssistantStreamAccumulator, expandAssistantStream } from '@deepseek-ai/dsh-llm';
 import { publicText, createPublicTextStream, publicSessionEvent, protectPublicSessionOutput,
-  publicTaskView } from '../src/adapters/harless_public_output.ts';
+  publicTaskView } from '../src/adapters/web/tasks/harless_public_output.ts';
 
 test('local file links never expose server paths in full text or across any split',()=>{
   for(const token of ['file:///home/operator/source/main.py','file:///C:/private/source/main.py',

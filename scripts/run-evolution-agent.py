@@ -14,11 +14,11 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.adapters.capability_contract import capability_digest, capability_ref, validate_capability_snapshot
-from src.adapters.capability_evolution_agent import packet, run, inspect_graph, boundary_handler, model_view, SYSTEM
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref, verify
-from src.adapters.capability_improvement import save
-from src.adapters.capability_motif_learning import _checked
+from src.capability.graph.capability_contract import capability_digest, capability_ref, validate_capability_snapshot
+from src.rsi.evolution.capability_evolution_agent import packet, run, inspect_graph, boundary_handler, model_view, SYSTEM
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref, verify
+from src.rsi.learning.capability_improvement import save
+from src.rsi.learning.capability_motif_learning import _checked
 from scenarios.paper_proofreading.frontier.budget import FrontierGate
 
 
@@ -100,8 +100,8 @@ def execute(manifest_ref, output, *, call_model=False, budget_usd='3', max_reque
             'budget_usd': str(budget), 'max_requests': max_requests, 'ledger_root': manifest['ledger_root'],
             'context_limit_utf8_bytes': context_bytes, 'heldout_matching': 'unique_exact_capability_sequence',
             'production_enabled': False, 'cumulative_ledger_reset': False,
-            'code': [file_ref(path) for path in [Path(__file__), ROOT / 'src/adapters/capability_evolution_agent.py',
-                ROOT / 'src/adapters/capability_goal_proposal.py', ROOT / 'src/adapters/capability_evolution.py',
+            'code': [file_ref(path) for path in [Path(__file__), ROOT / 'src/rsi/evolution/capability_evolution_agent.py',
+                ROOT / 'src/adapters/harness/capability/capability_goal_proposal.py', ROOT / 'src/rsi/evolution/capability_evolution.py',
                 ROOT / 'scenarios/paper_proofreading/frontier/budget.py']]})
         if evidence_packet['status'] != 'ready':
             report.update(status=evidence_packet['status']); return report

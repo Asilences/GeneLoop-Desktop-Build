@@ -88,7 +88,9 @@ def main():
     write(out/'dataset.json',runs)
     write(out/'schema.json',{'tools':[{'name':t['name'],'description':t['description'],'inputSchema':t['parameters']} for t in schemas]})
     # The ordinary traces determine every candidate, parameter edge and rejection.
-    guards=[ROOT/'src/adapters'/n for n in ('harless_task_scope.ts','harless_ppt_recovery.ts','dsh_web_tasks.ts','harless_scenarios.py','harless_rsi_binding.ts','harless_rsi_bundle.py')]
+    guards=[ROOT/'src/adapters/web'/n for n in (
+        'attachments/harless_task_scope.ts','scenes/harless_ppt_recovery.ts','dsh_web_tasks.ts',
+        'scenes/harless_scenarios.py','learning/harless_rsi_binding.ts','learning/harless_rsi_bundle.py')]
     manifest=learn(out/'dataset.json',contracts_path=ROOT/'scenarios/research_ppt/web-read-contracts.json',
         version_fields_path=ROOT/'scenarios/research_ppt/web-read-version-fields.json',tool_schema_path=out/'schema.json',
         out_dir=out/'compiled',guard_paths=tuple(guards),mining='witnessed_edges')
@@ -143,7 +145,7 @@ def main():
             'intent':'Read current approved sources and explicitly selected current deck pages.','input_version':'0'*64,'bindings':{},
             'source_versions':{name:'0'*64 for name in data['version_fields']}})
         write(target/'source-evidence.json',evidence);write(target/'learning-report.json',report)
-        code=list(guards)+[ROOT/'src/adapters/dsh_online_motif.mjs',ROOT/'src/motif_core/online_skill_runtime.mjs',ROOT/'scripts/learn-web-ppt-motif.py']
+        code=list(guards)+[ROOT/'src/adapters/harness/motif/dsh_online_motif.mjs',ROOT/'src/motif_core/runtime/online_skill_runtime.mjs',ROOT/'scripts/learn-web-ppt-motif.py']
         code += [f for f in (ROOT/'scenarios/research_ppt').rglob('*') if f.is_file() and f.suffix in ('.py','.ts','.js') and not {'node_modules','tests','__pycache__'}&set(f.parts)]
         write(target/'certification.json',{'schema_version':1,'scene':'ppt','binding_policy':'ppt_uploaded_sources_v2',
             'matching_policy':'structural_only','certification_scope':'independent_trace_structure','quality_cost_promoted':False,

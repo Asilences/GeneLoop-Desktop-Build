@@ -1,7 +1,7 @@
 import copy,json
 import pytest
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.terminal_compiler import terminal_witness,compile_terminal,certify_terminal
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.terminal_compiler import terminal_witness,compile_terminal,certify_terminal
 TOOL='mcp__literature_pdf_repair__submit_claim_repair'
 CONTRACTS=parse_tool_contracts({TOOL:{'required_params':['decisions','synthesis_hypothesis'],'read_only':True,'replay_stable':False}})
 

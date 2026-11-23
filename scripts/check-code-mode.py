@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State,create_server
 from src.adapters.native_budget import NativeBudgetGuard
 

@@ -26,7 +26,7 @@ app.whenReady().then(async()=>{
  assert.deepEqual(await evaluate('[typeof require,typeof process,typeof window.geneLoopDesktop,typeof window.__DSH_BOOT__,typeof window.__ModuleLoader__]'),Array(5).fill('undefined'));
  assert.ok(desktop.frontend.served.localScripts.includes('/desktop/app.js'));assert.deepEqual(desktop.frontend.served.networkScripts,[]);
  check('独立桌面DOM与JS加载；没有DSH网页、插件加载器或Node权限');
- await evaluate(`document.getElementById('new-workspace').click();document.querySelector('dialog input').value='桌面独立诊断';document.querySelector('dialog form').requestSubmit()`);
+ await evaluate(`document.getElementById('new-workspace').click();[...document.querySelectorAll('.workspace-type button')].find(el=>el.textContent==='云端工作区').click();document.querySelector('dialog input').value='桌面独立诊断';document.querySelector('dialog input').dispatchEvent(new Event('input'));document.querySelector('dialog form').requestSubmit()`);
  await until(()=>evaluate('document.getElementById("workspace-list").textContent.includes("桌面独立诊断")&&!document.querySelector("dialog")'),'原生新建工作区');
  check('独立表单通过原接口建立服务器工作区并订阅目录');
  await evaluate(`document.querySelector('.composer-add').click();document.querySelector('#scene-command-menu [data-scene=paper-proofreading]').click()`);
@@ -41,7 +41,7 @@ app.whenReady().then(async()=>{
  await evaluate(`(()=>{const dt=new DataTransfer();dt.items.add(new File(['independent desktop upload diagnostic'],'diagnostic.txt',{type:'text/plain'}));const input=document.getElementById('file-input');input.files=dt.files;input.dispatchEvent(new Event('change'));})()`);
  await until(()=>evaluate(`document.getElementById('attachments').textContent.includes('diagnostic.txt')&&!document.getElementById('attachments').textContent.includes('上传中')`),'服务器原生文件回执');
  check('独立附件组件实际上传合成文件副本到原生Host');
- await until(()=>desktop.state().appearance.background==='#f7f7f8','浅色标题栏');
+ await until(()=>desktop.state().appearance.background==='#f5f7f7','浅色标题栏');
  assert.equal(desktop.workspace.getBounds().y,32);await evaluate(`document.body.setAttribute('data-ds-dark-theme','')`);await until(()=>desktop.state().appearance.dark,'深色标题栏联动');await evaluate(`document.body.removeAttribute('data-ds-dark-theme')`);
  check('32px桌面菜单与主题联动，保留基线顶部修复');
  writeFileSync(join(output,'independent-workspace.png'),(await desktop.workspace.webContents.capturePage()).toPNG());

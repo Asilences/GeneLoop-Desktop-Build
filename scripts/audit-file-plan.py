@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scenarios/file-management'));sys.path.insert(0,str(ROOT))
 from common import digest,sha,snapshot,save,PREFIX
 from plan_study import scope,expected_actions
-from src.motif_core.offline.plan_compiler import effect_snapshot
+from src.motif_core.offline.compilation.plan_compiler import effect_snapshot
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--experiment',type=Path,required=True);args=p.parse_args();exp=args.experiment.resolve();protocol=json.loads((exp/'protocol.json').read_text())

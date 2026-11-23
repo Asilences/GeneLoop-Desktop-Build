@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {bytesSha256,validateRsiRecord} from '../src/adapters/rsi_protocol.ts';
-import {startRsiOptimization,publishOptimizedRsiUpdate} from '../src/adapters/rsi_optimization.ts';
+import {bytesSha256,validateRsiRecord} from '../src/rsi/protocol/rsi_protocol.ts';
+import {startRsiOptimization,publishOptimizedRsiUpdate} from '../src/rsi/learning/rsi_optimization.ts';
 import {fixtureRecord} from '../examples/rsi-protocol-v1/host.mjs';
 
 const cwd=fileURLToPath(new URL('../',import.meta.url));

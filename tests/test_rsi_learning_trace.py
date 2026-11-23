@@ -137,8 +137,8 @@ def test_offline_import_requires_authorization_and_redacts_errors(tmp_path):
 
 def test_non_default_read_and_unknown_interleaving_do_not_become_safe_witnesses():
     from src.adapters.rsi_learning_trace import compilation_trace, CONTRACTS, ROOT
-    from src.adapters.tool_contract_loader import parse_tool_contracts
-    from src.motif_core.offline.edge_compiler import count_safe_edge_witnesses
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+    from src.motif_core.offline.compilation.edge_compiler import count_safe_edge_witnesses
 
     contracts = parse_tool_contracts(json.loads(
         (ROOT / CONTRACTS["paper-proofreading"]).read_text(encoding="utf-8")))

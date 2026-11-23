@@ -9,21 +9,24 @@ const TASK = new Set([
   '/api/$events/result', '/api/harless/settings', '/api/harless/models', '/api/harless/file-scene',
   '/api/harless/questions', '/api/harless/session-trash', '/api/harless/workspaces',
   '/api/harless/workspaces/preferences', '/api/harless/tasks', '/api/harless/comparisons',
-  '/api/harless/deliveries', '/api/harless/motif-library',
+  '/api/harless/deliveries', '/api/harless/motif-library', '/api/harless/motif-catalog',
+  '/api/harless/rsi-learning',
   // Normal local-task model transport; these are not optional sharing endpoints.
   '/api/harless/desktop-model/lease', '/api/harless/desktop-model/v1/chat/completions',
-  '/api/harless/desktop-model/video/render',
+  '/api/harless/desktop-model/video/render', '/api/harless/desktop-model/v1/systemone',
 ]);
 
 export function apiPurpose(path: string, diagnostic = false): 'account' | 'task' | 'sharing' | undefined {
   if (path.startsWith('/api/account/') && ACCOUNT.has(path.slice('/api/account/'.length))) return 'account';
   if (TASK.has(path) || diagnostic && path.startsWith('/api/fixture/')) return 'task';
+  if (path === '/api/harless/rsi-collected-objects') return 'sharing';
   if (path === '/api/harless/rsi-sharing') return 'sharing';
   return undefined;
 }
 
 export async function sharingControlAllowed(request: Request): Promise<boolean> {
-  const query = new URL(request.url).searchParams;
+  const url=new URL(request.url),query=url.searchParams;
+  if(url.pathname==='/api/harless/rsi-collected-objects')return request.method==='GET'&&query.size===1&&/^[a-f0-9-]{36}$/.test(query.get('object_id')??'');
   if ([...query.keys()].some(key => key !== 'preview_id') || query.getAll('preview_id').length > 1) return false;
   if (query.has('preview_id') && !/^[a-f0-9-]{36}$/.test(query.get('preview_id')!)) return false;
   if (request.method === 'GET') return true;

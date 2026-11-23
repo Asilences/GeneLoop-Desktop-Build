@@ -3,7 +3,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {resolve,dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {validateOperationPolicy} from '../src/motif_core/operation_graph_policy.ts';
+import {validateOperationPolicy} from '../src/motif_core/runtime/policies/operation_graph_policy.ts';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const ix=process.argv.indexOf('--bundle'),bundle=ix>=0?resolve(root,process.argv[ix+1]):join(root,'examples/motif-library/file-management-operation-v2-winfix');
 const read=p=>JSON.parse(readFileSync(p,'utf8')),sha=p=>createHash('sha256').update(readFileSync(p)).digest('hex');

@@ -8,7 +8,7 @@ artifacts (including TSX) without treating their writes as read-only operations.
 from __future__ import annotations
 
 from jsonschema import Draft202012Validator
-from .script_motif_compiler import digest, sha
+from src.motif_core.offline.compilation.script_motif_compiler import digest, sha
 
 PARAMETER_TOKEN = '__GENELOOP_PARAMETERS__'
 FORMAT = 'parameterized_source_program_v1'

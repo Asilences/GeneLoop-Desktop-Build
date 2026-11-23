@@ -1,10 +1,13 @@
 """Real local HTTP: transient retries retain one task's funds and request count."""
 import json,threading,urllib.request,urllib.error
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
-from src.adapters.file_cost_gate import State,create_server
 
-def test_transient_retry_has_two_total_attempts_and_keeps_failed_cost(tmp_path,monkeypatch):
-    import src.adapters.file_cost_gate as gate
+import pytest
+from src.adapters.deepseek_cost_gate import FileState as State, create_file_server as create_server
+
+@pytest.mark.parametrize('rewrite_model', [False, True], ids=['sdk-model', 'provider-wire-model'])
+def test_transient_retry_has_two_total_attempts_and_keeps_failed_cost(tmp_path,monkeypatch,rewrite_model):
+    import src.adapters.deepseek_cost_gate as gate
     monkeypatch.setattr(gate.time,'sleep',lambda delay:None)
     class Upstream(BaseHTTPRequestHandler):
         def log_message(self,*args):pass
@@ -14,8 +17,14 @@ def test_transient_retry_has_two_total_attempts_and_keeps_failed_cost(tmp_path,m
             value={'error':'too busy'} if code==503 else {'usage':{'prompt_tokens':10,'prompt_cache_hit_tokens':0,'prompt_cache_miss_tokens':10,'completion_tokens':1,'total_tokens':11}}
             raw=json.dumps(value).encode();self.send_response(code);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
     upstream=ThreadingHTTPServer(('127.0.0.1',0),Upstream);upstream.bodies=[];upstream.statuses=[503,503,200]
+    origin=f'http://127.0.0.1:{upstream.server_port}'
+    wire_model='deepseek-flash'
+    if rewrite_model:
+        wire_model='fixture-upstream-model'
+        monkeypatch.setattr(gate,'model_api_root',lambda:origin)
+        monkeypatch.setattr(gate,'model_wire_id',lambda model:wire_model)
     state=State(cap_usd=1,output_cap=20,request_limit=4,record=tmp_path/'ledger.jsonl')
-    proxy=create_server('127.0.0.1',0,f'http://127.0.0.1:{upstream.server_port}',state)
+    proxy=create_server('127.0.0.1',0,origin,state)
     threads=[threading.Thread(target=s.serve_forever,daemon=True) for s in (upstream,proxy)]
     for t in threads:t.start()
     body=json.dumps({'model':'deepseek-flash','max_tokens':20,'messages':[{'role':'user','content':'bounded request'}]}).encode()
@@ -28,6 +37,9 @@ def test_transient_retry_has_two_total_attempts_and_keeps_failed_cost(tmp_path,m
         assert post()==200 and state.request_count==3 and state.provider_retries==2
         rows=[json.loads(l) for l in state.record.read_text().splitlines()]
         assert [r['response_status'] for r in rows]==[503,503,200]
+        assert [r['model'] for r in rows]==['deepseek-flash']*3
+        assert len({r['reserved_upper_usd'] for r in rows})==1
+        assert [json.loads(raw)['model'] for raw in upstream.bodies]==[wire_model]*3
         assert all(r['reservation_released_usd']==0 for r in rows[:2])
         assert state.reserved_usd>=sum(r['reserved_upper_usd'] for r in rows[:2])
         assert len(set(upstream.bodies))==1

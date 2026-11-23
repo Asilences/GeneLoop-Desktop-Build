@@ -13,12 +13,12 @@ from plan_tools import execution_version as plan_version
 from workflow_contract import verify_workflow
 from experiment import accounting,inspect_schema
 from src.adapters.file_job_budget import job_command,FileJobBudget
-from src.adapters.file_scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
-from src.adapters.file_cost_gate import create_server
+from src.adapters.deepseek_cost_gate import create_file_server as create_server
 
-RUNTIME=['src/adapters/file_entry_motif.ts','src/adapters/dsh_job_plan_gate.ts','src/motif_core/authorized_plan_policy.ts','src/motif_core/online_skill_runtime.mjs']
+RUNTIME=['src/adapters/harness/motif/dsh_entry_motif.ts','src/adapters/harness/dsh_job_plan_gate.ts','src/motif_core/runtime/policies/authorized_plan_policy.ts','src/motif_core/runtime/online_skill_runtime.mjs']
 CASES=[('normal-count2','N',2),('normal-count4','N',4),('stale-runtime','N',3),('permission-denial','N',3),
        ('request-limit','N',3),('acceptance-repair','N',3),('crash-recovery','E',3),('revoke-before-execute','N',3)]
 
@@ -56,13 +56,13 @@ def prepare():
                       'max_requests':3 if tid=='request-limit' else 96,'budget_usd':5,'expected_delivery':tid not in ('request-limit','revoke-before-execute')})
     # Only this negative case adds a fixed trusted test hook. The public launcher is unchanged.
     plugin=exp/'revoke-test.ts'
-    plugin.write_text("import {FileJob} from "+json.dumps((ROOT/'src/adapters/file_workflow_job.ts').as_uri())+";\nimport {observation} from "+json.dumps((ROOT/'src/motif_core/online_skill_runtime.mjs').as_uri())+";\nexport const name='test-revoke-before-execute';export const inject=['agents'];export function apply(ctx:any){let fired=false;ctx.on('agent/created',({agent}:any)=>{agent.ctx.on('tools/result',(exec:any,result:any)=>{if(!fired&&exec.name==='mcp__file_management__authorize_plan'&&observation(result,exec.name)?.status==='task_grant_authorized'){fired=true;new FileJob("+json.dumps(str(ROOT))+",process.env.FM_JOB_FILE!).apply('revoke',{reason:'frozen online negative drill after actual authorization'});}});});}\n")
+    plugin.write_text("import {FileJob} from "+json.dumps((ROOT/'src/adapters/file_workflow_job.ts').as_uri())+";\nimport {observation} from "+json.dumps((ROOT/'src/motif_core/runtime/online_skill_runtime.mjs').as_uri())+";\nexport const name='test-revoke-before-execute';export const inject=['agents'];export function apply(ctx:any){let fired=false;ctx.on('agent/created',({agent}:any)=>{agent.ctx.on('tools/result',(exec:any,result:any)=>{if(!fired&&exec.name==='mcp__file_management__authorize_plan'&&observation(result,exec.name)?.status==='task_grant_authorized'){fired=true;new FileJob("+json.dumps(str(ROOT))+",process.env.FM_JOB_FILE!).apply('revoke',{reason:'frozen online negative drill after actual authorization'});}});});}\n")
     patch=exp/'revoke-test.patch.yml';patch.write_text(json.dumps([{'insert':[{'id':'test-revoke-before-execute','name':plugin.as_uri()}]}]))
     launcher=exp/'revoke-launcher.py';launcher.write_text("import importlib.util\ns=importlib.util.spec_from_file_location('public_runner',"+repr(str(ROOT/'scripts/run-file-scenario.py'))+");m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\noriginal=m.create_harness\ndef wrapped(**kwargs):\n kwargs['patches']=tuple(kwargs['patches'])+("+repr(str(patch))+",)\n return original(**kwargs)\nm.create_harness=wrapped\nraise SystemExit(m.main())\n")
     code=[*HERE.glob('*.py'),*HERE.glob('*.md'),*HERE.glob('*.json')]+[ROOT/n for n in RUNTIME+[
         'scripts/run-file-scenario.py','scripts/validate-file-delivery.py','scripts/check-file-workflow-sdk.py','src/adapters/file_workflow_job.ts',
-        'src/adapters/file_job_budget.py','src/adapters/file_acceptance_guard.ts','src/adapters/file_scenario.py','src/adapters/file_cost_gate.py',
-        'src/adapters/harness_runtime.py','src/adapters/native_budget.py','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt']]
+        'src/adapters/file_job_budget.py','src/adapters/file_acceptance_guard.ts','src/adapters/scenario.py','src/adapters/deepseek_cost_gate.py',
+        'src/adapters/harness/harness_runtime.py','src/adapters/native_budget.py','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt']]
     for p in code:
         q=exp/'frozen-source'/p.relative_to(ROOT);q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
     protocol={'experiment_id':eid,'type':'controlled online development; real model on generated copies, not prospective user quality','tasks':tasks,

@@ -3,7 +3,7 @@ import importlib.util
 import json
 import pytest
 from pathlib import Path
-from src.adapters.script_motif_compiler import sha, digest
+from src.motif_core.offline.compilation.script_motif_compiler import sha, digest
 
 
 @pytest.mark.parametrize('newline', ['\n', '\r\n'])

@@ -18,9 +18,44 @@ jobs:
           python-version: '3.12'
       - name: Install PDF parser for Linux integration checks
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        timeout-minutes: 5
+        run: |
+          . /etc/os-release
+          apt_dir=$(mktemp -d)
+          trap 'rm -f -- "$apt_dir/mirrors.txt" "$apt_dir/ubuntu.sources"; rmdir -- "$apt_dir"' EXIT
+          chmod 755 "$apt_dir"
+          # The hosted runner's default Ubuntu archive hostnames can fail DNS.
+          cat > "$apt_dir/mirrors.txt" <<'EOF'
+          https://mirrors.edge.kernel.org/ubuntu/
+          https://mirrors.mit.edu/ubuntu/
+          EOF
+          cat > "$apt_dir/ubuntu.sources" <<EOF
+          Types: deb
+          URIs: mirror+file:$apt_dir/mirrors.txt
+          Suites: $VERSION_CODENAME $VERSION_CODENAME-updates $VERSION_CODENAME-security
+          Components: main
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
+          apt_options=(
+            -o "Dir::Etc::sourcelist=$apt_dir/ubuntu.sources"
+            -o 'Dir::Etc::sourceparts=-'
+            -o 'Acquire::https::Timeout=15'
+            -o 'Acquire::Retries=0'
+          )
+          sudo apt-get "${apt_options[@]}" -o APT::Update::Error-Mode=any update
+          sudo apt-get "${apt_options[@]}" install -y poppler-utils
+          pdfinfo -v
+          pdftotext -v
+          pdftoppm -v
       - run: npm ci
       - run: npm run setup
+      - name: Install pinned local privacy dependencies
+        shell: bash
+        run: |
+          python_path=.venv-sss/$([[ "$RUNNER_OS" == "Windows" ]] && echo Scripts || echo bin)/python
+          "$python_path" -m pip install -r requirements-rsi-privacy.txt
+          tool_path=$("$python_path" scripts/install-rsi-privacy-tools.py --root "$RUNNER_TEMP/geneloop-privacy-tools")
+          echo "SSS_RSI_GITLEAKS=$tool_path" >> "$GITHUB_ENV"
       - name: Install pinned OCR languages for real scan tests
         shell: bash
         run: |

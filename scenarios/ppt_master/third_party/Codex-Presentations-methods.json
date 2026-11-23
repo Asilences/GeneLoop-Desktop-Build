@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "source": "Codex Presentations",
+  "source_version": "26.1103.10131",
+  "license_declaration": "MIT in plugin manifest",
+  "reuse_kind": "independently_written_design_rules",
+  "source_sha256": {
+    ".codex-plugin/plugin.json": "a89e12cb0763090ebddb1d54e0c650baa557da587bee37ec74cabb338aaa69f5",
+    "skills/presentations/style_guidelines.md": "b682d1beb638b6ce77ecab86f83afcbde7a68207a749bc7994d8fd805feec619",
+    "skills/presentations/references/template_following.md": "881875960ffa6bc59c9f6351552d9f499ac053884c780f0725cc8ccf1125c4d2"
+  },
+  "adapted_into": [
+    "scenarios/ppt_master/design-conventions.md",
+    "src/adapters/ppt_page_renderer.py"
+  ],
+  "host_policy": [
+    "editable PPTX delivery",
+    "version-bound review",
+    "background model assessment",
+    "shared deterministic authoring"
+  ],
+  "platform_dependencies": []
+}

@@ -6,13 +6,12 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from src.adapters.dsh_trajectory import DshTrace, ToolRecord
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.continuation_policy import policy_digest
-from src.motif_core.offline.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
-from src.motif_core.offline.trace_compiler import contract_signature
-from src.motif_core.offline.library_builder import library_from_certified
+from src.adapters.harness.dsh_trajectory import DshTrace, ToolRecord
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.continuation_policy import policy_digest
+from src.motif_core.offline.compilation.chain_compiler import compile_witnessed_chain_motif, certify_witnessed_chain_motif
+from src.motif_core.offline.compilation.trace_compiler import contract_signature
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('grant_test_exporter', ROOT / 'scripts/export-online-motif-manifest.py')

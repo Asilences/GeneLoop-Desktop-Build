@@ -4,9 +4,9 @@ import hashlib
 import json
 from pathlib import Path
 import pytest
-from src.adapters.capability_improvement import run_improvement, validate, discover
-from src.adapters.capability_contract import create_capability_snapshot, capability_ref
-from src.adapters.capability_builder import compile_proposal
+from src.rsi.learning.capability_improvement import run_improvement, validate, discover
+from src.capability.graph.capability_contract import create_capability_snapshot, capability_ref
+from src.capability.builder.capability_builder import compile_proposal
 from tests.test_capability_builder import setup
 
 
@@ -69,7 +69,7 @@ def test_native_material_change_restarts_builder_with_fresh_snapshot_not_repair(
         seen.append(library['snapshot']['digest'])
         if len(seen)>1:
             assert parent is None and feedback is None
-            from src.adapters.capability_authoring import authoring_context
+            from src.capability.builder.capability_authoring import authoring_context
             context=authoring_context(task,library['snapshot'],library['source_catalog'])
             progress=context['material_continuation']
             assert progress['current_snapshot_sha256']==seen[-1]
@@ -100,8 +100,8 @@ def test_native_material_change_restarts_builder_with_fresh_snapshot_not_repair(
 
 
 def test_acquisition_context_verifies_immutable_sources_and_current_snapshot(tmp_path):
-    from src.adapters.capability_authoring import authoring_context
-    from src.adapters.capability_improvement import acquisition_continuation,continued_library
+    from src.capability.builder.capability_authoring import authoring_context
+    from src.rsi.learning.capability_improvement import acquisition_continuation,continued_library
     plan,snapshot,proposal=plan_at(tmp_path);attempt=tmp_path/'acquisition';attempt.mkdir()
     result=put(attempt/'result.json',{'status':'deferred'})
     acquired=put(attempt/'acquisition.json',{'status':'registered'})
@@ -117,7 +117,7 @@ def test_acquisition_context_verifies_immutable_sources_and_current_snapshot(tmp
 
 
 def test_saved_pending_gap_keeps_acquisition_intent_in_a_new_round(tmp_path):
-    from src.adapters.capability_authoring import authoring_context
+    from src.capability.builder.capability_authoring import authoring_context
     plan,snapshot,proposal=plan_at(tmp_path);plan['jobs']=plan['jobs'][:1]
     plan['learning_routes']=put(tmp_path/'routes.json',{'diagnostic':True})
     pending={'status':'deferred','construction_gap':{'reason':'missing_primitive','requirement':'Saved operation'}}
@@ -283,7 +283,7 @@ def test_corrupted_catalog_never_reaches_builder(tmp_path):
 
 
 def test_repeat_signature_compares_location_and_candidate_without_claiming_progress(tmp_path):
-    from src.adapters.capability_improvement import repair_signature
+    from src.rsi.learning.capability_improvement import repair_signature
     result={'error':'same_code','diagnostics':{'issues':[{'path':['steps',0]}]}}
     put(tmp_path/'proposal.json',{'x':1,'y':2})
     original=repair_signature(result,None,tmp_path)

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync, rmSync, mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { request } from 'node:http';
 import { costOf, runWorkflow, redeliverJob, recoverJob, JOBS, ROOT, serve } from '../scenarios/literature-notes/agent.ts';
@@ -193,7 +194,7 @@ for (const gaps of [0, 1]) test('automatic delivery needs no human approval, gap
   try{assert.equal(job.status,gaps?'delivered_with_gaps':'delivered');
     assert.equal(job.quality,'automatic_model_reviewed_unverified');assert.equal(job.human_review_required,false);
     assert.equal(job.model_requests,4);assert.equal(job.accounted_usd,0.02);assert.equal(operations.includes('approve'),false);}
-  finally{rmSync(join(JOBS,job.id),{recursive:true});}
+  finally{await rm(join(JOBS,job.id),{recursive:true,maxRetries:20,retryDelay:50});}
 });
 
 test('legacy policy redelivery validates source and keeps old history',async()=>{

@@ -7,8 +7,8 @@ import argparse,json,os,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[3];sys.path.insert(0,str(ROOT))
 from src.adapters.research_requests import ResearchRequests
-from src.motif_core.offline.experience_registry import read,durable
-from src.adapters.script_motif_compiler import sha,digest
+from src.motif_core.reuse.experience_registry import read,durable
+from src.motif_core.offline.compilation.script_motif_compiler import sha,digest
 
 SYSTEM='''Independently review the attached selected video frames against the task. You are not told
 the method, costs or implementation. The images were already viewed by the task Agent.
@@ -85,7 +85,7 @@ VISUAL_CHECKS=('task_requirements','text_and_geometry','sampled_timing')
 
 def visual_review_status(record,run,task,qa,protocol_sha256=None):
     if record.get('protocol')=='geneloop.rsi/v1':
-        from src.adapters.rsi_quality import quality_status,verify_quality_files
+        from src.rsi.feedback.rsi_quality import quality_status,verify_quality_files
         status=quality_status(record,task_sha256=digest(task),artifact_sha256=qa['video_sha256'],
             rubric_sha256=protocol_sha256 or record['payload']['rubric_sha256'],required_checks=VISUAL_CHECKS)
         verify_quality_files(record,run)

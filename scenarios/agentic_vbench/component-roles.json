@@ -1,0 +1,15 @@
+{
+  "study": "agentic-vbench-configured-manifest-20261109-v1",
+  "evaluation_scope": "configured_full_clip_manifest_v1",
+  "frozen_program_sha256": "fdb9bdb3c616ce2388ba19de28959f2db1ba4ee1219e36305f2af668475e05d2",
+  "selection_basis": "Original Task2/6/13 material split retained; configured-manifest component tasks do not claim official storyboard or video completion.",
+  "tasks": {
+    "agentic-vbench-assembly-task2": "development_source_retest",
+    "agentic-vbench-assembly-task6": "certification",
+    "agentic-vbench-assembly-task13": "sealed_successor_paired"
+  },
+  "component_inputs": {"source": "existing normal Task2 four-clip configuration", "certification": "Agent designs a three-clip plan using measured Task6 durations", "successor": "Agent prepares one five-clip Task13 plan before either arm; identical frozen bytes for both arms"},
+  "successor_order": ["reuse", "baseline_empty_store"],
+  "successor_timeout_seconds_per_arm": 300,
+  "expansion": "No expansion; original compiler/certification/Store/Runtime, unchanged program, unchanged official video scores. Report component quality and complete costs separately."
+}

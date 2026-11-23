@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "implementation_files": [
+    "src/adapters/ppt/runtime/ppt_execution.ts",
+    "src/adapters/ppt/runtime/ppt_workflow_runtime.ts",
+    "src/adapters/ppt/learning/ppt_workflow_learning.py",
+    "src/adapters/ppt/learning/ppt_skill_opportunities.py",
+    "src/adapters/ppt/learning/ppt_write_learning.py",
+    "src/adapters/ppt/runtime/ppt_write_runtime.ts",
+    "src/adapters/ppt/runtime/ppt_write_tool.ts",
+    "src/adapters/ppt/authoring/ppt_authoring.ts",
+    "src/adapters/ppt/delivery/ppt_output_packaging.ts",
+    "src/adapters/filesystem_paths.py",
+    "src/adapters/ppt/runtime/ppt_workflow_host.ts",
+    "src/adapters/ppt/delivery/ppt_delivery_pipeline.ts",
+    "src/adapters/ppt/authoring/ppt_input_policy.ts",
+    "src/adapters/ppt/sources/ppt_preview_runner.py",
+    "src/adapters/ppt/runtime/ppt_component_tool.ts",
+    "src/adapters/ppt/authoring/ppt_component_schema.ts",
+    "src/adapters/ppt/authoring/ppt_component_render.py",
+    "src/adapters/ppt/authoring/ppt_design.ts",
+    "src/adapters/ppt/authoring/ppt_page_renderer.py",
+    "src/adapters/ppt/authoring/ppt_native_edit.py",
+    "src/adapters/ppt/delivery/ppt_asset_budget.ts",
+    "src/adapters/ppt/delivery/ppt_task_completion.ts",
+    "src/adapters/ppt/runtime/ppt_program_broker.ts",
+    "src/adapters/artifact_motif_transport.ts",
+    "src/adapters/ppt/runtime/ppt_program_learning.ts",
+    "scenarios/ppt_master/workflow-contracts.json",
+    "package-lock.json",
+    "src/adapters/ppt/learning/ppt_workflow_certification.py",
+    "scripts/certify-ppt-workflow.mjs",
+    "src/adapters/ppt/authoring/ppt_deck_engine.ts",
+    "src/adapters/ppt/authoring/ppt_deck_contract.ts",
+    "src/adapters/ppt/authoring/ppt_deck_tool.ts",
+    "scenarios/ppt_master/third_party/dsh-ppt/PROVENANCE.json",
+    "scenarios/ppt_master/third_party/dsh-ppt/package-lock.json",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-advanced.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-core.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-data-math.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-data-view.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-data.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-delivery.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-media.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-render.mjs",
+    "scenarios/ppt_master/third_party/dsh-ppt/deck-visual.mjs"
+  ],
+  "tools": {
+    "edit_ppt_native": {
+      "read_only": false,
+      "resource_argument": "source",
+      "observed_completion": {
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "collection": [
+          "review_pages"
+        ]
+      },
+      "optional_host_tool": true
+    },
+    "finalize_ppt": {
+      "read_only": false,
+      "resource_argument": "project",
+      "observed_completion": {
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "allowed_finding_severities": [
+          "review"
+        ],
+        "collection": [
+          "review_pages"
+        ]
+      }
+    },
+    "read_image": {
+      "read_only": true,
+      "image_output_required": true
+    },
+    "create_ppt_page": {
+      "read_only": false,
+      "page_write": {
+        "resource_argument": "project",
+        "identity_argument": "page",
+        "revision_argument": "expected_page_sha256",
+        "version_output": [
+          "installed_page_sha256"
+        ],
+        "required_payload_arguments": [
+          "id",
+          "notes"
+        ],
+        "payload_choice_arguments": [
+          "parameters",
+          "parameters_file"
+        ]
+      }
+    },
+    "compose_ppt_page": {
+      "read_only": false,
+      "page_write": {
+        "resource_argument": "project",
+        "identity_argument": "page",
+        "revision_argument": "expected_page_sha256",
+        "version_output": [
+          "sha256"
+        ]
+      }
+    },
+    "build_ppt": {
+      "read_only": false,
+      "optional_host_tool": true,
+      "observed_completion": {
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "collection": [
+          "review_pages"
+        ]
+      },
+      "engineering_builtin": true,
+      "revision_type": "integer"
+    },
+    "patch_ppt": {
+      "read_only": false,
+      "resource_argument": "project",
+      "optional_host_tool": true,
+      "observed_completion": {
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "collection": [
+          "review_pages"
+        ]
+      },
+      "engineering_builtin": true,
+      "revision_type": "integer"
+    }
+  }
+}

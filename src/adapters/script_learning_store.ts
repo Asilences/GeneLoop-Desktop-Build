@@ -2,7 +2,7 @@
 import {readFileSync,realpathSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 
 export function resolveScriptLearningSettings(settings:any,user:string){
  if(!settings.learningStore)return {settings,snapshot:null};

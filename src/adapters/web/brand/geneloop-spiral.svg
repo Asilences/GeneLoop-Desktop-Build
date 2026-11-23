@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="321 324 612 612">
+  <defs>
+    <linearGradient id="ribbon" x1="0" y1="342" x2="0" y2="918" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#752e22"/>
+      <stop offset=".52" stop-color="#843526"/>
+      <stop offset=".52" stop-color="#c47a33"/>
+      <stop offset=".757" stop-color="#ba7330"/>
+      <stop offset=".757" stop-color="#7c3022"/>
+      <stop offset="1" stop-color="#742d21"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#ribbon)" d="M650 342
+    C708 366 774 398 775 435
+    C776 471 706 508 635 529
+    C579 545 519 554 494 567
+    C517 578 576 582 624 596
+    C689 614 775 652 775 695
+    C775 731 706 769 634 788
+    C577 803 514 811 494 825
+    C512 838 571 847 629 858
+    Q636 859 634 866 L620 913 Q618 920 611 918
+    C558 900 478 869 478 826
+    C478 791 549 754 613 732
+    C674 711 742 708 760 696
+    C741 684 680 681 621 665
+    C550 647 478 609 478 568
+    C478 533 547 496 614 474
+    C675 454 744 449 760 436
+    C747 425 685 417 631 404
+    Q624 403 626 396 L640 348 Q642 340 650 342Z"/>
+</svg>

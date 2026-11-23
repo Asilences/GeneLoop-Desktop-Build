@@ -2,10 +2,10 @@
 import copy,json,os,subprocess,sys
 from pathlib import Path
 import pytest
-from src.adapters.capability_scene import load_scene_adapter
-from src.adapters.capability_improvement import run_improvement
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_feedback import file_ref
+from src.adapters.harness.capability.capability_scene import load_scene_adapter
+from src.rsi.learning.capability_improvement import run_improvement
+from src.capability.builder.capability_builder import compile_proposal
+from src.rsi.feedback.capability_feedback import file_ref
 from tests.test_capability_improvement import put
 
 ROOT=Path(__file__).resolve().parents[1]

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTaskProgress, taskToolLabel, taskDocumentSubject } from '../src/adapters/harless_task_progress.ts';
+import { createTaskProgress, taskToolLabel, taskDocumentSubject } from '../src/adapters/web/tasks/harless_task_progress.ts';
 
 test('attachment preparation has immediate truthful progress without pretending the model started', () => {
   const p=createTaskProgress();

@@ -17,10 +17,10 @@ from pdf_catalog_tools import CatalogScene,HERE
 from catalog_entry import entry_task,private_policy
 sys.path.insert(0,str(ROOT))
 from src.adapters.scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.deepseek_cost_gate import State,create_server
 from src.adapters.native_budget import NativeBudgetGuard
-from src.motif_core.offline.entry_compiler import navigation_projection
+from src.motif_core.offline.compilation.entry_compiler import navigation_projection
 
 
 async def mcp_smoke(out,task,previous):

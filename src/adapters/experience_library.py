@@ -13,15 +13,25 @@ from pathlib import Path
 from functools import lru_cache
 from uuid import uuid4
 
-from src.motif_core.offline.experience_registry import (
-    ExperienceRegistry, check_motif_certificate, digest, durable, read, sha,
+from src.motif_core.reuse.experience_registry import (
+    ExperienceRegistry, digest, durable, read, sha,
 )
+from src.adapters.file_management.experience_certification import check_motif_certificate
 
 FORMAT = 'sss-managed-experience-v1'
 QUALITY = 'sss-management-quality-v7'
 CERTIFICATION = 'sss-operation-certification-v2'
 TARGET_CONTRACT = 'sss-runtime-and-catalog-compatibility-v2'
 MAX_AUTOMATIC_JOBS = 2
+
+
+def migration_budget_admits(cfg,budget):
+    """Null is unlimited; an unknown reservation cannot fit a finite cap."""
+    task=cfg['limits']['budget_usd']
+    def fits(cap,spent,pending):
+        return cap is None or task is not None and pending is not None and spent+pending+task<=cap
+    return fits(cfg['learning_cap_usd'],budget['learning_spent_usd'],budget['learning_reserved_usd']) and fits(
+        cfg['series_cap_usd'],budget['series']['estimated_usd'],budget['pending_usd'])
 
 
 def enabled(cfg):
@@ -68,7 +78,7 @@ def _current_contracts(version):
     sys.path.insert(0, str(ROOT/'scenarios/file-management'))
     from management_tools import ManagementScene, TOOLS, operator_contract
     from mcp.server import MCPServer
-    from src.motif_core.offline.operation_graph import catalog
+    from src.motif_core.offline.compilation.operation_graph import catalog
     server = MCPServer('file_management'); schema_only = ManagementScene.__new__(ManagementScene)
     for name in TOOLS:
         server.tool(name=name, meta={'sss_learning': operator_contract(name)})(getattr(schema_only, name))
@@ -89,6 +99,11 @@ def graph_compatibility(policy, tools):
 
 def policy_current(policy, runtime):
     tools = current_contracts(runtime); artifact = policy.get('artifact', {})
+    if policy.get('format')=='sss-file-source-program-v1':
+        from .file_script_tools import checked_script_policy
+        try:checked_script_policy(policy)
+        except (ValueError,KeyError,TypeError):return False
+        return policy.get('execution_version_sha256')==current_execution_version() and artifact.get('tool_contracts')==tools
     if policy.get('format')=='sss-operation-flow-v3':
         return (policy.get('execution_version_sha256')==current_execution_version() and not graph_compatibility(policy,tools)
                 and all(artifact['tool_contracts'][n['tool']]==tools[n['tool']] for n in artifact['nodes'])
@@ -107,7 +122,7 @@ def policy_current(policy, runtime):
 
 def material_graph_observed(f, nodes):
     """A verified inherited route can select material, never certify a native DAG."""
-    from src.motif_core.offline.operation_graph import valid_output, at, bindable
+    from src.motif_core.offline.compilation.operation_graph import valid_output, at, bindable
     verified = {r['call_id'] for r in f['audit'] if r['kind'] == 'operation_model_request_bypassed_verified'}
     tools = f['tools']; scope = f['scope']
     for start, root in enumerate(f['rows']):
@@ -142,6 +157,7 @@ def material_graph_observed(f, nodes):
 
 
 def shape(kind, value):
+    if kind=='file_script':return digest({'kind':kind,'source':value.get('artifact',{}).get('source'),'parameters_schema':value.get('artifact',{}).get('parameters_schema')})
     nodes = value.get('artifact', {}).get('nodes')
     if value.get('artifact',{}).get('kind')=='learned_mcp_control_flow':return digest({'kind':kind,'nodes':nodes,'edges':value['artifact']['edges']})
     if kind=='management_program':return digest({'kind':kind,'recipe':value.get('artifact',{}).get('recipe')})
@@ -324,7 +340,7 @@ def synchronize(cfg, project=None):
                 keys=translated[item['artifact_digest']]
                 state,reason=('covered','all translated goal/rule variants have current independent certificates') if keys<=active_translations else ('recertification_required','registered native adapter; current independent goal/rule proof required')
                 item['adapter_keys']=sorted(keys)
-            elif item['kind'] not in ('operation_graph','management_program'):
+            elif item['kind'] not in ('operation_graph','management_program','file_script'):
                 state, reason = 'adapter_required', 'historical IR managed; no native management execution adapter'
             elif item['kind']=='operation_graph' and graph_compatibility(read(base/item['payload']), tools):
                 state, reason = 'adapter_required', graph_compatibility(read(base/item['payload']), tools)
@@ -492,7 +508,7 @@ def prior_rejection(root, item, runtime):
             # Legacy rejections bind their actual frozen native catalog too.
             native_file = job/'native-cert-record.json'
             if native_file.exists():
-                from src.motif_core.offline.operation_graph import catalog
+                from src.motif_core.offline.compilation.operation_graph import catalog
                 record = read(native_file); schema = Path(record['origin'])/'tool-schemas.json'
                 if sha(schema) == record['schemas_sha256'] and catalog(read(schema)) == current_contracts(runtime):return str(job)
             elif candidate.get('tool_contracts') and all(t == current_contracts(runtime).get(n) for n, t in candidate['tool_contracts'].items()):
@@ -508,6 +524,7 @@ def maintain(cfg, root, all_records):
     from .management_recertification import recertify
     from .management_backup import budget_snapshot
     root = Path(root); runtime = sources(); version = target_version(runtime)
+    maximum=None if cfg['limits']['budget_usd'] is None else MAX_AUTOMATIC_JOBS
     catalog = synchronize(cfg); registry = ExperienceRegistry(root/'registry'); active = registry.load()
     stale = {e['entry_id'] for e in active['entries'] if e['state'] == 'active'
              and (e.get('runtime_source') != runtime or not policy_current(read(root/'registry'/e['payload']), runtime))}
@@ -538,7 +555,7 @@ def maintain(cfg, root, all_records):
         if (request['target'] != version or request['source'] != source_map()
                 or request['config_sha256'] != cfg['config_sha256']):
             deferred.append({'key': request['key'], 'job': str(job), 'state': 'source_version_blocked'});continue
-        if len(attempted) >= MAX_AUTOMATIC_JOBS:
+        if maximum is not None and len(attempted) >= maximum:
             deferred.append({'key': request['key'], 'job': str(job), 'state': 'queued'});continue
         # Its pending admission retains the original reservation. The child runner
         # performs the existing per-stage budget checks without a cold restart.
@@ -556,7 +573,8 @@ def maintain(cfg, root, all_records):
                and shape(e['kind'], read(root/'registry'/e['payload'])) == item['shape'] for e in state['entries']):continue
         cert = eligible_certificate(root, item, runtime)
         if cert and not any(e['entry_id'] == item['artifact_digest'] for e in state['entries']):
-            base = root/'experience'; entry = registry.entry('operation_graph', base/item['payload'], runtime, base/cert['file'])
+            base = root/'experience'; entry = registry.entry('operation_graph', base/item['payload'], runtime, base/cert['file'],
+                                   verify_certificate=check_motif_certificate)
             registry.publish([entry], expected=state['generation'], reason='managed migration of original current independent certificate')
             imported.append(item['key']);continue
         # A new clean ordinary witness is a new retry opportunity, never a new budget.
@@ -572,7 +590,7 @@ def maintain(cfg, root, all_records):
                 if f['spec'].get('quality', {}).get('goal', {}).get('state') != 'frozen':continue
                 old=read(root/'experience'/item['payload'])
                 if old.get('format')=='sss-operation-flow-v3':
-                    from src.motif_core.offline.control_flow import episodes
+                    from src.motif_core.offline.compilation.control_flow import episodes
                     if not any(ep['root']==old['artifact']['root'] for ep in episodes(f)):continue
                 elif not material_graph_observed(f,old['artifact']['nodes']):continue
                 seed_job = root/'experience/jobs'/digest({'shape': item['shape'], 'target': version, 'seed': record['task_fingerprint']})
@@ -589,11 +607,10 @@ def maintain(cfg, root, all_records):
         key = digest({'shape': item['shape'], 'target': version, 'seed': seed['seed']})
         job = root/'experience/jobs'/key
         if (job/'activation.json').exists() or (job/'failure.json').exists():continue
-        if len(attempted) >= MAX_AUTOMATIC_JOBS:
+        if maximum is not None and len(attempted) >= maximum:
             deferred.append({'key': item['key'], 'state': 'queued', 'job': str(job)});continue
         budget = budget_snapshot(ROOT)
-        if (budget['learning_spent_usd']+budget['learning_reserved_usd']+cfg['limits']['budget_usd'] > cfg['learning_cap_usd']
-                or budget['series']['estimated_usd']+budget['pending_usd']+cfg['limits']['budget_usd'] > cfg['series_cap_usd']):
+        if not migration_budget_admits(cfg,budget):
             deferred.append({'key': item['key'], 'state': 'budget_blocked'});continue
         job.mkdir(parents=True, exist_ok=True, mode=0o700)
         template = material_template(seed, job)
@@ -610,7 +627,7 @@ def maintain(cfg, root, all_records):
         elif read(job/'request.json') != request:raise ValueError('frozen automatic migration request changed')
         run_request(request, job)
     from .management_legacy import maintain as maintain_legacy
-    legacy=maintain_legacy(cfg,MAX_AUTOMATIC_JOBS-len(attempted))
+    legacy=maintain_legacy(cfg,None if maximum is None else maximum-len(attempted))
     result = {'format': FORMAT, 'imported': imported, 'attempted': attempted, 'deferred': deferred,'legacy':legacy,
               'original_budgets_retained': True, 'target': version}
     durable(root/'experience/maintenance.json', result)

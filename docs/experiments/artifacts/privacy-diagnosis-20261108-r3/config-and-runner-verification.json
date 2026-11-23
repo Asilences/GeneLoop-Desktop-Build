@@ -1,0 +1,26 @@
+{
+  "protocol-r3.json": {
+    "executed_bytes_sha256": "f8c1e3d6b77b7c8b5d352bab5259074def701d017db9be4f9a9a344b52fbb6c6",
+    "json_semantic_sha256": "db112538ac4aaaadc2ba0b71452b7ffc074b5ce11eadf52f85be30d8cb621fa0"
+  },
+  "credential-budget-r3.json": {
+    "executed_bytes_sha256": "1eae298f4ae07187f624d417a91b1c90ae44e4c698f8e54e59379811a1cfa2dd",
+    "json_semantic_sha256": "8a30f5ad0b858558c4ac982696d9f89cb66c86b32a5e6e239f1ae8c0084b8882"
+  },
+  "model-comparison-r3.json": {
+    "executed_bytes_sha256": "6c480fdcadfdca4522083cfa4c9b0f3a3eb0b11b8efcc85e877c859d6f8c9337",
+    "json_semantic_sha256": "1d7f1c75ced312d127609401a76895af9a64cec7667d66a737dfbddd9091581e"
+  },
+  "runner_revision_audit": {
+    "gliner_detection_and_main_loop_ast_unchanged": true,
+    "unchanged_functions": [
+      "digest",
+      "verify_sources",
+      "load_gliner",
+      "main"
+    ],
+    "changed_function": "load_openmed: official simple aggregation argument; JSON serialization of upstream empty sets",
+    "original_runner_sha256": "13476d3100174458682bf447c50160cd6807fcae13134961bcab1f0f4757c805",
+    "fixed_runner_sha256": "a3ee1bce7596d38086f312c280f655de3cd5776ff99373c18d5925556f3af692"
+  }
+}

@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_contract import capability_ref
-from src.adapters.capability_evolution import (
+from src.capability.graph.capability_contract import capability_ref
+from src.rsi.evolution.capability_evolution import (
     evolve_abstraction, propose_evolution_boundary, record_measured_effect, record_relation, value_context,
 )
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref
 from tests.test_capability_feedback import fixture
 from tests.test_efficiency_rsi_measurement import example, refresh
 
@@ -78,7 +78,7 @@ def test_relation_requires_original_compile_or_runtime_witness(tmp_path):
             'subject': a, 'beneficiary': b, 'scope': 'study', 'status': 'passed', 'sources': [source]})
         with pytest.raises(ValueError, match=message):
             record_relation(manager, relation=relation, subject=a, beneficiary=b, scope='study', evidence=witness)
-    from src.adapters.capability_builder import compile_proposal
+    from src.capability.builder.capability_builder import compile_proposal
     candidate = compile_proposal(proposal, library['snapshot'], 'owner')
     compiled = put(tmp_path / 'compiled.json', candidate)
     beneficiary = capability_ref(candidate['capability'])

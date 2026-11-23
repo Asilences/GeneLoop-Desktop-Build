@@ -13,9 +13,9 @@ import {ToolRuntime} from '@deepseek-ai/dsh-tools';
 import {LlmRuntime,createUserMessage,isAgentLoopRequest} from '@deepseek-ai/dsh-llm';
 import {TokenMeter} from '@deepseek-ai/dsh-token-meter';
 import {resolveAdapterOptions} from '@deepseek-ai/dsh-llm-deepseek';
-import {WebDeepSeekAdapter} from '../src/adapters/harless_reasoning.ts';
+import {WebDeepSeekAdapter} from '../src/adapters/web/tasks/harless_reasoning.ts';
 import {GeneLoopContextEngine,createContextAdmission,assertContextUserEnvelope,CONTEXT_INSTRUCTION} from '../src/adapters/geneloop_context.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 const frame=(text,finish_reason=null)=>'data: '+JSON.stringify({id:'context-local',object:'chat.completion.chunk',created:1,
  model:'deepseek-flash',choices:[{index:0,delta:{content:text},finish_reason}]})+'\n\n';
 

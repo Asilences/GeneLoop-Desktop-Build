@@ -14,7 +14,7 @@ from urllib.request import Request,build_opener,HTTPRedirectHandler
 from urllib.error import HTTPError,URLError
 from datetime import datetime,timezone
 from pathlib import Path
-from .native_motif_compiler import digest,root_events
+from src.motif_core.offline.compilation.trace.native_motif_compiler import digest,root_events
 from .crossref_metadata import literal_field,scalar_fields
 
 

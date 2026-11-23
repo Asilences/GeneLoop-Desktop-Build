@@ -3,9 +3,9 @@
  */
 import {AsyncLocalStorage} from 'node:async_hooks';
 import {isAgentLoopRequest} from '@deepseek-ai/dsh-llm';
-import {WebDeepSeekAdapter} from './harless_reasoning.ts';
+import {WebDeepSeekAdapter} from './web/tasks/harless_reasoning.ts';
 import {assertContextUserEnvelope} from './geneloop_context.ts';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 const executionOwners=new WeakMap<object,{root:any;assert:()=>void}>();
 
 /** Host tools resolve workspace from trusted live delegation, never lineage text. */

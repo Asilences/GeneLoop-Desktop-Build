@@ -11,9 +11,9 @@ from common import save,PREFIX,DATA,digest
 from operation_prepare import prepare_case
 from src.adapters.continuous_rsi import records,initialize,load_config,actual_schemas,source_map
 from src.adapters.mcp_learning import adapter
-from src.motif_core.offline.operation_graph import catalog
-from src.motif_core.offline.experience_registry import ExperienceRegistry,sha
-from src.adapters.file_scenario import prepare_scenario
+from src.motif_core.offline.compilation.operation_graph import catalog
+from src.motif_core.reuse.experience_registry import ExperienceRegistry,sha
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
 
 class Provider(BaseHTTPRequestHandler):
  def log_message(self,*args):pass

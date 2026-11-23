@@ -45,8 +45,8 @@ def main():
     write(bundle/'task.json',{'schema_version':1,'task_id':'ppt-runtime-admission','session_id':'ppt-runtime-admission',
         'intent':'Read only sources approved for the current PPT task.','input_version':'0'*64,'bindings':{},
         'source_versions':{name:'0'*64 for name in data['version_fields']}})
-    code=['src/adapters/dsh_online_motif.mjs','src/motif_core/online_skill_runtime.mjs',
-          'src/adapters/harless_rsi_binding.ts','src/adapters/harless_rsi_bundle.py']
+    code=['src/adapters/harness/motif/dsh_online_motif.mjs','src/motif_core/runtime/online_skill_runtime.mjs',
+          'src/adapters/web/learning/harless_rsi_binding.ts','src/adapters/web/learning/harless_rsi_bundle.py']
     for p in (ROOT/'scenarios/research_ppt').rglob('*'):
         if p.is_file() and not {'node_modules','tests','__pycache__'} & set(p.parts) and p.suffix in ('.py','.ts','.js'):
             code.append(str(p.relative_to(ROOT)))

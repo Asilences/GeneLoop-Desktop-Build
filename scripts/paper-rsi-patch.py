@@ -12,8 +12,8 @@ import sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.file_lock import exclusive_lock
 from src.adapters.revision_tool_evidence import build_revision_packets
-from src.adapters.report_patch_evidence import patch_cases
-from src.adapters.trace_tool_evidence import digest
+from scenarios.paper_proofreading.learning.report_patch_evidence import patch_cases
+from src.motif_core.trajectory.trace_tool_evidence import digest
 
 def module(name,file):
     spec=importlib.util.spec_from_file_location(name,ROOT/file);mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod);return mod
@@ -21,8 +21,8 @@ legacy=module('patch_learning_base','scripts/paper-rsi-tool-learning.py')
 trace=module('patch_schema_base','scripts/paper-rsi-trace.py')
 EXP=ROOT/'.local/paper-reference/paper-rsi-patch-20261012-v1'
 SOURCES=[f'.local/paper-reference/paper-rsi-batch-shadow-20261011-v2/runs/{label}' for label in ['baseline-main','baseline-abstract']]
-FILES=['scripts/paper-rsi-patch.py','src/adapters/report_patch_evidence.py','src/adapters/report_patch_protocol.ts',
-       'src/adapters/dsh_patch_rsi_generation.ts','scenarios/paper-submission/patch-rsi-task-server.ts',
+FILES=['scripts/paper-rsi-patch.py','scenarios/paper_proofreading/learning/report_patch_evidence.py','src/adapters/report_patch_protocol.ts',
+       'src/adapters/harness/paper/dsh_patch_rsi_generation.ts','scenarios/paper-submission/patch-rsi-task-server.ts',
        'scenarios/paper-submission/patch-learning-server.ts','scripts/paper-rsi-tool-learning.py',
        'src/adapters/trace_rsi_program.ts','src/adapters/paper_rsi_program.ts']
 save,load=trace.save_once,trace.load
@@ -71,7 +71,7 @@ def learn(label,repair_from=None):
             prompt+='\n上一轮输出无法被标准JSON解析器读取，请自行修复括号/逗号等语法并重新输出完整裸JSON程序。\n解析器错误：'+str(error)+'\n上一轮原始输出：'+previous.read_text()
         else:raise ValueError('only_syntax_repair_supported_here')
     config_path=EXP/'runs'/label/'config.json'
-    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_patch_learning\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/patch-learning-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_PATCH_RSI_GENERATION: '+json.dumps(str(config_path))+'\n    - name: '+json.dumps((ROOT/'src/adapters/dsh_patch_rsi_generation.ts').as_uri())+'\n'
+    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-mcp-client"\n      config:\n        serverName: paper_patch_learning\n        transport: stdio\n        failOnStartupError: true\n        command: '+json.dumps(shutil.which('node'))+'\n        args: '+json.dumps(['--experimental-strip-types',str(ROOT/'scenarios/paper-submission/patch-learning-server.ts')])+'\n        cwd: '+json.dumps(str(ROOT))+'\n        env:\n          SSS_PATCH_RSI_GENERATION: '+json.dumps(str(config_path))+'\n    - name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_patch_rsi_generation.ts').as_uri())+'\n'
     learning_files={str(ROOT/p):legacy.sha(ROOT/p) for p in FILES}
     learning_files.update({str(EXP/name):legacy.sha(EXP/name) for name in ['contract.json','development.json']})
     return legacy.paid(label,prompt,policy,{'mode':'patch_program_generation','source_packets_sha256':digest(data),

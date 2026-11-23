@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from adapters.paper_renderer import prepare_renderer, publish_generated_renderer, render_renderer
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scenarios.paper_proofreading.document_tools.paper_renderer import prepare_renderer, publish_generated_renderer, render_renderer
 
 
 def main():

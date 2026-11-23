@@ -2,8 +2,8 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {readFileSync,readdirSync,lstatSync,realpathSync,existsSync} from 'node:fs';
 import {join,relative,resolve,isAbsolute,extname} from 'node:path';
-import {digest,syntheticToolStreamBatch} from '../motif_core/online_skill_runtime.mjs';
-import {loopbackSimilarity} from './dsh_online_motif.mjs';
+import {digest,syntheticToolStreamBatch} from '../motif_core/runtime/online_skill_runtime.mjs';
+import {loopbackSimilarity} from './harness/motif/dsh_online_motif.mjs';
 import {fileURLToPath} from 'node:url';
 import {inflateSync} from 'node:zlib';
 import {createScriptExecutionFrontier} from './script_execution_frontier.ts';
@@ -231,7 +231,7 @@ export function loadScriptLibrary(path:string){
   }
   return library;
 }
-export const scriptCodeLocks=['src/adapters/script_learning_store.ts','src/adapters/reuse_snapshot.py','scripts/learn-script-motifs.py','src/adapters/script_motif_compiler.py','src/adapters/script_dataflow_compiler.py','src/adapters/reuse_mediation.ts','src/adapters/script_motif_runtime.ts','src/adapters/script_execution_frontier.ts','src/adapters/script_negative_runtime.ts','src/adapters/negative_field_runtime.ts','src/adapters/geneloop_shell.ts','src/adapters/script_motif_shell.ts','src/adapters/script_motif_macos.ts','src/adapters/script_motif_web.ts','scripts/script-motif-web.py','scripts/certify-script-motifs.mjs','scripts/run-certified-script.mjs','scripts/fetch-script-evidence.py'];
+export const scriptCodeLocks=['src/adapters/script_learning_store.ts','src/adapters/reuse_snapshot.py','scripts/learn-script-motifs.py','src/motif_core/offline/compilation/script_motif_compiler.py','src/motif_core/offline/compilation/script_dataflow_compiler.py','src/adapters/reuse_mediation.ts','src/adapters/script_motif_runtime.ts','src/adapters/script_execution_frontier.ts','src/adapters/script_negative_runtime.ts','src/motif_core/runtime/policies/negative_field_runtime.ts','src/adapters/geneloop_shell.ts','src/adapters/script_motif_shell.ts','src/adapters/script_motif_macos.ts','src/adapters/script_motif_web.ts','scripts/script-motif-web.py','scripts/certify-script-motifs.mjs','scripts/run-certified-script.mjs','scripts/fetch-script-evidence.py'];
 export function createScriptInterceptor({library,workspace,session,goal,mode,endpoint,model,minSimilarity=.88,minMargin=.04,minGoalSimilarity=.6,negativeGoals=[],audit,similarity,demandBound=false,executionFrontier=false,compactContext=false}:any){
   if(!['cache','shadow','execute'].includes(mode))throw Error('invalid_script_mode');
   if(!Number.isFinite(minSimilarity)||minSimilarity<.5||minSimilarity>1||!Number.isFinite(minMargin)||minMargin<.01||minMargin>1)throw Error('invalid_script_threshold');

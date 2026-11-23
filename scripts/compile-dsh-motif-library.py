@@ -20,18 +20,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.adapters.dsh_trajectory import (  # noqa: E402
+from src.adapters.harness.dsh_trajectory import (  # noqa: E402
     ToolContract, extract_dsh_trace, infer_dsh_provenance,
 )
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions  # noqa: E402
-from src.adapters.tool_contract_loader import parse_tool_contracts  # noqa: E402
+from src.motif_core.offline.compilation.tool_contracts import bind_mcp_descriptions, parse_tool_contracts  # noqa: E402
 from src.adapters.task_identity import (  # noqa: E402
     load_trace_identity, require_distinct_decisions,
 )
-from src.motif_core.offline.library_builder import (  # noqa: E402
+from src.motif_core.offline.compilation.library_builder import (  # noqa: E402
     _digest as library_digest, build_read_motif_library,
 )
-from src.motif_core.offline.dynamic_code_nodes import (  # noqa: E402
+from src.motif_core.offline.compilation.dynamic_code_nodes import (  # noqa: E402
     certify_dynamic_code_node,
 )
 

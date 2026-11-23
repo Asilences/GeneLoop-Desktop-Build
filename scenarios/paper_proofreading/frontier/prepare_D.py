@@ -2,12 +2,12 @@
 import argparse,copy,json,re,shutil,subprocess
 from decimal import Decimal,InvalidOperation
 from pathlib import Path
-from src.adapters.capability_scene import ROOT,reference
-from src.adapters.capability_improvement import evidence,read,save
-from src.adapters.capability_contract import create_capability_snapshot,capability_digest
-from src.adapters.capability_materials import CapabilityMaterials
-from src.adapters.efficiency_rsi_measurement import validate_study
-from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
+from src.adapters.harness.capability.capability_scene import ROOT,reference
+from src.rsi.learning.capability_improvement import evidence,read,save
+from src.capability.graph.capability_contract import create_capability_snapshot,capability_digest
+from src.capability.runtime.capability_materials import CapabilityMaterials
+from src.rsi.feedback.efficiency_rsi_measurement import validate_study
+from src.rsi.feedback.efficiency_rsi_registry import StudyRequestRegistry
 from scenarios.paper_proofreading.frontier.execute import execute
 from scenarios.paper_proofreading.frontier.oracle import evaluate,compare
 from scenarios.paper_proofreading.frontier.freeze import protocol_reference
@@ -187,7 +187,7 @@ def main():
         from scenarios.paper_proofreading.frontier.study_profiles import creation_value_profile
         profile=creation_value_profile(hierarchical,c_ref,base_refs,relation,c_description,replicates=replicates)
         snapshots=profile['snapshots'];reference_interfaces=profile['reference_interfaces'];profile_order=profile['order']
-        from src.adapters.capability_source_authoring import source_callable_interfaces
+        from src.capability.builder.capability_source_authoring import source_callable_interfaces
         source_interfaces={entry['capability']['id']:entry for entry in source_callable_interfaces(hierarchical)}
         for cards in reference_interfaces.values():
             for card in cards:
@@ -195,10 +195,10 @@ def main():
                 card['source_contract']={'input_schema':interface['input_schema'],'output_schema':interface['output_schema'],
                     'effects':copy.deepcopy(card['contract']['effects'])}
     source_files=['adapter.py','author.py','budget.py','learn.py','program_training.py','study_profiles.py','check.py','publish.mjs','oracle.py','execute.py','run.py','prepare_D.py','finalize_D.py','feedback.py','freeze.py']
-    common_files=['src/adapters/capability_scene.py','src/adapters/capability_improvement.py','src/adapters/capability_authoring.py','src/adapters/capability_composition_source.py','src/adapters/capability_source_authoring.py','src/adapters/script_capability_runtime.ts',
-        'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/adapters/efficiency_rsi_registry.py',
-        'src/adapters/efficiency_rsi_measurement.py','config/script-runtime-compatibility.json',
-        'src/adapters/script_motif_compiler.py','src/adapters/capability_program_encoding.py','src/adapters/capability_shape_diagnostics.py']
+    common_files=['src/adapters/harness/capability/capability_scene.py','src/rsi/learning/capability_improvement.py','src/capability/builder/capability_authoring.py','src/capability/builder/capability_composition_source.py','src/capability/builder/capability_source_authoring.py','src/adapters/script_capability_runtime.ts',
+        'src/adapters/script_motif_runtime.ts','scripts/certify-script-motifs.mjs','src/rsi/feedback/efficiency_rsi_registry.py',
+        'src/rsi/feedback/efficiency_rsi_measurement.py','config/script-runtime-compatibility.json',
+        'src/motif_core/offline/compilation/script_motif_compiler.py','src/capability/builder/capability_program_encoding.py','src/capability/builder/capability_shape_diagnostics.py']
     native_files=json.loads(subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',
         "import {scriptCapabilityFiles} from './src/adapters/script_capability_runtime.ts';process.stdout.write(JSON.stringify(scriptCapabilityFiles));"],
         cwd=ROOT,capture_output=True,text=True,check=True).stdout)

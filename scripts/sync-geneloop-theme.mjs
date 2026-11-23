@@ -2,8 +2,8 @@
 // Embed the canonical CSS at development time so no runtime/task code changes
 // or extra asset requests are needed. --check is used by the regression suite.
 import {readFileSync,writeFileSync} from 'node:fs';
-const source=new URL('../src/adapters/geneloop_theme.css',import.meta.url);
-const target=new URL('../src/adapters/geneloop_brand.js',import.meta.url);
+const source=new URL('../src/adapters/web/geneloop_theme.css',import.meta.url);
+const target=new URL('../src/adapters/web/geneloop_brand.js',import.meta.url);
 const start='  // BEGIN GENERATED GENELOOP THEME',end='  // END GENERATED GENELOOP THEME';
 const css=readFileSync(source,'utf8').replaceAll('\r\n','\n');
 const embedded=[start,'  const visualTheme = document.createElement(\'style\');',

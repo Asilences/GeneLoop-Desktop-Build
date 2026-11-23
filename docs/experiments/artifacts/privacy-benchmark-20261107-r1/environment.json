@@ -1,0 +1,45 @@
+{
+  "created_utc": "2026-11-07T09:26:22Z",
+  "rule_commit": "68a4e4d7d57808cefabb2d70bd9f291291caaff8",
+  "python": "3.12.15 (main, Oct  6 2026, 23:50:18) [GCC 15.3.0]",
+  "platform": "Linux-4.15.0-213-generic-x86_64-with-glibc2.27",
+  "glibc": [
+    "glibc",
+    "2.27"
+  ],
+  "packages": {
+    "presidio-analyzer": "2.2.365",
+    "presidio-anonymizer": "2.2.365",
+    "spacy": "3.8.7",
+    "en_core_web_sm": "3.8.0",
+    "zh_core_web_sm": "3.8.0",
+    "nervaluate": "1.2.1",
+    "duckdb": "1.1.3"
+  },
+  "rule_sha256": {
+    "src/adapters/rsi_text_privacy.py": "e1e02b246cebf216eddab87a2524bdedadd8dc9646a1e3d0ea03a88c859b7106",
+    "src/adapters/geneloop_privacy.py": "b31082de5944b767c87e00862f987324c4742e31522b3477175773a50e4cbbf6",
+    "src/adapters/geneloop_privacy.ts": "c304461ad56123123379c4646e52971657478f08247dc14f32f2b4904df1a2cd",
+    "src/adapters/geneloop_learning_trace.py": "774f212c96c2bc810638400b529f970bfb80aa3970efb6f72b10c7d8844513d1",
+    "requirements-rsi-privacy.txt": "833471b75d6938b8d62075c40cdade5a52ad76dad7a84759509eac339c7c9ae9"
+  },
+  "driver_sha256": {
+    "run_semantics.py": "5fdd09463d1030f8a832aabb318e58bd29dd875dabf7acdcf45378535a077ea8",
+    "run_pii.py": "57ad158a0b377253a19de38ae1e398301f449f28b6c0b98cb0cf960be040727e",
+    "test_credentials.py": "5bc7658e98061bcf3220a1f992289f16f6e40ad8c14d8a8bfc19d0190713a381",
+    "protocol-r1.json": "5d224453c8bd07e94ae91786df4edbaa9c2e48e162152f8fdaaf058697ad4f3c",
+    "test_adapters.py": "0096d7a9de183571af780c2458bc7fa0b321554034b72d2a4b380044540f0816",
+    "prepare_creddata.py": "69638c7e1e0ea66548a7f7c53665ac8333d993c3efb5430dc60371c53f44a569",
+    "credential-protocol-r1.json": "934cfd65387b3ca51e991b7b0d70ade68031fc64a8c03a0d8d1a12232c55b4f4",
+    "run_credentials.py": "58da05df0bc974d0b710a133ca1fddc89f6ef3f453d91ee3ac6aff49f189bb6a",
+    "check_entries.mjs": "4280b257d5b96e96f20f9e3a9031beb87a95a871d738585e33a1db3e9bf71abd",
+    "recover_creddata_files.py": "215c16b9d6d6f61bf84f527e8a5ee6e1ca17c4abd09a287d47c2dfed862cbe51",
+    "protocol-r1-evaluator2.json": "9c2a4b5936deac85f6349f1182f0b61a6e9f64f0a8a87eff995f4e1e87c0514a",
+    "semantic-cases-r1.json": "312ad74b6acd6f3389ad7037efdff4e4eda71dc76bc02f14e2b617c275e5dd44"
+  },
+  "gitleaks_sha256": "8b6fd684fcd5b4ebe39b68abb072ce59e1063ce7ed4abd556157697845f1f088",
+  "gitleaks_version": "8.30.0",
+  "production_service_touched": false,
+  "cloud_requests": 0,
+  "cloud_api_cost": 0
+}

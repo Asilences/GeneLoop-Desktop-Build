@@ -15,8 +15,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from src.adapters.dsh_trajectory import _observation_digest
-from src.adapters.dsh_event_projection import is_original_tool_result
+from src.adapters.harness.dsh_trajectory import _observation_digest
+from src.adapters.harness.dsh_event_projection import is_original_tool_result
 
 
 def digest(value):

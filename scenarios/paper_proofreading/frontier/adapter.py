@@ -2,15 +2,15 @@
 from __future__ import annotations
 import copy,hashlib,json,os,re,subprocess,sys
 from pathlib import Path
-from src.adapters.capability_scene import CapabilityImprovementAdapter,ROOT,reference,run_child
-from src.adapters.capability_improvement import evidence,read,save
-from src.adapters.capability_contract import capability_digest,create_capability_snapshot
-from src.adapters.capability_contract import capability_ref
-from src.adapters.capability_shape_diagnostics import composition_shape_advisories,diagnose_step_argument_shapes
-from src.adapters.capability_proposal import write
-from src.adapters import capability_proposal as pilot
-from src.adapters.capability_authoring import compact_proposal,diagnose
-from src.adapters.capability_program_encoding import encode_complete_script,encode_program_composition
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter,ROOT,reference,run_child
+from src.rsi.learning.capability_improvement import evidence,read,save
+from src.capability.graph.capability_contract import capability_digest,create_capability_snapshot
+from src.capability.graph.capability_contract import capability_ref
+from src.capability.builder.capability_shape_diagnostics import composition_shape_advisories,diagnose_step_argument_shapes
+from src.adapters.harness.capability.capability_proposal import write
+from src.adapters.harness.capability import capability_proposal as pilot
+from src.capability.builder.capability_authoring import compact_proposal,diagnose
+from src.capability.builder.capability_program_encoding import encode_complete_script,encode_program_composition
 from scenarios.paper_proofreading.frontier.author import propose
 from scenarios.paper_proofreading.frontier.learn import learn
 from scenarios.paper_proofreading.frontier.program_training import prepare_program_cases,TrainingEvidenceUnavailable

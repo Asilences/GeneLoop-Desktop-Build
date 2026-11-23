@@ -5,7 +5,7 @@ import re
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from src.adapters.research_requests import ResearchRequests
 from src.adapters.reuse_form_rsi import propose_form,resolve_form,split_model_form
-from src.motif_core.offline.experience_registry import durable,read,sha
+from src.motif_core.reuse.experience_registry import durable,read,sha
 
 SYSTEM='''Improve the representation used by an RSI learner/executor from measured evidence.
 Return exactly {"representation":"...","catalog_format":"...","tool_naming":"...","parameter_binding":"...","program_evidence":"...","library_scope":"...","agent_instruction":"...","compiler_instruction":"..."}.

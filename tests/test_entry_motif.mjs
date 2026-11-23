@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {markAgentLoopRequest} from '@deepseek-ai/dsh-llm';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {createEntryController,validateEntryPolicy,validateEntryTask} from '../src/motif_core/entry_read_policy.ts';
-import {createEntryGate} from '../src/adapters/dsh_entry_motif.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {createEntryController,validateEntryPolicy,validateEntryTask} from '../src/motif_core/runtime/policies/entry_read_policy.ts';
+import {apply,createEntryGate} from '../src/adapters/harness/motif/dsh_entry_motif.ts';
 const tool='mcp__test__read_packet',schema={type:'object',required:['id'],properties:{id:{type:'string'}}};
 function fixture(n=2){
  const artifact={kind:'task_entry_read_frontier',status:'trace_validated_read_only',schema_sha256:digest(schema),
@@ -18,6 +21,24 @@ function fixture(n=2){
   prompt_sha256:createHash('sha256').update('Review selected claims').digest('hex')};
  return {policy,task};
 }
+test('generic plugin ignores the File binding while durable registration checks it',()=>{
+ const root=mkdtempSync(join(tmpdir(),'sss-entry-plugin-')),previousDirectory=process.cwd();
+ const {policy,task}=fixture(),policyFile=join(root,'policy.json'),taskFile=join(root,'task.json');
+ writeFileSync(policyFile,JSON.stringify(policy));writeFileSync(taskFile,JSON.stringify(task));
+ const env={SSS_ENTRY_MOTIF_POLICY:policyFile,SSS_ENTRY_MOTIF_TASK:taskFile,SSS_DURABLE_PLAN_BINDING:join(root,'missing.json')};
+ const previous=Object.fromEntries(Object.keys(env).map(key=>[key,process.env[key]]));
+ try{
+  Object.assign(process.env,env);process.chdir(root);
+  const eventNames=[];const ctx={on(name){eventNames.push(name);}};
+  apply(ctx);
+  assert.deepEqual(eventNames,['agent/created','agent/disposed','llm/stream']);
+  assert.throws(()=>apply(ctx,{durablePlan:true}),{code:'ENOENT'});
+ }finally{
+  process.chdir(previousDirectory);
+  for(const [key,value] of Object.entries(previous))if(value===undefined)delete process.env[key];else process.env[key]=value;
+  rmSync(root,{recursive:true,force:true});
+ }
+});
 function result(target,task){return {value:{structuredContent:{id:target,input_sha256:task.input_version,document_version_sha256:task.target_versions[target]}}};}
 test('entry spans changing counts in batches of at most eight, verified only after actual results',()=>{
  const {policy,task}=fixture(9),log=[];const c=createEntryController(policy,task,r=>log.push(r));let counter=0;

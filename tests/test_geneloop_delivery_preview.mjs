@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {webcrypto,createHash} from 'node:crypto';
-const source=readFileSync(new URL('../src/adapters/harless_web_client/client.js',import.meta.url),'utf8');
+const source=readFileSync(new URL('../src/adapters/web/client/client.js',import.meta.url),'utf8');
 function helpers(fetcher){
  const context={Blob,DataView,TextDecoder,Uint8Array,DecompressionStream,AbortController,URL,
   window:{crypto:webcrypto},fetch:fetcher,artifactName:file=>file.name.split(/[\\/]/).pop(),

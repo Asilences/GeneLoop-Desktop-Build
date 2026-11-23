@@ -8,7 +8,7 @@ import { markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
 for (const outputCap of [1000, null]) test(`Web admission keeps guards with output cap ${outputCap}`,
   { skip: !process.features?.typescript }, async () => {
-    const { apply } = await import('../src/adapters/dsh_web_policy.ts');
+    const { apply } = await import('../src/adapters/web/dsh_web_policy.ts');
     const directory = mkdtempSync(join(tmpdir(), 'sss-web-policy-'));
     const previous = process.env.SSS_WEB_POLICY;
     const schemas = [{ name: 'mcp__demo__pin_note', description: 'pin',

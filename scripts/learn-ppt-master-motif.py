@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """从真实 GeneLoop Baseline 轨迹编译 ppt-master 只读衔接；不写图、不训练模型权重。"""
-from pathlib import Path
+from pathlib import Path as BootstrapPath
 import argparse
 import hashlib
 import importlib.util
@@ -9,13 +9,15 @@ import shutil
 import sys
 import time
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=BootstrapPath(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
+from src.adapters.filesystem_paths import Path
+ROOT=Path(ROOT).resolve()
 from scenarios.research_ppt.motif_v6 import learn,validate_compilation
 from scenarios.ppt_master.package import read_lock
 from src.adapters.rsi_learning_trace import import_trace, export_projected_identity
 from src.adapters.task_identity import load_trace_identity,require_distinct_decisions
-spec=importlib.util.spec_from_file_location('web_evidence',ROOT/'scripts/learn-web-paper-document-motif.py')
+spec=importlib.util.spec_from_file_location('web_evidence',str(ROOT/'scripts/learn-web-paper-document-motif.py'))
 accounting=importlib.util.module_from_spec(spec);spec.loader.exec_module(accounting)
 SCENE=ROOT/'scenarios/ppt_master'
 CHAIN=['mcp__ppt_master__pin_source', 'mcp__ppt_master__convert_source', 'mcp__ppt_master__read_converted_source']
@@ -34,38 +36,45 @@ def write(p,v):
 
 
 def code_paths():
-    files=[p for p in SCENE.iterdir() if p.is_file() and p.name!='README.md']
-    files += [ROOT/p for p in ('src/adapters/dsh_web_tasks.ts','src/adapters/harless_scenarios.py',
-        'src/adapters/harless_settings.ts','src/adapters/harless_task_scope.ts','src/adapters/harless_rsi_binding.ts','src/adapters/session_files.py','src/adapters/harless_rsi_bundle.py',
-        'src/adapters/dsh_online_motif.mjs','src/motif_core/online_skill_runtime.mjs','src/adapters/ppt_master_recovery.ts',
+    files=[p for p in SCENE.iterdir() if p.is_file() and p.name not in ('README.md','skill-lock.json')]
+    files += [ROOT/p for p in ('src/adapters/web/dsh_web_tasks.ts','src/adapters/web/scenes/harless_scenarios.py',
+        'src/adapters/web/account/harless_settings.ts','src/adapters/web/attachments/harless_task_scope.ts','src/adapters/web/learning/harless_rsi_binding.ts','src/adapters/session_files.py','src/adapters/web/learning/harless_rsi_bundle.py',
+        'src/adapters/harness/motif/dsh_online_motif.mjs','src/motif_core/runtime/online_skill_runtime.mjs','src/adapters/ppt/delivery/ppt_master_recovery.ts',
         'src/adapters/geneloop_skill_installation.mjs','src/adapters/geneloop_shell.ts',
         'src/adapters/geneloop_command_broker.ts','src/adapters/geneloop_capabilities.ts',
-        'scripts/harless_gateway.mjs','scripts/harless_member_scenes.mjs','scripts/install-ppt-master.py','scenarios/research_ppt/motif_v6.py',
+        'scripts/harless_gateway.mjs','scripts/harless_member_scenes.mjs','scenarios/research_ppt/motif_v6.py',
         'config/geneloop-capabilities.json','config/geneloop-capabilities.md',
-        'src/adapters/geneloop_pdf.py','src/adapters/geneloop_pdf_vision.ts','src/adapters/harless_attachment_text.py',
+        'src/adapters/geneloop_pdf.py','src/adapters/geneloop_pdf_vision.ts','src/adapters/web/attachments/harless_attachment_text.py',
         'src/adapters/geneloop_presentation.py','src/adapters/geneloop_presentation.ts','src/adapters/geneloop_presentation_render.py',
-        'src/adapters/deepseek_cost_gate.py','src/adapters/web_task_budget.py','scripts/web_budget_broker.mjs',
+        'src/adapters/deepseek_cost_gate.py','src/adapters/web/web_task_budget.py','scripts/web_budget_broker.mjs',
         'scripts/serve-web-budget.py','config/pdf-ocr-assets.json')]
-    files += [ROOT/p for p in ('src/adapters/harless_ppt_learning.ts','scripts/learn-web-ppt-tasks.py',
-        'src/adapters/ppt_delivery_quality.py','scenarios/ppt_master/quality-rubric.json',
-        'src/adapters/rsi_quality.py','src/adapters/rsi_quality.ts','src/adapters/rsi_protocol.py',
-        'src/adapters/rsi_protocol.ts','schemas/rsi-protocol-v1.schema.json')]
-    files += [ROOT/p for p in ('src/adapters/ppt_program_learning.py','src/adapters/ppt_program_learning.ts',
+    files += [ROOT/p for p in ('src/adapters/web/learning/harless_ppt_learning.ts', 'src/adapters/web/learning/private_source_locks.ts','scripts/learn-web-ppt-tasks.py',
+        'src/adapters/ppt/delivery/ppt_delivery_quality.py','scenarios/ppt_master/quality-rubric.json',
+        'src/rsi/feedback/rsi_quality.py','src/rsi/feedback/rsi_quality.ts','src/rsi/protocol/rsi_protocol.py',
+        'src/rsi/protocol/rsi_protocol.ts','schemas/rsi-protocol-v1.schema.json','src/adapters/filesystem_paths.py',
+        'src/adapters/file_lock.py','src/adapters/task_identity.py',
+        'scripts/compile-witnessed-read-chains.py','scripts/export-online-motif-manifest.py',
+        'scripts/learn-web-paper-document-motif.py')]
+    files += [ROOT/p for p in ('src/adapters/ppt/learning/ppt_program_learning.py','src/adapters/ppt/runtime/ppt_program_learning.ts',
         'src/adapters/artifact_motif_runtime.ts','src/adapters/artifact_motif_shell.ts',
         'src/adapters/artifact_motif_trace.ts','src/adapters/artifact_motif_compiler.py',
         'scripts/learn-artifact-motifs.py','scripts/certify-artifact-motifs.mjs','scripts/run-artifact-motif.mjs','scripts/harness-web.py',
-        'src/adapters/ppt_program_broker.ts','src/adapters/geneloop_command_client.mjs',
-        'src/adapters/ppt_learning_evidence.py','src/adapters/ppt_learning_evidence.ts')]
-    files += [ROOT/p for p in ('src/adapters/ppt_page_learning.py','src/adapters/ppt_component_learning.py',
-        'src/adapters/ppt_component_tool.ts','src/adapters/ppt_delivery_pipeline.ts','src/adapters/ppt_preparation_runner.py',
-        'src/adapters/ppt_delivery_runner.py','src/adapters/ppt_design_preflight.py','src/adapters/ppt_annotation_repair.py',
-        'src/adapters/ppt_component_literals.py','src/adapters/geneloop_native_work.ts')]
-    files += [ROOT/p for p in ('src/adapters/ppt_capability_learning.py','src/adapters/ppt_capability_online.ts',
-        'src/adapters/artifact_capability_runtime.ts','src/adapters/capability_materials.ts',
-        'src/adapters/capability_scene.py','src/adapters/capability_runtime.ts','src/adapters/capability_cycle.ts',
-        'src/adapters/capability_store.ts','src/adapters/capability_improvement.py')]
-    files += [ROOT/p for p in ('src/adapters/ppt_capability_budget.py','src/adapters/capability_proposal.py')]
+        'src/adapters/ppt/runtime/ppt_program_broker.ts','src/adapters/geneloop_command_client.mjs',
+        'src/adapters/ppt/learning/ppt_learning_evidence.py','src/adapters/ppt/learning/ppt_learning_evidence.ts')]
+    files += [ROOT/p for p in ('src/adapters/ppt/learning/ppt_page_learning.py','src/adapters/ppt/learning/ppt_component_learning.py',
+        'src/adapters/ppt/runtime/ppt_component_tool.ts','src/adapters/ppt/delivery/ppt_delivery_pipeline.ts','src/adapters/ppt/delivery/ppt_preparation_runner.py',
+        'src/adapters/ppt/delivery/ppt_delivery_runner.py','src/adapters/ppt/authoring/ppt_design_preflight.py','src/adapters/ppt/learning/ppt_annotation_repair.py',
+        'src/adapters/ppt/learning/ppt_component_literals.py','src/adapters/geneloop_native_work.ts')]
+    files += [ROOT/p for p in ('src/adapters/ppt/learning/ppt_capability_learning.py','src/adapters/ppt/runtime/ppt_capability_online.ts',
+        'src/adapters/artifact_capability_runtime.ts','src/adapters/harness/capability/capability_materials.ts',
+        'src/adapters/harness/capability/capability_scene.py','src/capability/runtime/capability_runtime.ts','src/rsi/learning/capability_cycle.ts',
+        'src/capability/runtime/capability_store.ts','src/rsi/learning/capability_improvement.py')]
+    files += [ROOT/p for p in ('src/adapters/ppt/learning/ppt_capability_budget.py','src/adapters/harness/capability/capability_proposal.py')]
     files += [ROOT/'src/adapters/rsi_learning_trace.py', ROOT/'docs/schemas/rsi-learning-trace.schema.json']
+    files += [ROOT/'src/capability/runtime/evidence.py', ROOT/'src/capability/graph/source_program_contract.ts']
+    files += [ROOT / p for p in (
+        'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/motif_miner.py',
+        'src/motif_core/offline/mining/trace_mining.py', 'src/motif_core/offline/compilation/edge_compiler.py')]
     return sorted(set(files+[Path(__file__).resolve()]))
 
 
@@ -79,15 +88,17 @@ def main(argv=None, *, private_publish_root=None, privacy_projection=False):
         raise ValueError('two independent train tasks and one heldout required')
     ledger=accounting.real_ledger(private(data['ledger']))
     out.mkdir(parents=True,exist_ok=False);started=time.monotonic()
-    lock=read_lock();evidence={};runs={};schemas=None;full_schemas=None
+    source_identities=set();evidence={};runs={};schemas=None;full_schemas=None
     for split in ('train','heldout'):
         evidence[split]=[];runs[split]=[]
         for i,row in enumerate(data[split]):
             task=private(row['task_dir']);state=read(task/'task-state.json');req=read(task/'task.json');effective=read(task/'effective-config.json')
+            historical=effective.get('skill_package_sha256')
             if (state.get('status')!='completed' or req.get('mode')!='baseline' or
                     effective.get('provider_mode')!='real' or effective.get('ppt_execution_strategy')!='ppt_master' or
-                    effective.get('skill_package_sha256')!=lock['package_sha256']):
-                raise ValueError('requires a real completed ppt-master Baseline task at the pinned version')
+                    not isinstance(historical,str) or len(historical)!=64 or any(c not in '0123456789abcdef' for c in historical)):
+                raise ValueError('requires real completed PPT baselines with recorded source identities')
+            source_identities.add(historical)
             totals=accounting.reconcile(state,req,ledger,qualifying=True)
             current=accounting.native_schemas(effective['tools'])
             mcp=[t for t in current if t['name'].startswith('mcp__')]
@@ -110,14 +121,16 @@ def main(argv=None, *, private_publish_root=None, privacy_projection=False):
                 question='\n'.join(x['text'] for x in req['content'] if x['type']=='text')
                 write(dest/'manifest.json',{'task_id':req['task_id'],'question':question,
                     'effective_sha256':sha(task/'effective-config.json'),'original_events_sha256':sha(task/'events.jsonl'),
-                    'trace_start_index':start,'skill_package_sha256':lock['package_sha256'],'stats':totals})
+                    'trace_start_index':start,'skill_package_sha256':historical,'stats':totals})
                 write(dest/'task-identity.json',{'schema_version':1,'research_decision_id':row['decision_id'],
                     'manifest_sha256':sha(dest/'manifest.json'),'events_sha256':sha(dest/'agent-events.jsonl')})
                 identity=load_trace_identity(dest/'task-identity.json',dest/'agent-events.jsonl',ROOT/'.local')
-            evidence[split].append({**identity,**totals,'skill_package_sha256':lock['package_sha256'],
+            evidence[split].append({**identity,**totals,'skill_package_sha256':historical,
                 'effective_config_sha256':sha(task/'effective-config.json')})
             runs[split].append(str(dest))
     identities=evidence['train']+evidence['heldout'];require_distinct_decisions(identities)
+    source_identity=next(iter(source_identities)) if len(source_identities)==1 else hashlib.sha256(
+        json.dumps(sorted(source_identities),separators=(',',':')).encode()).hexdigest()
     write(out/'dataset.json',runs)
     write(out/'schema.json',{'tools':[{'name':t['name'],'description':t['description'],'inputSchema':t['parameters']} for t in schemas]})
     manifest_path=learn(out/'dataset.json',contracts_path=SCENE/'contracts.json',version_fields_path=SCENE/'version-fields.json',
@@ -133,7 +146,9 @@ def main(argv=None, *, private_publish_root=None, privacy_projection=False):
         excluded.append({'task_id':req['task_id'],'status':state['status'],**accounting.reconcile(state,req,ledger,qualifying=False)})
     report={'schema_version':1,'new_training':True,'method':'existing_witnessed_edge_compiler',
         'training_tasks':2,'heldout_tasks':1,'artifacts':len(manifest['artifacts']),
-        'skill_package_sha256':lock['package_sha256'],'library_digest':library['library_digest'],'manifest_digest':manifest['manifest_digest'],
+        'source_identity_policy':'certified_trace_source_v1',
+        'skill_package_sources':sorted(source_identities),
+        'skill_package_sha256':source_identity,'library_digest':library['library_digest'],'manifest_digest':manifest['manifest_digest'],
         'model_weights_trained':False,'quality_cost_promoted':False,'scientific_quality_reviewed':False,
         'compilation_model_requests':0,'compilation_seconds':time.monotonic()-started,
         'trace_collection_requests':sum(x['requests'] for x in identities),
@@ -156,8 +171,8 @@ def main(argv=None, *, private_publish_root=None, privacy_projection=False):
         for name in ('source-evidence.json','learning-report.json'):shutil.copyfile(out/name,target/name)
         write(target/'tool-schemas.json',schemas)
         write(target/'task.json',{'schema_version':1,'task_id':'ppt-master-admission','session_id':'ppt-master-admission',
-            'intent':'Convert and read the exact model-selected uploaded PDF using official version-locked tools.','input_version':lock['package_sha256'],
-            'bindings':{},'source_versions':{CHAIN[0]:'@observed',CHAIN[1]:lock['package_sha256'],CHAIN[2]:lock['package_sha256']}})
+            'intent':'Convert and read the exact model-selected uploaded PDF.','input_version':source_identity,
+            'bindings':{},'source_versions':{CHAIN[0]:'@observed',CHAIN[1]:source_identity,CHAIN[2]:source_identity}})
         write(target/'certification.json',{'schema_version':1,'scene':'ppt','binding_policy':'ppt_master_sources_v1',
             'matching_policy':'structural_only','certification_scope':'independent_trace_structure','quality_cost_promoted':False,
             'source_evidence_sha256':sha(target/'source-evidence.json'),'learning_report_sha256':sha(target/'learning-report.json'),

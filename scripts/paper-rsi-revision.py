@@ -19,7 +19,7 @@ from src.adapters.file_lock import exclusive_lock
 from src.adapters.revision_tool_evidence import (build_revision_packets, revision_facts,
     revision_counterfactuals, strict_revision_pointer, project_generated_outputs,
     compose_generated_candidates, rebind_generated_input)
-from src.adapters.trace_tool_evidence import digest, project_inputs
+from src.motif_core.trajectory.trace_tool_evidence import digest, project_inputs
 
 def module(name,path):
     spec=importlib.util.spec_from_file_location(name,ROOT/path)
@@ -30,7 +30,7 @@ TRAIN_RUNS=[f'.local/paper-reference/paper-rsi-batch-shadow-20261011-v2/runs/{la
     '.local/paper-reference/paper-rsi-batch-training-20261011-v1/runs/baseline-main']
 FILES=['scripts/paper-rsi-revision.py','src/adapters/revision_tool_evidence.py',
     'src/adapters/revision_rsi_macros.ts',
-    'src/adapters/dsh_revision_rsi_learning.ts','scenarios/paper-submission/revision-rsi-learning.prompt.md',
+    'src/adapters/harness/paper/dsh_revision_rsi_learning.ts','scenarios/paper-submission/revision-rsi-learning.prompt.md',
     *trace.FILES]
 save,load=trace.save_once,trace.load
 
@@ -130,7 +130,7 @@ def learn(exp,label):
     config={'mode':'learning','experiment_path':str(exp),'training_packets_path':str(exp/'training-packets.json'),
         'training_packets_sha256':hashlib.sha256((exp/'training-packets.json').read_bytes()).hexdigest(),
         'python_command':sys.executable,'controller_path':str(ROOT/'scripts/paper-rsi-revision.py')}
-    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-cordis-host-runner"\n      config:\n        vmTimeoutMs: 5000\n    - name: "@deepseek-ai/dsh-tool-cordis"\n    - name: '+json.dumps((ROOT/'src/adapters/dsh_revision_rsi_learning.ts').as_uri())+'\n'
+    policy='\n- insert:\n    - name: "@deepseek-ai/dsh-cordis-host-runner"\n      config:\n        vmTimeoutMs: 5000\n    - name: "@deepseek-ai/dsh-tool-cordis"\n    - name: '+json.dumps((ROOT/'src/adapters/harness/paper/dsh_revision_rsi_learning.ts').as_uri())+'\n'
     return legacy.paid(label,(ROOT/'scenarios/paper-submission/revision-rsi-learning.prompt.md').read_text(),policy,config,['SSS_REVISION_RSI_LEARNING'])
 
 def freeze(exp,label):

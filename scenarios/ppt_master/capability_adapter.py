@@ -6,10 +6,10 @@ import os
 from pathlib import Path
 import sys
 
-from src.adapters.capability_scene import CapabilityImprovementAdapter, ROOT, reference, run_child
-from src.adapters.capability_improvement import evidence, read, save
-from src.adapters.capability_discovery import read_context
-from src.adapters.capability_contract import capability_digest
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter, ROOT, reference, run_child
+from src.rsi.learning.capability_improvement import evidence, read, save
+from src.rsi.learning.capability_discovery import read_context
+from src.capability.graph.capability_contract import capability_digest
 
 
 class PptCapabilityAdapter(CapabilityImprovementAdapter):
@@ -19,7 +19,7 @@ class PptCapabilityAdapter(CapabilityImprovementAdapter):
         super().__init__(plan)
         policy = os.environ.get('GENELOOP_PPT_COMPONENT_LEARNING_POLICY') or os.environ.get('SSS_WEB_POLICY')
         if policy:
-            from src.adapters.ppt_capability_budget import PptCapabilityBudget
+            from src.adapters.ppt.learning.ppt_capability_budget import PptCapabilityBudget
             self.gate = PptCapabilityBudget(policy, plan['ledger_root'])
 
     def inspect_run(self, entry, owner):

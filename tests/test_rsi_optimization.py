@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.rsi_optimization import assess_opportunities, evaluate_optimization, digest
+from src.rsi.learning.rsi_optimization import assess_opportunities, evaluate_optimization, digest
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('optimization_example', ROOT / 'examples/rsi-protocol-v1/optimization_example.py')

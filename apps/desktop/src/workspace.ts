@@ -1,4 +1,5 @@
 import { BrowserWindow, WebContentsView, dialog, ipcMain, session, shell, Menu, nativeTheme } from 'electron';
+import {bindWindowsBrand} from './windows-brand.ts';
 import type { IpcMainInvokeEvent, Session, Event, DownloadItem, WebContents } from 'electron';
 import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
@@ -34,6 +35,7 @@ export class DesktopWorkspace {
   private lastDownloaded?: string;
   private allowClose = false;
   private disposed = false;
+  private removeWindowsBrand?:()=>void;
   private readonly page = join(directory, '../ui/index.html');
 
   constructor(private options: { settings: Settings; settingsFile: string; version: string; downloadsDirectory: string; allowLoopback?: boolean; closeToTray?: boolean }) {
@@ -49,6 +51,7 @@ export class DesktopWorkspace {
       icon: join(directory, '../assets/icon.png'),
       webPreferences: { preload: join(directory, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true },
     });
+    this.removeWindowsBrand=bindWindowsBrand(this.window,join(directory,'../assets'));
     this.window.webContents.on('will-navigate', event => event.preventDefault());
     this.window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     this.window.webContents.on('page-title-updated', event => event.preventDefault());
@@ -131,8 +134,41 @@ export class DesktopWorkspace {
     if (!result.canceled && !this.disposed) return authorizedDirectory(result.filePaths[0]);
   }
 
+  private getLocalRunner():LocalWorkspaceConversation {
+    if(!this.currentSession)throw Error('请先连接 GeneLoop。');
+    const server=this.stateValue.server;
+    return this.localWorkspace ??= new LocalWorkspaceConversation({
+        server, session: this.currentSession!,allowLoopback:this.options.allowLoopback,
+        notice:async()=>{await dialog.showMessageBox(this.window,{type:'info',title:'本机任务的数据处理',
+          message:'本机执行、自动学习与脱敏收集',
+          detail:'Agent、工具和 RSI 在本机运行；任务需要的内容仍会发送给云端模型。任务完成、失败或取消后，在本机脱敏并生成不含正文、参数、路径或原始工具名的流程结构，通过 HTTPS 自动发送至 '+new URL(server).origin+'。原始轨迹不上传。任务副本保留90天，派生学习副本保留30天。学习与收集是本服务固定流程，可在「数据与隐私」查看进度。',buttons:['知道了']});},
+        approveFilePlan: async request => {
+          const preview=JSON.stringify(request.preview,null,2);
+          if(preview.length>24000)return false;
+          const answer=await dialog.showMessageBox(this.window,{
+            type:'question',title:'GeneLoop Desktop',message:'执行这份文件整理方案？',
+            detail:'以下操作只作用于本轮文件副本，工作区原件保持不变。\n\n'+preview,
+            buttons:['取消','确认整理副本'],defaultId:0,cancelId:0,
+          });
+          return answer.response===1;
+        },
+        approveVideo: async request => {
+          const details = request.assets.map(asset => `• ${asset.path}（${Math.ceil(asset.bytes / 1024)} KiB）`);
+          const result = await dialog.showMessageBox(this.window, {
+            type: 'question', title: 'GeneLoop Desktop', message: '在服务器上渲染 Remotion 视频？',
+            detail: [new URL(server).origin, `Remotion 工程源码（${Math.ceil(request.sourceBytes / 1024)} KiB）`,
+              ...details, '仅发送上面列出的素材。渲染完成后，视频将写入本机工作区。'].join('\n'),
+            buttons: ['取消', '上传并渲染'], defaultId: 0, cancelId: 0,
+          });
+          return result.response === 1;
+        },
+      });
+  }
+
   private async localWorkspaceAction(command: unknown, value: unknown) {
     if (!['win32', 'darwin'].includes(process.platform) || this.disposed) throw Error('本机工作区需要 Windows 或 macOS。');
+    if(command==='rsi-status')return this.getLocalRunner().rsiStatus();
+    if(command==='rsi-catalog')return this.getLocalRunner().rsiCatalog();
     if (command === 'scenes') return localSceneStatus();
     if (command === 'open-folder' || command === 'list') {
       this.localAccountId = typeof value === 'string' ? value : undefined;
@@ -174,41 +210,20 @@ export class DesktopWorkspace {
       if (typeof input.source === 'string') this.folderTickets.delete(input.source);
       return saved;
     }
-    if (command === 'history' || command === 'start' || command === 'cancel' || command === 'report') {
-      const input = (value ?? {}) as { workspaceId?: unknown; accountId?: unknown; threadId?: unknown; name?: unknown };
+    if (command === 'history' || command === 'start' || command === 'cancel' || command === 'report' || command==='answer' || command==='recover') {
+      const input = (value ?? {}) as { workspaceId?: unknown; accountId?: unknown; threadId?: unknown; name?: unknown; id?:unknown; answers?:unknown; taskId?:unknown };
       if (typeof input.workspaceId !== 'string' || !this.currentSession) throw Error('无效的本机工作区。');
       const row = this.localWorkspaces.list(this.stateValue.server, input.accountId).find(item => item.id === input.workspaceId);
       if (!row?.directory) throw Error('找不到已绑定的本机工作区。');
       const server = this.stateValue.server;
-      const runner = this.localWorkspace ??= new LocalWorkspaceConversation({
-        server, session: this.currentSession,
-        approveFilePlan: async request => {
-          const preview=JSON.stringify(request.preview,null,2);
-          if(preview.length>24000)return false;
-          const answer=await dialog.showMessageBox(this.window,{
-            type:'question',title:'GeneLoop Desktop',message:'执行这份文件整理方案？',
-            detail:'以下操作只作用于本轮文件副本，工作区原件保持不变。\n\n'+preview,
-            buttons:['取消','确认整理副本'],defaultId:0,cancelId:0,
-          });
-          return answer.response===1;
-        },
-        approveVideo: async request => {
-          const details = request.assets.map(asset => `• ${asset.path}（${Math.ceil(asset.bytes / 1024)} KiB）`);
-          const result = await dialog.showMessageBox(this.window, {
-            type: 'question', title: 'GeneLoop Desktop', message: '在服务器上渲染 Remotion 视频？',
-            detail: [new URL(server).origin, `Remotion 工程源码（${Math.ceil(request.sourceBytes / 1024)} KiB）`,
-              ...details, '仅发送上面列出的素材。渲染完成后，视频将写入本机工作区。'].join('\n'),
-            buttons: ['取消', '上传并渲染'], defaultId: 0, cancelId: 0,
-          });
-          return result.response === 1;
-        },
-      });
+      const runner=this.getLocalRunner();
       if (command === 'history') return runner.history(row);
       if (command === 'report') return runner.reveal(row, input.name);
       if (typeof input.threadId !== 'string') throw Error('无效的本机会话。');
       if (command === 'cancel') return runner.cancel(row.id, input.threadId);
+      if (command === 'answer') return runner.answer(row.id,input.threadId,input.id,input.answers);
       const view = this.workspace?.webContents;
-      return runner.start(row, input, update => {
+      return runner.start(row, command==='recover'?{...input,recover:true}:input, update => {
         if (view && view === this.workspace?.webContents && !view.isDestroyed()) {
           view.send('geneloop:local-update', { workspaceId: row.id, threadId: input.threadId, update });
         }
@@ -403,6 +418,7 @@ export class DesktopWorkspace {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.removeWindowsBrand?.();
     this.localWorkspace?.dispose();
     ++this.generation;
     this.removeWorkspace();

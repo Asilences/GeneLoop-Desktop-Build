@@ -1,8 +1,9 @@
-import { app, dialog, Menu, Tray, nativeImage } from 'electron';
+import { app, dialog, Menu, Tray, nativeImage, nativeTheme } from 'electron';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSettings } from './settings.ts';
 import { DesktopWorkspace } from './workspace.ts';
+import {ToolPreparation} from './tool-preparation.ts';
 
 app.setName('GeneLoop Desktop');
 app.setAppUserModelId('ai.geneloop.desktop');
@@ -12,6 +13,7 @@ if (!app.isPackaged && process.env.GENELOOP_DESKTOP_USER_DATA_DIR) {
 
 let desktop: DesktopWorkspace | undefined;
 let tray: Tray | undefined;
+let tools:ToolPreparation|undefined;
 const directory = dirname(fileURLToPath(import.meta.url));
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
@@ -26,6 +28,8 @@ else {
     const create = () => {
       const settings = loadSettings(settingsFile, process.env.GENELOOP_DESKTOP_URL, allowLoopback);
       desktop = new DesktopWorkspace({ settings, settingsFile, version: app.getVersion(), downloadsDirectory: app.getPath('downloads'), allowLoopback, closeToTray: process.platform === 'win32' });
+      tools?.dispose();tools=new ToolPreparation(desktop.window);
+      desktop.ready.then(()=>tools?.offer()).catch(()=>{});
       desktop.ready.catch(() => { dialog.showErrorBox('GeneLoop Desktop', '连接页面无法启动，请重新安装应用。'); app.quit(); });
     };
     Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -41,6 +45,7 @@ else {
         { label: '新会话', accelerator: 'CmdOrCtrl+N', click: () => desktop?.runWorkspaceCommand('new-session') },
         { label: '新建工作区…', click: () => desktop?.runWorkspaceCommand('new-workspace') },
         { label: '打开本机文件夹…', accelerator:'CmdOrCtrl+Shift+O', click: () => { void desktop?.openLocalWorkspace(); } },
+        { label: '本机工具…', click:()=>tools?.show() },
         { type: 'separator' },
         { label: '添加附件…', accelerator: 'CmdOrCtrl+O', click: () => desktop?.runWorkspaceCommand('attach') },
         { label: '打开最近下载的位置', click: () => { void desktop?.openLastDownload(); } },
@@ -66,7 +71,9 @@ else {
       else { if (desktop.window.isMinimized()) desktop.window.restore(); desktop.window.show(); desktop.window.focus(); }
     };
     if (process.platform === 'win32') {
-      tray = new Tray(nativeImage.createFromPath(join(directory, '../assets/icon.png')).resize({ width: 20, height: 20 }));
+      const trayImage = () => nativeImage.createFromPath(join(directory, '../assets/', nativeTheme.shouldUseDarkColorsForSystemIntegratedUI ? 'tray-dark.png' : 'icon.png')).resize({ width: 20, height: 20 });
+      tray = new Tray(trayImage());
+      nativeTheme.on('updated', () => { if (tray && !tray.isDestroyed()) tray.setImage(trayImage()); });
       tray.setToolTip('GeneLoop Desktop');
       tray.setContextMenu(Menu.buildFromTemplate([
         { label: '打开 GeneLoop Desktop', click: show },
@@ -81,6 +88,6 @@ else {
       else desktop.window.show();
     });
   }).catch(() => { dialog.showErrorBox('GeneLoop Desktop', '启动失败。请检查服务器地址配置，或从默认安装入口重新打开。'); app.quit(); });
-  app.on('before-quit', () => { desktop?.permitClose(); desktop?.dispose(); tray?.destroy(); });
+  app.on('before-quit', () => { tools?.dispose();desktop?.permitClose(); desktop?.dispose(); tray?.destroy(); });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 }

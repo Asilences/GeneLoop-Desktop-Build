@@ -34,10 +34,12 @@ def snapshot(root):
 
 def source_code():
     paths = sorted(HERE.glob('*.py')) + sorted(HERE.glob('*.md'))
-    paths += [ROOT / n for n in ('scripts/run-scenario.py', 'src/adapters/dsh_trajectory.py',
-               'src/motif_core/offline/edge_compiler.py', 'scripts/export-online-motif-manifest.py',
-               'src/motif_core/online_skill_runtime.mjs', 'src/adapters/dsh_online_motif.mjs',
-               'src/motif_core/source_dereference.ts','src/motif_core/source_dereference.generated.mjs',
-               'src/motif_core/collection_read_policy.ts','src/adapters/dsh_entry_motif.ts',
-               'src/motif_core/offline/collection_compiler.py')]
+    paths += [ROOT / n for n in ('scripts/run-scenario.py', 'src/adapters/harness/dsh_trajectory.py',
+               'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+               'src/motif_core/offline/mining/motif_miner.py',
+               'src/motif_core/offline/compilation/edge_compiler.py', 'scripts/export-online-motif-manifest.py',
+               'src/motif_core/runtime/online_skill_runtime.mjs', 'src/adapters/harness/motif/dsh_online_motif.mjs',
+               'src/motif_core/runtime/policies/source_dereference.ts','src/motif_core/runtime/policies/source_dereference.generated.mjs',
+               'src/motif_core/runtime/policies/collection_read_policy.ts','src/adapters/harness/motif/dsh_entry_motif.ts',
+               'src/motif_core/offline/compilation/collection_compiler.py')]
     return {str(p.relative_to(ROOT)): sha(p) for p in paths}

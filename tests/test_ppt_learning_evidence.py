@@ -4,7 +4,7 @@ import subprocess
 import shutil
 from pathlib import Path
 import pytest
-from src.adapters.ppt_learning_evidence import freeze_state,verify_state_binding,projection,digest
+from src.adapters.ppt.learning.ppt_learning_evidence import freeze_state,verify_state_binding,projection,digest
 
 @pytest.fixture
 def state_file(tmp_path):
@@ -31,12 +31,28 @@ def test_ownership_source_failure_and_usage_changes_still_revoke(state_file,key,
     with pytest.raises(ValueError,match='facts changed'):verify_state_binding(out,binding)
 
 @pytest.mark.skipif(not shutil.which('node'),reason='Node is needed for cross-language fact identity')
-def test_python_typescript_use_the_same_projection_and_guard(state_file):
-    out,folder,path,state=state_file;binding=freeze_state(out,folder,state)
+@pytest.mark.parametrize('structure_only',[False,True])
+def test_python_typescript_use_the_same_projection_and_guard(state_file,structure_only):
+    out,folder,path,state=state_file;binding=freeze_state(out,folder,state,structure_only=structure_only)
     root=Path(__file__).resolve().parents[1]
     code="""import {readFileSync} from 'node:fs';
-import {pptLearningState,pptLearningStateDigest,verifyPptStateBinding} from './src/adapters/ppt_learning_evidence.ts';
+import {pptLearningState,pptLearningStateDigest,verifyPptStateBinding} from './src/adapters/ppt/learning/ppt_learning_evidence.ts';
 const [output,state,binding]=process.argv.slice(1);verifyPptStateBinding(output,binding);
-console.log(pptLearningStateDigest(pptLearningState(JSON.parse(readFileSync(state,'utf8')))));"""
+console.log(pptLearningStateDigest(pptLearningState(JSON.parse(readFileSync(state,'utf8')),binding.includes('learning-structure-'))));"""
     value=subprocess.check_output(['node','--experimental-strip-types','--input-type=module','-e',code,str(out),str(path),str(binding)],cwd=root,text=True)
-    assert value.strip()==digest(projection(state))
+    assert value.strip()==digest(projection(state,structure_only=structure_only))
+
+
+def test_structural_facts_survive_late_usage_settlement(state_file):
+    out,folder,path,state=state_file
+    binding=freeze_state(out,folder,state,structure_only=True);raw=binding.read_bytes()
+    state['stats'].update(upstream_requests=3,prompt_tokens=12345,usage_complete=False,pending_requests=2,unknown_usage_requests=1)
+    path.write_text(json.dumps(state));verify_state_binding(out,binding)
+    assert freeze_state(out,folder,state,structure_only=True)==binding and binding.read_bytes()==raw
+
+
+@pytest.mark.parametrize('key,value',[('user_id','foreign'),('status','failed'),('scene_inputs',[]),('stats',{'verified_skips':1})])
+def test_structural_binding_still_rejects_changed_execution_facts(state_file,key,value):
+    out,folder,path,state=state_file;binding=freeze_state(out,folder,state,structure_only=True)
+    state[key]=value;path.write_text(json.dumps(state))
+    with pytest.raises(ValueError,match='facts changed'):verify_state_binding(out,binding)

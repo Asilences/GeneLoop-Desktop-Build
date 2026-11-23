@@ -5,7 +5,7 @@ from uuid import uuid4
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 sp=importlib.util.spec_from_file_location('checks',ROOT/'scripts/check-web-tasks.py');checks=importlib.util.module_from_spec(sp);sp.loader.exec_module(checks)
 from src.adapters.continuous_rsi import load_config,records,source_map,snapshot
-from src.motif_core.offline.experience_registry import read,durable,sha
+from src.motif_core.reuse.experience_registry import read,durable,sha
 
 def run(config_file,paid):
     cfg=load_config(config_file)

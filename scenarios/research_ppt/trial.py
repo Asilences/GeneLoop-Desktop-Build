@@ -27,8 +27,8 @@ from .feedback_learning import (DEFAULT_STORE, FeedbackStore, _execution_policy_
                                 _host_receipt, COMPOSED_TOOLS, HOST_ROUTES)
 from .service import ROOT, SCENE, private_path, validate_minimum_original_figures
 from src.adapters.deepseek_cost_gate import PEAK_USD_PER_MILLION, CACHE_HIT_PEAK_USD_PER_MILLION
-from src.adapters.dsh_trajectory import _observation_digest
-from src.adapters.dsh_event_projection import is_original_tool_result
+from src.adapters.harness.dsh_trajectory import _observation_digest
+from src.adapters.harness.dsh_event_projection import is_original_tool_result
 
 GROUPS = ('baseline', 'optimized')
 REVIEW_FIELDS = ('scientific_facts', 'figures_and_citations', 'editable_and_rendered', 'usable_presentation')

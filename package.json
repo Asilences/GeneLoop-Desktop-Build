@@ -38,11 +38,13 @@
     "build:continuation": "node scripts/build-continuation-policy.mjs",
     "web:literature": "node scripts/project.mjs python scenarios/literature-notes/run-web.py",
     "code:check": "node scripts/project.mjs python scripts/check-code-mode.py",
-    "management": "node scripts/project.mjs python scripts/management.py"
+    "management": "node scripts/project.mjs python scripts/management.py",
+    "jev": "node scripts/kouri-jev.mjs"
   },
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",
     "@deepseek-ai/dsh-llm": "0.1.5-rc.3",
+    "@office-kit/pptx": "0.21.0",
     "ajv": "8.20.0",
     "ws": "8.21.3"
   },

@@ -4,12 +4,12 @@ import {join,resolve,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 import {loadScriptLibrary,programIdentity,scriptVirtualHost,fixedInput,compatibleInput,scriptCodeLocks} from './script_motif_runtime.ts';
 import {capabilityDigest,capabilityRef,createCapability,createCapabilitySnapshot,validateCapabilitySnapshot,
- type CapabilitySnapshot,type CapabilityRef} from './capability_contract.ts';
-import {createCapabilityRuntime,type CapabilityBackend} from './capability_runtime.ts';
-import {bytesSha256,rsiRecord,type AdmissionHost} from './rsi_protocol.ts';
+ type CapabilitySnapshot,type CapabilityRef} from '../capability/graph/capability_contract.ts';
+import {createCapabilityRuntime,type CapabilityBackend} from '../capability/runtime/capability_runtime.ts';
+import {bytesSha256,rsiRecord,type AdmissionHost} from '../rsi/protocol/rsi_protocol.ts';
 import {readScriptWorkerFailure} from './script_worker_failure.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const assert=(value:unknown,reason:string)=>{if(!value)throw Error(reason);};
@@ -17,7 +17,7 @@ const same=(a:unknown,b:unknown)=>capabilityDigest(a)===capabilityDigest(b);
 const read=(path:string)=>JSON.parse(readFileSync(path,'utf8'));
 export const scriptCapabilityFiles=[...scriptCodeLocks,'src/adapters/script_runtime_compatibility.ts',
  'config/script-runtime-compatibility.json','src/adapters/script_capability_runtime.ts',
- 'src/adapters/capability_runtime.ts','src/adapters/capability_contract.ts','src/adapters/rsi_protocol.ts',
+ 'src/capability/runtime/capability_runtime.ts','src/capability/graph/capability_contract.ts', 'src/capability/graph/source_program_contract.ts','src/rsi/protocol/rsi_protocol.ts',
  'scripts/script-capability-worker.mjs','src/adapters/script_worker_failure.mjs'];
 export function scriptExecutorDigest(){return capabilityDigest(scriptCapabilityFiles.map(path=>({path,sha256:bytesSha256(readFileSync(join(root,path)))})));}
 

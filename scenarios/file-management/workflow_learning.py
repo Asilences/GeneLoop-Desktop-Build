@@ -18,13 +18,12 @@ from workflow_contract import verify_workflow
 from src.adapters.file_job_budget import job_command
 from collection_study import contracts as collection_contracts,GRAPH_TOOLS as COLLECTION_TOOLS
 from plan_study import scope as original_plan_scope,GRAPH_TOOLS as PLAN_TOOLS
-from src.adapters.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif
-from src.motif_core.offline.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
-from src.motif_core.offline.plan_compiler import native_rows,plan_witness,compile_plan,certify_plan
-from src.motif_core.offline.library_builder import library_from_certified
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif
+from src.motif_core.offline.compilation.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
+from src.motif_core.offline.compilation.plan_compiler import native_rows,plan_witness,compile_plan,certify_plan
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 DEPENDENCIES=['common.py','file_tools.py','collection_tools.py','report_tools.py','workflow_contract.py','workflow_delivery.py','workflow_tools.py']
 RECOVERY_DEPENDENCIES=['task_tools.py','task_contract.py','plan_tools.py','recovery_tools.py']
@@ -74,11 +73,13 @@ def prepare(training_parent=None):
     code=[*HERE.glob('*.py'),*HERE.glob('*.md'),*HERE.glob('*.json')]
     code += [ROOT/n for n in ('scripts/run-file-scenario.py','scripts/validate-file-delivery.py','scripts/audit-workflow-exploration.py',
         'scripts/replay-file-workflow-motif.mjs','scripts/replay-file-workflow-motif.py','scripts/export-online-motif-manifest.py',
-        'src/adapters/file_job_budget.py','src/adapters/file_workflow_job.ts','src/adapters/file_acceptance_guard.ts','src/adapters/file_scenario.py',
-        'src/adapters/file_cost_gate.py','src/adapters/harness_runtime.py','src/adapters/dsh_trajectory.py','src/adapters/tool_contract_loader.py',
-        'src/motif_core/offline/edge_compiler.py','src/motif_core/offline/collection_compiler.py','src/motif_core/offline/plan_compiler.py',
-        'src/motif_core/offline/library_builder.py','src/motif_core/collection_read_policy.ts','src/motif_core/authorized_plan_policy.ts',
-        'src/motif_core/online_skill_runtime.mjs','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt')]
+        'src/adapters/file_job_budget.py','src/adapters/file_workflow_job.ts','src/adapters/file_acceptance_guard.ts','src/adapters/scenario.py',
+        'src/adapters/deepseek_cost_gate.py','src/adapters/harness/harness_runtime.py','src/adapters/harness/dsh_trajectory.py','src/motif_core/offline/compilation/tool_contracts.py',
+        'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+        'src/motif_core/offline/mining/motif_miner.py',
+        'src/motif_core/offline/compilation/edge_compiler.py','src/motif_core/offline/compilation/collection_compiler.py','src/motif_core/offline/compilation/plan_compiler.py',
+        'src/motif_core/offline/compilation/library_builder.py','src/motif_core/runtime/policies/collection_read_policy.ts','src/motif_core/runtime/policies/authorized_plan_policy.ts',
+        'src/motif_core/runtime/online_skill_runtime.mjs','config/semantic-sdk.patch.yml','package.json','package-lock.json','requirements.txt')]
     for p in code:
         dest=exp/'frozen-source'/p.relative_to(ROOT);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,dest);dest.chmod(0o600)
     origins=[]

@@ -23,7 +23,7 @@ def prepare(manifest: Path, task: Path) -> dict:
             or structured.get("schema_version") != 1
             or not structured.get("session_id")):
         raise ValueError("manifest and task must be frozen versioned JSON")
-    runtime_uri = (ROOT / "src/motif_core/online_skill_runtime.mjs").resolve(strict=True).as_uri()
+    runtime_uri = (ROOT / "src/motif_core/runtime/online_skill_runtime.mjs").resolve(strict=True).as_uri()
     verifier = ("import fs from 'node:fs'; "
                 "import {validateOnlineManifest, parseStructuredTask} "
                 f"from {json.dumps(runtime_uri)}; "
@@ -33,7 +33,7 @@ def prepare(manifest: Path, task: Path) -> dict:
     subprocess.run(["node", "--input-type=module", "-e", verifier,
                     str(manifest), str(task)], cwd=ROOT, check=True,
                    capture_output=True, text=True)
-    plugin = (ROOT / "src/adapters/dsh_online_motif.mjs").resolve(strict=True)
+    plugin = (ROOT / "src/adapters/harness/motif/dsh_online_motif.mjs").resolve(strict=True)
     rendered = TEMPLATE.read_text(encoding="utf-8").replace(
         "__SSS_ONLINE_MOTIF_PLUGIN__", json.dumps(plugin.as_uri()))
     patch_hash = hashlib.sha256(rendered.encode()).hexdigest()[:16]

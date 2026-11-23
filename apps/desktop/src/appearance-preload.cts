@@ -36,7 +36,10 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 contextBridge.exposeInMainWorld('desktopWorkspaces', Object.freeze({
+  answer: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces','answer',value),
   available: ['win32', 'darwin'].includes(process.platform),
+  rsiStatus: () => ipcRenderer.invoke('geneloop:local-workspaces','rsi-status'),
+  rsiCatalog: () => ipcRenderer.invoke('geneloop:local-workspaces','rsi-catalog'),
   scenes: () => ipcRenderer.invoke('geneloop:local-workspaces', 'scenes'),
   list: (accountId: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'list', accountId),
   openFolder: (accountId: string) => ipcRenderer.invoke('geneloop:local-workspaces', 'open-folder', accountId),
@@ -44,6 +47,7 @@ contextBridge.exposeInMainWorld('desktopWorkspaces', Object.freeze({
   save: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'save', value),
   history: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'history', value),
   start: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'start', value),
+  recover: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'recover', value),
   cancel: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'cancel', value),
   report: (value: unknown) => ipcRenderer.invoke('geneloop:local-workspaces', 'report', value),
   onUpdate: (callback: (event: unknown) => void) => ipcRenderer.on('geneloop:local-update', (_event, value) => callback(value)),

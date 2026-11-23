@@ -14,8 +14,8 @@ def installed(tmp_path,monkeypatch):
         p=tmp_path/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text,encoding='utf-8')
     versions={k:hashlib.sha256(v.encode()).hexdigest() for k,v in files.items()}
     lock={'schema_version':1,'version':'6.6.0','files':versions,'package_sha256':hashlib.sha256(json.dumps(versions,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
-    monkeypatch.setattr(server,'read_lock',lambda:lock)
-    monkeypatch.setattr(package,'read_lock',lambda:lock)
+    monkeypatch.setattr(server,'runtime_lock',lambda _:lock)
+    monkeypatch.setattr(package,'runtime_lock',lambda _:lock)
     monkeypatch.setattr(server.subprocess,'run',lambda *a,**kw:SimpleNamespace(returncode=0))
     return tmp_path,server.SkillReader(tmp_path)
 
@@ -24,7 +24,8 @@ def test_exact_entry_and_routing_bytes(installed):
     root,reader=installed
     entry=reader.read_skill_entry()
     routing=reader.read_pinned_routing(entry['source_id'])
-    assert entry['text']=='official entry' and routing['text']=='routing'
+    assert entry['text']==Path(server.__file__).with_name('SKILL.md').read_text(encoding='utf-8').split('---',2)[-1].strip()
+    assert routing['text']==Path(server.__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')
     assert entry['version_sha256']==routing['version_sha256'] and routing['guard_exit_code']==0
     assert entry['skill_dir']=='/opt/geneloop/ppt-master'
     assert entry['runtime_policy']['text']==Path(server.__file__).with_name('runtime-policy.md').read_text(encoding='utf-8')
@@ -51,13 +52,16 @@ def test_wrong_handle_and_extra_package_file_rejected(installed):
     with pytest.raises(ValueError,match='unregistered'):package.verify_installation(root)
 
 
-def test_registry_replaces_old_writer_but_preserves_old_library():
+def test_registry_selects_one_current_ppt_library():
     root=Path(__file__).resolve().parents[1]
     row=next(x for x in json.loads((root/'config/harless-scenes.json').read_text())['scenes'] if x['id']=='ppt')
     scenario=json.loads((root/row['scenario']).read_text())
     assert row['ppt_execution_strategy']=='ppt_master'
     assert scenario['allowed_tools']==['mcp__ppt_master__read_skill_entry','mcp__ppt_master__pin_source','mcp__ppt_master__read_source_page','mcp__ppt_master__convert_source','mcp__ppt_master__read_converted_source']
-    assert (root/'motif-libraries/ppt-web-v2-r13/entry.json').is_file()
+    bundle = root / row['rsi']['runtime_bundle']
+    assert bundle == root / 'motif-libraries' / 'ppt-master'
+    assert (bundle / 'entry.json').is_file()
+    assert not any(path.is_dir() for path in bundle.parent.rglob('ppt-*-v*'))
     assert (root/'scenarios/research_ppt/web-scenario.json').is_file()
 
 

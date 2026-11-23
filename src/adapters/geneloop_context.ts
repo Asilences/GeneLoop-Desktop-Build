@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {BasicCompactionEngine} from '@deepseek-ai/dsh-compaction-basic';
 import {BlockAssembler,LlmError,createUserMessage,contentHasImage} from '@deepseek-ai/dsh-llm';
 import {isCompactCheckpointSource} from '@deepseek-ai/dsh-compaction';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 
 const permits=new WeakMap<object,{bridge:object;fingerprint:string;session:string;used:boolean}>();
 const requestFacts=(q:any)=>({provider:q.provider,model:q.model,reasoningEffort:q.reasoningEffort,

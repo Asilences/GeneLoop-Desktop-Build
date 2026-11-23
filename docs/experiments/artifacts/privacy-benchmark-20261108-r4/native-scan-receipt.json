@@ -1,0 +1,11 @@
+{
+  "rule_commit": "a4923292c874d2832bd10ed75fd42b4610d74a88",
+  "data_digest": "3ba9735bfc0dacb37b8d6466415e3bf523218b4de87234e717b212744104c7ea",
+  "scan_wall_seconds": 48.863383958116174,
+  "exit_code": 1,
+  "findings": 8350,
+  "same_finding_locations_as_r1": true,
+  "report_sha256": "0f54257219bca0b972ad918543d4f323073956e8a4e2bf4b7116d116d24a816b",
+  "gitleaks_sha256": "8b6fd684fcd5b4ebe39b68abb072ce59e1063ce7ed4abd556157697845f1f088",
+  "reused_completed_scan": false
+}

@@ -1,0 +1,48 @@
+const {readFileSync,existsSync}=require('node:fs');
+const {join,resolve}=require('node:path');
+const config=JSON.parse(JSON.stringify(require('./package.json').build));
+const rsiFiles=['source/src/adapters/desktop/desktop_rsi.py','source/src/adapters/desktop/desktop_rsi_catalog.py'];
+const privacyFiles=['privacy/versions.json',process.platform==='win32'?'privacy/gitleaks.exe':'privacy/gitleaks'];
+if(process.env.GENELOOP_DESKTOP_TOOL_PACKS==='1'){
+  const root=resolve(process.env.GENELOOP_TOOL_PACK_OUTPUT||join(__dirname,'.local/tool-pack-build'));
+  if(!existsSync(join(root,'preservation.json')))throw Error('先完成工具包构建与文件保留核对');
+  const proof=JSON.parse(readFileSync(join(root,'preservation.json'),'utf8'));
+  if(!proof.allToolsRetained||proof.filesBefore!==proof.filesInPacks)throw Error('工具文件保留核对失败');
+  const catalog=JSON.parse(readFileSync(join(root,'tool-packs.json'),'utf8'));
+  if(catalog.toolsetId!==proof.toolsetId||catalog.platform!==process.platform||catalog.arch!==process.arch||
+    catalog.packages.reduce((n,p)=>n+p.files.length,0)!==proof.filesBefore||
+    !existsSync(join(root,'installer-tools',catalog.codec.filename)))throw Error('工具目录、平台或解码器不匹配');
+  const files=catalog.packages.flatMap(p=>p.files.map(f=>f.path));
+  if([...rsiFiles,...privacyFiles].some(file=>!files.includes(file)))
+    throw Error('工具分包必须包含当前本机 RSI 与脱敏组件。');
+  if(catalog.packages.some(p=>p.id==='speech')||!files.includes('skills/geneloop-ppt/SKILL.md')||
+    !files.includes('local-ppt-deck.mjs')||files.some(p=>p.startsWith('ppt-master/'))||
+    files.some(p=>/\/playwright\/driver\/node(?:\.exe)?$/.test(p))||
+    !files.some(p=>p.endsWith('/numpy/_core/tests/_natype.py')))
+    throw Error('工具分包范围过期或缺少统计运行模块，请重新准备当前六场景工具。');
+  if(process.env.GENELOOP_DESKTOP_OFFICE_ENGINE!=='libreoffice'&&!files.includes('libreoffice/office-kit.json'))
+    throw Error('默认构建必须使用已核对的精简 Office Kit。');
+  const published=require('./tool-releases.json').releases[process.platform+'-'+process.arch];
+  if(published?.toolsetId===catalog.toolsetId&&!catalog.baseUrl)throw Error('该工具版本已有下载源，请重新生成工具目录');
+  config.extraResources=[{from:join(root,'tool-packs.json'),to:'tool-packs.json'},{from:join(root,'installer-tools'),to:'installer-tools'}];
+}else{
+  const root=resolve(process.env.GENELOOP_DESKTOP_TOOLS_STAGE||join(__dirname,'desktop-tools-bundle'));
+  const manifest=existsSync(join(root,'manifest.json'))?JSON.parse(readFileSync(join(root,'manifest.json'),'utf8')):null;
+  if(manifest?.profile?.scope!=='six-scenes-ppt-authoring'||existsSync(join(root,'speech'))||existsSync(join(root,'ppt-master'))||
+    !existsSync(join(root,'local-ppt-deck.mjs'))||
+    !existsSync(join(root,'ppt-deck/scenarios/ppt_master/third_party/ppt-master/SKILL.md'))||
+    !existsSync(join(root,'skills/geneloop-ppt/SKILL.md')))
+    throw Error('完整离线包的工具目录已过期，请按当前六场景范围重新准备工具；不能复用旧语音目录。');
+  if(manifest.platform!==process.platform||manifest.arch!==process.arch)throw Error('完整离线包的工具平台与当前构建不匹配。');
+  const {createHash}=require('node:crypto');
+  const digest=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+  if([...rsiFiles,...privacyFiles].some(file=>!existsSync(join(root,file))))
+    throw Error('完整离线包必须先准备本机 RSI 与脱敏组件。');
+  if(rsiFiles.some(file=>digest(join(root,file))!==digest(join(__dirname,'../..',file.slice('source/'.length)))))
+    throw Error('本机 RSI 暂存代码已过期，请重新暂存当前源码。');
+  if(process.env.GENELOOP_DESKTOP_OFFICE_ENGINE!=='libreoffice'&&!existsSync(join(root,'libreoffice/office-kit.json')))
+    throw Error('完整离线包必须包含已核对的精简 Office Kit。');
+  config.extraResources=config.extraResources.map(row=>row.to==='geneloop-tools'?{...row,from:root,
+    filter:['**/*','!**/__pycache__/**','!**/*.pyc','!**/*.pyo']}:row);
+}
+module.exports=config;

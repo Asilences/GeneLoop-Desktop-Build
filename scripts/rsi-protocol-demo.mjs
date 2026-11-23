@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
-import {executeRsiOperation,admissionDecision,bytesSha256} from '../src/adapters/rsi_protocol.ts';
+import {executeRsiOperation,admissionDecision,bytesSha256} from '../src/rsi/protocol/rsi_protocol.ts';
 import {diagnosticHost,fixtures} from '../examples/rsi-protocol-v1/host.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));

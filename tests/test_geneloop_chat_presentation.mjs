@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const source = readFileSync(new URL('../src/adapters/harless_web_client/client.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../src/adapters/web/client/client.js', import.meta.url), 'utf8');
 const node = (kind, seq, data, closed = true) => ({ key: kind + seq, kind, anchorSeq: seq,
   location: { kind: 'step', turn: { turn: 1, status: closed ? 'closed' : 'running' } }, visibility: 'visible', data });
 const assistant = (seq, text, closed = true, blocks = []) => node('assistant-step', seq, {

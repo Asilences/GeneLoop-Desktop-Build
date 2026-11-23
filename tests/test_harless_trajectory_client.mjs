@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 
-const source=readFileSync(new URL('../src/adapters/harless_web_client/client.js',import.meta.url),'utf8');
+const source=readFileSync(new URL('../src/adapters/web/client/client.js',import.meta.url),'utf8');
 function fixture({header=false}={}) {
   let plugin,wrapper,cursor=0,states=[],deps=[],pending=[],tree,cleanups=[];
   const Native=function NativeTrajectory(){},Images=function NativeImages(){},imageInject=()=>({imageAction:'native'});

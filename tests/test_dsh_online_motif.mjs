@@ -5,8 +5,8 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
-import { apply, observeHarnessToolResult } from '../src/adapters/dsh_online_motif.mjs';
-import { compileLocalPrograms, digest } from '../src/motif_core/online_skill_runtime.mjs';
+import { apply, observeHarnessToolResult } from '../src/adapters/harness/motif/dsh_online_motif.mjs';
+import { compileLocalPrograms, digest } from '../src/motif_core/runtime/online_skill_runtime.mjs';
 
 const nativeResult = (value) => ({ isError: false, value,
   content: [{ type: 'text', text: JSON.stringify(value) }] });

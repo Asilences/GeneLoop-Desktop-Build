@@ -96,7 +96,7 @@ def test_full_native_host_boots_and_exposes_scoped_controls_without_model_work()
                                                    'includeUserRoot': False,
                                                    'roots': [{'path': str(output / 'presets'), 'trust': 'system'}]}},
                   {'insert': [{'id': 'geneloop-tasks-boot',
-                               'name': (ROOT / 'src/adapters/dsh_web_tasks.ts').as_uri()},
+                               'name': (ROOT / 'src/adapters/web/dsh_web_tasks.ts').as_uri()},
                               {'id': 'geneloop-shell', 'name': (ROOT / 'src/adapters/geneloop_shell.ts').as_uri()},
                               {'id': 'geneloop-web-search', 'name': (ROOT / 'src/adapters/geneloop_web_search.ts').as_uri()}]}]
         composition = subprocess.run([node, str(ROOT / 'src/adapters/geneloop_native_host.mjs'),

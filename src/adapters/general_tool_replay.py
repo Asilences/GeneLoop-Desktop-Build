@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from jsonschema import Draft202012Validator
-from src.motif_core.offline.experience_registry import digest, read, sha
+from src.motif_core.reuse.experience_registry import digest, read, sha
 from src.adapters.general_tools import digest as gateway_digest
 
 ROOT = Path(__file__).resolve().parents[2]

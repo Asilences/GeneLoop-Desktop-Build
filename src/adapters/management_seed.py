@@ -6,10 +6,13 @@ files, historical task grants, raw traces, or another account's mutable registry
 """
 from pathlib import Path
 import re
-from src.motif_core.offline.experience_registry import read,sha,digest,durable,ExperienceRegistry
+from src.motif_core.reuse.experience_registry import read,sha,digest,durable,ExperienceRegistry
+from src.adapters.file_management.experience_certification import check_motif_certificate
 
 FORMAT='sss-management-seed-release-v1'
 CERT='sss-management-seed-attestation-v1'
+PUBLIC_RELEASE=Path('motif-libraries/file-management')
+STAGED_RELEASES=Path('.local/public-file-seeds')
 
 
 def validate_historical_certificate(policy,certificate,raw_sha,project=None):
@@ -18,10 +21,12 @@ def validate_historical_certificate(policy,certificate,raw_sha,project=None):
     root=Path(project or ROOT).resolve();cert=read(certificate)
     name=cert.get('release','')
     if not re.fullmatch(r'file-v[1-9][0-9]*',name):raise ValueError('unregistered management seed release')
-    release=root/'motif-libraries'/name
+    release=root/PUBLIC_RELEASE
     if any(p.is_symlink() for p in (release,*release.parents)):raise ValueError('seed release symlink refused')
     manifest=read(release/'entry.json')
-    if manifest.get('format')!=FORMAT or manifest.get('digest')!=digest({k:v for k,v in manifest.items() if k!='digest'}):raise ValueError('seed manifest changed')
+    if (manifest.get('format')!=FORMAT or manifest.get('release')!=name
+            or manifest.get('digest')!=digest({k:v for k,v in manifest.items() if k!='digest'})):
+        raise ValueError('seed manifest changed')
     for name,h in manifest['files'].items():
         p=Path(name)
         if not re.fullmatch(r'(?:policies|certificates)/[a-f0-9]{64}\.json',name) or (release/p).is_symlink() or sha(release/p)!=h:raise ValueError('seed release object changed')
@@ -50,29 +55,28 @@ def install(cfg):
     from .continuous_rsi import ROOT
     from .experience_library import sources
     registry=ExperienceRegistry(Path(cfg['state_root'])/'registry');state=registry.load();known={r['entry_id'] for r in state['entries']}
-    releases=sorted((ROOT/'motif-libraries').glob('file-v*'),key=lambda p:int(p.name[6:]) if re.fullmatch(r'file-v[1-9][0-9]*',p.name) else -1,reverse=True)
+    release=ROOT/PUBLIC_RELEASE
+    if not (release/'entry.json').is_file():return state
     additions=[]
-    for release in releases:
-        if not (release/'entry.json').is_file():continue
-        try:
-            manifest=read(release/'entry.json')
-            validated=[]
-            for item in manifest['entries']:
-                if any(not re.fullmatch(r'(?:policies|certificates)/[a-f0-9]{64}\.json',item.get(k,'')) or item[k] not in manifest['files'] for k in ['payload','certificate']):raise ValueError('seed path outside trusted manifest')
-                payload=release/item['payload'];certificate=release/item['certificate'];policy=read(payload)
-                validate_certificate(policy,certificate,sha(payload))
-                if item['policy_digest'] not in known:validated.append((item,payload,certificate))
-            for item,payload,certificate in validated:
-                additions.append(registry.entry(item['kind'],payload,sources(),certificate));known.add(item['policy_digest'])
-            break
-        except (ValueError,KeyError,TypeError,OSError) as error:
-            # An incompatible or damaged seed is never execution authority and
-            # must not prevent an ordinary task from running. Keep one receipt
-            # per release/target/failure; never silently rewrite its certificate.
-            failure={'release':release.name,'manifest_sha256':sha(release/'entry.json'),
-                     'runtime_source':sources(),'reason':str(error),'activated':False}
-            receipt=Path(cfg['state_root'])/'seed-rejections'/(digest(failure)+'.json')
-            if not receipt.exists():durable(receipt,failure,exclusive=True)
+    try:
+        manifest=read(release/'entry.json')
+        validated=[]
+        for item in manifest['entries']:
+            if any(not re.fullmatch(r'(?:policies|certificates)/[a-f0-9]{64}\.json',item.get(k,'')) or item[k] not in manifest['files'] for k in ['payload','certificate']):raise ValueError('seed path outside trusted manifest')
+            payload=release/item['payload'];certificate=release/item['certificate'];policy=read(payload)
+            validate_certificate(policy,certificate,sha(payload))
+            if item['policy_digest'] not in known:validated.append((item,payload,certificate))
+        for item,payload,certificate in validated:
+            additions.append(registry.entry(item['kind'],payload,sources(),certificate,
+                                            verify_certificate=check_motif_certificate));known.add(item['policy_digest'])
+    except (ValueError,KeyError,TypeError,OSError) as error:
+        # An incompatible or damaged seed is never execution authority and
+        # must not prevent an ordinary task from running. Keep one receipt
+        # per release/target/failure; never silently rewrite its certificate.
+        failure={'release':release.name,'manifest_sha256':sha(release/'entry.json'),
+                 'runtime_source':sources(),'reason':str(error),'activated':False}
+        receipt=Path(cfg['state_root'])/'seed-rejections'/(digest(failure)+'.json')
+        if not receipt.exists():durable(receipt,failure,exclusive=True)
     if additions:return registry.publish(additions,expected=state['generation'],reason='trusted re-certified public seeds; account guards and future learning remain independent')
     return state
 
@@ -81,12 +85,13 @@ def publish(config,release_name):
     """Run only against fully re-certified current private records before commit."""
     from .continuous_rsi import ROOT,load_config
     from .experience_library import sources,policy_current
-    from src.motif_core.offline.experience_registry import check_motif_certificate
     if not re.fullmatch(r'file-v[1-9][0-9]*',release_name):raise ValueError('invalid fresh seed release name')
     cfg=load_config(config);root=Path(cfg['state_root'])/'registry';state=ExperienceRegistry(root).load()
-    release=ROOT/'motif-libraries'/release_name
-    if release.exists():raise ValueError('never overwrite a public release')
-    manifest={'format':FORMAT,'quality':'sss-management-quality-v7','runtime_source':sources(),'entries':[],'files':{},
+    release=ROOT/STAGED_RELEASES/release_name
+    current=ROOT/PUBLIC_RELEASE/'entry.json'
+    if release.exists() or (current.is_file() and read(current).get('release')==release_name):
+        raise ValueError('never overwrite a public release')
+    manifest={'format':FORMAT,'release':release_name,'quality':'sss-management-quality-v7','runtime_source':sources(),'entries':[],'files':{},
               'raw_private_evidence_published':False,'grants_execution':False}
     checked=[]
     for e in state['entries']:
@@ -118,4 +123,4 @@ def publish(config,release_name):
         manifest['entries'].append({'kind':e['kind'],'policy_digest':name,'payload':payload,'payload_sha256':sha(release/payload),'certificate':certificate})
         for f in [payload,certificate]:manifest['files'][f]=sha(release/f)
     manifest['digest']=digest(manifest);durable(release/'entry.json',manifest,exclusive=True)
-    return {'release':release_name,'entries':len(checked),'private_raw_files_published':0}
+    return {'release':release_name,'staged_bundle':str(release),'entries':len(checked),'private_raw_files_published':0}

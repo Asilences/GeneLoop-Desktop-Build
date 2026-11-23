@@ -9,8 +9,8 @@ import argparse,json,os,subprocess,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[3];sys.path.insert(0,str(ROOT))
 from src.adapters.reuse_form_rsi import evaluate_form,publish_form,resolve_form
-from src.adapters.script_motif_compiler import digest
-from src.motif_core.offline.experience_registry import read,durable,sha
+from src.motif_core.offline.compilation.script_motif_compiler import digest
+from src.motif_core.reuse.experience_registry import read,durable,sha
 from scenarios.remotion_edit.structured.analyze_programs import measurement
 
 

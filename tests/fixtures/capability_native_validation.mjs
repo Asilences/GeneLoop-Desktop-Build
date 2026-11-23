@@ -1,7 +1,7 @@
 /** Synthetic library admission cases; no stored program executes. */
 import {createHash} from 'node:crypto';
-import {digest} from '../../src/motif_core/online_skill_runtime.mjs';
-import {validateSourceProgram} from '../../src/adapters/source_program_runtime.ts';
+import {digest} from '../../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validateSourceProgram} from '../../src/capability/runtime/source_program_runtime.ts';
 const cases=[
  ['duplicate_required',{type:'object',properties:{x:{type:'integer'}},required:['x','x']},'const x=__GENELOOP_PARAMETERS__;'],
  ['scalar_input',{type:'number'},'const x=__GENELOOP_PARAMETERS__;'],

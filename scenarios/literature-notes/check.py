@@ -23,15 +23,14 @@ sys.path.insert(0, str(ROOT))
 
 from mcp import Client, StdioServerParameters
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 from src.adapters.scenario import prepare_scenario
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 PREFIX = 'mcp__literature_notes__'
 TRAIN = ('train_seed', 'train_protocol')

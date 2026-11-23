@@ -1,9 +1,9 @@
 /** Deterministic evidence-consumption diagnostics, not a model-quality claim. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {attachmentReadingIndex} from '../src/adapters/harless_attachment_reading.ts';
-import {attachmentContextMessage,attachmentEvidence} from '../src/adapters/harless_attachment_context.ts';
-import {publicSessionEvent} from '../src/adapters/harless_public_output.ts';
+import {attachmentReadingIndex} from '../src/adapters/web/attachments/harless_attachment_reading.ts';
+import {attachmentContextMessage,attachmentEvidence} from '../src/adapters/web/attachments/harless_attachment_context.ts';
+import {publicSessionEvent} from '../src/adapters/web/tasks/harless_public_output.ts';
 
 const a='a'.repeat(64),b='b'.repeat(64),image='c'.repeat(64);
 const source=(sha256,origin,format='pptx')=>({name:(sha256===a?'previous.':'current.')+format,sha256,origin});

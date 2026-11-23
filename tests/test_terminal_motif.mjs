@@ -4,9 +4,9 @@ import {createHash,randomUUID} from 'node:crypto';
 import {mkdirSync,mkdtempSync,writeFileSync,rmSync,readFileSync,symlinkSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {markAgentLoopRequest} from '@deepseek-ai/dsh-llm';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {validateTerminalPolicy,validateTerminalTask,verifyRepairReceipt} from '../src/motif_core/terminal_receipt_policy.ts';
-import {createTerminalGate} from '../src/adapters/dsh_entry_motif.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validateTerminalPolicy,validateTerminalTask,verifyRepairReceipt} from '../src/motif_core/runtime/policies/terminal_receipt_policy.ts';
+import {createTerminalGate} from '../src/adapters/harness/motif/dsh_entry_motif.ts';
 const ROOT=resolve('.'),tool='mcp__literature_pdf_repair__submit_claim_repair',schema={type:'object',properties:{}};
 const hash=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
 function fixture(){
@@ -16,7 +16,7 @@ function fixture(){
  const task={question:'fixture',sources:inventory},evidence={draft:{}},request={input_sha256:digest(evidence),claim_ids:['claim:p:method']};
  function save(p,v){writeFileSync(p,JSON.stringify(v));}
  save(join(input,'evidence.json'),evidence);save(join(input,'pdf-input-snapshot.json'),{task});save(join(input,'repair-targets.json'),request);
- const versions=[{path:'src/motif_core/terminal_receipt_policy.ts',sha256:hash('src/motif_core/terminal_receipt_policy.ts')}];
+ const versions=[{path:'src/motif_core/runtime/policies/terminal_receipt_policy.ts',sha256:hash('src/motif_core/runtime/policies/terminal_receipt_policy.ts')}];
  const frame={schema_version:1,session_id:'s',task_id:'t',input_version:digest(evidence),task_sha256:digest(task),request_version:digest(request),policy_sha256:digest({}),
   target_ids:request.claim_ids,target_ids_sha256:digest(request.claim_ids),pdf_inventory:inventory,artifact_root:output,version_files:versions,execution_version_sha256:digest(versions),
   input_files:['evidence.json','pdf-input-snapshot.json','repair-targets.json'].map(n=>({path:join(input,n),sha256:hash(join(input,n))})),

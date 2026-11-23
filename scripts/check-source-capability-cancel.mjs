@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {runSourceCapability} from '../src/adapters/source_capability_runtime.ts';
-import {capabilityDigest,validateCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
+import {capabilityDigest,validateCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
 
 const exec=promisify(execFile),sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const fail=reason=>{throw Error(reason);};

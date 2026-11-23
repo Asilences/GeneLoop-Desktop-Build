@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { digest } from '../../src/motif_core/online_skill_runtime.mjs';
+import { digest } from '../../src/motif_core/runtime/online_skill_runtime.mjs';
 const helper = fileURLToPath(new URL('./web-binding.py', import.meta.url));
 export function createTaskBinding(config: { python: string; papers_dir: string; presets_root: string }) {
   const invoke = (payload: any): Promise<any> => new Promise((resolve, reject) => {

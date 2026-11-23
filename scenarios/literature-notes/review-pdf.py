@@ -17,7 +17,7 @@ REVIEW_TOOL = 'mcp__literature_pdf_review__submit_claim_review'
 
 def review_contracts():
     sys.path.insert(0, str(ROOT))
-    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
     return parse_tool_contracts({REVIEW_TOOL: {'required_params': ['review'], 'read_only': True, 'replay_stable': False}})
 
 
@@ -25,7 +25,7 @@ def collect_review(model_run, output, run, input_digest, *, tool_name=REVIEW_TOO
                    contracts=None, validator=ReviewScene):
     """Collect only a tool-witnessed hash receipt; safe to retry offline after a collector failure."""
     contracts = contracts if contracts is not None else review_contracts()
-    from src.adapters.dsh_trajectory import extract_dsh_trace
+    from src.adapters.harness.dsh_trajectory import extract_dsh_trace
     model_run, output, run = Path(model_run).resolve(), Path(output).resolve(), Path(run).resolve()
     if not model_run.is_relative_to(ROOT / '.local/runs') or not output.is_relative_to(ROOT / '.local'):
         raise ValueError('unexpected review directory')

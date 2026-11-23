@@ -26,7 +26,7 @@ def module(name, filename):
 
 def repair_contracts(synthesis_only=False):
     sys.path.insert(0, str(ROOT))
-    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
     return parse_tool_contracts({REPAIR_TOOL: {'required_params': ['synthesis_hypothesis'] if synthesis_only else ['decisions', 'synthesis_hypothesis'],
                                              'read_only': True, 'replay_stable': False}})
 

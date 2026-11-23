@@ -1,15 +1,16 @@
 # GeneLoop 的 ppt-master 场景
 
-网页版 `/ppt` 使用官方 ppt-master 6.6.0，原 `research_ppt` CLI、工具和库保留用于历史复现及回滚。上游为 [hugohe3/ppt-master](https://github.com/hugohe3/ppt-master)，MIT，Copyright (c) 2025–2026 Hugo He。此目录是集成适配，不是上游技能的复制品；不修改其归属文件、工作流或检查器。
+2026-11-11 新候选增加`build_ppt`与`patch_ppt`，只吸收dsh-ppt锁定执行模块，共享原权限、预览和交付，不安装上游完整插件/Skill。SVG及已有PPTX路线保留；JSON源稿不回收Office手工修改。纯JS依赖由根目录`npm ci`安装，开发隔离环境也可在`third_party/dsh-ppt`运行`npm ci --ignore-scripts`。桌面可选打包入口`apps/desktop/scripts/stage-ppt-deck.mjs`，宿主提供目录授权、主题、字体、Office及发布函数；本模块不增加常驻服务或模型调用。完整状态及未验证项见[本轮记录](../../docs/experiments/ppt-native-deck-engine-20261111.md)。
 
-`skill-lock.json` 冻结完整安装的 13,016 个文件。用已经下载的对应官方分发执行：
+2026-11-10当前本地候选PPT152/Paper154提供`edit_ppt_native`处理原生文本、字号、对齐小修改，`prepare_ppt_asset`准备本地图片；复杂重排沿原流程。当前完整PPTX/PDF/逐页PNG按版本交付，成功发布结束本轮，未执行的工具文本不能当改页完成。RSI学习和内部可选Judge各自后台运行，不阻塞前台；备注默认可选。零模型原轨迹及Office回放、完整回归和平台边界见[当前记录](../../docs/experiments/ppt-stable-delivery-audit-20261110.md)，以下为历史说明。未改前端或正式部署，未PR。
 
-```sh
-python scripts/install-ppt-master.py --source /path/to/ppt-master --destination /fixed/public/ppt-master-6.6.0
-export GENELOOP_PPT_MASTER_ROOT=/fixed/public/ppt-master-6.6.0
-```
+2026-11-09当前隔离PPT145支持先功能试用后验证：原稿保真与设计差异可保留作诊断，已独立观察的写页/改页结构可以进入probation。两个真实轨迹学得的连续程序已在一份独立留出任务执行并交付，不按任意Skill文字生成流程；本例请求与估费下降，范围和分账见[结果](../../docs/experiments/ppt-practical-learning-20261109.md)。以下旧版本段落保留作历史。
 
-安装器逐字节核验、不覆盖现有目录。Python 依赖按该安装的 `requirements.txt` 安装在隔离运行环境。账号网关 `memberSceneDeployment.pptMasterRoot` 指向同一安装；MCP 和 Bash 都只读挂载为 `/opt/geneloop/ppt-master`。账号网关既有 `rendererRoot`、`fontRoot` 同时提供给命令沙箱，源附件仍只读，输出仍按会话隔离。包缺失、字节变化、工具环境未就绪时明确拒绝，不回退旧生成器冒充新技能。
+当前隔离适配PPT142/Paper144另维护`skill-sources.json`及`skill_sources/`：外部MIT来源先审阅，再自主重写为短设计/编辑参考，与现有工具共用；不安装第二套Agent。`read_ppt_design(guide=true)`按需返回参考，Python发现使用同一登记。参考本身不可执行，学习、认证和后继采用各自记录。两份参考已在真实业务模拟任务被读取；三卡片程序经实际认证反馈纠正、正常学习器登记为认证试用，原失败保留，尚未证明独立后继采用或降费，见[本轮报告](../../docs/experiments/ppt-external-skill-learning-20261108.md)。以下保留早期集成说明；当前接口和状态以该报告及场景交接为准。
+
+网页版 PPT 使用与桌面共用的内置制作资源。来源为 [hugohe3/ppt-master](https://github.com/hugohe3/ppt-master)，MIT，Copyright (c) 2025–2026 Hugo He。许可证、第三方声明和来源信息随包保存。
+
+Web 场景准备时自动验证并展开仓库随附的制作包。MCP 和 Bash 以 `/opt/geneloop/ppt-master` 作为既有只读路径。Python 依赖在隔离运行环境安装，账号网关的 `rendererRoot`、`fontRoot` 继续提供给命令沙箱。源附件只读，输出按会话隔离。部署时用 `scripts/prepare-release-scenes.py` 重建快照。旧独立安装器和整包锁已从源码移除。
 
 两种模式使用同一模型、提示、技能、普通环境准备和工具集合。模型读取入口，官方 attribution guard 成功后读取 routing，再自行按选定路由规划、编写 SVG、核对来源、检查、修复和导出。用户明确委托自主设计时使用上游 explicit delegation 分支；否则保留确认门禁。既有公共 Bash、搜索、网页读取和后台任务继续可用。
 

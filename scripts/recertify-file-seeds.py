@@ -15,22 +15,25 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / 'scenarios/file-management')]
 from src.adapters.continuous_rsi import STATE_HOME, PRIVATE_HOME, load_config, initialize, private, records
-from src.adapters.management_seed import validate_historical_certificate, publish
+from src.adapters.management_seed import PUBLIC_RELEASE, STAGED_RELEASES, validate_historical_certificate, publish
 from src.adapters.management_recertification import recertify
-from src.motif_core.offline.experience_registry import read, sha, durable
+from src.motif_core.reuse.experience_registry import read, sha, durable
 from management_prepare import prepare
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--experiment', type=Path, required=True)
-    parser.add_argument('--previous', default='file-v5')
-    parser.add_argument('--release', default='file-v6')
+    release = ROOT / PUBLIC_RELEASE
+    manifest = read(release / 'entry.json')
+    latest = manifest['release']
+    parser.add_argument('--previous', default=latest)
+    parser.add_argument('--release', default=f'file-v{int(latest[6:]) + 1}')
     parser.add_argument('--call-model', action='store_true')
     args = parser.parse_args()
     experiment = private(args.experiment)
-    release = ROOT / 'motif-libraries' / args.previous
-    manifest = read(release / 'entry.json')
+    if args.previous != latest:
+        parser.error('Check out the matching historical Git revision to use a retired seed release.')
     for entry in manifest['entries']:
         payload = release / entry['payload']
         validate_historical_certificate(read(payload), release / entry['certificate'], sha(payload))
@@ -96,11 +99,12 @@ def main():
         print(json.dumps({'tools': tools, 'status': result['status'], 'reason': result.get('reason')}, ensure_ascii=False), flush=True)
         if result['status'] != 'activated':
             raise SystemExit(1)
-    current = ROOT / 'motif-libraries' / args.release
+    current = ROOT / STAGED_RELEASES / args.release
     if not current.exists():
         published = publish(config, args.release)
     else:
-        published = {'release': args.release, 'entries': len(read(current / 'entry.json')['entries']), 'existing': True}
+        published = {'release': args.release, 'staged_bundle': str(current),
+                     'entries': len(read(current / 'entry.json')['entries']), 'existing': True}
     outcomes = records(cfg['state_root'])
     summary = {'published': published, 'results': results, 'material_type': 'synthetic_compatibility',
                'requests': sum(r['upstream_requests'] for r in outcomes),

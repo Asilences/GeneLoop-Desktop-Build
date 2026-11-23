@@ -1,7 +1,7 @@
 import copy
 import pytest
-from src.adapters.dsh_event_projection import project_ptc_dispatches
-from src.adapters.dsh_trajectory import ToolContract, extract_dsh_trace
+from src.adapters.harness.dsh_event_projection import project_ptc_dispatches
+from src.adapters.harness.dsh_trajectory import ToolContract, extract_dsh_trace
 
 
 def events(error=False):

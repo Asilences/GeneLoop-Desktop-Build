@@ -110,8 +110,8 @@ def test_native_conversation_alias_closes_old_budget_without_reset(case):
     _,spec,w,x,out=case
     import json
     from src.adapters.operation_runner import initialize_job
-    from src.adapters.file_web_task_budget import TaskBudgetRegistry
-    from src.adapters.file_cost_gate import State
+    from src.adapters.web.web_task_budget import FileTaskBudgetRegistry as TaskBudgetRegistry
+    from src.adapters.deepseek_cost_gate import FileState as State
     limits={'budget_usd':1,'max_steps':96,'max_output':100,'max_repairs':2}
     registry=TaskBudgetRegistry(run_state=State(cap_usd=2,output_cap=100,request_limit=200,record=out.parent/(uuid4().hex+'.jsonl')),tasks_root=out.parent,task_request_limit=96,max_task_budget_usd=1)
     for index in (1,2):

@@ -4,8 +4,8 @@ import json
 import tempfile
 from pathlib import Path
 import pytest
-from src.adapters.capability_feedback import CapabilityFeedback
-from src.adapters.capability_contract import capability_digest
+from src.rsi.feedback.capability_feedback import CapabilityFeedback
+from src.capability.graph.capability_contract import capability_digest
 from tests.test_capability_feedback import fixture, fact
 from tests.test_capability_improvement import put
 

@@ -16,11 +16,11 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
-from src.adapters.file_scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
-from src.adapters.dsh_client import _usage
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.adapters.harness.harness_runtime import create_harness
+from src.adapters.harness.dsh_client import _usage
 from src.adapters.native_budget import NativeBudgetGuard
-from src.adapters.file_cost_gate import State, create_server
+from src.adapters.deepseek_cost_gate import FileState as State, create_file_server as create_server
 
 
 def main():
@@ -59,11 +59,12 @@ def main():
     # Keep the old CLI alias; runtime and budget accounting use the official ID.
     if args.model == 'deepseek-pro':
         args.model = 'deepseek-v4-pro'
-    if (not 0 <= args.budget_usd <= 100 or not 1 <= args.max_output <= 393216 or not 0 <= args.max_steps <= 100
-            or (args.budget_usd==0 or args.max_steps==0) and not (args.rsi_config or args.rsi_resume)):
+    if (not 0 <= args.budget_usd <= 100 or not 0 <= args.max_output <= 393216 or not 0 <= args.max_steps <= 100
+            or (args.budget_usd==0 or args.max_steps==0 or args.max_output==0) and not (args.rsi_config or args.rsi_resume)):
         parser.error('invalid budget')
     if args.budget_usd==0:args.budget_usd=None
     if args.max_steps==0:args.max_steps=None
+    if args.max_output==0:args.max_output=None
     if not args.rsi_config and not args.rsi_resume and args.scenario:
         candidate=json.loads(args.scenario.read_text())
         if candidate.get('acceptance_guard',{}).get('durable_job') and any('management_tools.py' in str(v.get('args',[])) for v in candidate.get('servers',[])):
@@ -151,7 +152,7 @@ def main():
         bound.parent.mkdir(parents=True, exist_ok=True)
         with bound.open('x', encoding='utf-8') as stream: json.dump(collection, stream, ensure_ascii=False)
         bound.chmod(0o600)
-        verifier = "import fs from 'node:fs';import {validateCollectionPolicy,validateCollectionTask} from './src/motif_core/collection_read_policy.ts';const p=validateCollectionPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateCollectionTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
+        verifier = "import fs from 'node:fs';import {validateCollectionPolicy,validateCollectionTask} from './src/motif_core/runtime/policies/collection_read_policy.ts';const p=validateCollectionPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateCollectionTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
         import subprocess
         subprocess.run(['node','--input-type=module','-e',verifier,str(policy_path),str(bound)],cwd=ROOT,check=True,capture_output=True)
         collection_digest = policy['policy_digest']
@@ -169,7 +170,7 @@ def main():
         bound.parent.mkdir(parents=True, exist_ok=True)
         with bound.open('x', encoding='utf-8') as stream: json.dump(collection, stream, ensure_ascii=False)
         bound.chmod(0o600)
-        verifier = "import fs from 'node:fs';import {validateReentryPolicy,validateReentryTask} from './src/motif_core/collection_reentry_policy.ts';const p=validateReentryPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateReentryTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
+        verifier = "import fs from 'node:fs';import {validateReentryPolicy,validateReentryTask} from './src/motif_core/runtime/policies/collection_reentry_policy.ts';const p=validateReentryPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateReentryTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
         import subprocess
         subprocess.run(['node','--input-type=module','-e',verifier,str(policy_path),str(bound)],cwd=ROOT,check=True,capture_output=True)
         reentry_digest = policy['policy_digest']
@@ -187,7 +188,7 @@ def main():
         bound.parent.mkdir(parents=True, exist_ok=True)
         with bound.open('x', encoding='utf-8') as stream: json.dump(collection, stream, ensure_ascii=False)
         bound.chmod(0o600)
-        verifier = "import fs from 'node:fs';import {validatePlanPolicy,validatePlanTask} from './src/motif_core/authorized_plan_policy.ts';const p=validatePlanPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validatePlanTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
+        verifier = "import fs from 'node:fs';import {validatePlanPolicy,validatePlanTask} from './src/motif_core/runtime/policies/authorized_plan_policy.ts';const p=validatePlanPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validatePlanTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
         import subprocess
         subprocess.run(['node','--input-type=module','-e',verifier,str(policy_path),str(bound)],cwd=ROOT,check=True,capture_output=True)
         plan_digest = policy['policy_digest']
@@ -197,7 +198,7 @@ def main():
             binding=json.loads(binding_path.read_text())
             if binding.get('job_file')!=str(args.file_job.resolve()):raise ValueError('composition belongs to another job')
             child_env['SSS_DURABLE_PLAN_BINDING']=str(binding_path)
-            check = "import fs from 'node:fs';import {createJobPlanGuard} from './src/adapters/dsh_job_plan_gate.ts';const g=createJobPlanGuard(process.cwd(),process.argv[1],process.argv[2],JSON.parse(fs.readFileSync(process.argv[3])),()=>{});try{g.validate();console.log(JSON.stringify({eligible:true,activated:false}));}catch(e){console.log(JSON.stringify({eligible:false,activated:false,reason:e.message}));}"
+            check = "import fs from 'node:fs';import {createJobPlanGuard} from './src/adapters/harness/dsh_job_plan_gate.ts';const g=createJobPlanGuard(process.cwd(),process.argv[1],process.argv[2],JSON.parse(fs.readFileSync(process.argv[3])),()=>{});try{g.validate();console.log(JSON.stringify({eligible:true,activated:false}));}catch(e){console.log(JSON.stringify({eligible:false,activated:false,reason:e.message}));}"
             checked=subprocess.run(['node','--input-type=module','-e',check,str(binding_path),str(policy_path),str(bound)],cwd=ROOT,check=True,capture_output=True,text=True)
             plan_composition_preview=json.loads(checked.stdout)
     if args.collection_script:
@@ -213,7 +214,7 @@ def main():
         bound.parent.mkdir(parents=True, exist_ok=True)
         with bound.open('x', encoding='utf-8') as stream: json.dump(collection, stream, ensure_ascii=False)
         bound.chmod(0o600)
-        verifier = "import fs from 'node:fs';import {validateCollectionTask} from './src/motif_core/collection_read_policy.ts';import {validateCollectionScript} from './src/motif_core/collection_batch_script.ts';const p=validateCollectionScript(JSON.parse(fs.readFileSync(process.argv[1])));validateCollectionTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
+        verifier = "import fs from 'node:fs';import {validateCollectionTask} from './src/motif_core/runtime/policies/collection_read_policy.ts';import {validateCollectionScript} from './src/motif_core/runtime/policies/collection_batch_script.ts';const p=validateCollectionScript(JSON.parse(fs.readFileSync(process.argv[1])));validateCollectionTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
         import subprocess
         subprocess.run(['node','--input-type=module','-e',verifier,str(policy_path),str(bound)],cwd=ROOT,check=True,capture_output=True)
         script_digest = policy['script_digest']
@@ -231,7 +232,7 @@ def main():
         bound.parent.mkdir(parents=True, exist_ok=True)
         with bound.open('x', encoding='utf-8') as stream: json.dump(entry, stream, ensure_ascii=False)
         bound.chmod(0o600)
-        verifier = "import fs from 'node:fs';import {validateEntryPolicy,validateEntryTask} from './src/motif_core/entry_read_policy.ts';const p=validateEntryPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateEntryTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
+        verifier = "import fs from 'node:fs';import {validateEntryPolicy,validateEntryTask} from './src/motif_core/runtime/policies/entry_read_policy.ts';const p=validateEntryPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateEntryTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
         import subprocess
         subprocess.run(['node','--input-type=module','-e',verifier,str(policy_path),str(bound)],cwd=ROOT,check=True,capture_output=True)
         entry_digest = policy['policy_digest']
@@ -249,7 +250,7 @@ def main():
         bound.parent.mkdir(parents=True, exist_ok=True)
         with bound.open('x', encoding='utf-8') as stream: json.dump(terminal, stream, ensure_ascii=False)
         bound.chmod(0o600)
-        verifier = "import fs from 'node:fs';import {validateTerminalPolicy,validateTerminalTask} from './src/motif_core/terminal_receipt_policy.ts';const p=validateTerminalPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateTerminalTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
+        verifier = "import fs from 'node:fs';import {validateTerminalPolicy,validateTerminalTask} from './src/motif_core/runtime/policies/terminal_receipt_policy.ts';const p=validateTerminalPolicy(JSON.parse(fs.readFileSync(process.argv[1])));validateTerminalTask(JSON.parse(fs.readFileSync(process.argv[2])),p);"
         import subprocess
         subprocess.run(['node','--input-type=module','-e',verifier,str(policy_path),str(bound)],cwd=ROOT,check=True,capture_output=True)
         terminal_digest = policy['policy_digest']

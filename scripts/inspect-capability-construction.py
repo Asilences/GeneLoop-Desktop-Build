@@ -6,9 +6,9 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from src.adapters.capability_construction_history import capture,build_history
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_improvement import evidence,save
+from src.rsi.learning.capability_construction_history import capture,build_history
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_improvement import evidence,save
 
 
 def inspect(manifest, output):

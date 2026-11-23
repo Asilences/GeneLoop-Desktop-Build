@@ -1,7 +1,7 @@
 """Budget-routing diagnostics, no model or external endpoint is called."""
 import json
 import pytest
-from src.adapters.ppt_capability_budget import PptCapabilityBudget
+from src.adapters.ppt.learning.ppt_capability_budget import PptCapabilityBudget
 
 
 @pytest.mark.parametrize('prefix', ['', 'abc12345'])

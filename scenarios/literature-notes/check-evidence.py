@@ -18,11 +18,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from mcp import Client, StdioServerParameters
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 from src.adapters.scenario import prepare_scenario
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
 
 import importlib.util
 

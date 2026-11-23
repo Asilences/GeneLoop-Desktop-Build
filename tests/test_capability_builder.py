@@ -6,8 +6,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import create_capability, create_capability_snapshot, capability_ref
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import create_capability, create_capability_snapshot, capability_ref
 from tests.test_capability_contract import leaf
 
 SCALAR = {'type': 'integer'}

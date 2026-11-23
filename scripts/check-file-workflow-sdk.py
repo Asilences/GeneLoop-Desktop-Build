@@ -5,11 +5,11 @@ from pathlib import Path
 from uuid import uuid4
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'scenarios/file-management'))
 from common import PREFIX,save
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
-from src.adapters.file_cost_gate import create_server
+from src.adapters.deepseek_cost_gate import create_file_server as create_server
 from src.adapters.file_job_budget import FileJobBudget,job_command
-from src.adapters.file_scenario import prepare_scenario
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
 import importlib.util
 sp=importlib.util.spec_from_file_location('workflow_probe_helpers',ROOT/'scripts/check-file-workflows.py');helpers=importlib.util.module_from_spec(sp);sp.loader.exec_module(helpers)
 

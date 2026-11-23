@@ -1,7 +1,7 @@
 /** Host-owned CLI for native Artifact catalog and public Capability execution. */
 import {readFileSync} from 'node:fs';
 import {buildArtifactCapabilities,runArtifactCapability} from '../src/adapters/artifact_capability_runtime.ts';
-import {publicPptValidationTask} from '../src/adapters/ppt_capability_broker.ts';
+import {publicPptValidationTask} from '../src/adapters/ppt/runtime/ppt_capability_broker.ts';
 const args=process.argv.slice(2);
 try{
  if(args[0]==='--catalog'){

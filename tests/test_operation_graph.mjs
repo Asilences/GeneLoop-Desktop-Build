@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {createOperationController,validateOperationPolicy} from '../src/motif_core/operation_graph_policy.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {createOperationController,validateOperationPolicy} from '../src/motif_core/runtime/policies/operation_graph_policy.ts';
 function fixture(){
  const names=['prepare','perform','inspect'].map(n=>'mcp__other__'+n),scope={execution_version:'a'.repeat(64)};
  const tools=names.map((name,i)=>({name,parameters:{type:'object',required:[i?'handle':'intent']}}));

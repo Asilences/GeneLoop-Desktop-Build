@@ -8,7 +8,7 @@ import continual_rsi as continual
 import fallback_rsi as fresh
 from common import ROOT,save,sha
 from script_reuse_study import arms
-from src.motif_core.offline.experience_registry import ExperienceRegistry
+from src.motif_core.reuse.experience_registry import ExperienceRegistry
 
 
 def prior_learning(parent,p):

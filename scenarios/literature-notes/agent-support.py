@@ -29,7 +29,7 @@ def capture(directory, question):
             'contract_sha256': contract_version(),
             'workflow_sha256': digest({**{n: hashlib.sha256((HERE / n).read_bytes()).hexdigest()
                                       for n in version_files}, 'completion_guard': hashlib.sha256(
-                                      (ROOT / 'src/adapters/dsh_completion_guard.ts').read_bytes()).hexdigest()})}
+                                      (ROOT / 'src/adapters/harness/dsh_completion_guard.ts').read_bytes()).hexdigest()})}
 
 
 def validate(evidence, snapshot):

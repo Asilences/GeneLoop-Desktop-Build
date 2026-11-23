@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters.capability_feedback import file_ref, verify
+from src.rsi.feedback.capability_feedback import file_ref, verify
 from tests.test_capability_evolution_inputs import valid_fixture, put
 
 

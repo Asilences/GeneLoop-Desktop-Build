@@ -1,6 +1,6 @@
 """Autonomous copy-workspace operations; risky effects need host-issued approval."""
 from __future__ import annotations
-import copy,json,os,shutil,errno
+import copy,json,os,shutil,errno,sys
 from pathlib import Path,PurePosixPath
 from typing import Annotated,Literal
 from uuid import uuid4
@@ -10,10 +10,15 @@ from mcp.types import ToolAnnotations
 from mcp.server.mcpserver.exceptions import ToolError
 from common import ROOT,HERE,digest,sha
 from plan_tools import atomic
-from operation_tools_v2 import OperationSceneV2,TOOLS as BASE_TOOLS,operator_contract as inherited_contract
+from operation_evidence import (BATCH_OPERATION_TOOLS as BASE_TOOLS, DurableOperationEvidence,
+                                batch_operator_contract as inherited_contract, reviewed_execution_version)
+from report_tools import ReportScene
 from management_reading import DocumentReading,TOOLS as READING_TOOLS,contract as reading_contract
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 from src.adapters.general_tools import GeneralTools,NAMES as GENERAL_TOOLS
-TOOLS=[*BASE_TOOLS,*READING_TOOLS,*GENERAL_TOOLS]
+from src.adapters.file_script_tools import FileScripts,TOOLS as SCRIPT_TOOLS,contract as script_contract
+TOOLS=[*BASE_TOOLS,*READING_TOOLS,*GENERAL_TOOLS,*SCRIPT_TOOLS]
 
 VERSION='sss-management-v3'
 LOW_OPS={'copy','move','rename','mkdir','quarantine'}
@@ -39,11 +44,12 @@ def tree(root,ignored=()):
     return {'files':files,'directories':directories}
 
 def execution_version():
-    paths=[HERE/n for n in ('management_tools.py','management_native.py','management_reading.py','management_contract.py','management_goals.py','management_temporal.py','management_provenance.py','file_tools.py','report_tools.py','collection_tools.py','common.py')]
-    paths += [ROOT/n for n in ('src/adapters/general_tools.py','src/adapters/general_tool_replay.py','src/adapters/geneloop_pdf.py','scenarios/file-management/general-tools.json','scenarios/general/runtime.py','scenarios/general/runtime_code.ts')]
-    return digest({p.relative_to(ROOT).as_posix():sha(p) for p in paths})
+    paths=[HERE/n for n in ('management_tools.py','management_native.py','management_reading.py','operation_evidence.py','management_contract.py','management_goals.py','management_temporal.py','management_provenance.py','management_delivery.py','file_tools.py','report_tools.py','collection_tools.py','common.py')]
+    paths += [ROOT/n for n in ('src/adapters/general_tools.py','src/adapters/general_tool_replay.py','src/adapters/geneloop_pdf.py','scenarios/file-management/general-tools.json','scenarios/general/runtime.py','scenarios/general/runtime_code.ts','src/adapters/file_script_tools.py','src/adapters/file_script_runtime.ts')]
+    return reviewed_execution_version(digest({p.relative_to(ROOT).as_posix():sha(p) for p in paths}))
 
 def operator_contract(name):
+    if name in SCRIPT_TOOLS:return script_contract(name)
     if name in READING_TOOLS:return reading_contract(name)
     if name in GENERAL_TOOLS:
         from src.adapters.general_tool_replay import operator_contract as general_contract
@@ -56,8 +62,8 @@ def operator_contract(name):
     if name=='restore_plan':c={'format':'sss-mcp-learning-v1','effect':'semantic','auto_continue':False,'exports':[]}
     return c
 
-class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
-    fields=(*OperationSceneV2.fields,'documents','visual_reads')
+class ManagementScene(FileScripts,DocumentReading,GeneralTools,DurableOperationEvidence,ReportScene):
+    fields=(*DurableOperationEvidence.fields,'documents','visual_reads','operation_history')
     def __init__(self,spec,output):
         self.spec=copy.deepcopy(spec);self.input_digest=digest(spec)
         self.output=Path(output).resolve();self.root=Path(spec['workspace']).resolve()
@@ -81,7 +87,7 @@ class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
           'permission_sha256':digest({'owner':spec['owner'],'workspace_id':spec['workspace_id'],'external_roots':spec.get('external_roots',{}),'low_operations':sorted(LOW_OPS),'read_only':spec.get('rules',{}).get('read_only',False),'high_risk':'one_plan_native_confirmation'}),
           'initial_snapshot_sha256':digest(spec['initial_tree']),'result_read_allowed':True}
         self.execution_version=execution_version();self.report_contract={'version':'sss-file-report-v3','kind':'task_result'}
-        self.task_read=False;self.search_receipts={};self.collections={};self.collection_results={};self.documents={};self.visual_reads={}
+        self.task_read=False;self.search_receipts={};self.collections={};self.collection_results={};self.documents={};self.visual_reads={};self.operation_history=[]
         self.plans={};self.receipts={};self.result_handles={};self.handles={};self.reads={};self.index={};self.journals={};self.external_read_grants=[];self.local_staging={}
         self.expected_tree=copy.deepcopy(spec['initial_tree']);self.sync_files()
         if self.state_file.exists():
@@ -136,14 +142,72 @@ class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
           'high_risk_operations':['overwrite','delete','external_root_access'],'external_root_ids':list(self.spec.get('external_roots',{})),
           'learning_scope':self.learning_scope,'goal_acceptance':public_goal,'goal_contract_sha256':digest(frozen_goal),
           'default_type_directories':{'PDF/Word':'documents','Excel/CSV':'tables','images':'images','text':'notes','other':'others'},
-          'recovery_state':[{'plan_id':p,'status':j['status']} for p,j in self.journals.items()],
-          'instruction':'Choose actions from the user goal and actual file identities. No fixed source/destination list. High-risk plans need one native human confirmation; do not invent approval tokens.'})
+          'recovery_state':[{'plan_id':p,'status':j['status'],
+              'receipt_ids':[rid for rid,receipt in self.receipts.items() if receipt.get('plan_id')==p],
+              'completed_effects':len(j.get('completed',[])),'total_effects':len(j.get('effects',[]))} for p,j in self.journals.items()],
+          'script_recovery':[{'execution_id':p.name,'status':json.loads((p/'receipt.json').read_text())['status'] if (p/'receipt.json').exists() else 'interrupted_or_running'}
+              for p in (self.output/'script-runs').iterdir() if p.is_dir()] if (self.output/'script-runs').exists() else [],
+          'learned_scripts':self.script_catalog()['scripts'],
+          'instruction':'Choose actions from the user goal and actual file identities. No fixed source/destination list. High-risk plans need one native human confirmation; do not invent approval tokens. For repeated mechanical reading or processing, check learned_scripts/script_catalog and execute a compatible script_id with CURRENT parameters. If none fits, run_script accepts new parameterized JavaScript through the same guarded File tools; successful ordinary source can be learned after independent certification. run_script.delivery_state contains actual coverage and current file_ids; inspect_script_result retrieves retained evidence without repeating reads. You MUST call submit_report(summary=..., gaps=...) before your final answer, including when a script has completed. OMIT file_ids: the host binds the complete current permitted set. A final chat answer alone does not deliver the task.'})
     def list_files(self):
         self.active()
         return self.stamp({'files':[{'file_id':fid,'path':name.split('/',1)[1],'root_id':name.split('/',1)[0],'sha256':self.expected[name],'bytes':self.path(name).stat().st_size} for fid,name in self.files().items()],
           'directories':self.expected_tree['workspace']['directories'],'snapshot_sha256':digest(self.expected_tree)})
     def inventory_rows(self):
         return [{**r,'source_version':digest({'path':r['root_id']+'/'+r['path'],'sha':r['sha256'],'parser':'fm-parser-v1'})} for r in self.list_files()['files']]
+    def build_index(self,source_ids:list[str]):
+        """Index CURRENT fully returned text/OCR, reusing actual reading chunks.
+        Truncated previews cannot silently stand in for the complete document.
+        Finish open_document/read_document_chunk first for long or PDF sources.
+        """
+        self.active()
+        if not source_ids or len(source_ids)!=len(set(source_ids)):raise ToolError('unique current source_ids required')
+        from management_reading import coverage
+        for sid in source_ids:
+            handle=self.handles.get(sid)
+            if not handle or self.expected.get(handle['path'])!=handle['sha256']:raise ToolError('index source is not current')
+            documents=[d for d in self.documents.values() if d['anchor']['source_id']==sid and coverage(d)['complete']]
+            if documents:
+                d=documents[-1];pieces=sorted(d['chunks'].values(),key=lambda c:(c['page'],c['offset']));parts=[];positions=[];offset=0
+                for piece in pieces:
+                    if positions and positions[-1]['page']!=piece['page']:parts.append('\n');offset+=1
+                    text=piece['text'];positions.append({'start':offset,'end':offset+len(text),'page':piece['page'],'page_offset':piece['offset']})
+                    parts.append(text);offset+=len(text)
+                row={**handle,'source_id':sid,'file_id':handle['file_id'],'text':''.join(parts),'status':'readable',
+                    'positions':positions,'complete':True,'document_id':d['document_id'],'mode':d['mode']}
+            else:
+                old=self.reads.get(sid)
+                if not old or old.get('status')!='readable' or old.get('truncated') or old.get('metadata',{}).get('preview_only'):
+                    raise ToolError('complete source text required; use open_document and read all chunks before indexing')
+                row={**old,'positions':[{'start':0,'end':len(old['text']),'page':None,'page_offset':0}],'complete':True}
+            self.index[row['file_id']]=row
+        body={'input_sha256':self.input_digest,'entries':list(self.index.values())};atomic(self.output/'index.json',body);self.persist()
+        return self.stamp({'indexed':len(self.index),'file_ids':list(self.index),'artifact_sha256':digest(body),
+            'scope':'complete actually returned text; no new parsing or model calls'})
+    def search_index(self,query:str):
+        """Search all indexed text, including late pages, with verifiable positions.
+        Return at most 200 positions per file and explicit total/truncation counts.
+        """
+        self.active()
+        if not query or len(query)>500 or not self.index:raise ToolError('nonempty query and complete index required')
+        import re
+        matches=[]
+        for fid,row in self.index.items():
+            if self.expected.get(row['path'])!=row['sha256']:raise ToolError('index version changed; rebuild against current sources')
+            found=list(re.finditer(re.escape(query),row['text'],re.I))
+            if not found:continue
+            positions=[]
+            for m in found[:200]:
+                section=next((v for v in row['positions'] if v['start']<=m.start()<v['end']),None)
+                positions.append({'offset':m.start(),'page':section['page'] if section else None,
+                    'page_offset':section['page_offset']+m.start()-section['start'] if section else None,
+                    'excerpt':row['text'][max(0,m.start()-100):m.end()+200]})
+            matches.append({'file_id':fid,'path':row['path'],'source_id':row['source_id'],'source_sha256':row['sha256'],
+                'excerpt':positions[0]['excerpt'],'positions':positions,'total_hits':len(found),'positions_truncated':len(found)>200})
+        body={'query':query,'matches':matches,'input_sha256':self.input_digest,'index_sha256':digest(self.index),
+            'snapshot_sha256':digest(self.expected_tree),'scope':'case-insensitive literal text; no semantic-absence inference'}
+        rid='search-'+uuid4().hex;body['search_receipt_id']=rid;body['search_sha256']=digest(body)
+        self.search_receipts[rid]=body;atomic(self.output/'searches'/f'{rid}.json',body);self.persist();return self.stamp(body)
     def parse(self,path):
         if path.suffix.lower()=='.pdf':
             from management_reading import page_count,extract_page
@@ -275,7 +339,8 @@ class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
                 for key,n in names:
                     dst=self.output/'backups'/plan_id/key/n;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(self.resolve_path(key,n),dst);backups[key+'/'+n]=sha(dst)
             j={'plan_id':plan_id,'before':copy.deepcopy(self.expected_tree),'completed':[],'status':'executing','backups':backups,'irreversible':any(a['op']=='delete' for a in p['actions']),'effects':[],'boundaries':[]}
-            j['effects']=self.effects(p,j);self.journals[plan_id]=j;self.persist()
+            j['effects']=self.effects(p,j);self.journals[plan_id]=j
+            self.operation_history.append({'plan_id':plan_id,'direction':'execute'});self.persist()
         if j['status']!='executing':raise ToolError('prior plan is inactive')
         for e in j['effects'][len(j['completed']):]:
             self.active();flight=j.get('flight')
@@ -293,6 +358,13 @@ class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
                     if sha(Path(e['staged']))!=e['sha256']:raise ToolError('staged bytes changed')
                     self.publish_bytes(e['staged'],path,e['kind']=='replace')
                 if getattr(self,'crash_after_effect',None)==len(j['completed']):raise SystemExit('recorded management effect boundary')
+                if self.spec.get('experiment_interrupt_after_first_write') is True and e['kind'] in ('publish','replace'):
+                    marker=self.output/'experiment-first-write-interruption.json'
+                    if not marker.exists():
+                        atomic(marker,{'task_sha256':self.input_digest,'plan_id':plan_id,'effect_index':len(j['completed']),
+                            'effect':e,'before_sha256':digest(flight['before']),'after_sha256':digest(self.actual_tree()),
+                            'scope':'host-frozen experimental MCP process exit after the first effective file write; not a browser cancel'})
+                        raise SystemExit('host-frozen first-write process interruption')
             self.expected_tree=self.actual_tree();self.sync_files()
             if self.expected_tree!=flight['after']:raise ToolError('effect footprint changed')
             j['boundaries'].append(flight);j['completed'].append(e);j.pop('flight',None);self.persist()
@@ -365,6 +437,8 @@ class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
             elif self.expected_tree!=flight['before']:raise ToolError('unfinished operation boundary differs')
             j.pop('flight');self.persist()
         j.setdefault('restore_before',copy.deepcopy(self.expected_tree));j.setdefault('restore_boundaries',[])
+        if not any(e=={'plan_id':plan_id,'direction':'restore'} for e in self.operation_history):
+            self.operation_history.append({'plan_id':plan_id,'direction':'restore'})
         # Each reverse boundary is persisted before touching the corresponding path.
         todo=list(reversed(list(zip(j['completed'],j['boundaries']))))
         j.update(status='restoring',restored_count=j.get('restored_count',0));self.persist()
@@ -391,9 +465,16 @@ class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
         if self.expected_tree!=j['before']:raise ToolError('restoration postcondition differs')
         self.clean_local_staging()
         j.update(status='restored_verified',after=self.expected_tree);self.persist();return self.stamp({'plan_id':plan_id,'status':'restored_verified'})
-    def submit_report(self,summary:str,file_ids:list[str],gaps:list[str]):
+    def submit_report(self,summary:str,file_ids:list[str]|None=None,gaps:list[str]|None=None):
+        """Deliver the report with every CURRENT permitted file, bound by the host.
+        Omit file_ids to bind them automatically. If supplied, IDs must match the
+        complete current set exactly; source/document IDs and paths are not IDs.
+        Actual bytes, effects, coverage and frozen goal checks are always verified.
+        """
         self.active()
-        if len(file_ids)!=len(set(file_ids)) or set(file_ids)!=set(self.files()):raise ToolError('report must include all actual current file identities')
+        current=list(self.files());gaps=[] if gaps is None else gaps
+        if file_ids is None:file_ids=current
+        if len(file_ids)!=len(set(file_ids)) or set(file_ids)!=set(current):raise ToolError('report must include all actual current file identities; omit file_ids for host binding, or use exact current IDs: '+json.dumps(current))
         from management_contract import verify_management
         report={'task_id':self.spec['task_id'],'input_sha256':self.input_digest,'final_tree':self.expected_tree,'file_ids':file_ids,'summary':summary,'gaps':gaps}
         r=verify_management(self.spec,report,self.output)
@@ -402,6 +483,6 @@ class ManagementScene(DocumentReading,GeneralTools,OperationSceneV2):
 
 def serve():
     scene=ManagementScene(json.loads(Path(os.environ['FM_TASK_FILE']).read_text()),os.environ['FM_OUTPUT']);server=MCPServer('file_management')
-    for n in TOOLS:server.tool(name=n,meta={'sss_learning':operator_contract(n)},annotations=ToolAnnotations(readOnlyHint=n not in ('execute_plan','restore_plan','submit_report','build_index','execute_tool_call'),destructiveHint=False,openWorldHint=False))(getattr(scene,n))
+    for n in TOOLS:server.tool(name=n,meta={'sss_learning':operator_contract(n)},annotations=ToolAnnotations(readOnlyHint=n not in ('execute_plan','restore_plan','submit_report','build_index','execute_tool_call','run_script'),destructiveHint=False,openWorldHint=False))(getattr(scene,n))
     server.run()
 if __name__=='__main__':serve()

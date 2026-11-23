@@ -4,8 +4,8 @@ import json
 import pytest
 from jsonschema import Draft202012Validator
 
-from src.adapters.capability_evolution_investigation import run_investigation
-from src.adapters.capability_feedback import file_ref, verify
+from src.rsi.evolution.capability_evolution_investigation import run_investigation
+from src.rsi.feedback.capability_feedback import file_ref, verify
 from tests.test_capability_investigation import data, make
 
 

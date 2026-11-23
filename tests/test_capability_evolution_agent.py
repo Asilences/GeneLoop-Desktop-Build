@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from src.adapters.capability_contract import capability_digest
-from src.adapters.capability_evolution_agent import packet, run, validate_candidate, model_view, restore_regions
-from src.adapters.capability_feedback import file_ref
+from src.capability.graph.capability_contract import capability_digest
+from src.rsi.evolution.capability_evolution_agent import packet, run, validate_candidate, model_view, restore_regions
+from src.rsi.feedback.capability_feedback import file_ref
 from tests.test_capability_feedback import fixture
 from tests.test_capability_goal_proposal import FiniteDiagnosticGate
 from tests.test_capability_proposal_loop import fake_harness
@@ -19,7 +19,7 @@ def put(path, value):
 
 
 def inspect(ref, owner):
-    from src.adapters.capability_feedback import verify
+    from src.rsi.feedback.capability_feedback import verify
     return json.loads(verify(ref))
 
 
@@ -177,7 +177,7 @@ def test_request_limit_denies_second_request_before_native_booking(tmp_path, mon
     import time
     from types import SimpleNamespace
     from scenarios.paper_proofreading.frontier.budget import FrontierGate
-    from src.adapters.capability_proposal import CumulativeProposalGate
+    from src.adapters.harness.capability.capability_proposal import CumulativeProposalGate
     booked = []
     def enter(gate):
         def book(body):
@@ -199,16 +199,16 @@ def test_request_limit_denies_second_request_before_native_booking(tmp_path, mon
 
 
 def test_boundary_proposal_enters_original_miner_store_and_followup(tmp_path, corpus, monkeypatch):
-    from src.adapters.capability_contract import capability_ref
-    from src.adapters.capability_evolution_agent import boundary_handler
-    from src.adapters.capability_feedback import CapabilityFeedback
+    from src.capability.graph.capability_contract import capability_ref
+    from src.rsi.evolution.capability_evolution_agent import boundary_handler
+    from src.rsi.feedback.capability_feedback import CapabilityFeedback
     _, snapshot, c_ref, _, traces = corpus
     refs = [put(tmp_path / ('trace-' + str(i) + '.json'), trace) for i, trace in enumerate(traces)]
     def arithmetic_inspector(reference, owner):
         # This diagnostic host has pure integer inputs and no files. The Paper
         # inspector deliberately requires actual file-version witnesses.
-        from src.adapters.capability_feedback import verify
-        from src.adapters.capability_motif_learning import _checked
+        from src.rsi.feedback.capability_feedback import verify
+        from src.rsi.learning.capability_motif_learning import _checked
         trace = _checked(json.loads(verify(reference)), owner)
         return {'task_id': trace['task_id'], 'source_identity': capability_digest(trace['task_input']),
                 'relation': 'diagnostic-integer-transform', 'stage': 'execution', 'status': 'passed',
@@ -243,7 +243,7 @@ def test_boundary_proposal_enters_original_miner_store_and_followup(tmp_path, co
 
 def test_host_admitted_capability_uses_existing_construction_queue(tmp_path):
     from tests.test_capability_improvement import plan_at, Adapter
-    from src.adapters.capability_evolution_agent import construction_handler
+    from src.rsi.evolution.capability_evolution_agent import construction_handler
     plan, snapshot, proposal = plan_at(tmp_path)
     adapter = Adapter(snapshot, proposal)
     adapter.configure_jobs = lambda jobs: None
@@ -267,7 +267,7 @@ def test_host_admitted_capability_uses_existing_construction_queue(tmp_path):
 
 
 def test_exact_external_prompt_has_final_capacity_gate(tmp_path):
-    from src.adapters.capability_goal_proposal import propose_json
+    from src.adapters.harness.capability.capability_goal_proposal import propose_json
     gate = FiniteDiagnosticGate()
     with pytest.raises(ValueError, match='context_capacity_exceeded'):
         propose_json({'owner': 'owner', 'trigger_id': 'bounded'}, tmp_path / 'model', gate,
@@ -296,10 +296,10 @@ def test_semantic_pressure_groups_different_graphs_and_exposes_only_approved_con
 
 def test_evolved_policy_is_independently_admitted_then_enters_actual_builder_prompt(tmp_path, data):
     from pathlib import Path
-    from src.adapters.capability_evolution_agent import strategy_handler
-    from src.adapters.capability_feedback import CapabilityFeedback
-    from src.adapters.capability_proposal import prepare_attempt
-    from src.adapters.capability_strategy import strategy_context
+    from src.rsi.evolution.capability_evolution_agent import strategy_handler
+    from src.rsi.feedback.capability_feedback import CapabilityFeedback
+    from src.adapters.harness.capability.capability_proposal import prepare_attempt
+    from src.rsi.evolution.capability_strategy import strategy_context
     snapshot, _ = data
     _, context = make(tmp_path, data)
     feedback = CapabilityFeedback(tmp_path / 'policy-feedback', snapshot['owner'])

@@ -4,7 +4,7 @@ import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {validateRsiRecord,bytesSha256,admissionDecision,executeRsiOperation,
- validateRsiUpdate,publishRsiUpdate,rollbackRsiUpdate} from '../src/adapters/rsi_protocol.ts';
+ validateRsiUpdate,publishRsiUpdate,rollbackRsiUpdate} from '../src/rsi/protocol/rsi_protocol.ts';
 import {fixtures,fixtureRecord,diagnosticHost} from '../examples/rsi-protocol-v1/host.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -23,7 +23,7 @@ test('Python and TypeScript agree on all public wire fixtures, including invalid
 
 test('fixture versions bind the actual Python operator and TypeScript admission code',()=>{
  assert.equal(fixtures.versions.motif.sha256,bytesSha256(readFileSync(new URL('../examples/rsi-protocol-v1/group_count.py',import.meta.url))));
- assert.equal(fixtures.versions.matcher.sha256,bytesSha256(readFileSync(new URL('../src/adapters/rsi_protocol.ts',import.meta.url))));
+ assert.equal(fixtures.versions.matcher.sha256,bytesSha256(readFileSync(new URL('../src/rsi/protocol/rsi_protocol.ts',import.meta.url))));
 });
 
 test('different complete tasks execute the same local Python operation on different current inputs',async()=>{

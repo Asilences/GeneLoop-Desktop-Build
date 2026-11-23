@@ -69,7 +69,7 @@ def test_python_publication_is_loadable_by_authoritative_typescript(tmp_path):
     proposal=propose_form(FORM,owner='owner',evidence_sha256='b'*64)
     verdict=evaluate_form(proposal,report,library);store=tmp_path/'store'
     publish_form(store,proposal,verdict,library,file)
-    script="import {loadSourceForm} from './src/adapters/source_program_runtime.ts'; console.log(JSON.stringify(loadSourceForm(process.argv[1],'owner').policy.form));"
+    script="import {loadSourceForm} from './src/capability/runtime/source_program_runtime.ts'; console.log(JSON.stringify(loadSourceForm(process.argv[1],'owner').policy.form));"
     actual=subprocess.check_output([node,'--experimental-strip-types','--input-type=module','-e',script,str(store)],
         cwd=Path(__file__).resolve().parents[1],text=True)
     assert json.loads(actual)==FORM

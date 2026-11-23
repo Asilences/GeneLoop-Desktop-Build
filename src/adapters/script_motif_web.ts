@@ -3,11 +3,11 @@ import {appendFileSync,readFileSync,readdirSync,writeFileSync,existsSync,mkdirSy
 import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import * as native from './dsh_web_tasks.ts';
+import * as native from './web/dsh_web_tasks.ts';
 import {createScriptInterceptor,loadScriptLibrary,registerScriptCache,registerReuseMediation} from './script_motif_runtime.ts';
 import {createNegativeRuntime,loadNegativeLibrary} from './script_negative_runtime.ts';
 import {createReuseMediation,loadReuseLibrary} from './reuse_mediation.ts';
-import {createReuseTrace} from './reuse_trace.ts';
+import {createReuseTrace} from './artifact_motif_trace.ts';
 import {createUserMessage,isAgentLoopRequest} from '@deepseek-ai/dsh-llm';
 import {resolveScriptLearningSettings} from './script_learning_store.ts';
 export const name=native.name;

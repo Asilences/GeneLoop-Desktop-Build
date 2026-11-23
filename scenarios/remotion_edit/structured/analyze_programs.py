@@ -12,7 +12,7 @@ def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 def measurement(base,experiment,registry,trial,baseline_trial=None):
     from scenarios.remotion_edit.structured.review_program_runs import visual_review_status
-    from src.adapters.script_motif_compiler import digest
+    from src.motif_core.offline.compilation.script_motif_compiler import digest
     ledger=[json.loads(s) for s in (base/'cost-ledger.jsonl').read_text().splitlines()]
     provider={r['request_id']:r for r in ledger if 'request_id' in r}
     auth=read(experiment/'authorized-experiment.json')

@@ -6,11 +6,11 @@ from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'scenarios/file-management'))
 import workflow_holdout as w
 from common import save,PREFIX,sha
-from src.adapters.file_scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 from src.adapters.file_job_budget import FileJobBudget,job_command
-from src.adapters.file_cost_gate import create_server
+from src.adapters.deepseek_cost_gate import create_file_server as create_server
 
 class Provider(BaseHTTPRequestHandler):
  def log_message(self,*args):pass

@@ -3,14 +3,20 @@ import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
 import {mkdtempSync,chmodSync,existsSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,resolve} from 'node:path';
 import {commandLayout,commandArgv} from './geneloop_shell.ts';
 import {videoCommand} from './geneloop_video.ts';
-import {preparePptProgramJob} from './ppt_program_broker.ts';
+import {isExecutionSessionId} from './geneloop_session_id.ts';
+import {preparePptProgramJob} from './ppt/runtime/ppt_program_broker.ts';
 
 export async function startCommandBroker(options:{output:string;python:string;node:string;resources?:any}) {
-  const directory=mkdtempSync(join(tmpdir(),'geneloop-cmd-')),socketPath=join(directory,'commands.sock');
-  chmodSync(directory,0o700);
+  const prefix='geneloop-cmd-',socketName='commands.sock';
+  const tempRoot=resolve(tmpdir());
+  // Leave room for the terminating NUL in sockaddr_un. Some Node versions
+  // silently bind a truncated name if the supplied path is too long.
+  const maxSocketBytes=process.platform==='linux'?107:103;
+  const socketRoot=Buffer.byteLength(join(tempRoot,prefix+'XXXXXX',socketName))<=maxSocketBytes?tempRoot:'/tmp';
+  const directory=mkdtempSync(join(socketRoot,prefix)),socketPath=join(directory,socketName);
   const children=new Set<ReturnType<typeof spawn>>();
   const containers=new Map<ReturnType<typeof spawn>,string>();
   const stop=(child:ReturnType<typeof spawn>)=>{
@@ -30,7 +36,7 @@ export async function startCommandBroker(options:{output:string;python:string;no
       if(!artifact&&(!['command,cwd,readOnly,session','command,cwd,network,readOnly,session'].includes(Object.keys(value).sort().join(','))||
         ('network' in value&&value.network!=='none')||typeof value.command!=='string'||
         typeof value.cwd!=='string'||!/^\/work(?:\/|$)/.test(value.cwd)||value.cwd.split('/').includes('..')||
-        typeof value.readOnly!=='boolean'||!/^session-[a-f0-9-]{36}$/.test(value.session)||
+        typeof value.readOnly!=='boolean'||!isExecutionSessionId(value.session)||
         !existsSync(join(options.output,'sessions',value.session,'work'))))throw Error('invalid owning Session command');
       const layout=artifact?undefined:commandLayout(options.output,value.session);
       const recipe=video?videoCommand(options.output,value.session,value.command,options.resources.videoRenderer):undefined;
@@ -45,7 +51,17 @@ export async function startCommandBroker(options:{output:string;python:string;no
       res.once('close',()=>{if(children.has(child))stop(child);});
     }catch{if(!res.headersSent)res.writeHead(400);res.end('Invalid isolated command request');}
   });
-  await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(socketPath,resolve);});
-  chmodSync(socketPath,0o600);
+  try {
+    chmodSync(directory,0o700);
+    await new Promise<void>((ready,reject)=>{
+      server.once('error',reject);
+      server.listen(socketPath,()=>{server.off('error',reject);ready();});
+    });
+    chmodSync(socketPath,0o600);
+  } catch(error) {
+    if(server.listening)await new Promise<void>(closed=>server.close(()=>closed()));
+    rmSync(directory,{recursive:true,force:true});
+    throw error;
+  }
   return {socketPath,close(){for(const child of children)stop(child);server.close(()=>rmSync(directory,{recursive:true,force:true}));}};
 }

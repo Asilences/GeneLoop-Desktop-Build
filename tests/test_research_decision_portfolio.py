@@ -15,7 +15,7 @@ from mcp import Client, StdioServerParameters
 
 from benchmarks.research_decision_portfolio_v1 import build_fixtures as fixtures
 from benchmarks.research_decision_portfolio_v1 import mock_apps_server as apps
-from src.adapters.tool_contract_loader import parse_tool_contracts
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
 
 
 ROOT = Path(fixtures.__file__).resolve().parent

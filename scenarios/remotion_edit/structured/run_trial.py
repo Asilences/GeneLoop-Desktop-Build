@@ -19,7 +19,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import model_api_root, model_api_key_configured, model_sdk_key
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.scenario import prepare_scenario
 from src.adapters.deepseek_cost_gate import State, create_server
 from src.adapters.native_budget import NativeBudgetGuard
@@ -327,7 +327,7 @@ def main():
                         'experiment_code': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                                             for p in [Path(__file__), HERE / 'server.py', HERE / 'plugin.ts', HERE.parent / 'server.py']}}
             if args.program_library:
-                for path in [HERE/'program_server.py',ROOT/'src/adapters/source_program_runtime.ts',ROOT/'src/adapters/source_program_mcp.py',ROOT/'src/adapters/source_program_bridge.py',ROOT/'scripts/materialize-source-program.mjs']:
+                for path in [HERE/'program_server.py',ROOT/'src/capability/runtime/source_program_runtime.ts',ROOT/'src/adapters/source_program_mcp.py',ROOT/'src/adapters/source_program_bridge.py',ROOT/'scripts/materialize-source-program.mjs']:
                     snapshot['experiment_code'][str(path.relative_to(ROOT))] = hashlib.sha256(path.read_bytes()).hexdigest()
             save(run / 'effective.json', snapshot)
             if form_snapshot:

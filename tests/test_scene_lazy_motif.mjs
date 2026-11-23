@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
-import {dataInterceptor} from '../src/adapters/harless_legacy_motif.ts';
+import {dataInterceptor} from '../src/adapters/web/learning/harless_legacy_motif.ts';
 
 test('Data Motif delegates without files, then observes the normal tool after it materializes sources',async()=>{
  const root=mkdtempSync(join(tmpdir(),'geneloop-lazy-motif-')),events=[];

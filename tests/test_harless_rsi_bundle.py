@@ -1,26 +1,9 @@
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import pytest
-from src.adapters.harless_rsi_bundle import load_ppt_bundle, load_product_bundle
-
-
-def test_registered_ppt_compatibility_matches_current_source_and_original_artifacts():
-    root = Path(__file__).resolve().parents[1]
-    bundle = root / 'motif-libraries/ppt'
-    entry = json.loads((bundle / 'entry.json').read_text(encoding='utf-8'))
-    binding = json.loads((bundle / 'runtime-bindings.json').read_text(encoding='utf-8'))
-    sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
-    assert entry['new_training'] is False and binding['validation']['new_training'] is False
-    assert binding['original_certification_sha256'] == sha(bundle / 'certification.json')
-    for name, expected in entry['files'].items():
-        assert sha(bundle / name) == expected, name
-    # Archived rollback bytes remain immutable. Changed current adapters must
-    # reject the old runtime certificate rather than silently re-admit it.
-    assert any((root/name).is_file() and sha(root/name)!=expected
-               for name,expected in binding['code_locks'].items())
-    with pytest.raises((ValueError,FileNotFoundError)):
-        load_product_bundle(root,bundle,'ppt')
+from src.adapters.web.learning.harless_rsi_bundle import load_ppt_bundle, load_product_bundle
 
 
 def test_new_ppt_release_keeps_artifact_and_current_source_locks():
@@ -35,11 +18,13 @@ def test_new_ppt_release_keeps_artifact_and_current_source_locks():
     assert report['trace_collection_requests']>0
     for name,version in entry['files'].items():assert sha(bundle/name)==version,name
     admitted=load_product_bundle(root,bundle,'ppt')
-    pairs=json.loads((root/'config/rsi-privacy-code-compat.json').read_text(encoding='utf-8'))
+    from src.adapters.web.learning.harless_rsi_bundle import _reviewed_code_version
+    reviewed = json.loads((root / 'config/rsi-privacy-code-compat.json').read_text(encoding='utf-8'))
     for name,version in cert['code_locks'].items():
-        actual=sha(root/name)
-        assert actual==version or pairs.get(name)=={'certified':version,'current':actual},name
-        assert admitted['certified_code_locks'][str((root/name).resolve())]==actual,name
+        current = root / reviewed.get(name, {}).get('path', name)
+        actual=sha(current)
+        assert _reviewed_code_version(name,version,actual),name
+        assert admitted['certified_code_locks'][str(current.resolve())]==actual,name
     assert admitted['binding_policy']=='ppt_master_sources_v1'
     assert len(admitted['certified_tool_schemas'])==5
     assert admitted['runtime_kind']=='ppt_master_v2'
@@ -47,44 +32,45 @@ def test_new_ppt_release_keeps_artifact_and_current_source_locks():
     assert {tuple(a['tools']) for a in manifest['artifacts']}=={('mcp__ppt_master__pin_source','mcp__ppt_master__convert_source'),('mcp__ppt_master__convert_source','mcp__ppt_master__read_converted_source')}
 
 
-@pytest.mark.parametrize('previous,release',[
-    ('paper-web-v22','paper-web-v23'),('ppt-master-v19','ppt-master-v20')])
-def test_gateway_polling_compatibility_preserves_certified_program_and_source_evidence(previous,release):
-    root=Path(__file__).resolve().parents[1]
-    old=root/'motif-libraries'/previous;new=root/'motif-libraries'/release
-    for name in ['library.json','online-manifest.json','task.json','tool-schemas.json','source-evidence.json']:
-        assert (new/name).read_bytes()==(old/name).read_bytes(),name
-    report=json.loads((new/'learning-report.json').read_text(encoding='utf-8'))
-    compatibility=report['gateway_watcher_environment_compatibility']
-    assert compatibility['previous_release']==previous
-    assert compatibility['same_online_program'] and compatibility['same_tool_schema']
-    assert not compatibility['new_capabilities'] and not compatibility['quality_cost_promoted']
-    assert compatibility['model_requests']==compatibility['new_training_tasks']==0
-    before=json.loads((old/'certification.json').read_text(encoding='utf-8'))['code_locks']
-    after=json.loads((new/'certification.json').read_text(encoding='utf-8'))['code_locks']
-    assert {name for name,value in before.items() if after.get(name)!=value}=={'scripts/harless_gateway.mjs'}
-    assert set(after)-set(before)=={'scripts/reexport-gateway-polling-compat.py'}
+def test_public_ppt_motifs_admit_without_the_legacy_skill_installation(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    registry = json.loads((root / 'config/harless-scenes.json').read_text(encoding='utf-8'))
+    selected = next(row['rsi']['runtime_bundle'] for row in registry['scenes'] if row['id'] == 'ppt')
+    source = root / selected
+    bundle = tmp_path / selected
+    shutil.copytree(source, bundle)
+    cert = json.loads((bundle / 'certification.json').read_text(encoding='utf-8'))
+    policy = 'config/rsi-privacy-code-compat.json'
+    reviewed = json.loads((root / policy).read_text(encoding='utf-8'))
+    for name in {reviewed.get(name, {}).get('path', name) for name in cert['code_locks']} | {policy}:
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / name, target)
+    assert not (tmp_path / 'scenarios/ppt_master/skill-lock.json').exists()
+    assert not (tmp_path / 'scripts/install-ppt-master.py').exists()
+    admitted = load_product_bundle(tmp_path, bundle, 'ppt')
+    assert admitted['runtime_mode'] == 'execute'
+
+    identities = tmp_path / 'scenarios/ppt_master/source-evidence-identities.json'
+    registry = json.loads(identities.read_text(encoding='utf-8'))
+    identities.write_text(json.dumps({**registry, 'package_sha256': [registry['package_sha256'][-1]]}), encoding='utf-8')
+    with pytest.raises(ValueError, match='unknown historical source identity'):
+        load_product_bundle(tmp_path, bundle, 'ppt')
+    identities.write_bytes((root / 'scenarios/ppt_master/source-evidence-identities.json').read_bytes() + b'\n')
+    with pytest.raises(ValueError, match='certified runtime code changed'):
+        load_product_bundle(tmp_path, bundle, 'ppt')
 
 
-@pytest.mark.parametrize('previous,release',[
-    ('paper-web-v23','paper-web-v24'),('ppt-master-v20','ppt-master-v21')])
-def test_public_context_continuation_preserves_certified_program_and_tool_schema(previous,release):
-    root=Path(__file__).resolve().parents[1]
-    old=root/'motif-libraries'/previous;new=root/'motif-libraries'/release
-    for name in ['library.json','online-manifest.json','task.json','tool-schemas.json','source-evidence.json']:
-        assert (new/name).read_bytes()==(old/name).read_bytes(),name
-    report=json.loads((new/'learning-report.json').read_text(encoding='utf-8'))
-    compatibility=report['file_chat_public_context_compatibility']
-    assert compatibility['previous_release']==previous
-    assert compatibility['same_online_program'] and compatibility['same_tool_schema']
-    assert not compatibility['new_capabilities'] and not compatibility['quality_cost_promoted']
-    assert not compatibility['larger_concurrency_capacity_measured']
-    assert compatibility['model_requests']==compatibility['new_training_tasks']==0
-    before=json.loads((old/'certification.json').read_text(encoding='utf-8'))['code_locks']
-    after=json.loads((new/'certification.json').read_text(encoding='utf-8'))['code_locks']
-    assert {name for name,value in before.items() if after.get(name)!=value}=={
-        'scripts/harless_gateway.mjs','src/adapters/dsh_web_tasks.ts'}
-    assert set(after)-set(before)=={'scripts/reexport-file-chat-continuation-compat.py'}
+def test_new_ppt_evidence_keeps_multiple_source_identities_without_current_installation():
+    from src.adapters.web.learning.harless_rsi_bundle import _ppt_evidence_packages
+    root = Path(__file__).resolve().parents[1]
+    sources = ['a' * 64, 'b' * 64]
+    version = hashlib.sha256(json.dumps(sources, separators=(',', ':')).encode()).hexdigest()
+    report = {'source_identity_policy': 'certified_trace_source_v1', 'skill_package_sources': sources,
+              'skill_package_sha256': version}
+    assert _ppt_evidence_packages(root, report) == set(sources)
+    with pytest.raises(ValueError, match='historical source identity mismatch'):
+        _ppt_evidence_packages(root, {**report, 'skill_package_sha256': 'c' * 64})
 
 
 def test_bundle_freezes_runtime_code_artifacts_and_whole_schema(tmp_path):

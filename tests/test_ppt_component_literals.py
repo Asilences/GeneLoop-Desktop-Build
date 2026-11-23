@@ -1,5 +1,5 @@
 """Typed syntax exemptions preserve scientific-content leak counterexamples."""
-from src.adapters.ppt_component_literals import technical_literals
+from src.adapters.ppt.learning.ppt_component_literals import technical_literals
 
 SVG = '<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#2E5C8A"/><text>Scientific result</text></svg>'
 

@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {requestedSlides} from '../src/adapters/harless_task_scope.ts';
-import {readFileSync} from 'node:fs';
+import {requestedSlides,sceneOptions} from '../src/adapters/web/attachments/harless_task_scope.ts';
 test('explicit slide count overrides the default without extracting ordinal citations',()=>{
   for(const text of ['制作3页，包含封面共3页','生成三页中文汇报','create 3 slides'])assert.equal(requestedSlides(text),3);
   assert.equal(requestedSlides('总结第3页文献'),6);
@@ -9,13 +8,8 @@ test('explicit slide count overrides the default without extracting ordinal cita
   assert.equal(requestedSlides('介绍研究'),6);
 });
 
-test('every supported slide count has an exact schema while learned read contracts stay fixed',()=>{
-  const variants=JSON.parse(readFileSync(new URL('../motif-libraries/ppt/tool-schema-variants.json',import.meta.url)));
-  const expected=JSON.parse(readFileSync(new URL('../motif-libraries/ppt/tool-schemas.json',import.meta.url)));
-  for(let count=1;count<=30;count++){
-    const schema=variants.find(items=>items.find(t=>t.name==='mcp__ppt__render_deck')?.parameters.properties.plan.properties.slides.minItems===count);
-    assert.ok(schema,`missing schema for ${count} slides`);
-    assert.equal(schema.find(t=>t.name==='mcp__ppt__render_deck').parameters.properties.plan.properties.slides.maxItems,count);
-    for(const name of ['mcp__ppt__pin_source','mcp__ppt__read_source'])assert.deepEqual(schema.find(t=>t.name===name),expected.find(t=>t.name===name));
-  }
+test('native PPT capacity accepts an existing 56-page deck before task submission',()=>{
+ assert.equal(requestedSlides('生成56页PPT'),56);
+ assert.equal(sceneOptions({slides:56,allow_output:true},{adapter:'ppt',ppt_execution_strategy:'ppt_master'}).slides,56);
+ assert.throws(()=>sceneOptions({slides:201},{adapter:'ppt',ppt_execution_strategy:'ppt_master'}),/invalid_scene_options/);
 });

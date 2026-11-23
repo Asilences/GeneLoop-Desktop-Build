@@ -1,6 +1,6 @@
 /** Private JSON protocol used by existing MCP scenes; never executes source. */
 import {readFileSync} from 'node:fs';
-import {decodeSourceLibrary,materializeSource,sourceCatalog,sourceProgramVersion,loadSourceForm,selectSourcePrograms} from '../src/adapters/source_program_runtime.ts';
+import {decodeSourceLibrary,materializeSource,sourceCatalog,sourceProgramVersion,loadSourceForm,selectSourcePrograms} from '../src/capability/runtime/source_program_runtime.ts';
 try{
  const input=JSON.parse(readFileSync(0,'utf8'));
  if(input.operation==='resolve_form'){

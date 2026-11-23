@@ -8,11 +8,18 @@ import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createMotifViewRoute} from '../../../scripts/harless_motif_view.ts';
+import {runtimeMotifEvidence} from '../../../src/adapters/web/learning/harless_motif_catalog.ts';
+import {loadedProductMotifScenes} from '../../../tests/helpers/product_motif_scenes.mjs';
 import {createRsiSharing} from '../../../src/adapters/rsi_sharing.ts';
-import {projectPrivateLearningTrace} from '../../../src/adapters/harless_learning_trace.ts';
+import {projectPrivateLearningTrace} from '../../../src/adapters/web/learning/harless_learning_trace.ts';
 const require=createRequire(import.meta.url),{WebSocketServer}=require('ws');
 const app=fileURLToPath(new URL('../',import.meta.url));
 const output=join(app,'.local/validation/renderer-'+randomUUID());mkdirSync(output,{recursive:true});
+const useCatalogFixture=process.env.GENELOOP_RENDERER_CATALOG_FIXTURE==='1';
+const runtimeLibraries=useCatalogFixture
+ ?JSON.parse(readFileSync(new URL('../../../tests/fixtures/motif-catalog-pr161.json',import.meta.url),'utf8')).catalog.libraries
+ :loadedProductMotifScenes().map(scene=>{const evidence=runtimeMotifEvidence(scene,()=>null);return {id:'runtime:'+scene.id,title:evidence.source.label,scene:scene.id,status:'ready',evidence};});
+const runtimeCounts=Object.fromEntries(runtimeLibraries.map(row=>[row.scene,row.evidence.capabilities.length]));
 const privacyDiagnostic=process.env.GENELOOP_PRIVACY_DIAGNOSTIC==='1';
 const sharingBodies=[],sharingAudit=[];
 let receiverMode='accept',receiver;
@@ -51,13 +58,15 @@ const sharing=createRsiSharing({
   return projectPrivateLearningTrace(process.env.SSS_PYTHON,shareSources.get(taskId),taskId,'completed',0,{share:true});
  },
 });
-const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFileSync(join(app,'ui/desktop/motif-example.json')));
-const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'}]});
-let motifAuthenticated=true;
-let workspaceTasks=[];
 // The UI must offer completed tasks from future MCP scenes as well. Its
 // protocol fixture needs no NLP installation; actual v4 admission runs on Linux.
 shareSources.set('future-custom-mcp',shareSources.get('ppt'));
+const motifFile=join(output,'motif-export.json');writeFileSync(motifFile,readFileSync(join(app,'ui/desktop/motif-example.json')));
+const motifRoute=createMotifViewRoute({sources:[{accountId:'renderer-fixture',workspaceId:'workspace',path:motifFile,executionLocation:'cloud'},{accountId:'renderer-fixture',workspaceId:'empty-workspace',path:motifFile,executionLocation:'cloud'}]});
+let motifAuthenticated=true;
+let motifRoutesUnavailable=true;
+let runtimeCatalogFail=false;
+let workspaceTasks=[];
 const requests=[],streams=new Map(),sessions=[],selections=new Map(),modelSelections=new Map();let questionPending=false;
 const archived=new Set(),deleted=new Set();
 const scenes=[['new-scene','Chat','chat'],['ppt','PPT','ppt'],['paper-proofreading','论文校对','paper'],['research-data-analysis','数据分析','data'],['files','文件管理','file'],['video-editing','视频编辑','video']].map(([id,label,shortcut])=>({id,label,shortcut,available:true}));
@@ -73,9 +82,11 @@ const json=(res,value,status=200)=>{res.writeHead(status,{'content-type':'applic
 const push=(endpoint,value,sessionId)=>{for(const [key,row]of streams)if(row.endpoint===endpoint&&(!sessionId||row.sessionId===sessionId))row.socket.send(JSON.stringify({type:'item',streamId:key,value}));};
 const server=createServer(async(req,res)=>{
  try{
+  if(motifRoutesUnavailable&&['/api/harless/motif-library','/api/harless/motif-catalog'].includes(req.url))return json(res,{error:'motif_unavailable'},404);
   if(await motifRoute(req,res,motifAuthenticated?{id:'renderer-fixture'}:null))return;
   const url=new URL(req.url,'http://127.0.0.1'),path=url.pathname;const buffers=[];for await(const chunk of req)buffers.push(chunk);const raw=Buffer.concat(buffers),body=raw.length&&(req.headers['content-type']||'').includes('json')?JSON.parse(raw):{};
   requests.push({path,method:req.method,body});
+  if(path==='/api/fixture/motif-restore'&&req.method==='POST'){motifRoutesUnavailable=false;return json(res,{ok:true});}
   if(path==='/api/fixture/motif-logout'&&req.method==='POST'){motifAuthenticated=false;return json(res,{ok:true});}
   if(path==='/api/fixture/motif-update'&&req.method==='POST'){const next=JSON.parse(readFileSync(motifFile,'utf8'));next.capabilities[0].name+=' · 更新诊断';writeFileSync(motifFile,JSON.stringify(next));return json(res,{ok:true});}
   if(path==='/api/account/me'){await new Promise(resolve=>setTimeout(resolve,600));return json(res,{user:{id:'diagnostic',displayName:'协议诊断账号',username:'diagnostic'}});}
@@ -97,6 +108,8 @@ const server=createServer(async(req,res)=>{
   if(path==='/api/harless/models')return json(res,{...catalog,session_selection:modelSelections.get(url.searchParams.get('session_id'))});
   if(path==='/api/harless/file-scene')return json(res,{selected:false});
   if(path==='/api/harless/tasks')return json(res,{tasks:[...workspaceTasks,...(privacyDiagnostic?[...shareSources.keys()].map(scene=>({task_id:scene,scene,status:'completed'})):[])]});
+  if(path==='/api/fixture/runtime-catalog-fail'&&req.method==='POST'){runtimeCatalogFail=!runtimeCatalogFail;return json(res,{ok:true});}
+  if(path==='/api/harless/motif-catalog')return !motifAuthenticated?json(res,{error:'login_required'},401):runtimeCatalogFail?json(res,{error:'catalog_unavailable'},503):json(res,{format:'geneloop-runtime-motif-catalog-v1',libraries:runtimeLibraries});
   if(path==='/api/fixture/task-progress'&&req.method==='POST'){workspaceTasks[0].duration_ms=2400;return json(res,{ok:true});}
   if(path==='/api/fixture/workspace-task'&&req.method==='POST'){
    const time='2026-11-06T00:00:00.000Z';
@@ -162,7 +175,7 @@ const server=createServer(async(req,res)=>{
 const ws=new WebSocketServer({server,path:'/api/remote.mux'});
 ws.on('connection',socket=>{socket.on('message',data=>{const frame=JSON.parse(data);if(frame.type==='cancel'){streams.delete(frame.streamId);return;}const row={socket,endpoint:frame.endpoint,sessionId:frame.payload.args.request?.address?.sessionId};streams.set(frame.streamId,row);const item=value=>socket.send(JSON.stringify({type:'item',streamId:frame.streamId,value}));if(frame.endpoint==='workspace/follow')item({type:'baseline',value:{items:[{workspaceId:'workspace',title:'诊断工作区',sessionIds:['history','menu-fixture']},{workspaceId:'empty-workspace',title:'空工作区',sessionIds:[]}],archivedSessionIds:[...archived]}});else if(frame.endpoint==='$events')item({type:'ready',clientId:'fixture-client'});else if(frame.endpoint==='session/control')item({type:'baseline',value:{}});else if(frame.endpoint==='session/follow')item({type:'snapshot',header:{id:row.sessionId},cursor:2,records:row.sessionId==='history'?records:[],hasMore:false,projections:{asOfSeq:2,values:{}}});});socket.on('close',()=>{for(const [id,row]of streams)if(row.socket===socket)streams.delete(id);});});
 server.listen(0,'127.0.0.1');await once(server,'listening');
-const fixture=join(output,'fixture.json');writeFileSync(fixture,JSON.stringify({diagnostic:true,privacy:privacyDiagnostic,server:`http://127.0.0.1:${server.address().port}/`,output}));
+const fixture=join(output,'fixture.json');writeFileSync(fixture,JSON.stringify({diagnostic:true,useCatalogFixture,runtimeCounts,motifTotal:new Set([...JSON.parse(readFileSync(motifFile)).capabilities,...runtimeLibraries.flatMap(r=>r.evidence.capabilities)].map(c=>c.id)).size,privacy:privacyDiagnostic,server:`http://127.0.0.1:${server.address().port}/`,output}));
 const env={...process.env,GENELOOP_RENDERER_FIXTURE:fixture,
   GENELOOP_FFMPEG_DIRECTORY:join(output,'missing-media-tools')};delete env.ELECTRON_RUN_AS_NODE;
 let result=1;

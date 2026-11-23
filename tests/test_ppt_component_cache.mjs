@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {readComponentCache,saveComponentCache} from '../src/adapters/ppt_component_cache.ts';
+import {readComponentCache,saveComponentCache} from '../src/adapters/ppt/runtime/ppt_component_cache.ts';
 import {artifactInvocation,registerArtifactContext} from '../src/adapters/artifact_motif_runtime.ts';
 const sha=data=>createHash('sha256').update(data).digest('hex');
 

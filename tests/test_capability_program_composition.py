@@ -6,9 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters.capability_authoring import aliases
-from src.adapters.capability_contract import capability_ref,create_capability,create_capability_snapshot
-from src.adapters.capability_program_encoding import freeze_program_composition,encode_program_composition
+from src.capability.builder.capability_authoring import aliases
+from src.capability.graph.capability_contract import capability_ref,create_capability,create_capability_snapshot
+from src.capability.builder.capability_program_encoding import freeze_program_composition,encode_program_composition
 from tests.test_capability_builder import setup as builder_setup,RECORD
 from tests.test_capability_improvement import put
 

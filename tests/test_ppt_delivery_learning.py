@@ -1,8 +1,8 @@
 import hashlib
 import json
 
-from src.adapters.ppt_delivery_learning import learn_delivery_fonts
-from src.adapters.ppt_design_preflight import apply_font_rule, font_independent_signature
+from src.adapters.ppt.learning.ppt_delivery_learning import learn_delivery_fonts
+from src.adapters.ppt.authoring.ppt_design_preflight import apply_font_rule, font_independent_signature
 
 
 def test_learn_font_rule_from_a_delivered_correction_and_keep_geometry(tmp_path):

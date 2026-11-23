@@ -16,7 +16,7 @@ import {LlmRuntime} from '@deepseek-ai/dsh-llm';
 import {SkillRegistry} from '@deepseek-ai/dsh-skill';
 import {LocalFileSystem} from '@deepseek-ai/dsh-fs-local';
 import {apply as skillTool} from '@deepseek-ai/dsh-tool-skill';
-import {apply as researchScope} from '../src/adapters/dsh_research_scope.mjs';
+import {apply as researchScope} from '../src/adapters/harness/dsh_research_scope.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 

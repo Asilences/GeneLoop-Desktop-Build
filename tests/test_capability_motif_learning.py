@@ -11,14 +11,14 @@ import sys
 
 import pytest
 
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import capability_digest, capability_ref
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_motif_learning import capture_capability_trace, learn_capability_motifs
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import capability_digest, capability_ref
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_motif_learning import capture_capability_trace, learn_capability_motifs
 
 
 def test_execution_evidence_has_a_separate_bounded_envelope(tmp_path):
-    from src.adapters.capability_motif_learning import _checked, _trajectory_digest
+    from src.rsi.learning.capability_motif_learning import _checked, _trajectory_digest
     snapshot = run_driver({'action': 'seed', 'owner': 'large-execution-evidence'})
     original = call_trace(tmp_path, snapshot, [snapshot['roots'][0]], 'large-evidence-task', 7)
     task_input = {'value': 7, 'source_context': 'x' * 4_100_000}
@@ -36,7 +36,7 @@ def test_execution_evidence_has_a_separate_bounded_envelope(tmp_path):
 
 def test_wire_hash_bounds_apply_to_each_runtime_value():
     import hashlib
-    from src.adapters.capability_motif_learning import _wire_hashes
+    from src.rsi.learning.capability_motif_learning import _wire_hashes
     values = [{'text': 'a' * 2_100_000}, {'text': 'b' * 2_100_000}]
     expected = [hashlib.sha256(json.dumps(value, separators=(',', ':')).encode()).hexdigest()
                 for value in values]

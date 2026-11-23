@@ -83,7 +83,7 @@ def test_program_from_tasks_certifies_then_future_actual_executions_require_lowe
         code="""import {appendFileSync,writeFileSync,mkdtempSync} from 'node:fs';
 import {join} from 'node:path';import {request} from 'node:http';
 import {startCommandBroker} from './src/adapters/geneloop_command_broker.ts';
-import {createPptLearning} from './src/adapters/harless_ppt_learning.ts';
+import {createPptLearning} from './src/adapters/web/learning/harless_ppt_learning.ts';
 import {loadArtifactLibrary,provideArtifactPrograms,registerArtifactContext,artifactInvocation,runArtifactProgram} from './src/adapters/artifact_motif_runtime.ts';
 const [libraryPath,workspace,auditPath,output,taskId,session]=process.argv.slice(1);const library=loadArtifactLibrary(libraryPath);
 if(!createPptLearning({output,user:'diagnostic-user',scope:'a'.repeat(64),python:process.env.SSS_PYTHON,taskIds:()=>[]}).program())throw Error('next-task program was not admitted');

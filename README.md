@@ -1,14 +1,121 @@
 # GeneLoop：Motif × DeepSeek Harness × 自定义 MCP
 
-[公共脱敏模块](docs/rsi-data-privacy.md)覆盖各场景的 Web、SDK、离线导入和学习模型边界，使用本地 Presidio 和 Gitleaks，保留脱敏后的任务语义。学习准入需要安装 `requirements-rsi-privacy.txt` 并配置已核验的 Gitleaks；依赖不可用时拒绝学习样本，原任务继续正常执行。
+## 源码导航
+
+- [Motif Core](src/motif_core) 从宿主提供的轨迹挖掘模式，编译和认证可执行结构，再由运行时执行并处理后继复用。
+- [Capability](src/capability) 定义能力图、构建器与执行器。[RSI](src/rsi) 用执行结果推动学习、反馈和递归成长。
+- [Web](src/adapters/web)、[Desktop](src/adapters/desktop) 和 [Harness](src/adapters/harness) 负责各自的工具与宿主接线。评测在 [benchmarks](benchmarks)。
+- [File 宿主接线](src/adapters/file_management)包含操作授权、检查点和状态恢复。[PPT 适配](src/adapters/ppt)按来源、成稿、执行、交付和学习组织。
+
+Windows 桌面 `0.4.1` 接通本机只读 RSI、现有脱敏内核与 HTTPS 自动收集，取消学习/收集开关，保留云端工作区和六场景工具。结构闭环与回执诊断通过；真实模型两条任务成功，第三条遇上游网络错误，真实后继复用尚未验收。[实现、验证与边界](docs/debug/desktop-local-rsi-041-20261117.md)。源码更新 PR171，安装包仅本地交付，不合并 main。
+
+桌面 PPT 以仓库内的制作资源和锁定原生引擎构建，模板与脚本随安装包交付。Windows 和 macOS 的接线与验收入口见 [桌面 PPT 接线](docs/handoffs/ppt-desktop-install.md)。
+
+桌面`0.4.0`将鱼缸、A/B三卡和详情统一为账号可见总Motif库，跨工作区去重并支持场景/来源/状态筛选；工作区右栏保留实际使用记录。保留GeneLoop品牌，统一圆角并增加快捷导航、逐轮定位、对话目录和右侧工作台。Windows完整本地包已交付，六场景工具保留；[范围、验证及本地交付](docs/debug/desktop-v040-20261109.md)。源码同步至独立桌面分支 `codex/desktop-local-runtime`，Windows 安装包仅在本地交付。
+
+桌面`0.3.0-preview.27`同时保留鱼缸、A结构演化、B能力分布三卡；各自右上角斜箭头打开居中可放大的详情窗，大鱼缸支持节点悬浮、聚焦、点击、搜索和分页。右侧栏继续显示当前任务。默认共用当前来源，尚未提供的层级单独归类，独立层级示例不写回工作区。Windows完整本地包已更新，六场景工具与应用栏图标修复保留；[范围、验证与本地交付](docs/debug/desktop-preview27-three-motif-20261109.md)。Mac暂不构建，源码和安装包均未上传。
+
+桌面`0.3.0-preview.26`进一步对齐分形官网的排版与图形语言：大标题、朱红强调、直角控件、细线分区，以及按可见状态停止/释放的递归画布。保留原工作区、对话及六场景工具，Windows完整包已本地交付，源码已同步独立桌面分支；[验证与本地交付](docs/debug/desktop-preview26-fractal-20261108.md)。安装包未上传，Mac本轮暂不构建，preview.24冻结包及preview.25 Windows包保留。
+
+桌面`0.3.0-preview.25`以已冻结的preview.24为基线，参考团队`codex/fractal-website`官网统一分形品牌、配色与随包字体；保留桌面交互、六场景工具及按需资源调度。Windows完整包已本地交付，本轮Mac暂不构建；[视觉适配、验证与回退](docs/debug/desktop-preview25-fractal-20261108.md)。preview.24三平台原安装包已保留，源码后续随preview.26一起同步团队桌面分支。
+
+桌面`0.3.0-preview.23`在独立桌面分支完整整合PR161 `225d7b55`、PR162 `91bbead0`、PR163 `8988de79`，包含桌面模型路由、Motif目录后台、新隐私准入和PPT工作流源码；保留原桌面风格及紧凑安装器，右侧详情栏改为与左栏同高。Windows EXE与Apple Silicon/Intel完整DMG已本地交付，不合并main、不部署正式服务、不发布安装包。定向及原生工具检查与全仓回归的未通过项分列，见[整合记录](docs/debug/desktop-preview23-integration-20261108.md)。
+
+桌面`0.3.0-preview.22`客户端适配[PR #161](https://github.com/jingyio/GeneLoop/pull/161)的场景库目录和v2只读证据，保留工作区v1、现有风格、本机执行与紧凑安装器。协议/界面检查通过，Windows EXE与Apple Silicon、Intel完整离线DMG已本地交付，工具摘要一致；安装包未发布Release，Mac授权临时产物已取回删除。后台接口仍由该PR部署，服务端准入不等于本机已认证。[适配范围与证据](docs/debug/desktop-pr161-sync-20261108.md)。
+
+桌面从 `0.3.0-preview.21` 恢复默认完整离线分发：`apps/desktop` 中的 `npm run dist` 显式选择 `--complete`，将当前六场景工具随应用一次安装；完整包使用应用资源目录中的工具，不触发首次全量工具准备。`npm run dist:lite`／`--lightweight` 仅供主动选择轻量分包方式的构建，低层 CI 的显式环境入口保持兼容。两种方式保留同一套六场景能力，PPT 仍仅制作／编辑，不恢复语音扩展。构建可通过 `GENELOOP_DESKTOP_TOOLS_STAGE` 指向已核对的当前平台工具目录；Apple Silicon 和 Intel 的完整离线 DMG 已分别在原生构建机生成，并通过实际镜像复制副本的核心工具、PPT/PDF、Remotion 与统计/转换依赖检查；无需安装后再准备全套工具。[Mac交付与边界](docs/debug/desktop-preview21-macos-complete-20261108.md)。安装包仍只本地交付。
+
+桌面 `0.3.0-preview.20` 已按六场景实际实现更新工具并生成 Windows x64、Apple Silicon／Intel 本地候选。取消 PPT 语音扩展，改用精简 native Office Kit，共享 Node／Chromium并保留统计运行必需文件；安装器分别约268／230／241 MB，配套六工具包约322／257／299 MB。三平台原生依赖及实际PPT模板／PDF检查通过，本轮模型请求0。后续实测 Windows 应用首次17秒、preview.15覆盖55秒，但正常用户目录首次工具准备仍370秒，因此小包不再作为默认交付。[完整计时](docs/debug/desktop-preview20-install-20261108.md)、[计量与工具边界](docs/debug/desktop-preview20-tool-refresh-20261108.md)。
+
+桌面构建默认采用固定版本的官方 native Office Kit，复用桌面宿主，取消重复 WASM／Node；仅需准备 Office 时在 `apps/desktop` 运行 `npm run tools:office -- <新工具目录>`。三平台新引擎原生检查已在preview.20通过，preview.19已交付文件未变；格式范围、兼容边界与完整 Office 构建回退见[精简 Kit 记录](docs/debug/desktop-office-kit-20261108.md)。
+
+桌面 PPT 最新范围仅制作／编辑演示文稿及 PDF／逐页预览；使用 GeneLoop 自有 Skill 入口，不提供上游配音、演示视频或字幕扩展。preview.20已实际取消语音依赖与speech分包，保留其他场景。DSH逐项参考、同伴服务器证据边界和新工具集要求见[范围记录](docs/debug/desktop-ppt-authoring-scope-20261108.md)。
+
+旧桌面 `0.3.0-preview.19` 的七包公开下载与三种原生环境各六条简单真实任务结果保持原记录，不外推为preview.20模型效果。[历史记录](docs/debug/desktop-preview19-macos-delivery-20261107.md)。Mac仍未Apple公证／人工安装验收，正式账号网关另计。
+
+其余场景已按当前注册、实际实现与桌面依赖[交叉核对](docs/debug/desktop-scene-scope-review-20261108.md)：不额外适配论文LaTeX编译或视频ASR，保留现有统计、PDF/OCR与媒体编辑；不能按早期窄范围裁掉后来已接通的工具。
+
+桌面 `0.3.0-preview.18` 候选保留六场景工具，新增小安装包和安装后统一工具准备，支持续传、校验与本机导入；安装界面采用 GeneLoop 原生研究节点图。[Windows 七个工具包](https://github.com/Asilences/GeneLoop-Desktop-Build/releases/tag/desktop-tools-win32-x64-21e5190b5076c9c28586e197)已获授权公开发布，固定下载源已接通。61,681 个工具文件恢复校验、恢复后 10 组离线工具检查及 ASAR Agent 读写／取消通过；真实桌面匿名下载、暂停续传和逐文件校验也通过。Mac 新分包流程未原生验收，原完整离线构建保留。配置及边界见[分发记录](docs/debug/desktop-preview18-distribution-20261107.md)。安装包仍只保存在本机。
+
+桌面 `0.3.0-preview.17` 候选补齐 Skill 可选依赖、完整媒体组件、离线字幕对齐及宿主私有 MCP 注册。Windows 工具目录与两种 Mac 实际包内统一诊断通过；后补 CLI 修复的版本边界、外部服务条件和实际任务限制见[本轮记录](docs/experiments/desktop-preview17-optional-tools-20261107.md)及[工具说明](docs/product/desktop/native-optional-tools.md)。安装包不上传。
+
+桌面 `0.3.0-preview.16` 工具对齐候选复用原场景 MCP 和官方 DSH 公共工具，通用 PPT 采用完整 PPT Master 工作流。Windows x64、Mac ARM64/Intel实际包内工程检查通过，Windows EXE保存在本地；Mac本轮未重新取回DMG。正式网关v4部署、真实模型效果和Mac人工验收仍另计，详见[本轮记录](docs/experiments/desktop-preview16-tool-parity-20261107.md)。安装包未上传。
+
+文件管理新增从真实轨迹学习并独立认证的执行程序、JEV 局部判断及原任务恢复。见[文件管理交接](docs/handoffs/file-management.md)。
+
+[公共脱敏模块](docs/rsi-data-privacy.md)为各场景提供账号内结构学习入口。桌面“数据与隐私”可开启未来任务的结构学习，Web 与离线导入复用同一投影器。账号结构只保留工具顺序、结果状态和账号内工具代号。Presidio、Gitleaks 等正文处理工具继续用于显式诊断及受控研究入口，中文正文收集等待独立验收。
+
+R8新增默认关闭的中文Stanza候选与同事务有界批处理，继续由相同公共入口服务未来MCP Agent。宿主配置格式`geneloop.privacy-chinese/v1`，资产/代码摘要见`config/rsi-privacy-chinese-tools.json`；模型准备入口`scripts/install-rsi-chinese-tools.py --model-dir PRIVATE_DIRECTORY`，需独立安装固定`stanza==1.11.0`及已核验Torch。测试和配置边界见[中文优先修订](docs/research/rsi/privacy-r6-repair-design.md#中文客户优先的设计修订2026-11-11)，不代表识别质量已通过验收。
+
+R9增加默认关闭的[官方Gitleaks库复用适配器](tools/gitleaks-worker/README.md)，通过`SSS_RSI_GITLEAKS_WORKER`指定已核验本地二进制；未配置继续原CLI。`SSS_RSI_GITLEAKS_DEDUP=1`允许同事务完全相同字节的clear结果复用，每个逻辑输入/输出检查仍核验工具字节，命中和失败不缓存。构建入口`python scripts/install-rsi-gitleaks-worker.py --go TRUSTED_GO_1_25_4 --output PRIVATE_BINARY`，不涉及正式服务安装或启动。
+
+R10在公共入口补充中文详细地址、同一联系记录内的字段关联，以及QQ、微信和登录账号的识别。凭证复核由宿主显式选用 `gitleaks+credsweeper-review`。复核只在本地执行，疑似结果阻止进入学习。识别和准入细节见[公共脱敏说明](docs/rsi-data-privacy.md)。
+
+公共入口将 JSON 包及解码原文一并交给 Gitleaks，并拒绝歧义 JSON，防止包装隐藏凭证；Unicode 识别通过固定 `regex` 映射回原文，保留未遮盖的公式和代码。[R1 基线](docs/experiments/privacy-benchmark-20261107-r1.md) 与 [R2 修复后复测](docs/experiments/privacy-benchmark-20261107-r2.md) 分别保留；有限回归不代表完全匿名化或真实 RSI 质量不变。
+
+R4 修正投影器的首次解析：数字形式的 `text` 仍按文字识别，事件、参数和工具目录的重复 JSON 键直接拒绝。`config/geneloop-privacy-policy-v1.json` 是公共类别/字段策略，`config/rsi-privacy-tools.json` 锁定依赖、扫描器官方资产及实际二进制摘要；每次扫描重新核验字节。TypeScript 复用有界本地子进程，排队计入原有120秒限时；SDK、离线导入CLI和派生文件采集使用同一120秒单次子进程边界，通过后才输出或原子写入学习副本。正常任务和认证继续读取原件。冻结成绩、候选未采用原因和实施后审计见[R4记录](docs/experiments/privacy-benchmark-20261108-r4.md)，隐私质量仍未验收。
+
+[R3 归因与现成识别器对照](docs/experiments/privacy-diagnosis-20261108-r3.md) 补原文姓名识别，保留已有命中；GLiNER/OpenMed 尚为独立研究候选，未加入产品默认依赖。隐私子进程只透传白名单环境，保留 `HOME`/`USERPROFILE` 的缓存隔离和显式 `OMP_NUM_THREADS`、`OPENBLAS_NUM_THREADS`、`MKL_NUM_THREADS` 配置；不延长120秒准入限时，不透传其他环境和凭证变量。
+
+2026-11-11 当前候选 PPT165/Paper167：明确单页文字替换读取原生 OOXML，长 PDF 先建本地索引，按需读取图表页。两项新材料前后对照的四份成品全部交付且通过独立 Judge，制作请求合计 39→15。隔离实例重启后加载两条发布的来源读取 Motif 和四条轨迹学习试用程序，历史轨迹重认证新增模型请求为 0。详见[本轮验证](docs/experiments/ppt-input-delivery-20261111.md)和[原15题记录](docs/experiments/ppt-presentbench15-20261111.md)。
+
+2026-11-11当前PPT153/Paper155已整合main `e2494b0d`，本轮更新[PR #163](https://github.com/jingyio/GeneLoop/pull/163)。公开快照完整Python3279/Node1797通过，smoke/motif/rsi通过；桌面新增常驻MCP为0，保留原生共享执行适配，网页服务器流程不变。未自动合并或部署，Mac完整设备验收未完成；dsh-ppt新引擎仍仅为设计。见[本次整合与验证](docs/debug/ppt-pr-main-integration-20261111.md)及[当前交接](docs/handoffs/research_ppt.md)。以下为历史记录。
+
+2026-11-10 PPT稳定交付候选PPT152/Paper154：拒绝未执行的假完成、接纳当前完整导出、成功发布按DSH原生终态收尾；原生文字/字号/对齐小修改保留非目标部件，素材准备与写页计量走固定执行层。Judge与RSI独立后台进程，错误不阻塞下载和后续聊天，评分保持内部可选。原失败轨迹与实际Office零模型回放已通过，完整免费回归状态见[修复记录](docs/experiments/ppt-stable-delivery-audit-20261110.md)。本轮未部署、未PR、无新增模型请求；以下为历史状态。
+
+2026-11-09 PPT145/Paper147隔离学习闭环完成：页面源稿差异可以先进入功能试用，独立观察重放过的写页/改页流程不再被发布器提前排除。三份正常业务模拟任务完成六份PPT，从真实轨迹学得新建/修订连续程序；唯一留出C01中各实际执行一段并进入成品。生成+同会话改页请求42→16，配置估费USD0.4090→0.1162，本例低71.58%；质量经实际内容、可编辑性和渲染非盲审阅核对，不外推通用收益。材料获取USD0.2954单列，挖掘/认证新增模型0，Judge未用。Linux完整Python3267/Node1765通过（PPT144），145定向32通过；前端/正式服务不动，未PR。见[结果、放宽范围与边界](docs/experiments/ppt-practical-learning-20261109.md)。以下为历史状态。
+
+2026-11-08外部Skill学习的三卡片候选已完成自动纠正，隔离源码PPT142/Paper144：认证反馈直接提供错字，Builder纠正提示聚焦实际失败；原候选和首次无效纠正均保留。模型纠正后40个文字节点完全一致、渲染MAE=0，现有学习器登记`certified_probation`，真实在线加载、重新读取及账号隔离通过。两个业务模拟任务及原会话改价的材料74请求/估费USD0.698930；Builder含全部失败和纠正4请求/USD0.042375。Judge及独立后继任务未启动，尚未证明最终采用或降费。旧隔离实例、前端及正式服务不动，未提交/PR。见[实际材料、纠正与边界](docs/experiments/ppt-external-skill-learning-20261108.md)。以下为历史状态。
+
+2026-11-08隔离开发实例已启用PPT138/Paper140：工具调用文本化按原生工具进展有界恢复；已采用页保留并通过版本化入口修改；已认证的单页原生修订可自动进入学得程序，续接导出和预览，避免只增加可选工具却仍让模型安排全部步骤。修复有效缓存返回空待审列表时的错误拒绝，最终成品直接进入下载结果。Windows定向24项、Linux定向67项及原生接线1项通过；冻结候选在独立C01材料上完成普通、显式程序、自动入口的实际工具/Office认证，新增模型0请求。唯一真实E01优化稿已完成六页生成及同会话改页，但该轮未调用新写页程序；最终自动入口修复后没有追加真实模型任务，不能宣称稳定降费。学习/Judge分账，旧版与失败保留，前端和正式服务未改，未提交/PR。当前结论详见[修复记录](docs/experiments/ppt-benchmark-repair-20261108.md)；以下旧版本段落为历史状态。
+
+2026-11-08公开benchmark材料小试跑已停止：隔离候选PPT126/Paper128增加学习冻结和PPT来源独立v2规则。L01六页生成及同会话两页修改完成；L02客户端超时后一次恢复仍因文本化工具调用／未导出失败，仅1个机械合格来源，不足发现/认证新连续程序。材料采集130请求、已报配置估费USD1.3501另19次用量未知；后继对照与Judge未启动，不宣称新闭环或降费。完整无模型Python3219、Node1754通过，连通性检查通过；未PR、未改前端或正式服务，详见[结果与负例](docs/experiments/ppt-benchmark-pilot-20261108.md)。
+
+2026-11-08本地PPT124/Paper126接入Skill引导的连续操作发现：Skill只提出搜索范围，顺序/循环/绑定来自正常轨迹，认证后通过现有PPT执行层批量制作或修订。15条历史正常轨迹中重新发现的单页修订结构已在第3个独立来源通过原生认证；多页生成与修订通过合成内容、真实工具及Office诊断，尚无新的真实降费对照。全量检查另修复公共模型配置缺少成员只读挂载的问题。前端不动、未部署/PR，详见[实施与验证](docs/experiments/ppt-skill-guided-learning-20261108.md)。
+
+2026-11-08 Windows学习深路径已修复：本机未开启系统长路径支持，恢复原始完整UUID目录后，学习/独立认证/后继晋级Node4项与相关Python141项全部通过；Linux相同闭环4项及路径3项通过。文件访问使用Windows原生扩展路径，证据和证书仍保留正常路径，账户/来源/版本/反馈检查未放松。本地候选PPT120/Paper122，未改前端、未部署/PR、新增云请求0。见[修复与复现](docs/experiments/ppt-windows-learning-paths-20261108.md)。
+
+2026-11-08后端候选PPT119/Paper121修复取消/重启后改页400、以固定文件操作续接收尾，评分改为仅内部显式开启，正常轨迹学习保留。Windows定向Node65项通过、Python40通过/1跳过；Linux学习/后继晋级及收尾Node10、评分协议Python17通过。完整Windows学习仍有深路径限制；前端和单结果入口由另一对话负责，本轮不改、不PR、不部署、无新增模型请求。见[后端修复及交接](docs/experiments/ppt-production-closure-20261108.md)。
+
+2026-11-08本地交付候选PPT117/Paper119：finalize_ppt登记当前成品，present只核对稿件内容版本与所选文件，不再次认证整个项目/运行环境。随有效PPTX/PDF携带的附加PNG有问题时跳过并说明，主稿仍正常返回。无模型范围检查Node55通过、Python23通过/1跳过；未启用到服务器、未PR，历史会话准入400与Judge失败仍未解决，不宣布整套端到端已完全收敛。见[修复与边界](docs/experiments/ppt-delivery-convergence-20261108.md)。
+
+PPT场景范围为制作、编辑PPT和交付前PDF/图片预览检查；适配入口不包含旁白音频、演示视频、配乐或字幕制作。PPT内文字备注按需保留。2026-11-08本地范围协议候选为PPT115/Paper117，尚未切换隔离实例或更新PR；上一组真实结果仍对应PPT114/Paper116。
+
+2026-11-08 隔离实例已启用PPT114/Paper116，并结束唯一一组真实回归。优化生成28请求、同会话改页4请求，组件进入终稿，第一页源码/备注/原生内容/像素不变；局部预览成功生成并发布。普通组初稿因新发现的预览发布接线缺口被取消，修复后原会话改页仍在付费前准入失败，未重生成普通稿。O已报制作估费USD0.256460，B已报0.214708另2次用量未知，不能证明质量合格降费；Judge2请求无有效评分且单列。全部失败及中途修复保留，未正式发布或更新PR，见[完整结果](docs/experiments/ppt-delivery-fixed-pair-20261108.md)。
+
+2026-11-08 本地候选PPT113/Paper115修复预览误拦和缺成品仍显示完成：局部检查由固定图片工具执行，会话内临时图片复制放行；开始/修改的项目必须有当前完整导出回执。Linux范围回归Node146通过/2跳过、Python15通过，真实固定执行器的裁剪→原生读图→会话临时复制通过；新增模型0请求，未部署或更新PR。Windows完整聊天范围仍有3项附件解析/视觉诊断失败，不声明桌面全部通过，见[修复记录](docs/experiments/ppt-delivery-repair-20261108.md)。
+
+2026-11-07 已在隔离开发实例启用PPT112/Paper114并完成一组真实回归：含失败和一次监测恢复，B/O制作请求64/35、已报配置估费USD0.64535145/0.11744481；连续程序2段实际续接、各段0模型往返，最终组件来源匹配。O终稿Judge8.75，B评审无有效分数；初稿缺交付/收尾拒绝及测试脚本误取消全部保留，不能称无故障稳定降费。学习/Judge分账，原账本续接18849；未正式发布或更新PR，见[结果与失败](docs/experiments/ppt-cache-enabled-pair-20261107.md)。
+
+2026-11-07 本地PPT112/Paper114候选补齐上游模型/请求ID及usage/cost数值记录，分开预算预留、配置估费和上游费用；币种/单位未知不换算，不将报告费用当作实付。Windows计费/转发/重试定向99项通过，未新增云请求、扩跑、部署或更新PR，见[记录与费用口径](docs/experiments/ppt-upstream-telemetry-20261107.md)。
+
+2026-11-07 上游只读核对：未发现B/O在本项目内切换模型、出口或配置费率；新增发现Judge原响应含单位未明的`usage.cost`，制作流未保存该字段或供应商request ID，不能将当前配置估费当Kouri账单。未新增推理请求、改运行代码或更新PR，见[路由与计费审计](docs/experiments/ppt-upstream-routing-billing-audit-20261107.md)。
+
+2026-11-07 缓存与上下文审计修复候选：消除同图重复返回、复用未变化页预览，收紧重复Skill说明，放行受限只读校验和输出文件整理。保留版本与页面写入保护，新增只记录哈希/数量的出站请求诊断。缓存归零在首次看图前已出现，上游usage另有突增，尚不能确认其内部原因或宣称真实费用已下降。本轮不新增真实制作/学习/Judge、不更新PR或部署，见[审计与修复](docs/experiments/ppt-cache-context-audit-20261107.md)。
+
+2026-11-07 单组真实回归已结束：页级连续程序实际续接并进入最终交付，生成加同会话改页请求79→52；但已报token的配置费率估费反高84.32%，HTTP502收费未知，未证明完整净降费。两侧局部修订保持第一页不变；质量复核及Judge失败保留。未更新PR或正式部署，见[完整单组报告](docs/experiments/ppt-fixed-pair-20261107.md)。
+
+2026-11-07 本地修复候选：连续页面程序与原工具共用项目路径推断；计费识别标准缓存字段并单列未分类token；后台Judge兼容完整SSE及一次JSON格式回退。原预算保护、失败和旧评分保留。本组不扩跑制作实验，未提交、推送、更新PR或部署；验证与边界见[三处接口修复](docs/experiments/ppt-three-interface-fixes-20261107.md)。
+
+PPT制作与交付候选新增内置主题/页型、参数预检、版本保护修订和统一Office导出；原生Skill使用GeneLoop精简适配入口。两来源正常轨迹已产生单页修订→交付→预览程序，通过第三来源独立原生执行认证，并在后继任务中由宿主实际调用。该真实任务随后交付失败；本轮补上能力范围、临时输出、失败回执与溢出准入修复，没有合格降本对照，不宣称稳定降费或完整多页制作编译。学习/评审分账、回归及负例见[当前记录](docs/experiments/ppt-write-native-replay-20261107.md)和[前轮记录](docs/experiments/ppt-write-workflow-20261106-results.md)。更新目标为PR163，未正式部署；Windows/Mac完整本机写页宿主仍待设备验收。
+
+Paper/PPT 的 [RSI 任务语义脱敏](docs/rsi-data-privacy.md#v3-任务语义诊断)可在隔离 Web 和离线导入中显式启用，使用本地 Presidio 和 Gitleaks。普通运行只需原有依赖。
 
 轨迹、源码共享和可选遥测默认关闭。桌面设置中的[数据与隐私](docs/rsi-data-privacy.md#默认私有与可选共享)提供工具流程预览、逐次授权、保存本地副本与取消；接收端由部署方在私有配置中指定。
 
+R5新增默认关闭的[官方 Privacy Filter / CredSweeper 候选接入](docs/research/rsi/privacy-official-tools-r5.md)。宿主以 `SSS_RSI_PRIVACY_CANDIDATE_CONFIG` 和配置字节的 `SSS_RSI_PRIVACY_CANDIDATE_SHA256` 成对选择本地后端，Web、SDK、离线和公开导出继续使用公共入口。额外依赖、模型及软件包摘要独立核验；当前原始 Presidio/Gitleaks 配置仍是默认。候选姓名/地址召回改善不代表误删或产品验收已通过，不自动启用新模型，不改变正常任务读取原件。
+
+R5测试复现了spaCy3.8.7异常退出内存区间后污染下一条中文处理的问题，修复采用[官方上游修复](https://github.com/explosion/spaCy/pull/13932)所在的spaCy3.8.18及匹配依赖，继续严格核验版本。请按`requirements-rsi-privacy.txt`同步安装完整组合；两个中英文模型仍为3.8.0。仅升到3.8.12与旧Confection组合的实测失败保留，未采用。当前默认继续使用Presidio/Gitleaks规则，额外模型保持关闭；修复版完整基准和工程回归完成前仍不宣称验收通过。
+
 文档分类与入口见 [docs/README.md](docs/README.md)。
 
-GeneLoop Desktop `0.3.0-preview.13` 提供 Windows x64、macOS ARM64 和 Intel 本机执行预览：六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。工具随包提供，Mac 使用 ZIP 分发 `.app`。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[本轮记录](docs/debug/desktop-preview13-full-tools-20261106.md)。安装包保存在私有本地目录，不发布 Release。
+GeneLoop Desktop `0.3.0-preview.14` 提供 Windows x64 EXE、macOS ARM64 DMG 和 Intel DMG 本机执行预览。在 preview.13 基础上接入 Draft PR161 的 Motif 库／工作区展示和 Draft PR162 的数据隐私接口，保留独立桌面界面、本机工作区及统一输入框。六场景复用 DSH Agent 与原场景工具，模型仍调用云端；云端工作区保持服务器执行。包内工程检查通过，完整真实模型效果、新 Motif 认证和 Mac 人工安装／Apple 公证尚待完成，见[桌面说明](docs/product/desktop/desktop.md)与[交接](docs/handoffs/desktop.md)。正式服务器未随安装包部署，不发布 Release。
+
+Windows `0.3.0-preview.15` 安装提速修订2已本地交付：整目录备份旧版，逐文件SHA-256校验后复用未变化的工具目录，变更部分仍从完整离线载荷解压，失败恢复旧版。同机同载荷完整覆盖82.62秒（含权限确认及启动等待），安装器记录的实际阶段66.18秒；这是单次覆盖结果，不能外推首次安装。保留原应用内容和账号数据，未上传；Mac继续使用preview.14。失败、旧基线和边界见[安装记录](docs/debug/desktop-preview15-install-20261106.md)。
 
 桌面 Motif 展示候选在工作区首页融入运行、能力组合、评估、演化和版本，并提供全局库入口。它复用同伴的脱敏证据协议，通过账号隔离的只读接口展示，不授予执行权或虚构节省。接入配置、构建和验证边界见[工作区 Motif 说明](docs/product/desktop/motif-workspace.md)与[模块交接](docs/handoffs/motif-visualization.md)；尚未部署正式服务。
+
+Motif 目录现直接读取宿主已经准入的 Paper/PPT/Data 场景库，账号学习版本沿用原解析器；不需要把这些库手工转成 Coding 样例。Coding 快照接口继续保留。前端提供来源切换、真实工具流与兼容版本记录，任务及对照用量沿用原 API；未提供的层级、自动演化和同质量收益不作推断。
 
 模型 API 的 Kouri 上游地址、模型 ID 和凭证入口集中在 `src/adapters/model_api.py`：当前 base URL 为 `https://api.kourichat.com/v1`，线上模型 ID 为 `deepseek-v4.1-flash`，私有环境配置 `KOURI_API_KEY`。正式 Web、File、独立预算代理及 Python 场景仍经本地计费网关转发；网关出站使用 Kouri 密钥。Harness SDK 所需的旧字段名只在本地网关内作兼容占位，不读取旧 DeepSeek 密钥值。SkillFlow baseline 首请求的 Kouri Chat/工具调用冒烟已返回 HTTP 200，见[记录](docs/debug/kouri-env-models-20261106.md)；文件、搜索、思考能力、容量和实际费率仍待真实兼容性验收。当前费用数字沿原 DeepSeek 单价作代理估算，不能当作 Kouri 实付。
 
@@ -107,6 +214,8 @@ PPT 账户内结构学习现接入已启用PPT双路对照的真实聊天任务�
 论文 Breakdown 的 [具体读写实例](docs/experiments/paper-operation-breakdown-20261019-v1.md) 现展示实际命令、工具参数、费用和复用边界。同一读取算子在另一真实多文件论文中，单主文件覆盖失败，绑定10个来源文件后覆盖一致；这仅为局部无模型检查，不是新端到端降费成绩。
 
 PPT/PPTX 输入现结合原生主题/母版/布局、字体颜色和对象位置声明，以及隔离渲染的逐页视觉观察。GeneLoop 可用上传 PPT 作为设计参考；沿用原生模板填新内容时使用 ppt-master 的 round-trip 编辑流程，原件保留。旧 PPT 可隔离转换为标准 PPTX；字体、媒体和复杂效果仍有保真边界。见[附件说明](docs/product/web/attachment-input-behavior.md#pptpptx-的视觉与风格输入)。兼容库更新为 `ppt-master-v6` / `paper-web-v11`，沿用原证据与结构，旧库保留。
+
+PPT 场景的明确单页文字替换可直接读取 PPTX 形状和原文，交付时验证非目标部件和渲染文字。超过 12 页的 PDF 先生成本地页索引，完整文字、OCR 和图表像素按需读取。检查同版预览时复用已有像素证据，交付仍包含可编辑 PPTX、同版 PDF 和逐页图片。见[验证记录](docs/experiments/ppt-input-delivery-20261111.md)。
 
 PDF 上传现已共用逐页文字读取、扫描页本地中英文 OCR、论文图片与矢量图的图文分析，适用于全部场景。图片分析使用 Flash，最终回复仍使用用户选择的模型；费用计入同一任务，原件、附件卡片和多轮继承保留。安装、覆盖与识别限制见[附件输入说明](docs/product/web/attachment-input-behavior.md)，真实五场景验收见[实验记录](docs/debug/pdf-ocr-vision-20261018.md)。当前兼容库为 `ppt-master-v5` / `paper-web-v10`，原有结构和历史证据不变，旧库留存。
 
@@ -292,13 +401,13 @@ node scripts/project.mjs python scripts/stop-harness-web.py RUN_ID
 | --- | --- |
 | `scenarios/` | 各同学的 MCP 配置、题面、服务、工具契约 |
 | `src/adapters/scenario.py` | 校验场景并生成私有 DSH 插件配置；支持 stdio / streamable-http |
-| `src/adapters/harness_runtime.py` | Python SDK → Node Harness 的唯一启动边界 |
-| `src/adapters/dsh_scenario_guard.mjs` | 限定场景工具集合，阻止绕过 MCP 读仓库或执行 shell |
-| `src/adapters/dsh_online_motif.mjs` | DSH 原生插件；在模型请求前匹配认证 Motif，在工具结果后复核 |
-| `src/adapters/dsh_trajectory.py` | Harness 原始工具事件 → 带参数来源的轨迹 |
+| `src/adapters/harness/harness_runtime.py` | Python SDK → Node Harness 的唯一启动边界 |
+| `src/adapters/harness/dsh_scenario_guard.mjs` | 限定场景工具集合，阻止绕过 MCP 读仓库或执行 shell |
+| `src/adapters/harness/motif/dsh_online_motif.mjs` | DSH 原生插件；在模型请求前匹配认证 Motif，在工具结果后复核 |
+| `src/adapters/harness/dsh_trajectory.py` | Harness 原始工具事件 → 带参数来源的轨迹 |
 | `src/motif_core/offline/` | 轨迹挖掘、DAG/参数流编译、独立留出认证与 library 产物 |
-| `src/motif_core/controller.py`、`read_executor.py` | Python 结构控制、依赖/证据守卫、handoff/reentry |
-| `src/motif_core/online_skill_runtime.mjs` | DSH 插件使用的在线执行子集，含受限纯代码参数转换 |
+| `src/motif_core/runtime/controller.py`、`read_executor.py` | Python 结构控制、依赖/证据守卫、handoff/reentry |
+| `src/motif_core/runtime/online_skill_runtime.mjs` | DSH 插件使用的在线执行子集，含受限纯代码参数转换 |
 | `tests/` | 结构核心、接口、版本失效、权限拒绝与安全回退回归 |
 | `benchmarks/research_decision_portfolio_v{1,2}/` | 18 项冻结的合成科研决定，仅供开发诊断 |
 

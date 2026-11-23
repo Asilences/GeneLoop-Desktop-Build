@@ -32,10 +32,13 @@ export function validateProgram(program:any):void {
   }
   walk(program,0);
 }
-/** A finite operation counter bounds nested maps; input and every output are bounded. */
-export function runProgram(program:any,input:any):any {
+/** The operation counter is independent of a caller's data-volume policy. */
+export type ProgramDataLimits={inputBytes?:number|null;outputBytes?:number|null};
+export function runProgram(program:any,input:any,limits:ProgramDataLimits={}):any {
   validateProgram(program);
-  if(Buffer.byteLength(JSON.stringify(input)??'')>192000)throw Error('input_too_large');
+  const inputBytes=limits.inputBytes===undefined?192000:limits.inputBytes;
+  const outputBytes=limits.outputBytes===undefined?192000:limits.outputBytes;
+  if(inputBytes!==null&&Buffer.byteLength(JSON.stringify(input)??'')>inputBytes)throw Error('input_too_large');
   let fuel=200000;
   const array=(v:any)=>{if(!Array.isArray(v)||v.length>2000)throw Error('bounded_array_required');return v;};
   function ev(x:any,env:any):any {
@@ -92,7 +95,7 @@ export function runProgram(program:any,input:any):any {
     }
   }
   const value=ev(program,{input});
-  if(Buffer.byteLength(JSON.stringify(value)??'')>192000)throw Error('output_too_large');return value;
+  if(outputBytes!==null&&Buffer.byteLength(JSON.stringify(value)??'')>outputBytes)throw Error('output_too_large');return value;
 }
 export function validateCandidate(c:any){
   if(c?.schema_version!==1||c.name!=='check_report_structure'||typeof c.description!=='string'||c.description.length>800)

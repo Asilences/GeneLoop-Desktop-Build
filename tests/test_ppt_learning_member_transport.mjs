@@ -37,7 +37,7 @@ for(const failing of [false,true])test('member page learning binds, meters and r
  const delegated=purpose=>createHmac('sha256',admin).update(purpose+':'+user.id).digest('base64url');
  const policy=join(directory,'policy.json');writeFileSync(policy,JSON.stringify({endpoint:endpoint+'/v1',control_endpoint:endpoint,
   control_token:delegated('control'),budget_task_prefix:createHash('sha256').update(user.id).digest('hex').slice(0,8),budget_usd:null}));
- const code=`import sys,urllib.error\nfrom pathlib import Path\nfrom src.adapters.ppt_component_learning import propose_component\ntry:\n propose_component({'source_sha256':'diagnostic'},sys.argv[1],Path(sys.argv[2]))\nexcept urllib.error.HTTPError as error:\n if error.code != 500: raise\n`;
+ const code=`import sys,urllib.error\nfrom pathlib import Path\nfrom src.adapters.ppt.learning.ppt_component_learning import propose_component\ntry:\n propose_component({'source_sha256':'diagnostic'},sys.argv[1],Path(sys.argv[2]))\nexcept urllib.error.HTTPError as error:\n if error.code != 500: raise\n`;
  const child=spawn(python,['-c',code,policy,join(directory,'proposal')],{cwd:root,
   env:{...process.env,PYTHONUTF8:'1',DEEPSEEK_API_KEY:delegated('model')},stdio:['ignore','pipe','pipe']});
  let stderr='';child.stderr.on('data',part=>stderr+=part);const [status]=await once(child,'close');assert.equal(status,0,stderr);

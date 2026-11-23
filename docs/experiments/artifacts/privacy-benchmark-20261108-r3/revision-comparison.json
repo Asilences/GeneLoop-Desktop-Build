@@ -1,0 +1,406 @@
+{
+  "independent_unseen_evaluation": false,
+  "pii": {
+    "zh_formal": {
+      "records": 5000,
+      "admission_transitions": {
+        "True_to_True": 5000
+      },
+      "same_admitted_cohort": {
+        "documents": 5000,
+        "gold_entities": 15662,
+        "r2_literal_residuals": 4532,
+        "r3_literal_residuals": 4328
+      },
+      "by_gold_type": {
+        "PERSON": {
+          "gold_entities": 5310,
+          "fully_covered_entities": 3178,
+          "gained_over_current": 250,
+          "lost_from_current": 0
+        },
+        "PHONE_NUMBER": {
+          "gold_entities": 4400,
+          "fully_covered_entities": 3966,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "LOCATION": {
+          "gold_entities": 1429,
+          "fully_covered_entities": 398,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "EMAIL_ADDRESS": {
+          "gold_entities": 931,
+          "fully_covered_entities": 931,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "IDENTITY_NUMBER": {
+          "gold_entities": 2275,
+          "fully_covered_entities": 1826,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "CREDIT_CARD": {
+          "gold_entities": 862,
+          "fully_covered_entities": 202,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "LICENSE_PLATE": {
+          "gold_entities": 455,
+          "fully_covered_entities": 6,
+          "gained_over_current": 2,
+          "lost_from_current": 0
+        }
+      },
+      "native_by_gold_type": {
+        "PERSON": {
+          "gold_entities": 5310,
+          "fully_covered_entities": 3616
+        },
+        "PHONE_NUMBER": {
+          "gold_entities": 4400,
+          "fully_covered_entities": 3036
+        },
+        "LOCATION": {
+          "gold_entities": 1429,
+          "fully_covered_entities": 313
+        },
+        "EMAIL_ADDRESS": {
+          "gold_entities": 931,
+          "fully_covered_entities": 931
+        },
+        "IDENTITY_NUMBER": {
+          "gold_entities": 2275,
+          "fully_covered_entities": 529
+        },
+        "CREDIT_CARD": {
+          "gold_entities": 862,
+          "fully_covered_entities": 433
+        },
+        "LICENSE_PLATE": {
+          "gold_entities": 455,
+          "fully_covered_entities": 111
+        }
+      },
+      "changed_core_predictions": 251
+    },
+    "zh_chat": {
+      "records": 3000,
+      "admission_transitions": {
+        "True_to_True": 3000
+      },
+      "same_admitted_cohort": {
+        "documents": 3000,
+        "gold_entities": 7544,
+        "r2_literal_residuals": 2983,
+        "r3_literal_residuals": 2963
+      },
+      "by_gold_type": {
+        "PERSON": {
+          "gold_entities": 3010,
+          "fully_covered_entities": 1373,
+          "gained_over_current": 20,
+          "lost_from_current": 0
+        },
+        "PHONE_NUMBER": {
+          "gold_entities": 2261,
+          "fully_covered_entities": 1954,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "IDENTITY_NUMBER": {
+          "gold_entities": 782,
+          "fully_covered_entities": 447,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "CREDIT_CARD": {
+          "gold_entities": 504,
+          "fully_covered_entities": 100,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "EMAIL_ADDRESS": {
+          "gold_entities": 493,
+          "fully_covered_entities": 493,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "LOCATION": {
+          "gold_entities": 255,
+          "fully_covered_entities": 0,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "LICENSE_PLATE": {
+          "gold_entities": 239,
+          "fully_covered_entities": 6,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        }
+      },
+      "native_by_gold_type": {
+        "PERSON": {
+          "gold_entities": 3010,
+          "fully_covered_entities": 1801
+        },
+        "PHONE_NUMBER": {
+          "gold_entities": 2261,
+          "fully_covered_entities": 1805
+        },
+        "IDENTITY_NUMBER": {
+          "gold_entities": 782,
+          "fully_covered_entities": 305
+        },
+        "CREDIT_CARD": {
+          "gold_entities": 504,
+          "fully_covered_entities": 282
+        },
+        "EMAIL_ADDRESS": {
+          "gold_entities": 493,
+          "fully_covered_entities": 486
+        },
+        "LOCATION": {
+          "gold_entities": 255,
+          "fully_covered_entities": 54
+        },
+        "LICENSE_PLATE": {
+          "gold_entities": 239,
+          "fully_covered_entities": 50
+        }
+      },
+      "changed_core_predictions": 23
+    },
+    "en_test": {
+      "records": 5000,
+      "admission_transitions": {
+        "True_to_True": 4958,
+        "False_to_False": 42
+      },
+      "same_admitted_cohort": {
+        "documents": 4958,
+        "gold_entities": 21233,
+        "r2_literal_residuals": 11255,
+        "r3_literal_residuals": 11255
+      },
+      "by_gold_type": {
+        "PRIVATE_ID": {
+          "gold_entities": 2814,
+          "fully_covered_entities": 229,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "EMAIL_ADDRESS": {
+          "gold_entities": 1049,
+          "fully_covered_entities": 1049,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "PHONE_NUMBER": {
+          "gold_entities": 904,
+          "fully_covered_entities": 770,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "LOCATION": {
+          "gold_entities": 1847,
+          "fully_covered_entities": 239,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "MEDICAL_RECORD_NUMBER": {
+          "gold_entities": 2658,
+          "fully_covered_entities": 292,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "DATE_TIME": {
+          "gold_entities": 3805,
+          "fully_covered_entities": 52,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "LICENSE_PLATE": {
+          "gold_entities": 579,
+          "fully_covered_entities": 194,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "CREDIT_CARD": {
+          "gold_entities": 663,
+          "fully_covered_entities": 367,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "IDENTITY_NUMBER": {
+          "gold_entities": 1730,
+          "fully_covered_entities": 1095,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "PERSON": {
+          "gold_entities": 3209,
+          "fully_covered_entities": 2314,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "FINANCIAL_ACCOUNT": {
+          "gold_entities": 426,
+          "fully_covered_entities": 225,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "BIOMETRIC_IDENTIFIER": {
+          "gold_entities": 137,
+          "fully_covered_entities": 17,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "IP_ADDRESS": {
+          "gold_entities": 962,
+          "fully_covered_entities": 957,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "CREDENTIAL": {
+          "gold_entities": 124,
+          "fully_covered_entities": 40,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "VEHICLE_IDENTIFIER": {
+          "gold_entities": 98,
+          "fully_covered_entities": 7,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "CERTIFICATE_LICENSE_NUMBER": {
+          "gold_entities": 124,
+          "fully_covered_entities": 7,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "COMPANY_NAME": {
+          "gold_entities": 185,
+          "fully_covered_entities": 12,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "HEALTH_PLAN_BENEFICIARY_NUMBER": {
+          "gold_entities": 41,
+          "fully_covered_entities": 5,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        },
+        "PRIVATE_REFERENCE": {
+          "gold_entities": 23,
+          "fully_covered_entities": 23,
+          "gained_over_current": 0,
+          "lost_from_current": 0
+        }
+      },
+      "native_by_gold_type": {
+        "PRIVATE_ID": {
+          "gold_entities": 2814,
+          "fully_covered_entities": 704
+        },
+        "EMAIL_ADDRESS": {
+          "gold_entities": 1049,
+          "fully_covered_entities": 1048
+        },
+        "PHONE_NUMBER": {
+          "gold_entities": 904,
+          "fully_covered_entities": 772
+        },
+        "LOCATION": {
+          "gold_entities": 1847,
+          "fully_covered_entities": 209
+        },
+        "MEDICAL_RECORD_NUMBER": {
+          "gold_entities": 2658,
+          "fully_covered_entities": 591
+        },
+        "DATE_TIME": {
+          "gold_entities": 3805,
+          "fully_covered_entities": 3428
+        },
+        "LICENSE_PLATE": {
+          "gold_entities": 579,
+          "fully_covered_entities": 240
+        },
+        "CREDIT_CARD": {
+          "gold_entities": 663,
+          "fully_covered_entities": 522
+        },
+        "IDENTITY_NUMBER": {
+          "gold_entities": 1730,
+          "fully_covered_entities": 1132
+        },
+        "PERSON": {
+          "gold_entities": 3209,
+          "fully_covered_entities": 2472
+        },
+        "FINANCIAL_ACCOUNT": {
+          "gold_entities": 426,
+          "fully_covered_entities": 252
+        },
+        "BIOMETRIC_IDENTIFIER": {
+          "gold_entities": 137,
+          "fully_covered_entities": 36
+        },
+        "IP_ADDRESS": {
+          "gold_entities": 962,
+          "fully_covered_entities": 957
+        },
+        "CREDENTIAL": {
+          "gold_entities": 124,
+          "fully_covered_entities": 10
+        },
+        "VEHICLE_IDENTIFIER": {
+          "gold_entities": 98,
+          "fully_covered_entities": 16
+        },
+        "CERTIFICATE_LICENSE_NUMBER": {
+          "gold_entities": 124,
+          "fully_covered_entities": 21
+        },
+        "COMPANY_NAME": {
+          "gold_entities": 185,
+          "fully_covered_entities": 100
+        },
+        "HEALTH_PLAN_BENEFICIARY_NUMBER": {
+          "gold_entities": 41,
+          "fully_covered_entities": 10
+        },
+        "PRIVATE_REFERENCE": {
+          "gold_entities": 23,
+          "fully_covered_entities": 21
+        }
+      },
+      "changed_core_predictions": 0
+    }
+  },
+  "credentials": {
+    "files": 11030,
+    "status_transitions": {
+      "accepted_to_accepted": 8630,
+      "accepted_to_evaluation_timeout": 210,
+      "rejected_to_rejected": 2101,
+      "evaluation_timeout_to_evaluation_timeout": 83,
+      "evaluation_timeout_to_accepted": 6
+    },
+    "same_admitted_cohort": {
+      "files": 8630,
+      "extractable_positive_rows": 4957,
+      "r2_literal_residuals": 2590,
+      "r3_literal_residuals": 2590
+    },
+    "native_flagged_accepted_files_with_literal_residual": 0
+  },
+  "actual_core_matches_frozen_union_ablation": true,
+  "source_sha256": "ec0f6b3527c2bec42778f4485915f7dab66366273dfad2d35b056cd2cf3c1ea6"
+}

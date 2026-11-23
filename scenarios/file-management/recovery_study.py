@@ -36,7 +36,7 @@ def prepare():
                       'input_sha256':digest(spec),'family':family,'arm':arm,'role':'recovery_validation','fault_injected':fault,'expected_terminal_failure':denied})
     (exp/'L2').mkdir();shutil.copyfile(parent/'L2/policy.json',exp/'L2/policy.json');(exp/'L2/policy.json').chmod(0o600)
     code=source_code()
-    for n in ['src/adapters/scenario.py','src/adapters/dsh_entry_motif.ts','src/adapters/dsh_acceptance_guard.ts','src/adapters/dsh_online_motif.mjs','scripts/validate-file-delivery.py']:
+    for n in ['src/adapters/scenario.py','src/adapters/harness/motif/dsh_entry_motif.ts','src/adapters/file_acceptance_guard.ts','src/adapters/harness/motif/dsh_online_motif.mjs','scripts/validate-file-delivery.py']:
         code[n]=sha(ROOT/n)
     protocol={'experiment_id':name,'parent':str(parent),'tasks':cases,'model':'deepseek-flash','reasoning_effort':'off','compression_enabled':False,
         'per_task_cap_usd':5,'total_cap_usd':1000,'max_steps':96,'max_output':4000,'max_repairs':2,'source_code':code,'L2_sha256':sha(exp/'L2/policy.json'),

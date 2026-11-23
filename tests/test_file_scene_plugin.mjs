@@ -6,24 +6,36 @@ import {tmpdir} from 'node:os';
 import {join,relative} from 'node:path';
 import {EventEmitter} from 'node:events';
 import {fileURLToPath} from 'node:url';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 const enabled={skip:!process.features?.typescript};
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
 
 async function fixture(budget=.25,sessions=['owned'],member=false){
- const {installFileScene,fileShortcut}=await import('../src/adapters/harless_file_scene.ts');
+ const {installFileScene,fileShortcut}=await import('../src/adapters/web/scenes/harless_file_scene.ts');
  const directory=mkdtempSync(join(tmpdir(),'file-plugin-')),id='file-test-'+randomUUID(),events=[];
  const policy=join(directory,'policy.json'),saved=process.env.SSS_WEB_POLICY;
  writeFileSync(policy,JSON.stringify({output:directory,user_id:id,...(member?{budget_task_prefix:id}:{}),provider_mode:'mock',budget_usd:budget,
   python:'diagnostic-only',scenes:[{id:'files',allowed_tools:['mcp__file_management__list_files']}]}));
  process.env.SSS_WEB_POLICY=policy;
  const routes=new Map(),hooks=new Map(),disposers=[],calls=[],workers=[],uploads=new Map();
- const upload=(session,name,text)=>{const receiptId=randomUUID();uploads.set(receiptId,{session,name,bytes:Buffer.byteLength(text),diagnosticText:text});return {type:'file',receiptId};};
+ const upload=(session,name,data)=>{
+  const receiptId=randomUUID(),bytes=Buffer.from(data);
+  uploads.set(receiptId,{session,data:bytes,ref:{attachmentId:receiptId,name,bytes:bytes.length}});
+  return {type:'file',receiptId};
+ };
  const histories=new Map(sessions.map(session=>[session,session==='owned'?events:[]]));
  const agents=sessions.map(id=>({session:{id,snapshotEvents:()=>histories.get(id),append(type,data,metadata){const rows=histories.get(id),event={seq:rows.length,time:Date.now(),type,data,...metadata};rows.push(event);return event;}},ctx:{get(){return null;}}}));
  const ctx={sessionController:{
   async inspect(session){if(!histories.has(session))throw Error('not owned');return {meta:{},events:histories.get(session)};},
   async prompt(request){calls.push(request);return {delegated:true};},async cancel(){return {cancelled:true};},async selectModel(){return {};},
- },attachments:{async admitPromptContent(content){return content;},async *readFileStream(ref){yield Buffer.from(ref.diagnosticText);}},fileUploads:{resolve(agent,id){const ref=uploads.get(id);if(ref?.session!==agent.session.id)throw Error('foreign receipt');return ref;},bindPrompt(){return {commit(){},[Symbol.dispose](){}};}},
+  },attachments:{async admitPromptContent(content){return content;},async *readFileStream(ref){yield uploads.get(ref.attachmentId).data;}},fileUploads:{
+  async uploadStream({sessionId,name,data}) {
+   const chunks=[];for await(const chunk of data)chunks.push(Buffer.from(chunk));
+   return upload(sessionId,name,Buffer.concat(chunks));
+  },
+  resolve(agent,id){const ref=uploads.get(id);if(ref?.session!==agent.session.id)throw Error('foreign receipt');return ref.ref;},
+  bindPrompt(){return {commit(){},[Symbol.dispose](){}};},
+ },
  workspaceRegistry:{list:()=>[{id:'workspace-a',sessionIds:sessions}]},on(name,handler){hooks.set(name,handler);},
  connection:{requestRejection:()=>null,fetch:{register(route){routes.set(route.path,route);return ()=>{};}}},effect(install){const dispose=install();if(typeof dispose==='function')disposers.push(dispose);}};
  function launch(_python,args,options){
@@ -36,7 +48,7 @@ async function fixture(budget=.25,sessions=['owned'],member=false){
  const api=(query='',body)=>route.fetch(new Request('http://127.0.0.1/api/harless/file-scene?session_id=owned'+query,{method:body?'POST':'GET',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})}));
  return {ctx,events,histories,calls,workers,api,fileShortcut,upload,directory,async close(){for(const dispose of disposers.reverse())dispose();if(saved===undefined)delete process.env.SSS_WEB_POLICY;else process.env.SSS_WEB_POLICY=saved;rmSync(directory,{recursive:true,force:true});
   // The tests have no uploads, recovery data or real requests.
-  const root=fileURLToPath(new URL('../',import.meta.url));const {createHash}=await import('node:crypto');rmSync(join(root,'.local/web/file-management/accounts',createHash('sha256').update(id).digest('hex')),{recursive:true,force:true});}};
+  const root=fileURLToPath(new URL('../',import.meta.url));rmSync(join(root,'.local/web/file-management/accounts',createHash('sha256').update(id).digest('hex')),{recursive:true,force:true});}};
 }
 
 test('file extension delegates Paper/PPT/Data/chat without launching or changing their requests',enabled,async()=>{
@@ -73,7 +85,8 @@ test('File delivery API labels an unverified retained reservation without claimi
 
 test('file admission is owned, automatic, idempotent and retains native lifecycle',enabled,async()=>{
  const f=await fixture();try{
-  const settings=await (await f.api()).json();assert.equal(settings.automatic,true);assert.equal(settings.scene.shortcut,'file');
+  const settings=await (await f.api()).json();assert.equal(settings.automatic,true);assert.equal(settings.mode,'execute');
+  assert.equal(settings.rsi,true);assert.equal(settings.scene.shortcut,'file');
   const request={sessionId:'owned',requestId:'one',mode:'queue',content:[{type:'text',text:'/file 盘点任务副本'}]};
   await assert.rejects(f.ctx.sessionController.prompt({...request,sessionId:'foreign'}));assert.equal(f.workers.length,0);
   await f.ctx.sessionController.prompt(request,new AbortController().signal);assert.equal(f.workers.length,1);
@@ -95,6 +108,55 @@ test('foreign upload receipts fail before worker dispatch or native turn publica
  const f=await fixture();try{
   await assert.rejects(f.ctx.sessionController.prompt({sessionId:'owned',requestId:'upload',mode:'queue',content:[{type:'text',text:'/file 整理'},{type:'file',receiptId:'other-owner'}]},new AbortController().signal));
   assert.equal(f.workers.length,0);assert.equal(f.events.length,0);
+ }finally{await f.close();}
+});
+
+test('File admission keeps original mixed upload bytes and native image order',enabled,async()=>{
+ const f=await fixture();try{
+  const text=f.upload('owned','notes.txt','notes');
+  const image={type:'image',mediaType:'image/png',data:png.toString('base64')};
+  const content=[{type:'text',text:'/management 按类型整理'},{...image,name:'figure.png'},text,image,image];
+  const original=structuredClone(content);
+  const batches=[];
+  f.ctx.attachments.admitPromptContent=async parts=>{batches.push(structuredClone(parts));return parts;};
+  await f.ctx.sessionController.prompt({sessionId:'owned',requestId:'mixed',mode:'queue',content});
+  assert.deepEqual(content,original);
+  assert.deepEqual(batches[0],content.filter(part=>part.type==='image'));
+  assert.deepEqual(batches[1].map(part=>part.type),['text','file','image','file','file','image','file','image']);
+  const request=JSON.parse(readFileSync(f.workers[0].input.request_file));
+  assert.deepEqual(request.sources.map(source=>source.name),['figure.png','notes.txt','image_1.png','image_2.png']);
+  assert.equal(request.objective,'按类型整理');
+  for(const source of request.sources){
+   const expected=source.name==='notes.txt'?Buffer.from('notes'):png;
+   assert.deepEqual(readFileSync(source.path),expected);
+   assert.equal(source.sha256,createHash('sha256').update(expected).digest('hex'));
+  }
+ }finally{await f.close();}
+});
+
+test('File rejects invalid images and input count before any upload or dispatch',enabled,async()=>{
+ const f=await fixture();try{
+  let validated=0,uploads=0;
+  f.ctx.attachments.admitPromptContent=async()=>{validated++;throw Error('native_image_rejected');};
+  f.ctx.fileUploads.uploadStream=async()=>{uploads++;throw Error('unexpected_upload');};
+  const image={type:'image',mediaType:'image/png',name:'broken.png',data:'AAAA'};
+  const submit=(requestId,images)=>f.ctx.sessionController.prompt({sessionId:'owned',requestId,mode:'queue',content:[{type:'text',text:'/file inspect'},...images]});
+  await assert.rejects(submit('invalid-image',[image]),/native_image_rejected/);
+  await assert.rejects(submit('too-many-images',Array(9).fill(image)),/scene_input_limit/);
+  assert.equal(validated,1);
+  assert.equal(uploads,0);
+  assert.equal(f.workers.length,0);
+  assert.equal(f.events.length,0);
+ }finally{await f.close();}
+});
+
+test('File rejects parent paths and duplicate receipt names before publishing a turn',enabled,async()=>{
+ const f=await fixture();try{
+  const submit=(requestId,uploads)=>f.ctx.sessionController.prompt({sessionId:'owned',requestId,mode:'queue',content:[{type:'text',text:'/files inspect'},...uploads]});
+  await assert.rejects(submit('parent-name',[f.upload('owned','../outside.txt','private')]),/invalid_or_duplicate_filename/);
+  await assert.rejects(submit('duplicate-name',[f.upload('owned','same.txt','first'),f.upload('owned','same.txt','second')]),/invalid_or_duplicate_filename/);
+  assert.equal(f.workers.length,0);
+  assert.equal(f.events.length,0);
  }finally{await f.close();}
 });
 

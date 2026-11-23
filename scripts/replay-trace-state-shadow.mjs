@@ -3,7 +3,7 @@ import {mkdtempSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {canonical} from '../src/adapters/paper_rsi_program.ts';
 import {sha256} from '../src/adapters/paper_triage_validation.ts';
-import {createStateShadowInterceptor} from '../src/adapters/dsh_trace_rsi_state_shadow.ts';
+import {createStateShadowInterceptor} from '../src/adapters/harness/paper/dsh_trace_rsi_state_shadow.ts';
 
 const run=resolve(process.argv[2]),libraryPath=resolve(process.argv[3]);
 const config=JSON.parse(readFileSync(join(run,'config.json'),'utf8'));

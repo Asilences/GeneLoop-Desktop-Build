@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from src.adapters import capability_proposal as pilot
+from src.adapters.harness.capability import capability_proposal as pilot
 from tests.test_capability_builder import setup
 
 
@@ -174,6 +174,24 @@ def test_cumulative_gate_preserves_prior_spend_and_unknown_request(tmp_path, mon
     assert pilot.read_json(tmp_path/'budget-checkpoint.json')['request_count'] == 8
 
 
+def test_original_sdk_can_omit_reasoning_fields_without_changing_other_gate_guards(tmp_path, monkeypatch):
+    monkeypatch.setenv('KOURI_API_KEY','diagnostic-not-a-real-key')
+    pilot.write(tmp_path/'budget-checkpoint.json',{'request_count':7,'reserved_usd':2.0})
+    (tmp_path/'cost-ledger.jsonl').write_text('')
+    monkeypatch.setattr(pilot,'create_server',lambda *args:SimpleNamespace(
+        serve_forever=lambda:None,shutdown=lambda:None,server_close=lambda:None,server_port=0))
+    attempt=tmp_path/'judge';attempt.mkdir()
+    with pilot.CumulativeProposalGate(tmp_path,max_tokens=4096,reasoning_effort='provider_default') as gate:
+        gate.current=attempt
+        payload={'model':pilot.MODEL,'max_tokens':4096,'messages':[]}
+        assert gate.state.book(json.dumps(payload).encode())[0]==8
+        for field,value in [('thinking',{'type':'disabled'}),('reasoning_effort',None),('max_tokens',4095)]:
+            changed={**payload,field:value}
+            with pytest.raises(ValueError,match='configuration_changed'):gate.state.book(json.dumps(changed).encode())
+        assert gate.state.request_count==8
+        assert gate.costs(attempt)['observed_model_usd'] is None
+
+
 def test_cli_failure_is_nonzero_after_writing_summary(tmp_path, monkeypatch, capsys):
     task, catalog, snapshot, _ = inputs()
     for name, value in [('task',task), ('catalog',catalog), ('snapshot',snapshot)]:
@@ -207,7 +225,7 @@ def test_json_feedback_has_location_without_rewriting_candidate():
 
 
 def test_compact_harness_draft_expands_without_model_supplied_contract_or_hashes(tmp_path, monkeypatch):
-    from src.adapters.capability_authoring import compact_proposal
+    from src.capability.builder.capability_authoring import compact_proposal
     task,catalog,snapshot,proposal=inputs()
     draft=compact_proposal(proposal,task,snapshot)
     observed=fake_harness(monkeypatch,json.dumps(draft))
@@ -220,7 +238,7 @@ def test_compact_harness_draft_expands_without_model_supplied_contract_or_hashes
 
 
 def test_exact_failure_is_in_next_repair_prompt(tmp_path, monkeypatch):
-    from src.adapters.capability_authoring import compact_proposal
+    from src.capability.builder.capability_authoring import compact_proposal
     task,catalog,snapshot,proposal=inputs();draft=compact_proposal(proposal,task,snapshot)
     bad=copy.deepcopy(draft);bad['steps'][1]['args']={'value':'wrong type'}
     fake_harness(monkeypatch,json.dumps(bad))

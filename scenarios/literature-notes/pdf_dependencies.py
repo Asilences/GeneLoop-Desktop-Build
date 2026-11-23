@@ -23,7 +23,7 @@ def contract_version():
              'pdf_incremental_tools.py', 'pdf_review_tools.py', 'pdf-incremental-policy.ts', 'pdf_dependencies.py',
              'research-checklist.md']
     return digest({**{name: hashlib.sha256((HERE / name).read_bytes()).hexdigest() for name in names},
-                   'completion_guard': hashlib.sha256((ROOT / 'src/adapters/dsh_completion_guard.ts').read_bytes()).hexdigest()})
+                   'completion_guard': hashlib.sha256((ROOT / 'src/adapters/harness/dsh_completion_guard.ts').read_bytes()).hexdigest()})
 
 
 def automatic_workflow_version():

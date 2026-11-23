@@ -321,7 +321,7 @@ def test_delivery_receipt_rejects_modified_artifact(corpus, monkeypatch):
         save_private(output / 'task.json', scene.task)
         save_private(output / 'input-snapshot.json', {'scope': 'receipt_fixture'})
         run = output / 'run'; run.mkdir(); (run / 'agent-events.jsonl').write_text('{}\n')
-        monkeypatch.setattr('src.adapters.dsh_trajectory.extract_dsh_trace',
+        monkeypatch.setattr('src.adapters.harness.dsh_trajectory.extract_dsh_trace',
             lambda *_args, **_kwargs: SimpleNamespace(records=[SimpleNamespace(
                 name='mcp__literature_pdf__preview_research_notes', observation=receipt)]))
         assert RUN.collect_preview(run, output)['status'] == 'preview'
@@ -402,7 +402,7 @@ def test_pdf_string_anchor_reaches_existing_online_closed_read_and_integer_defer
     code = r'''
       import fs from 'node:fs';
       import {compileLocalPrograms,digest,proposeReadyBatch,validateOnlineManifest}
-        from './src/motif_core/online_skill_runtime.mjs';
+        from './src/motif_core/runtime/online_skill_runtime.mjs';
       const pin='mcp__literature_pdf__pin_pdf_context',read='mcp__literature_pdf__read_pinned_pdf_context';
       const raw=JSON.parse(fs.readFileSync('scenarios/literature-notes/pdf-contracts.json'));
       const artifact={motif_id:'unit-fixture-only',certified_digest:'a'.repeat(64),tools:[pin,read],

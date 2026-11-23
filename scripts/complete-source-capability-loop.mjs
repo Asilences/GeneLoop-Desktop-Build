@@ -7,8 +7,8 @@ import {dirname,resolve,relative,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {capabilityDigest,capabilityRef} from '../src/adapters/capability_contract.ts';
-import {completeCapabilityCycle} from '../src/adapters/capability_cycle.ts';
+import {capabilityDigest,capabilityRef} from '../src/capability/graph/capability_contract.ts';
+import {completeCapabilityCycle} from '../src/rsi/learning/capability_cycle.ts';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');

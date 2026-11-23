@@ -6,8 +6,8 @@ sys.path.insert(0,str(ROOT))
 from common import digest,sha,snapshot,save,PREFIX
 from file_tools import FileScene
 from verify import verify as legacy_verify
-from src.motif_core.offline.collection_compiler import collection_witness
-from src.motif_core.offline.reentry_compiler import reentry_witness
+from src.motif_core.offline.compilation.collection_compiler import collection_witness
+from src.motif_core.offline.compilation.reentry_compiler import reentry_witness
 
 def audit(exp):
     p=json.loads((exp/'protocol.json').read_text());assert all(sha(exp/'frozen-source'/n)==h for n,h in p['source_code'].items())

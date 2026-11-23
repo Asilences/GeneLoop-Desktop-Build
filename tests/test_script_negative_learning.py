@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import pytest
 from src.adapters import script_negative_learning as learning
-from src.adapters.script_negative_compiler import collect_negative, RUNTIME_FILES, sha, digest
+from src.motif_core.offline.compilation.script_negative_compiler import collect_negative, RUNTIME_FILES, sha, digest
 
 
 def write(path,value):

@@ -14,9 +14,9 @@ from pdf_repair_tools import RepairScene
 from terminal_entry import TOOL, entry_task, execution_version
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.terminal_compiler import terminal_witness, compile_terminal, certify_terminal
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.terminal_compiler import terminal_witness, compile_terminal, certify_terminal
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 CONTRACTS = parse_tool_contracts({TOOL: {'read_only': True, 'replay_stable': False,
     'required_params': ['decisions', 'synthesis_hypothesis']}})
@@ -41,7 +41,7 @@ def load_witness(output):
         task_fingerprint=digest({'task': scene.task, 'input': scene.input_digest, 'request': scene.request_digest}),
         input_version=scene.input_digest, request_version=scene.request_digest, target_ids=scene.targets)
     if witness['receipt'] != result['receipt']: raise ValueError('collected receipt differs from original tool event')
-    checker = "import fs from 'node:fs';import {verifyRepairReceipt} from './src/motif_core/terminal_receipt_policy.ts';const x=JSON.parse(fs.readFileSync(0,'utf8'));if(!verifyRepairReceipt(x.receipt,x.task))throw Error('unbound terminal source');"
+    checker = "import fs from 'node:fs';import {verifyRepairReceipt} from './src/motif_core/runtime/policies/terminal_receipt_policy.ts';const x=JSON.parse(fs.readFileSync(0,'utf8'));if(!verifyRepairReceipt(x.receipt,x.task))throw Error('unbound terminal source');"
     subprocess.run(['node', '--input-type=module', '-e', checker], input=json.dumps({'receipt': witness['receipt'], 'task': task}),
         cwd=ROOT, text=True, check=True, capture_output=True)
     payload = json.loads(private_file(witness['receipt']['artifact']).read_text())
@@ -84,7 +84,7 @@ def learn(output, split):
     policy = {'schema_version': 1, 'format': 'sss-terminal-receipt-v1', 'source_library_digest': library['library_digest'],
         'execution_version_sha256': execution_version(), 'artifact': artifact}
     policy['policy_digest'] = digest(policy)
-    verifier = "import fs from 'node:fs';import {validateTerminalPolicy} from './src/motif_core/terminal_receipt_policy.ts';validateTerminalPolicy(JSON.parse(fs.readFileSync(0,'utf8')));"
+    verifier = "import fs from 'node:fs';import {validateTerminalPolicy} from './src/motif_core/runtime/policies/terminal_receipt_policy.ts';validateTerminalPolicy(JSON.parse(fs.readFileSync(0,'utf8')));"
     subprocess.run(['node', '--input-type=module', '-e', verifier], input=json.dumps(policy), text=True, cwd=ROOT, check=True, capture_output=True)
     for name, value in [('entry-policy.json', policy), ('library.json', library), ('witnesses.json', [c[0] for c in cases])]: save_private(output / name, value)
     report = {'policy_digest': policy['policy_digest'], 'training_counts': [c[0]['target_count'] for c in cases[:2]],

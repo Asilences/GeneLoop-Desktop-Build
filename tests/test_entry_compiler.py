@@ -1,9 +1,9 @@
 import copy
 import json
 import pytest
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.entry_compiler import entry_witness, compile_entry_motif, certify_entry_motif
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.entry_compiler import entry_witness, compile_entry_motif, certify_entry_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 TOOL='mcp__test__read_packet'
 CONTRACTS=parse_tool_contracts({TOOL:{'required_params':['id'],'read_only':True,'replay_stable':True}})

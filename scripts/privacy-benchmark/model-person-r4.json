@@ -1,0 +1,34 @@
+{
+  "comparison_id": "privacy-r4-official-person-only-20261108",
+  "baseline": "r4 contextual candidate f808fd318c4108c6ff8b3da45aa067e2ac1eb7d8",
+  "independent_unseen_evaluation": false,
+  "data_already_seen_in_r1_r2_r3": true,
+  "threshold": 0.4,
+  "torch_threads": 4,
+  "model_inference_device": "cpu",
+  "cloud_model_requests": 0,
+  "gold_passed_to_detector": false,
+  "truncation_or_silent_prefix_scoring": false,
+  "gliner_person": {
+    "repository": "urchade/gliner_multi-v2.1",
+    "revision": "443d26d654e0324125a96bebd8e796c14ff2efe6",
+    "backend_revision": "a0484667b22365f84929a935b5e50a51f71f159d",
+    "license": "Apache-2.0",
+    "adapter": "presidio-analyzer==2.2.365 GLiNERRecognizer",
+    "labels": {"person": "PERSON"},
+    "max_words": 384,
+    "encoder_max_tokens": 512,
+    "chunk_tokens": 192,
+    "overlap_tokens": 32,
+    "flat_ner": true,
+    "word_splitter": "official GLiNER SpaCyTokenSplitter; zh ChineseTokenizer jieba; English checkpoint default"
+  },
+  "adoption_gates": {
+    "existing_fully_covered_entities_lost": 0,
+    "max_added_non_pii_masking_percentage_points": 0.1,
+    "max_context_retention_drop_percentage_points": 0.5,
+    "required_retained_semantic_invariants": 120,
+    "required_available_inputs": 624
+  },
+  "adoption": "offline research candidate; no default adoption if any gate fails; not independent privacy certification"
+}

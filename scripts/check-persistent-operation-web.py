@@ -3,7 +3,7 @@ import importlib.util,json,sys,time
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 sp=importlib.util.spec_from_file_location('checks',ROOT/'scripts/check-web-tasks.py');c=importlib.util.module_from_spec(sp);sp.loader.exec_module(c)
-from src.motif_core.offline.experience_registry import read,durable
+from src.motif_core.reuse.experience_registry import read,durable
 def main():
     goal={'objective':'复制两个文件并核验全部实际产物','require_result_read':True,'actions':[
       {'op':'copy','source':'notes.txt','destination':'recovered/note.txt','format':'none'},

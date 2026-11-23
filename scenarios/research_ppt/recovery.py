@@ -335,7 +335,7 @@ class CheckpointPPTService(PPTService):
                 raise CheckpointRejected("checkpoint 来源句柄未获当前job授权")
             parsed = value["parsed"]
             _object(parsed, {"format", "page_count", "text_chars", "pages", "images", "warnings"}, "checkpoint 来源解析格式未知")
-            from src.adapters.harless_attachment_text import TEXT_SUFFIXES
+            from src.adapters.web.attachments.harless_attachment_text import TEXT_SUFFIXES
             image_formats = {'png','jpg','jpeg','webp','gif'}
             formats = {'pdf','pptx','docx','doc','xlsx','unknown'} | image_formats | {x.lstrip('.') for x in TEXT_SUFFIXES}
             maximum = 1 if parsed['format'] in image_formats else (200 if parsed['format'] in {'pdf','pptx'} else 2000)

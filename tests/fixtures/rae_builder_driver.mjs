@@ -6,14 +6,15 @@ import {readFileSync,mkdirSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../src/adapters/capability_contract.ts';
-import {bytesSha256} from '../../src/adapters/rsi_protocol.ts';
-import {completeCapabilityCycle} from '../../src/adapters/capability_cycle.ts';
-import {createCapabilityStore} from '../../src/adapters/capability_store.ts';
+import {createCapability,capabilityRef,createCapabilitySnapshot,capabilityDigest} from '../../src/capability/graph/capability_contract.ts';
+import {bytesSha256} from '../../src/rsi/protocol/rsi_protocol.ts';
+import {completeCapabilityCycle} from '../../src/rsi/learning/capability_cycle.ts';
+import {createCapabilityStore} from '../../src/capability/runtime/capability_store.ts';
 import {execute} from './rae_runtime.mjs';
 
-const files=['capability_builder_application.py','capability_source_authoring.py','capability_program_encoding.py'];
-const source=()=>Buffer.concat(files.map(f=>readFileSync(new URL('../../src/adapters/'+f,import.meta.url))));
+const files=['src/rsi/learning/capability_builder_application.py','src/capability/builder/capability_source_authoring.py',
+ 'src/capability/builder/capability_program_encoding.py','src/capability/runtime/evidence.py'];
+const source=()=>Buffer.concat(files.map(f=>readFileSync(new URL('../../'+f,import.meta.url))));
 const schema=name=>({type:'object',properties:{[name]:{type:'string'}},required:[name],additionalProperties:false});
 const signatures={builder_parse:['context_json','prepared_json'],builder_freeze:['prepared_json','result_json']};
 const operations=new Map(Object.keys(signatures).map(name=>[name,{
@@ -21,7 +22,7 @@ const operations=new Map(Object.keys(signatures).map(name=>[name,{
   library_sha256:bytesSha256('rae-builder-host-operations'),library_digest:bytesSha256('rae-builder-host-operations'),
   certificate_sha256:bytesSha256('rae-builder-diagnostic-host-authority')}),
  run:async args=>{
-  const run=spawnSync(process.env.SSS_PYTHON??'python3',['-m','src.adapters.capability_builder_application'],
+  const run=spawnSync(process.env.SSS_PYTHON??'python3',['-m','src.rsi.learning.capability_builder_application'],
    {input:JSON.stringify({operation:name,arguments:args}),encoding:'utf8'});
   if(run.status!==0)throw Error('builder_operation_failed:'+run.stderr);
   return JSON.parse(run.stdout);

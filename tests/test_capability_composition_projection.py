@@ -10,9 +10,9 @@ import subprocess
 
 import pytest
 
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_contract import capability_digest, capability_ref, create_capability_snapshot
-from src.adapters.capability_motif_learning import capture_composition_trace, learn_capability_motifs, _at
+from src.capability.builder.capability_builder import compile_proposal
+from src.capability.graph.capability_contract import capability_digest, capability_ref, create_capability_snapshot
+from src.rsi.learning.capability_motif_learning import capture_composition_trace, learn_capability_motifs, _at
 from tests.test_capability_motif_learning import put, ROOT
 
 

@@ -16,7 +16,7 @@ export const shadowDigest = (value: any): string => sha256(canonical(value));
 const hash = (s: any) => typeof s === 'string' && /^[a-f0-9]{64}$/.test(s);
 const same = (a: any,b: any) => canonical(a) === canonical(b);
 const codePaths = ['src/adapters/paper_triage_validation.ts',
-  'src/adapters/dsh_paper_delivery_check.ts', 'schemas/paper-citation-triage.schema.json'];
+  'src/adapters/harness/paper/dsh_paper_delivery_check.ts', 'schemas/paper-citation-triage.schema.json'];
 
 export function validateShadowLibrary(library: any): void {
   if (validateJsonSchemaValue(librarySchema,library).length)

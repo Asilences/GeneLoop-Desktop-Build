@@ -1,0 +1,32 @@
+{
+  "recorded_utc": "2026-11-07T17:33:53.147351+00:00",
+  "python": "3.12.15",
+  "os": "Ubuntu 18.04.6 LTS",
+  "kernel": "4.15.0-213-generic",
+  "libc": [
+    "glibc",
+    "2.27"
+  ],
+  "cpu_model": "Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz",
+  "logical_cpu_count": 56,
+  "affinity_count": 56,
+  "memory_kib": {
+    "MemTotal": 263787444,
+    "MemAvailable": 120769840
+  },
+  "load_average": [
+    87.35,
+    83.03,
+    58.53
+  ],
+  "application_commit": "ea819fc6ecb1f32d69d61a3f5619419e181f947e",
+  "application_checkout_clean": true,
+  "same_host_overlap": [
+    "R3 benchmark",
+    "candidate CPU inference",
+    "portion of regression",
+    "supplemental entry checks"
+  ],
+  "production_service_touched": false,
+  "cloud_model_requests": 0
+}

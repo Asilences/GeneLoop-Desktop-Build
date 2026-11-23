@@ -6,8 +6,8 @@ from pathlib import Path
 import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.reuse_compiler import collect, compile_library
-from src.adapters.probe_motif_compiler import collect as collect_probes
+from src.motif_core.offline.compilation.reuse_compiler import collect, compile_library
+from src.motif_core.offline.compilation.trace.probe_motif_compiler import collect as collect_probes
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)

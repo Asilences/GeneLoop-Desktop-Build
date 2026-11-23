@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';import {join} from 'node:path';import {createHash} from 'node:crypto';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';import {createOperationRuntime} from '../src/adapters/dsh_operation_motif.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';import {createOperationRuntime} from '../src/adapters/harness/motif/dsh_operation_motif.ts';
 import {createTemporalBarrier} from '../src/adapters/management_temporal.ts';
 const fixture=JSON.parse(execFileSync(process.env.SSS_PURE_CODE_PYTHON??'python3',['-c','import runpy,json;m=runpy.run_path("tests/test_parallel_requests.py");f=m["frames"]();c=m["discover_graphs"](f[:2])[0];p=m["certify_graph"](next(v["compiled"] for v in c if len(v["compiled"]["nodes"])==3),f[2]);print(json.dumps({"policy":p,"frame":f[2]}))'],{encoding:'utf8'}));
 const obs=v=>({value:{structuredContent:v}});

@@ -12,12 +12,11 @@ from pdf_tools import ROOT, digest, save_private
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from mcp import Client, StdioServerParameters
-from src.adapters.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace, infer_dsh_provenance, mine_witnessed_parameter_edges
 from src.adapters.task_identity import load_trace_identity, require_distinct_decisions
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif, certify_witnessed_edge_motif
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 PREFIX = 'mcp__literature_pdf__'
 
 def read(path):
@@ -86,7 +85,7 @@ def learn(split, output):
     exporter = module(ROOT / 'scripts/export-online-motif-manifest.py', 'pdf_exporter')
     manifest = exporter.export_manifest(library, contracts_raw, version_fields=read(HERE / 'pdf-version-fields.json'))
     import subprocess
-    verifier = 'import fs from \"node:fs\"; import {validateOnlineManifest} from \"./src/motif_core/online_skill_runtime.mjs\"; validateOnlineManifest(JSON.parse(fs.readFileSync(0,\"utf8\")));'
+    verifier = 'import fs from \"node:fs\"; import {validateOnlineManifest} from \"./src/motif_core/runtime/online_skill_runtime.mjs\"; validateOnlineManifest(JSON.parse(fs.readFileSync(0,\"utf8\")));'
     subprocess.run(['node', '--input-type=module', '-e', verifier], input=json.dumps(manifest), text=True, cwd=ROOT, check=True, capture_output=True)
     output.mkdir(mode=0o700, parents=True, exist_ok=False)
     save_private(output / 'library.json', library); save_private(output / 'online-manifest.json', manifest)

@@ -4,7 +4,8 @@ import copy
 import json
 from pathlib import Path
 from uuid import uuid4
-from src.motif_core.offline.experience_registry import digest,read,sha,durable,ExperienceRegistry,check_motif_certificate
+from src.motif_core.reuse.experience_registry import digest,read,sha,durable,ExperienceRegistry
+from src.adapters.file_management.experience_certification import check_motif_certificate
 
 FORMAT='sss-management-legacy-adapter-v1'
 PROGRAM='sss-management-program-v1'
@@ -299,7 +300,7 @@ def certify_proposal(cfg,proposal,job):
     from .continuous_motif_learning import frame,run_material,verify_operation_execution,RecoveryPending
     from .management_recertification import native_view,rebuild
     from .experience_library import sources
-    from src.motif_core.offline.operation_graph import certify_graph,witnesses
+    from src.motif_core.offline.compilation.operation_graph import certify_graph,witnesses
     root=Path(cfg['state_root']);job=Path(job)
     import os
     if not (root/'worker.lock').exists() or read(root/'worker.lock').get('pid')!=os.getpid():raise ValueError('legacy certification requires original worker lock')
@@ -375,7 +376,7 @@ def certify_proposal(cfg,proposal,job):
                                                  native_program_delivery_file=str(job/'native-program-delivery.json'),native_program_delivery_sha256=sha(job/'native-program-delivery.json'))
         if not (job/'certificate.json').exists():durable(job/'certificate.json',cert,exclusive=True)
         if failures:raise ValueError('independent actual legacy certification failed')
-        guard();entry=registry.entry(kind,file,runtime,job/'certificate.json');state=registry.load()
+        guard();entry=registry.entry(kind,file,runtime,job/'certificate.json',verify_certificate=check_motif_certificate);state=registry.load()
         existing=next((e for e in state['entries'] if e['entry_id']==entry['entry_id']),None)
         if existing is None:version=registry.publish([entry],expected=state['generation'],reason='legacy adapter current native and independent actual certification')
         elif existing['state']=='active':version=root/'registry'/read(root/'registry/current.json')['file']
@@ -457,7 +458,7 @@ def pending(cfg):
 
 
 def maintain(cfg,remaining):
-    from .experience_library import sources
+    from .experience_library import sources,migration_budget_admits
     from .continuous_rsi import source_map,ROOT
     from .continuous_motif_learning import RecoveryPending
     from .management_backup import budget_snapshot
@@ -468,7 +469,7 @@ def maintain(cfg,remaining):
         job,seed=opportunity(cfg,p,target)
         if job is None:
             deferred.append({'key':p['key'],'state':'awaiting_new_evidence'});continue
-        if len(attempted)>=remaining:
+        if remaining is not None and len(attempted)>=remaining:
             deferred.append({'key':p['key'],'state':'queued'});continue
         request={'adapter_format':FORMAT,'key':p['key'],'target':target,'proposal':p,'source':source_map(),
                  'config_sha256':cfg['config_sha256'],'original_budgets_retained':True,'holdout_used':False,**seed}
@@ -479,8 +480,7 @@ def maintain(cfg,remaining):
             request=original
         else:
             budget=budget_snapshot(ROOT)
-            if (budget['learning_spent_usd']+budget['learning_reserved_usd']+cfg['limits']['budget_usd']>cfg['learning_cap_usd']
-                    or budget['series']['estimated_usd']+budget['pending_usd']+cfg['limits']['budget_usd']>cfg['series_cap_usd']):
+            if not migration_budget_admits(cfg,budget):
                 deferred.append({'key':p['key'],'state':'budget_blocked'});continue
             durable(job/'request.json',request,exclusive=True)
         try:result=certify_proposal(cfg,request['proposal'],job)

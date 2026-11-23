@@ -1,0 +1,14 @@
+{
+  "inputs-private.jsonl": {
+    "same_bytes": true,
+    "sha256": "d570210f18295018c0b156303f20730b867a9ca32be9cea181554dd092387724"
+  },
+  "gold-private.jsonl": {
+    "same_bytes": true,
+    "sha256": "d092768bae660ecf2bc5147981a7e240a04ee1ace1d0e5b500ac9d9634185679"
+  },
+  "semantic-controls-private.json": {
+    "same_bytes": true,
+    "sha256": "f3ac7cf2428be35b029c4ecb72080773c444987d8983799703e3b8a06ecc3904"
+  }
+}

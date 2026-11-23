@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from src.adapters.revision_tool_evidence import revision_facts
-from src.adapters.trace_tool_evidence import digest
+from src.motif_core.trajectory.trace_tool_evidence import digest
 
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('revision_controller_diagnostic',ROOT/'scripts/paper-rsi-revision.py')

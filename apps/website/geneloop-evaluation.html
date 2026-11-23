@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="lattice">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fafbfb">
+  <meta name="description" content="Online capability learning, verified reuse, execution efficiency, and learning overhead.">
+  <title>GeneLoop: Evaluation &amp; Methodology — GENELOOP</title>
+  <link rel="canonical" href="https://geneloop.ai/geneloop-evaluation.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="GeneLoop: Evaluation &amp; Methodology">
+  <meta property="og:description" content="Online capability learning, verified reuse, execution efficiency, and learning overhead.">
+  <meta property="og:url" content="https://geneloop.ai/geneloop-evaluation.html">
+  <link rel="icon" href="./assets/brand/geneloop-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./site.css">
+  <link rel="stylesheet" href="./shared/layouts.css">
+  <link rel="stylesheet" href="./themes/lattice/theme.css">
+  <link rel="stylesheet" href="./shared/readability.css">
+  <link rel="stylesheet" href="./shared/type-and-navigation.css?v=7c7764dce6f6">
+  <link rel="stylesheet" href="./shared/research.css?v=6ee5a04f7b9b">
+  <script src="./shared/site-i18n.js?v=db0f8b7eef0e" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-banner">
+  <div class="header wrap">
+    <a class="brand" href="./?home" aria-label="GENELOOP home">
+      <img class="brand-mark" src="./assets/brand/geneloop-mark.svg" alt="">
+      <span>GENELOOP</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a class="nav-blog" href="./journal.html" aria-current="location">Blog</a>
+    </nav>
+  </div>
+</header>
+<main class="journal wrap" id="main">
+<a class="text-link research-link" href="./journal.html">Back to Blog</a>
+<article class="published-article article-copy" lang="zh-CN" data-no-translate=""><h1 id="geneloop-evaluation--methodology">GeneLoop: Evaluation &amp; Methodology</h1>
+<p class="eyebrow"><strong>Type:</strong> Technical Report</p>
+<p><strong>摘要</strong><br>
+本报告记录 GeneLoop 在真实任务批次中的评测方法、配对实验结果、真实复用核验与学习开销核算。在相同模型、对称工具与独立自动验收条件下，我们在论文书目核查（50 题）与程序化视频剪辑（45 题）两个场景中，分别衡量任务执行阶段的效率与交付质量，以及计入后置学习与认证成本后的净时间收益。关于 GeneLoop 的研究动机与核心思想，请参阅 <a href="./geneloop-launch.html">Launch Article</a>。</p>
+<hr>
+<h2 id="1-overview">1. Overview</h2>
+<p>本评测旨在在相同语言模型与底层工具条件下，系统评估 GeneLoop 的在线能力学习机制（Motif）能否产生可核验的实际程序复用，并在不降低交付质量的前提下改善执行效率，同时如实核算能力学习与认证带来的额外开销。</p>
+<p>为避免将局部执行收益与系统整体开销混淆，本文严格区分以下三个阶段与概念：</p>
+<ul>
+<li>
+<strong>Task Execution（任务执行阶段）</strong>：从任务启动到交付完成的全部在线过程，包含模型调用、工具执行、代码运行、视频渲染、任务内核验及失败重试。</li>
+<li>
+<strong>Capability Learning（能力学习阶段）</strong>：任务交付之后触发的离线轨迹提取、程序参数化、独立认证及版本化能力库发布。</li>
+<li>
+<strong>Verified Reuse（经核实的实际复用）</strong>：并非仅依据检索命中或程序入库，而是通过底层执行日志或交付产物哈希回执确认学出程序在后继任务中真实参与了计算或交付。</li>
+</ul>
+<hr>
+<h2 id="2-evaluation-setup">2. Evaluation Setup</h2>
+<p><strong>对照关系与对称原则</strong><br>
+每个场景均设置 <strong>Baseline</strong> 与 <strong>GeneLoop</strong> 两个实验臂。两侧使用相同的语言模型（<code>deepseek-v4.1-flash</code>，关闭思考请求配置）、相同的输出与时长上限（论文 8,192 tokens / 300 秒；视频 6,000 tokens / 900 秒）、相同的执行环境以及对称的底层工具集（论文两侧均提供完整终端与 44 项工具；视频两侧共享源码写入与渲染融合工具及源画面比对工具）。Baseline 臂同样可以自由编写脚本或源码完成任务，但不加载、不学习在线生成的 Motif 能力库。</p>
+<p><strong>配对任务与在线学习流</strong><br>
+实验采用固定任务清单的配对设计，两臂面对完全相同的输入文件与题面要求（视频主批同时平衡两臂先跑顺序）。在 GeneLoop 臂中，任务按顺序依次执行：每次任务开始时锁定当前已发布的能力库快照，任务完成后将合格轨迹送入后置学习流程，通过认证的新能力进入下一版本库，供后续任务自主选择与调用。运行时回放产生的轨迹不充当独立正常样本自证。</p>
+<p><strong>Motif 认证与独立任务验收的分离</strong><br>
+本评测将 <strong>Motif 认证</strong> 与 <strong>最终任务验收</strong> 严格区分为两个独立过程。前者发生在能力上架之前，在隔离环境中检验参数化程序能否在原输入上等价复现并在预设跨输入测试中满足行为边界；后者发生在每次任务交付之后，由独立验收程序依据客观标准判定交付是否合格（论文场景使用独立 <code>bibtexparser 1.4.3</code> 与条目头计数核对全部五项核心 JSON 字段并校验源文件完整性；视频场景核验全片解码、分辨率、帧率、帧数、指定源帧区域误差、音频窗口电平与波形一致性，并辅以绑定成片哈希的固定选帧审阅）。</p>
+<p><strong>统计指标与成本边界</strong><br>
+除验收通过数与配对交付中位用时外，报告分别统计任务执行阶段的累计时间、模型请求数与已知模型估费，并单列后置学习的模型请求、估费与计算时间。主跑汇总保留所有上游超时、传输中断与额度失败，不筛选剔除失败尝试。模型估费仅依据已记录的可计价用量按固定代理单价估算，不代表供应商实际账单，也不涵盖本地 CPU、渲染及认证所需的完整硬件货币成本。</p>
+<hr>
+<h2 id="3-benchmark-results">3. Benchmark Results</h2>
+<p>当前 GeneLoop 的评测矩阵覆盖两类已完成冻结评测的场景与三类计划扩展场景，总览如下：</p>
+<figure class="article-table"><div class="table-scroll" role="region" tabindex="0" aria-labelledby="zh-CN-metrics-1">
+<table>
+<thead>
+<tr>
+<th id="zh-CN-metrics-1" scope="col">场景（Workload）</th>
+<th scope="col">任务形态</th>
+<th scope="col">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">
+<strong>Bibliography Auditing</strong>（论文书目核查）</th>
+<td>只读文本解析、全量核对与异常诊断</td>
+<td>Completed（50 题）</td>
+</tr>
+<tr>
+<th scope="row">
+<strong>Programmatic Video Editing</strong>（程序化视频剪辑）</th>
+<td>参数化代码生成、媒体渲染与画面核验</td>
+<td>Completed（45 题展示 / 原 54 题批次）</td>
+</tr>
+<tr>
+<th scope="row">
+<strong>File Management</strong>（文件管理）</th>
+<td>受控权限下的目录盘点、规则归档与批量整理</td>
+<td><code>Pending Evaluation</code></td>
+</tr>
+<tr>
+<th scope="row">
+<strong>Presentation Generation</strong>（PPT 制作）</th>
+<td>文档读取、页面组件生成与排版质量检查</td>
+<td><code>Pending Evaluation</code></td>
+</tr>
+<tr>
+<th scope="row">
+<strong>Data Analysis</strong>（数据分析）</th>
+<td>多源表格提取、统计复算与图表交付</td>
+<td><code>Pending Evaluation</code></td>
+</tr>
+</tbody>
+</table>
+</div></figure><p>已完成的两组场景在<strong>任务执行阶段</strong>的配对评测结果如下（交付后的学习与认证开销见第 4 节）：</p>
+<figure class="article-table"><div class="table-scroll" role="region" tabindex="0" aria-labelledby="zh-CN-metrics-2">
+<table>
+<thead>
+<tr>
+<th id="zh-CN-metrics-2" scope="col">主跑执行阶段指标（Baseline → GeneLoop）</th>
+<th scope="col">Bibliography Auditing（50 题）</th>
+<th scope="col">Programmatic Video Editing（45 题）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">独立验收通过</th>
+<td>31/50 → 36/50</td>
+<td>38/45 → 45/45</td>
+</tr>
+<tr>
+<th scope="row">双方均通过的配对样本</th>
+<td>26 对</td>
+<td>38 对</td>
+</tr>
+<tr>
+<th scope="row">双方通过时单题交付时间中位数</th>
+<td>149.7 → 97.6 秒（−34.8%）</td>
+<td>118.7 → 105.5 秒（−11.1%）</td>
+</tr>
+<tr>
+<th scope="row">主跑累计执行时间</th>
+<td>9,442.0 → 7,391.2 秒（−21.7%）</td>
+<td>5,802.8 → 4,644.5 秒（−20.0%）</td>
+</tr>
+<tr>
+<th scope="row">主跑模型请求数</th>
+<td>705 → 467（−33.8%）</td>
+<td>322 → 254（−21.1%）</td>
+</tr>
+<tr>
+<th scope="row">主跑已知模型估费（USD）</th>
+<td>2.82533 → 1.99972</td>
+<td>0.49945 → 0.41081</td>
+</tr>
+<tr>
+<th scope="row">视频渲染次数</th>
+<td>—</td>
+<td>75 → 51<sup><a href="#render-scope" aria-label="视频渲染统计口径">1</a></sup>
+</td>
+</tr>
+<tr>
+<th scope="row">经核实的实际复用</th>
+<td>25/36 个合格交付执行过在线学出程序</td>
+<td>38/45 个合格交付的最终源码与 MP4 匹配程序回执</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figcaption id="render-scope">1. 视频渲染次数 75 → 51 统计原 54 题批次中双方均通过独立验收的 46 对任务，包含单列题型中的合格配对。</figcaption></figure><p><strong>Bibliography Auditing 说明</strong><br>
+测试集由 25 份公开论文完整 BibTeX 书目构成，每份执行两轮，共 50 题（并非 50 份彼此完全独立的输入）。GeneLoop 的后置学习采用确定性离线轨迹编译，消耗 <strong>0 次</strong>模型请求，本地学习与认证计算累计耗时 <strong>1,502.4 秒</strong>。</p>
+<p><strong>Programmatic Video Editing 说明</strong><br>
+原始在线学习批次包含 54 题（覆盖 6 类编辑任务），其中 9 题画中画二次视角任务（<code>t89_second_view</code>）因任务内画面核验误差及长尾慢局问题被事后按既有题型单列，上表主要结果展示其余 45 题。<strong>这 45 题沿用原 54 题批次的完整在线学习历史，不能视为独立学习批次。</strong> 原 54 题批次的后置学习与发布累计消耗 <strong>13 次</strong>模型请求、<strong>0.02387 USD</strong> 已知模型估费与 <strong>436.9 秒</strong>学习发布时间。被单列的 9 题画中画任务在独立验收中，Baseline 通过 <strong>8/9</strong>，GeneLoop 通过 <strong>9/9</strong>。</p>
+<hr>
+<h2 id="4-verified-reuse--learning-overhead">4. Verified Reuse &amp; Learning Overhead</h2>
+<h3 id="41-verified-reuse">4.1 Verified Reuse</h3>
+<p>在 Agent 自进化评测中，<strong>检索命中</strong>（候选能力被展示给模型）、<strong>程序入库</strong>（候选通过认证发布）与<strong>实际复用</strong>（能力在后继任务中被真实执行并贡献于交付）是三个性质完全不同的事件。仅报告程序入库数量或命中次数，无法证明系统的执行路径确实发生了改变。</p>
+<p>本评测依据两个场景的产物特征，采用两种强度不同的核验标准，且不将二者混作同一个指标：</p>
+<ul>
+<li>
+<strong>论文书目核查（执行级证据）</strong>：核查运行时审计日志中的真实执行回执，确认程序在当前文件指纹上实际运行并返回结果。在通过独立验收的 36 个交付中，有 <strong>25 个</strong>（25/36）实际执行过在线学出的程序。</li>
+<li>
+<strong>程序化视频剪辑（产物绑定级证据）</strong>：除检查程序调用记录外，进一步比对任务最终交付的源码文件与 MP4 视频哈希是否与在线学出程序的执行回执完全一致，以排除“先调用程序、后又手写源码覆盖”的虚假复用。在 45 个合格交付中，有 <strong>38 个</strong>（38/45）满足这一强一致条件。</li>
+</ul>
+<h3 id="42-learning-overhead">4.2 Learning Overhead</h3>
+<p>执行阶段的节省只是硬币的一面；能力学习、认证与发布本身构成前置投入。下表将执行阶段用时与计入后置学习开销后的总时间并列汇报：</p>
+<figure class="article-table"><div class="table-scroll" role="region" tabindex="0" aria-labelledby="zh-CN-metrics-3">
+<table>
+<thead>
+<tr>
+<th id="zh-CN-metrics-3" scope="col">时间与学习开销对比</th>
+<th scope="col">Bibliography Auditing（50 题）</th>
+<th scope="col">Programmatic Video Editing（45 题，计入原 54 题全部学习）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Baseline 累计执行时间</th>
+<td>9,442.0 秒</td>
+<td>5,802.8 秒</td>
+</tr>
+<tr>
+<th scope="row">GeneLoop 主跑累计执行时间</th>
+<td>7,391.2 秒（−21.7%）</td>
+<td>4,644.5 秒（−20.0%）</td>
+</tr>
+<tr>
+<th scope="row">GeneLoop 后置学习与发布时间</th>
+<td>1,502.4 秒</td>
+<td>436.9 秒（来自原 54 题完整批次）</td>
+</tr>
+<tr>
+<th scope="row">GeneLoop 含学习合计时间</th>
+<td>8,893.6 秒</td>
+<td>5,081.4 秒</td>
+</tr>
+<tr>
+<th scope="row"><strong>计入学习后的净时间降幅</strong></th>
+<td><strong>约 5.8%</strong></td>
+<td>
+<strong>约 12.4%</strong>（保守归集口径）</td>
+</tr>
+<tr>
+<th scope="row">后置学习模型请求 / 已知估费</th>
+<td>0 次 / 0 USD</td>
+<td>13 次 / 0.02387 USD（原 54 题完整批次）</td>
+</tr>
+</tbody>
+</table>
+</div></figure><p>需要明确的是，视频场景的 12.4% 净时间降幅是将原 54 题在线批次产生的全部 436.9 秒学习开销保守归入所展示的 45 题主跑结果后计算的，<strong>并非范围严格对齐的独立端到端实验</strong>。此外，论文与视频的模型估费均仅覆盖已记录的可计价模型用量，未折算本地执行、沙箱认证及视频渲染机器的硬件货币成本。</p>
+<hr>
+<h2 id="5-findings--limitations">5. Findings &amp; Limitations</h2>
+<p>从当前两组评测中可以归纳出两项主要观察，以及两项明确的方法局限：</p>
+<ol type="1">
+<li>
+<strong>减少重复推理与临场写代码，与交付稳定性提升相一致</strong>：在论文核查与视频剪辑中，GeneLoop 的独立验收通过数均高于 Baseline（31/50 → 36/50 与 38/45 → 45/45），同时执行阶段的模型请求分别下降 33.8% 与 21.1%。这一现象与减少临时脚本编写、语法调试及返工的机制相一致。由于缺少配对统计显著性检验，本文不对通过率差异作统计学显著性宣称。</li>
+<li>
+<strong>收益幅度受限于任务固有的不可省略计算</strong>：尽管两场景累计执行时间降幅接近（−21.7% 与 −20.0%），但双方均通过时的单题交付中位时间降幅差异明显（论文 −34.8%，视频 −11.1%）。论文任务的瓶颈主要集中在模型串行编写与调试脚本的往返等待；而在视频任务中，即便复用已学程序减少了渲染次数（75 → 51）与模型往返，新参数下的实际视频编码渲染与画面核验依然构成难以跳过的物理时间下限。</li>
+<li>
+<strong>程序认证不等于普遍语义正确性，且学习摊销仍有待长程验证</strong>：独立认证只能验证程序在源输入及预设跨输入测试下的确定性与边界行为，无法保证对一切未见输入格式都语义完备，因此模型仍须承担冲突诊断与最终判断。同时，学习与认证具有明确的前置成本（如论文场景 1,502.4 秒的本地认证开销使净时间降幅从 21.7% 收敛至约 5.8%）；在任务分布更稀疏、复用率更低的真实工作流中，能力学习开销能否有效摊销仍需进一步检验。最后，当前实验验证的是效率驱动的在线能力复用，并不构成对 Recursive Self-Improvement 的实证证明——后者仍是下一阶段的研究目标。</li>
+</ol>
+<hr>
+<h2 id="6-upcoming-evaluations">6. Upcoming Evaluations</h2>
+<p>以下三个场景已纳入 GeneLoop 后续标准化评测计划，目前均无冻结实验结果，待独立验收完成后按统一结构补充并更新第 3 节总览表，不改动已冻结的论文与视频评测记录。</p>
+<h3 id="file-management--pending-evaluation" class="pending-workload">File Management — Pending Evaluation</h3>
+<h3 id="presentation-generation--pending-evaluation" class="pending-workload">Presentation Generation — Pending Evaluation</h3>
+<h3 id="data-analysis--pending-evaluation" class="pending-workload">Data Analysis — Pending Evaluation</h3>
+</article>
+</main>
+<footer class="footer wrap"><a class="brand" href="./?home">GENELOOP</a><span class="footer-motto">Take intelligence beyond the known.</span><span class="footer-copyright">© 2026 GENELOOP</span></footer>
+</body>
+</html>

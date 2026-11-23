@@ -16,7 +16,7 @@ import urllib.error
 import urllib.request
 
 from .deepseek_cost_gate import State, response_usage
-from .script_motif_compiler import digest
+from src.motif_core.offline.compilation.script_motif_compiler import digest
 
 VERSION = 1
 LEARNER_REVISION = 3

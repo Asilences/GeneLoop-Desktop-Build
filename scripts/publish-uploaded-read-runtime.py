@@ -69,24 +69,24 @@ def main() -> None:
                                 'input_version': '0' * 64, 'bindings': {},
                                 'source_versions': {pin: '@observed', read: '@from_anchor'}})
     code = [
-        'src/adapters/dsh_online_motif.mjs', 'src/motif_core/online_skill_runtime.mjs',
-        'src/motif_core/approved_plan_continuation.generated.mjs',
-        'src/motif_core/source_dereference.generated.mjs',
-        'src/adapters/dsh_web_tasks.ts', 'src/adapters/harless_rsi_binding.ts',
-        'src/adapters/harless_rsi_bundle.py', 'src/adapters/harless_task_scope.ts',
+        'src/adapters/harness/motif/dsh_online_motif.mjs', 'src/motif_core/runtime/online_skill_runtime.mjs',
+        'src/motif_core/runtime/policies/approved_plan_continuation.generated.mjs',
+        'src/motif_core/runtime/policies/source_dereference.generated.mjs',
+        'src/adapters/web/dsh_web_tasks.ts', 'src/adapters/web/learning/harless_rsi_binding.ts',
+        'src/adapters/web/learning/harless_rsi_bundle.py', 'src/adapters/web/attachments/harless_task_scope.ts',
         'src/adapters/session_files.py', f'scenarios/{scene_dir}/server.py',
     ]
     if args.scene == 'paper-proofreading':
-        code.extend(['src/adapters/paper_static_checks.py',
+        code.extend(['scenarios/paper_proofreading/document_tools/paper_static_checks.py',
                      'scenarios/paper-submission/checks.py',
                      'src/adapters/paper_bibliography.py',
                      'src/adapters/arxiv_metadata.py',
                      'src/adapters/crossref_metadata.py',
                      'src/adapters/paper_query_recovery.py'])
-        code.extend(['src/adapters/native_motif_compiler.py', 'src/adapters/trace_paths.py',
-                     'src/adapters/harless_paper_delivery.ts', 'src/adapters/session_report.py',
-            'src/adapters/harless_attachment_text.py', 'scenarios/data_analysis/table_inputs.py',
-            'src/adapters/paper_renderer.py', 'src/adapters/harless_paper_renderer.py'])
+        code.extend(['src/motif_core/offline/compilation/trace/native_motif_compiler.py', 'src/motif_core/trajectory/trace_paths.py',
+                     'src/adapters/web/scenes/harless_paper_delivery.ts', 'src/adapters/session_report.py',
+            'src/adapters/web/attachments/harless_attachment_text.py', 'scenarios/data_analysis/table_inputs.py',
+            'scenarios/paper_proofreading/document_tools/paper_renderer.py', 'src/adapters/web/scenes/harless_paper_renderer.py'])
     write(bundle / 'certification.json', {
         'schema_version': 1, 'scene': args.scene,
         'certification_scope': 'independent_trace_structure',
@@ -99,7 +99,7 @@ def main() -> None:
         'code_locks': {name: sha(ROOT / name) for name in sorted(code)},
     })
     subprocess.run(['node', '--input-type=module', '-e',
-                    "import fs from 'node:fs'; import {validateOnlineManifest} from './src/motif_core/online_skill_runtime.mjs'; validateOnlineManifest(JSON.parse(fs.readFileSync(process.argv[1])));",
+                    "import fs from 'node:fs'; import {validateOnlineManifest} from './src/motif_core/runtime/online_skill_runtime.mjs'; validateOnlineManifest(JSON.parse(fs.readFileSync(process.argv[1])));",
                     str(bundle / 'online-manifest.json')], cwd=ROOT, check=True)
     print(json.dumps({'scene': args.scene, 'runtime_bundle': str(bundle),
                       'artifacts': len(manifest['artifacts']), 'model_requests': 0,

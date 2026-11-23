@@ -11,9 +11,9 @@ function save(p:string,v:any){writeFileSync(p,JSON.stringify(v,null,2)+'\n',{mod
 async function support(operation:string,values:any){const r=await execute([join(HERE,'agent-support.py')],{operation,...values});if(r.code)throw new Error(r.stderr);return lines(r.stdout).at(-1);}
 function snapshot(){
  const files=readdirSync(HERE).filter(n=>/\.(py|ts|mjs|json|md)$/.test(n)&&!['README.md','HANDOFF.md','phase-one-protocol.md'].includes(n)).map(n=>join(HERE,n));
- for(const f of ['scripts/run-scenario.py','scripts/project.mjs','src/adapters/scenario.py','src/adapters/dsh_entry_motif.ts',
-  'src/motif_core/entry_read_policy.ts','src/motif_core/inventory_entry_policy.ts','src/motif_core/offline/entry_compiler.py',
-  'src/motif_core/online_skill_runtime.mjs','src/adapters/dsh_completion_guard.ts','src/adapters/deepseek_cost_gate.py','package-lock.json'])files.push(join(ROOT,f));
+ for(const f of ['scripts/run-scenario.py','scripts/project.mjs','src/adapters/scenario.py','src/adapters/harness/motif/dsh_entry_motif.ts',
+  'src/motif_core/runtime/policies/entry_read_policy.ts','src/motif_core/runtime/policies/inventory_entry_policy.ts','src/motif_core/offline/compilation/entry_compiler.py',
+  'src/motif_core/runtime/online_skill_runtime.mjs','src/adapters/harness/dsh_completion_guard.ts','src/adapters/deepseek_cost_gate.py','package-lock.json'])files.push(join(ROOT,f));
  return Object.fromEntries(files.map(p=>[p.slice(ROOT.length+1),sha(p)]));
 }
 function privateDirectory(dir:string){if(!realpathSync(dir).startsWith(realpathSync(join(ROOT,'.local'))+sep))throw new Error('private experiment directory required');}

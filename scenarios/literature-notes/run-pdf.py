@@ -29,7 +29,7 @@ def runtime_snapshot():
             'git_status': subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).splitlines(),
             'scene_sha256': {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                              for path in sorted(HERE.glob('*')) if path.suffix in ('.py', '.json', '.md', '.ts')},
-            'completion_guard_sha256': hashlib.sha256((ROOT / 'src/adapters/dsh_completion_guard.ts').read_bytes()).hexdigest(),
+            'completion_guard_sha256': hashlib.sha256((ROOT / 'src/adapters/harness/dsh_completion_guard.ts').read_bytes()).hexdigest(),
             'compression_enabled': False, 'reasoning_effort': 'off'}
 
 
@@ -62,8 +62,8 @@ def prepare_task(directory: Path, question: str, *, cache_policy='reuse'):
 def collect_preview(run_directory: Path, task_directory: Path):
     """Collect tool-authoritative artifacts, never substitute the model's final status."""
     sys.path.insert(0, str(ROOT))
-    from src.adapters.dsh_trajectory import extract_dsh_trace
-    from src.adapters.tool_contract_loader import parse_tool_contracts
+    from src.adapters.harness.dsh_trajectory import extract_dsh_trace
+    from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
     events_path = run_directory / 'agent-events.jsonl'
     if not events_path.is_file():
         return {'status': 'missing_preview', 'reason': 'no_original_events'}

@@ -1,0 +1,42 @@
+{
+  "study": "agentic-vbench-normal-plan-learning-20261110-v1",
+  "evaluation_scope": "configured_full_clip_plan_v1",
+  "frozen_program_sha256": "08f511b3da8e5b72e8c530a5bd63766be5a64750cf5488f1d9f26759a2bc545a",
+  "frozen_program_origin": "Normal Task2 development feedback-003, real standalone call-8; source, recoveries and source quality checks are one development experience.",
+  "frozen_interface": "INSTANCE_JSON (current clips[].source and output_options), MEDIA_RECORDS_JSON (unchanged lossless measured array), fresh OUTPUT_DIR. Emits solution.json and concat.txt with measured video-duration directives; ordinary execute performs media work.",
+  "tasks": {
+    "agentic-vbench-assembly-task2": "development_source_retest",
+    "agentic-vbench-assembly-task6": "certification",
+    "agentic-vbench-assembly-task15": "sealed_successor_paired",
+    "agentic-vbench-sequencing-task3": "sealed_successor_paired"
+  },
+  "selection_basis": "Continue the original Task2 project; retain Task6 for independent certification. Assembly Task15 and Sequencing Task3 are the next official IDs after the completed tasks in each family, fixed before this revision's material or quality inspection. Original preflight structural metadata is not a selection score.",
+  "source": "One normal project-development experience: the Agent authors and actually executes useful pure-data generation, reading current measurements instead of copying durations. No researcher-authored target program, Builder loop or subprocess admission.",
+  "quality_criteria_before_source": [
+    "Current clip IDs/order and output options are data; actual measurements come from the unchanged measured material inputs.",
+    "Small manifest/concat/argument or export-plan artifacts must be coherent and actually consumed by ordinary media execution, rather than unused examples or prewritten command strings supplied as input.",
+    "Full source intervals and a contiguous delivered timeline must correspond to the current measured clips. Any explicit frame-rate quantization must be supported by the real rendered frames and output frame rate.",
+    "The produced video must faithfully contain the configured current clips; check all configured clips, not just storyboard-correct slots, without reading oracle ordering.",
+    "Independent quality checks are separate from original native source/output equivalence, whole benchmark quality and efficiency."
+  ],
+  "certification_policy": "Freeze the actual model-authored program and its input interface after the source experience, before Task6. Freeze the concrete independent checker before certification and unseen evaluation. Keep source and held failures; do not alter the program manually or learn from Task15.",
+  "library_policy": "Retain the previously certified C and its evidence. Add only a genuinely qualified new program through the original learner/certifier/Store. Freeze old and augmented library states before either successor arm.",
+  "successor_control": "The frozen augmented library versus a genuinely empty Store. Preserve prior capabilities in the augmented library; attribute actual old/new program use separately.",
+  "successor_task_order": ["agentic-vbench-assembly-task15", "agentic-vbench-sequencing-task3"],
+  "successor_order": {
+    "agentic-vbench-assembly-task15": ["baseline_empty_store", "augmented_library"],
+    "agentic-vbench-sequencing-task3": ["augmented_library", "baseline_empty_store"]
+  },
+  "shared_policy": "Both arms receive the same lossless array measurement view, ordinary media guidance, four native tool schemas, runtime and file-based capability interfaces. Shared preparation or CPU encoding improvements are not Motif gains.",
+  "model": "gpt-6-luna",
+  "reasoning_effort": "none",
+  "max_completion_tokens": 128000,
+  "budget_usd": null,
+  "request_limit": null,
+  "reset_cumulative_ledger": false,
+  "source_timeout_seconds": 1800,
+  "certification_timeout_seconds": 900,
+  "successor_timeout_seconds_per_arm": 900,
+  "adoption": "Optional throughout. No forced C invocation, oracle clip choices, new media executor or relaxed original contract.",
+  "expansion": "Only these two next successors after a useful program is independently accepted, using the same generation in both families. Do not consume either successor to repair the library. Preserve all earlier zero scores, nonadoption and timeouts."
+}

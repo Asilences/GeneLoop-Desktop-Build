@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {existsSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {createPaperLearning} from '../src/adapters/harless_paper_learning.ts';
+import {createPaperLearning} from '../src/adapters/web/learning/harless_paper_learning.ts';
 const python=process.env.SSS_PURE_CODE_PYTHON??process.env.SSS_PYTHON;
 const root=resolve(import.meta.dirname,'..');
 const enabled=Boolean(python&&existsSync(python));

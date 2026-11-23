@@ -1,7 +1,7 @@
 """Read-only validator slicing and intervention diagnostics, no provider."""
 import inspect
 import pytest
-from src.adapters.negative_field_compiler import extract_guards, certify_field_guard, evaluate, UnsupportedGuard
+from src.motif_core.offline.compilation.negative_field_compiler import extract_guards, certify_field_guard, evaluate, UnsupportedGuard
 
 
 def sample_validator(document):
@@ -27,7 +27,7 @@ def test_field_names_and_error_names_are_extracted_not_registered():
 
 
 def test_paper_validator_uses_the_same_generic_def_use_compiler():
-    from src.adapters.paper_renderer import validate_audit
+    from scenarios.paper_proofreading.document_tools.paper_renderer import validate_audit
     guard = extract_guards(inspect.getsource(validate_audit), 'validate_audit')
     assert guard['renderer_input_duplicate_source_ids']['read_paths'] == [['sources', '*', 'id']]
     assert 'renderer_input_invalid_status_priority' not in guard

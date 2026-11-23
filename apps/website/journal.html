@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en" data-theme="lattice">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fafbfb">
+  <meta name="description" content="Research, publications, and evaluation reports from GeneLoop.">
+  <title>Blog — GENELOOP</title>
+  <link rel="canonical" href="https://geneloop.ai/journal.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Blog">
+  <meta property="og:description" content="Research, publications, and evaluation reports from GeneLoop.">
+  <meta property="og:url" content="https://geneloop.ai/journal.html">
+  <link rel="icon" href="./assets/brand/geneloop-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./site.css">
+  <link rel="stylesheet" href="./shared/layouts.css">
+  <link rel="stylesheet" href="./themes/lattice/theme.css">
+  <link rel="stylesheet" href="./shared/readability.css">
+  <link rel="stylesheet" href="./shared/type-and-navigation.css?v=7c7764dce6f6">
+  <link rel="stylesheet" href="./shared/research.css?v=6ee5a04f7b9b">
+  <script src="./shared/site-i18n.js?v=db0f8b7eef0e" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-banner">
+  <div class="header wrap">
+    <a class="brand" href="./?home" aria-label="GENELOOP home">
+      <img class="brand-mark" src="./assets/brand/geneloop-mark.svg" alt="">
+      <span>GENELOOP</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a class="nav-blog" href="./journal.html" aria-current="page">Blog</a>
+    </nav>
+  </div>
+</header>
+<main class="journal journal-index wrap" id="main">
+<h1>Blog</h1>
+<section class="index-group" aria-labelledby="featured-title">
+  <h2 id="featured-title">Featured</h2>
+  <a class="index-card index-card--featured" href="./geneloop-launch.html" aria-labelledby="launch-name launch-action">
+    <h3 id="launch-name">Static Agents, and Computational Structures That Grow</h3>
+    <p class="index-featured-subtitle">GeneLoop: An Efficiency-Oriented Self-Improving System for LLM Agents</p>
+    <p class="index-summary" data-no-translate>
+      <span lang="en">GeneLoop learns reusable programs from real task traces. A bibliography audit shows how verified programs take over repeatable work while the model decides when to use them and investigates conflicts.</span>
+      <span lang="zh-CN">GeneLoop 从真实任务轨迹中学习可复用程序。文章以书目核查为例，展示已认证程序如何接手重复计算，模型如何判断程序是否适用并排查结果冲突。</span>
+    </p>
+    <div class="index-featured-footer">
+      <ul class="index-keywords" role="list" data-no-translate>
+        <li>Motif</li>
+        <li><span lang="en">Online learning</span><span lang="zh-CN">在线学习</span></li>
+        <li><span lang="en">Program reuse</span><span lang="zh-CN">程序复用</span></li>
+      </ul>
+      <span class="index-card-action" id="launch-action" data-no-translate>
+        <span lang="en">Read full article</span><span lang="zh-CN">阅读全文</span><span aria-hidden="true">→</span>
+      </span>
+    </div>
+  </a>
+</section>
+<section class="index-group" aria-labelledby="publications-title">
+  <h2 id="publications-title">Publications</h2>
+  <div class="index-publications">
+    <a class="index-card index-paper" href="https://doi.org/10.1609/aaai.v40i37.40389" aria-labelledby="autotool-name autotool-action">
+      <div class="index-paper-meta"><span>AAAI 2026</span><span class="index-stage" lang="en">Discover</span></div>
+      <div class="index-paper-copy">
+        <h3 id="autotool-name">AutoTool</h3>
+        <p class="index-paper-title" lang="en">Efficient Tool Selection for Large Language Model Agents</p>
+        <p class="index-summary" data-no-translate>
+          <span lang="en">Identifies recurring patterns in tool use and uses them to reduce repeated model decisions during tool selection.</span>
+          <span lang="zh-CN">发现工具调用惯性，利用历史调用中的重复模式减少模型在工具选择上的重复判断。</span>
+        </p>
+      </div>
+      <span class="index-card-action" id="autotool-action" data-no-translate>
+        <span lang="en">View paper</span><span lang="zh-CN">查看论文</span><span aria-hidden="true">↗</span>
+      </span>
+    </a>
+    <a class="index-card index-paper" href="https://atc.sigops.org/2026/accepted.html" aria-labelledby="motifagent-name motifagent-action">
+      <div class="index-paper-meta"><span>ATC 2026</span><span class="index-stage" lang="en">Execute</span></div>
+      <div class="index-paper-copy">
+        <h3 id="motifagent-name">MotifAgent</h3>
+        <p class="index-paper-title" lang="en">Make Graphs Great Again: Rethinking LLM Agent Architecture via Structure-Semantic Separation</p>
+        <p class="index-summary" data-no-translate>
+          <span lang="en">Separates structure from semantics so the runtime can execute recurring tool operations and the model can focus on semantic decisions.</span>
+          <span lang="zh-CN">通过结构–语义分离，把可复用的工具操作编译成可执行 Motif，由运行时推进，模型负责语义判断。</span>
+        </p>
+      </div>
+      <span class="index-card-action" id="motifagent-action" data-no-translate>
+        <span lang="en">View paper</span><span lang="zh-CN">查看论文</span><span aria-hidden="true">↗</span>
+      </span>
+    </a>
+  </div>
+</section>
+<section class="index-group" aria-labelledby="reports-title">
+  <h2 id="reports-title">Technical Reports</h2>
+  <a class="index-card index-card--report" href="./geneloop-evaluation.html" aria-labelledby="evaluation-name evaluation-action">
+    <div class="index-report-copy">
+      <h3 id="evaluation-name" lang="en">GeneLoop: Evaluation &amp; Methodology</h3>
+      <p class="index-summary" data-no-translate>
+        <span lang="en">Paired evaluations of bibliography auditing and programmatic video editing measure execution efficiency, verify reuse, and account for learning costs.</span>
+        <span lang="zh-CN">配对评估书目核查与程序化视频剪辑，测量执行效率、核验程序复用，并单独核算学习开销。</span>
+      </p>
+    </div>
+    <div class="index-report-metrics" data-no-translate>
+      <p class="index-metrics-label">
+        <span lang="en">Model requests in main-run execution</span><span lang="zh-CN">主跑执行阶段模型请求</span>
+      </p>
+      <dl class="index-metrics">
+        <div><dt><span lang="en">Bibliography auditing</span><span lang="zh-CN">论文核查</span></dt><dd>−33.8%</dd></div>
+        <div><dt><span lang="en">Video editing</span><span lang="zh-CN">视频剪辑</span></dt><dd>−21.1%</dd></div>
+      </dl>
+      <p class="index-metrics-note">
+        <span lang="en">Learning and certification costs counted separately.</span><span lang="zh-CN">学习与认证成本另计。</span>
+      </p>
+    </div>
+    <span class="index-card-action" id="evaluation-action" data-no-translate>
+      <span lang="en">Read report</span><span lang="zh-CN">阅读报告</span><span aria-hidden="true">→</span>
+    </span>
+  </a>
+</section>
+</main>
+<footer class="footer wrap">
+  <small class="footer-copyright">© 2026 GENELOOP</small>
+</footer>
+</body>
+</html>

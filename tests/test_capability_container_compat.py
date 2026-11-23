@@ -1,46 +1,12 @@
 """Product compatibility diagnostics; no model calls or Docker startup."""
 import atexit
-import hashlib
 import importlib.util
-import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
 import pytest
-from src.adapters.harless_rsi_bundle import load_product_bundle
 
 ROOT=Path(__file__).resolve().parents[1]
-IMMUTABLE=('library.json','online-manifest.json','task.json','tool-schemas.json','source-evidence.json')
-
-
-def read(path):return json.loads(path.read_text(encoding='utf-8'))
-def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-@pytest.mark.parametrize('old_name,new_name,scene',[
-    ('paper-web-v42','paper-web-v43','paper-proofreading'),
-    ('ppt-master-v39','ppt-master-v40','ppt'),
-])
-def test_container_compatibility_retains_original_program_and_report(old_name,new_name,scene):
-    old,new=(ROOT/'motif-libraries'/name for name in (old_name,new_name))
-    for name in IMMUTABLE:assert (old/name).read_bytes()==(new/name).read_bytes(),name
-    before,after=read(old/'learning-report.json'),read(new/'learning-report.json')
-    record=after.pop('capability_container_compatibility')
-    assert after==before
-    assert record['previous_certification_sha256']==sha(old/'certification.json')
-    reviewed={'scenarios/remotion_edit/server.py','scripts/materialize-source-program.mjs','src/adapters/source_program_runtime.ts'}
-    assert set(record['changed_code_locks'])==reviewed
-    assert record['additional_code_locks']==['scripts/reexport-capability-container-compat.py']
-    assert record['new_training_tasks']==record['model_requests']==0
-    assert record['raw_traces_replayed'] is record['quality_cost_promoted'] is record['capability_runtime_certified'] is False
-    old_locks=read(old/'certification.json')['code_locks'];new_locks=read(new/'certification.json')['code_locks']
-    assert {name for name,value in old_locks.items() if new_locks[name]!=value}==reviewed
-    assert set(new_locks)-set(old_locks)=={'scripts/reexport-capability-container-compat.py'}
-    for name,value in read(old/'entry.json')['files'].items():assert sha(old/name)==value
-    selected=next(row['rsi']['runtime_bundle'] for row in read(ROOT/'config/harless-scenes.json')['scenes'] if row['id']==scene)
-    if selected=='motif-libraries/'+new_name:
-        admitted=load_product_bundle(ROOT,new,scene)
-        assert admitted['runtime_mode']=='execute' and admitted['quality_cost_promoted'] is False
 
 
 @pytest.mark.parametrize('with_media_tools',[False,True])

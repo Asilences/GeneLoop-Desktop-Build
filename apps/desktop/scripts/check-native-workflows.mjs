@@ -1,6 +1,6 @@
 // Deterministic native MCP integration, not a model/quality acceptance test.
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,realpathSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,realpathSync,readdirSync,existsSync,linkSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {join,resolve} from 'node:path';
@@ -12,7 +12,7 @@ const runtime=resolve(process.env.GENELOOP_NATIVE_RUNTIME||'runtime-bundle'),bun
 const coreOnly=process.argv.includes('--core');
 const {openWorkspaceReader,openReportWriter}=await import(pathToFileURL(join(runtime,'local-files.mjs')).href);
 const {createNativeWorkflows}=await import(pathToFileURL(join(runtime,'local-workflows.mjs')).href);
-const {workflowToolName}=await import(pathToFileURL(join(runtime,'native-workflow-catalog.mjs')).href);
+const {workflowToolName,workflowTools}=await import(pathToFileURL(join(runtime,'native-workflow-catalog.mjs')).href);
 const {workflowOutput}=await import(pathToFileURL(join(runtime,'local-workflow-output.mjs')).href);
 const {ToolRuntime}=await import(pathToFileURL(join(runtime,'node_modules/@deepseek-ai/dsh-tools/lib/index.js')).href);
 const {SystemPrompt}=await import(pathToFileURL(join(runtime,'node_modules/@deepseek-ai/dsh-system-prompt/lib/index.js')).href);
@@ -31,8 +31,10 @@ const sources=names=>JSON.stringify(names.map(path=>({path,sha256:sha(readFileSy
 const ctx=new Context();new LocalSubprocessRuntime(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx);
 const registryScope=createScope(ctx,{}),registered=new Set();
 const reader=openWorkspaceReader(workspace),writer=openReportWriter(workspace);
+const pptResourceRoot=join(bundle,'ppt-deck/scenarios/ppt_master/third_party/ppt-master');
 const tools={sourceRoot:join(bundle,'source'),python:join(bundle,process.platform==='win32'?'python/python.exe':'python/bin/geneloop-python'),
-  soffice:join(bundle,process.platform==='win32'?'libreoffice/program/soffice.exe':'libreoffice/Contents/MacOS/soffice'),skill:join(bundle,'ppt-master')};
+  soffice:join(bundle,process.platform==='win32'?'libreoffice/program/soffice.com':'libreoffice/Contents/MacOS/soffice'),skill:existsSync(pptResourceRoot)?pptResourceRoot:join(bundle,'ppt-master'),
+  ...(existsSync(pptResourceRoot)?{deck:join(bundle,'local-ppt-deck.mjs')}:{})};
 process.chdir(root);const signal=AbortSignal.timeout(240000),flows=[];
 const controller=scene=>{const flow=createNativeWorkflows(ctx,reader,writer,tools,scene,signal,undefined,(kind,id,catalog)=>{
   for(const tool of catalog) {
@@ -57,6 +59,38 @@ try {
   assert.equal(audit.isError,undefined,JSON.stringify(audit));assert.ok(audit.artifacts.some(a=>a.name.endsWith('.pdf')),JSON.stringify(audit));
   assert.equal(audit.result.renderer_motif_certified,false);
   const general=controller('chat'),g=await general.open(sources(['notes.txt']),'创建本机资料副本','{"workflow":"general"}');
+  const workspaceFlow=controller('chat'),w=await workspaceFlow.open(sources(['notes.txt']),'读取本轮资料','{"workflow":"workspace"}');
+  const listing=(await workspaceFlow.call(w.workflow_id,'list_files','{}')).result.files;
+  const actual=await workspaceFlow.call(w.workflow_id,'read_file',JSON.stringify({name:listing[0].name,sha256:listing[0].sha256}));
+  assert.equal(actual.isError,undefined,JSON.stringify(actual));
+  const revision=controller('paper'),rev=await revision.open('[]','核对结构修订入口','{"workflow":"revision"}');
+  const revState=await revision.call(rev.workflow_id,'read_task_state','{}');assert.equal(revState.isError,undefined,JSON.stringify(revState));
+  const gateway=controller('chat'),gw=await gateway.open(sources(['notes.txt']),'检查实际动态工具目录','{"workflow":"gateway"}');
+  const discovery=await gateway.call(gw.workflow_id,'discover_tools','{}');assert.equal(discovery.isError,undefined,JSON.stringify(discovery));
+  assert.equal(discovery.result.providers.length,4);
+  assert.ok(discovery.result.providers.every(row=>row.available===null&&row.connection_status==='not_started'),JSON.stringify(discovery));
+  const selectedCatalog=await gateway.call(gw.workflow_id,'describe_tool',JSON.stringify({provider_id:'workspace-runtime'}));
+  assert.ok(selectedCatalog.result.tools.some(tool=>tool.name==='create_text'),JSON.stringify(selectedCatalog));
+  const afterSelection=(await gateway.call(gw.workflow_id,'discover_tools','{}')).result.providers;
+  assert.equal(afterSelection.filter(row=>row.connection_status==='connected').length,1);
+  assert.equal(afterSelection.filter(row=>row.connection_status==='not_started').length,3);
+  const manager=controller('files'),managed=await manager.open(sources(['notes.txt']),'整理本轮副本并验证恢复','{"workflow":"management"}');
+  assert.deepEqual(managed.tools.map(tool=>tool.name).sort(),[...workflowTools.management].sort());assert.ok(!managed.tools.some(tool=>tool.name==='_native_authorize_plan'));
+  await manager.call(managed.workflow_id,'read_task','{}');
+  const proposal=await manager.call(managed.workflow_id,'preview_actions',JSON.stringify({actions:[{op:'copy',source:'notes.txt',destination:'整理/notes.txt'}]}));
+  assert.equal(proposal.isError,undefined,JSON.stringify(proposal));
+  await assert.rejects(manager.call(managed.workflow_id,'execute_plan',JSON.stringify({plan_id:proposal.result.plan_id}),async()=>false));
+  const operation=await manager.call(managed.workflow_id,'execute_plan',JSON.stringify({plan_id:proposal.result.plan_id}),async()=>true);
+  assert.equal(operation.isError,undefined,JSON.stringify(operation));assert.equal(operation.result.status,'executed_verified');
+  const restored=await manager.call(managed.workflow_id,'restore_plan',JSON.stringify({plan_id:proposal.result.plan_id}),async()=>true);
+  assert.equal(restored.isError,undefined,JSON.stringify(restored));
+  const privateManagement=readdirSync(root).map(name=>join(root,name,'source','.local','turn','work','inputs','notes.txt')).find(existsSync);
+  assert.ok(privateManagement);const outsideLink=join(root,'outside-management.txt');linkSync(privateManagement,outsideLink);
+  try{
+    const blocked=await manager.call(managed.workflow_id,'preview_actions',JSON.stringify({actions:[{op:'copy',source:'notes.txt',destination:'another/notes.txt'}]}));
+    assert.equal(blocked.isError,undefined,JSON.stringify(blocked));
+    await assert.rejects(manager.call(managed.workflow_id,'execute_plan',JSON.stringify({plan_id:blocked.result.plan_id}),async()=>true),/场景产物类型/);
+  }finally{unlinkSync(outsideLink);}
   const capabilities=await general.call(g.workflow_id,'runtime_capabilities','{}');
   assert.equal(capabilities.result.code.available,true,JSON.stringify(capabilities));assert.equal(capabilities.result.ocr.available,true,JSON.stringify(capabilities));
   const text=await general.call(g.workflow_id,'create_text',JSON.stringify({destination:'result.txt',text:'Native MCP output.'}));
@@ -74,9 +108,10 @@ try {
   await assert.rejects(fileFlow.call(f.workflow_id,'authorize_plan',JSON.stringify({plan_id:preview.plan_id}),async()=>false),/用户尚未确认/);
   const auth=(await fileFlow.call(f.workflow_id,'authorize_plan',JSON.stringify({plan_id:preview.plan_id}),async()=>true)).result;
   const receipt=await fileFlow.call(f.workflow_id,'execute_plan',JSON.stringify({plan_id:preview.plan_id,authorization_id:auth.authorization_id}));
+  assert.equal(receipt.isError,undefined,JSON.stringify(receipt));
   assert.equal(receipt.result.status,'executed_verified');assert.equal(receipt.artifacts.length,1);
   assert.equal(readFileSync(join(workspace,'notes.txt'),'utf8'),'Synthetic local evidence.');
-  const ppt=controller('ppt'),p=await ppt.open(sources(['source.pptx']),'合成诊断：制作一页材料摘要，不做科研效果主张。','{"slides":1}');
+  const ppt=controller('ppt'),p=await ppt.open(sources(['source.pptx']),'合成诊断：制作一页材料摘要，不做科研效果主张。','{"workflow":"ppt","slides":1}');
   assert.equal(p.tools.length,21);
   if(!coreOnly) {
   const input=(await ppt.call(p.workflow_id,'list_inputs','{}')).result.inputs[0];
@@ -98,7 +133,7 @@ try {
   await assert.rejects(report.call(r.workflow_id,'inspect_study','{}'),/来源已变化/);
   console.log(JSON.stringify({paper_tools:opened.tools.length,general_tools:g.tools.length,data_tools:r.tools.length,
     file_tools:f.tools.length,ppt_tools:p.tools.length,skill_tools:coreOnly?0:5,dsh_registered:registered.size,core_only:coreOnly,
-    ppt_office_delivery:!coreOnly,ppt_source_conversion:!coreOnly,native_code:true,file_approval_and_copy_delivery:true,paper_evidence:true,paper_audit_pdf:true,native_output:true,source_invalidation:true,model_requests:0}));
+    ppt_office_delivery:!coreOnly,ppt_source_conversion:!coreOnly,native_code:true,file_approval_and_copy_delivery:true,management_tools:managed.tools.length,workspace_tools:w.tools.length,revision_tools:rev.tools.length,gateway_tools:gw.tools.length,external_hardlink_denied:true,paper_evidence:true,paper_audit_pdf:true,native_output:true,source_invalidation:true,model_requests:0}));
 } finally {
   await Promise.allSettled(flows.map(flow=>flow.close()));await registryScope.dispose();reader.close();writer.close();await ctx.fiber.dispose();process.chdir(prior);
   removeScratchDirectory(root,realpathSync(tmpdir()));

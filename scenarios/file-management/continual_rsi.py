@@ -9,7 +9,8 @@ import auto_rsi as rsi
 import fallback_rsi as fresh
 from common import ROOT, sha, save, digest
 from script_reuse_study import arms
-from src.motif_core.offline.experience_registry import ExperienceRegistry, durable
+from src.motif_core.reuse.experience_registry import ExperienceRegistry, durable
+from src.adapters.file_management.experience_certification import check_script_certificate
 
 NOVEL_GOALS={
     'FM05:max':fresh.GOALS[0],
@@ -121,7 +122,8 @@ def build_seed(exp, p):
         if rsi.read(cert)['status'] != 'certified_v2':
             raise ValueError('fresh seed did not pass independent certification')
         reg = ExperienceRegistry(exp / 'registry')
-        entries = [reg.entry('script_v2', r['path'], rsi.runtime_source('script_v2', p), cert) for r in lock['scripts']]
+        entries = [reg.entry('script_v2', r['path'], rsi.runtime_source('script_v2', p), cert,
+                             verify_certificate=check_script_certificate) for r in lock['scripts']]
         file = reg.publish(entries, reason='new service version; independently certified fresh shared seed')
         activation = {'round': n, 'registry_file': str(file), 'registry_sha256': sha(file),
                       'new_entries': [e['entry_id'] for e in entries], 'certificate_sha256': sha(cert),

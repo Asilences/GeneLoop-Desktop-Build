@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.motif_core.dependencies import resolve_dependencies
-from src.motif_core.evidence import BoundEvidence
+from src.motif_core.runtime.dependencies import resolve_dependencies
+from src.motif_core.runtime.evidence import BoundEvidence
 
 
 class MotifFailureFeedbackTests(unittest.TestCase):

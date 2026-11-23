@@ -7,8 +7,8 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 const enabled={skip:!process.features?.typescript};
 async function fixture(){
- const {apply}=await import('../src/adapters/file_approval_bridge.ts');
- const {digest}=await import('../src/motif_core/online_skill_runtime.mjs');
+ const {apply}=await import('../src/adapters/file_management/file_approval_bridge.ts');
+ const {digest}=await import('../src/motif_core/runtime/online_skill_runtime.mjs');
  const home=realpathSync(mkdtempSync(join(tmpdir(),'file-approval-'))),delivery=join(home,'delivery'),requests=join(home,'requests');
  mkdirSync(delivery);const task=join(home,'task.json');writeFileSync(task,'{}');
  const prior={};for(const [key,value] of Object.entries({HARLESS_FILE_APPROVAL_HOME:requests,FM_OUTPUT:delivery,FM_TASK_FILE:task})){prior[key]=process.env[key];process.env[key]=value;}
@@ -47,7 +47,7 @@ test('ordinary workspace operations require no extra approval',enabled,async()=>
  const f=await fixture();try{f.state.plans.p.risks=[];f.store();await f.execute();assert.equal(f.prompts,0);assert.equal(f.effects,1);}finally{f.close();}
 });
 test('file download rejects escaped, modified and symlink artifacts',enabled,async()=>{
- const {fileArtifactBytes}=await import('../src/adapters/harless_file_scene.ts');
+ const {fileArtifactBytes}=await import('../src/adapters/web/scenes/harless_file_scene.ts');
  const home=realpathSync(mkdtempSync(join(tmpdir(),'file-artifact-'))),base=join(home,'exports');mkdirSync(base);
  try{
   const data=Buffer.from('synthetic artifact'),sha=createHash('sha256').update(data).digest('hex'),file=join(base,'result.txt');writeFileSync(file,data);

@@ -25,7 +25,7 @@ import {WebServer} from '@deepseek-ai/dsh-host-webserver';
 import {apply as nativeConnection} from '@deepseek-ai/dsh-client-connection';
 import WebSocket from 'ws';
 import {protectGoalRpc,registerIndependentFileMode,independentFileMode,guardNativeModeCommand} from '../src/adapters/geneloop_runtime_routes.ts';
-import {registerPrivateLanes} from '../src/adapters/harless_private_lanes.ts';
+import {registerPrivateLanes} from '../src/adapters/web/account/harless_private_lanes.ts';
 
 // Standard Remote decorator initialization, without requiring a transpiler.
 const initializers=[];

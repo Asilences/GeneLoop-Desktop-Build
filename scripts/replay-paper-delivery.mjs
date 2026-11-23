@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDeliveryChecker } from '../src/adapters/dsh_paper_delivery_check.ts';
+import { createDeliveryChecker } from '../src/adapters/harness/paper/dsh_paper_delivery_check.ts';
 import { sha256 } from '../src/adapters/paper_triage_validation.ts';
 import { deliveryResponseClass } from './evaluate-paper-delivery-shadow.mjs';
 const json=p=>JSON.parse(readFileSync(p,'utf8'));

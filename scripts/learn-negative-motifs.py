@@ -7,9 +7,10 @@ import sys
 import importlib.util
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.script_negative_compiler import collect_negative, compile_negative, RUNTIME_FILES, sha, digest
-from src.adapters.negative_field_compiler import certify_field_guard, UnsupportedGuard
-from src.adapters.negative_constraint_compiler import constraint_observations, certify_current_constraint, recertify_current_constraints
+from src.motif_core.offline.compilation.script_negative_compiler import collect_negative, compile_negative, RUNTIME_FILES, sha, digest
+from src.motif_core.offline.compilation.negative_field_compiler import certify_field_guard, UnsupportedGuard
+from src.adapters.paper_constraint_evidence import constraint_observations
+from src.motif_core.offline.compilation.negative_constraint_compiler import certify_current_constraint, recertify_current_constraints
 
 
 def main():

@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.adapters.continuous_rsi import load_config, private
 from src.adapters.management_recertification import recertify
-from src.motif_core.offline.experience_registry import check_motif_certificate, read, sha
+from src.adapters.file_management.experience_certification import check_motif_certificate
+from src.motif_core.reuse.experience_registry import read, sha
 
 
 def main():

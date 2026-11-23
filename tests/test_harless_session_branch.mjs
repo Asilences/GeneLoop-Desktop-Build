@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { completedBranchPrefix, branchTitleRoot, sessionBranchTitle, createSessionBranchService } from '../src/adapters/harless_session_branch.ts';
+import { completedBranchPrefix, branchTitleRoot, sessionBranchTitle, createSessionBranchService } from '../src/adapters/web/sessions/harless_session_branch.ts';
 
 const event = (type, seq, data = {}) => ({ type, seq, time: 1000 + seq, data });
 function history() { return [event('turn/start', 0, { turn: 1 }),

@@ -20,7 +20,7 @@ function temporary(t) {
   return path;
 }
 test('two accounts can create the same display name concurrently without sharing paths or files', options, async t => {
-  const { createManagedWorkspaceService } = await import('../src/adapters/harless_managed_workspaces.ts');
+  const { createManagedWorkspaceService } = await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
   const directory = temporary(t), a = registry(), b = registry();
   const owner = createManagedWorkspaceService(directory, 'owner', a), member = createManagedWorkspaceService(directory, 'member', b);
   const id = randomUUID(), request = { name: '科研汇报', request_id: id };
@@ -36,7 +36,7 @@ test('two accounts can create the same display name concurrently without sharing
   assert.equal((await restored.create(request)).workspace.workspaceId, one.workspace.workspaceId);
 });
 test('workspace names and retry IDs reject path injection, conflicts and changed requests', options, async t => {
-  const { createManagedWorkspaceService } = await import('../src/adapters/harless_managed_workspaces.ts');
+  const { createManagedWorkspaceService } = await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
   const service = createManagedWorkspaceService(temporary(t), 'owner', registry());
   for (const name of ['', ' ', '../other', 'a/b', 'a\\b', 'C:project', 'bad\nname', '..', 'x'.repeat(65)])
     await assert.rejects(service.create({ name, request_id: randomUUID() }));
@@ -47,7 +47,7 @@ test('workspace names and retry IDs reject path injection, conflicts and changed
   await assert.rejects(service.create({ name: '项目 A', request_id: randomUUID() }), /同名/);
 });
 test('old registered workspace and its files survive while unregistered host directories cannot be adopted', options, async t => {
-  const { createManagedWorkspaceService } = await import('../src/adapters/harless_managed_workspaces.ts');
+  const { createManagedWorkspaceService } = await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
   const root = temporary(t), legacy = join(root, 'legacy'), unrelated = join(root, 'other-project');
   mkdirSync(legacy); mkdirSync(unrelated); writeFileSync(join(legacy, 'paper.txt'), 'unchanged');
   const records = registry(); const original = await records.create(legacy, '已有课题');
@@ -61,7 +61,7 @@ test('old registered workspace and its files survive while unregistered host dir
   assert.notEqual(fresh.workspace.path, first.workspace.path);
 });
 test('symlink replacement cannot redirect managed creation into another account', options, async t => {
-  const { createManagedWorkspaceService } = await import('../src/adapters/harless_managed_workspaces.ts');
+  const { createManagedWorkspaceService } = await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
   const base = temporary(t), records = registry(), service = createManagedWorkspaceService(base, 'owner', records);
   const request = { name: '项目', request_id: randomUUID() }, created = await service.create(request);
   const other = join(base, 'foreign'); mkdirSync(other);
@@ -72,7 +72,7 @@ test('symlink replacement cannot redirect managed creation into another account'
   assert.throws(() => service.adopt(created.workspace.path), /独立目录/);
 });
 test('workspace API enforces login, returns native adoption and blocks host browsing for every account', options, async t => {
-  const { registerManagedWorkspaceRoutes } = await import('../src/adapters/harless_managed_workspaces.ts');
+  const { registerManagedWorkspaceRoutes } = await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
   const routes = new Map(), ctx = { workspaceRegistry: registry(), effect: fn => fn(), connection: {
     requestRejection: req => req.headers.get('authorization') === 'fixture' ? undefined : 401,
     fetch: { register: route => { assert.equal(routes.has(route.path), false); routes.set(route.path, route); return () => {}; } },
@@ -95,7 +95,7 @@ test('workspace API enforces login, returns native adoption and blocks host brow
 test('workspace UI replaces both native directory flows and never installs server browsing controls', () => {
   const slots = [], styles = [], effects = [], window = {};
   const document = { createElement: () => ({ remove() {} }), head: { append: node => styles.push(node) } };
-  vm.runInNewContext(readFileSync(new URL('../src/adapters/geneloop_workspaces.js', import.meta.url), 'utf8'), { window, document });
+  vm.runInNewContext(readFileSync(new URL('../src/adapters/web/geneloop_workspaces.js', import.meta.url), 'utf8'), { window, document });
   const ctx = { effect: fn => effects.push(fn()), slots: { inject(_name, fn) { const result = fn(); if (result?.next) [...result]; }, register(options, component) { slots.push({ options, component }); } } };
   const React = { createElement: (type, props, ...children) => ({ type, props, children }), useState: initial => [initial, () => {}],
     useRef: initial => ({ current: initial }), useEffect() {}, useId: () => 'workspace-name' };
@@ -114,13 +114,13 @@ test('workspace UI replaces both native directory flows and never installs serve
     assert.doesNotMatch(JSON.stringify(tree), /服务器目录|目录选择/);
     assert.equal(slot.component({ ...injected, ...props, open: false }).props.open, false);
   }
-  const source = readFileSync(new URL('../src/adapters/geneloop_workspaces.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../src/adapters/web/geneloop_workspaces.js', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /listDirectory|createDirectory|directoryPicker\/|\/api\/workspace\/create/);
   assert.match(source, /工作区名称/); assert.match(source, /nativeEvent\.isComposing/);
 });
 
 test('workspace public baseline, updates and rename never expose host deployment paths', options, async()=>{
- const {protectWorkspaceProjection}=await import('../src/adapters/harless_managed_workspaces.ts');
+ const {protectWorkspaceProjection}=await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
  const workspace={workspaceId:'owned-workspace',path:'/home/private/deployment/project',title:'论文',sessionIds:['chat'],createdAt:'now'};
  const controller={async *follow(){yield {type:'baseline',value:{items:[workspace],archivedSessionIds:[]}};yield{type:'upsert',workspace};},
   async rename(){return{workspace};},async insertSessionBefore(){return{workspace};}};
@@ -135,7 +135,7 @@ test('workspace public baseline, updates and rename never expose host deployment
 test('workspace browser preserves store receivers and top-level New chat targets the clicked workspace', async()=>{
  const slots=[], window={}, created=[];
  const document={createElement:()=>({remove(){}}),head:{append(){}}};
- vm.runInNewContext(readFileSync(new URL('../src/adapters/geneloop_workspaces.js',import.meta.url),'utf8'),{window,document});
+ vm.runInNewContext(readFileSync(new URL('../src/adapters/web/geneloop_workspaces.js',import.meta.url),'utf8'),{window,document});
  class Store {
   constructor(value){this.value=value;this.listeners=new Set();}
   getSnapshot(){return this.value;}
@@ -163,7 +163,7 @@ test('workspace browser preserves store receivers and top-level New chat targets
 });
 
 test('workspace pins persist per account and cannot address another account or resurrect a deleted group', options, async t => {
-  const { createManagedWorkspaceService } = await import('../src/adapters/harless_managed_workspaces.ts');
+  const { createManagedWorkspaceService } = await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
   const root = temporary(t), one = registry(), two = registry();
   const a = createManagedWorkspaceService(root, 'account-a', one), b = createManagedWorkspaceService(root, 'account-b', two);
   const left = (await a.create({ name: '同名课题', request_id: randomUUID() })).workspace;
@@ -185,7 +185,7 @@ test('workspace pins persist per account and cannot address another account or r
 });
 
 test('pin endpoint enforces normal authentication and returns only owned opaque IDs', options, async t => {
-  const { registerManagedWorkspaceRoutes } = await import('../src/adapters/harless_managed_workspaces.ts');
+  const { registerManagedWorkspaceRoutes } = await import('../src/adapters/web/sessions/harless_managed_workspaces.ts');
   const routes = new Map(), records = registry(), ctx = { workspaceRegistry: records, effect: fn => fn(), connection: {
     requestRejection: req => req.headers.get('authorization') === 'fixture' ? undefined : 401,
     fetch: { register: route => { routes.set(route.path, route); return () => {}; } },
@@ -257,7 +257,7 @@ function interactiveWorkspaceBrowser() {
     if (options?.method === 'POST') { const input = JSON.parse(options.body); calls.push(['pin', input]); pinned = input.pinned ? [...pinned, input.workspace_id] : pinned.filter(id => id !== input.workspace_id); }
     return { ok: true, json: async () => ({ pinned_workspace_ids: pinned }) };
   };
-  vm.runInNewContext(readFileSync(new URL('../src/adapters/geneloop_workspaces.js', import.meta.url), 'utf8'), { window, document, fetch });
+  vm.runInNewContext(readFileSync(new URL('../src/adapters/web/geneloop_workspaces.js', import.meta.url), 'utf8'), { window, document, fetch });
   window.__installGeneLoopWorkspaces(ctx, React, { Modal: 'modal' });
   const Browser = slots.find(row => row.options.name === 'sidebar.workspaces').component;
   const Home = slots.find(row => row.options.name === 'main' && row.options.key === 'geneloop-workspace').component;
@@ -652,7 +652,7 @@ test('workspace browser installation retries delayed service readiness without d
   const ctx = { get: name => services[name], inject: (_names, ready) => callbacks.push(ready), effect: fn => fn(),
     slots: { inject(_name, fn) { const value = fn(); if (value?.next) [...value]; }, register(options, component) { slots.push({ options, component }); } } };
   const React = { createElement: (type, props, ...children) => ({ type, props, children }) };
-  vm.runInNewContext(readFileSync(new URL('../src/adapters/geneloop_workspaces.js', import.meta.url), 'utf8'), {
+  vm.runInNewContext(readFileSync(new URL('../src/adapters/web/geneloop_workspaces.js', import.meta.url), 'utf8'), {
     window, document, fetch: async () => ({ ok: true, json: async () => ({ sessions: [], deleted_session_ids: [] }) }),
   });
   window.__installGeneLoopWorkspaces(ctx, React, { Modal: 'modal' });

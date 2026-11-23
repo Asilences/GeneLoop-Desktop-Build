@@ -15,7 +15,7 @@ import {resolveAdapterOptions} from '@deepseek-ai/dsh-llm-deepseek';
 import {GoalService} from '@deepseek-ai/dsh-goal';
 import * as nativeGoalDriver from '@deepseek-ai/dsh-goal-round-driver';
 import * as nativeGoalTools from '@deepseek-ai/dsh-tool-goal';
-import {WebDeepSeekAdapter} from '../src/adapters/harless_reasoning.ts';
+import {WebDeepSeekAdapter} from '../src/adapters/web/tasks/harless_reasoning.ts';
 import {createGoalAdmission} from '../src/adapters/geneloop_goal.ts';
 import {createClosingTurnMirror} from '../src/adapters/geneloop_task_trace.ts';
 const frame=(delta,finish_reason=null)=>'data: '+JSON.stringify({id:'goal-local',object:'chat.completion.chunk',created:1,

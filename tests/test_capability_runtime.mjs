@@ -8,9 +8,9 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {createCapability,capabilityRef,capabilityIdentity,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
-import {createCapabilityRuntime} from '../src/adapters/capability_runtime.ts';
-import {bytesSha256} from '../src/adapters/rsi_protocol.ts';
+import {createCapability,capabilityRef,capabilityIdentity,createCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
+import {createCapabilityRuntime} from '../src/capability/runtime/capability_runtime.ts';
+import {bytesSha256} from '../src/rsi/protocol/rsi_protocol.ts';
 import {diagnosticHost} from '../examples/rsi-protocol-v1/host.mjs';
 
 const owner='diagnostic-owner',active={lifecycle:'active',certification:'certified',migration:'testing'};

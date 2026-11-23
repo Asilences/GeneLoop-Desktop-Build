@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 import unittest
 
-from src.adapters.dsh_client import SemanticValidationError
-from src.adapters.motif_read_semantic import resolve_and_resume_read_motif
-from src.motif_core.read_executor import run_read_motif
-from src.motif_core.offline.chain_compiler import (
+from src.adapters.harness.dsh_client import SemanticValidationError
+from src.adapters.harness.motif.motif_read_semantic import resolve_and_resume_read_motif
+from src.motif_core.runtime.read_executor import run_read_motif
+from src.motif_core.offline.compilation.chain_compiler import (
     certify_witnessed_chain_motif, compile_witnessed_chain_motif,
 )
 from src.semantic_inputs import SemanticInputRequired

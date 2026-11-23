@@ -1,13 +1,39 @@
 # GeneLoop 公共脱敏模块
 
-本分支以 main `d1863342` 为集成基线。公共脱敏能力不按 Paper/PPT 分支选择，现有场景和新增 MCP 场景共用 `src/adapters/geneloop_privacy.py`。在线 TypeScript 调用固定本地 worker，离线 Python 直接调用同一内核。正式服务没有切换。
+## 账号内结构学习与留存
+
+各场景由两个任务宿主统一接入。开关默认关闭，账号授权后只收录此后启动并结算的任务。`rsi-structure.json` 从任务起点提取调用顺序和结果状态。工具代号由账号私有随机密钥和工具名计算 HMAC。同一账号可以跨任务匹配工具，其他账号和可选共享对象使用独立代号。Paper/PPT 的已有结构编译只接收通过此入口的任务，并由原证书、账本和私有源文件继续完成证据核验。通用视图的用途限于结构学习，场景仍负责定义自己的学习器。
+
+`GET /api/harless/rsi-learning` 返回账号内设置，`POST` 只接受 `{"enabled":true}` 或 `{"enabled":false}`。桌面在“数据与隐私”展示开关和留存时间。关闭后取消等待中的采集及账户编译，清理账号的任务级学习副本。对话放入回收站即退出学习范围。清空时持久化不可恢复的撤销状态，清理 `events.jsonl`、任务前缀、任务请求和答复副本、学习副本，并将任务状态收缩为恢复索引所需的元数据。既有已认证库、独立用户分支、原附件、成品和财务账本各有独立生命周期。
+
+固定版 DSH 将物理删除交给存储维护。Linux 上，GeneLoop 复用 DSH 的 JSONL 版本命名解析和原生 `flock`，在会话写入释放后删除该会话的日志版本和投影缓存。仍由 DSH Web 控制器持有的会话返回 `native_pending`，应用访问立即撤销，后台在释放后重试。当前固定版的 Web 控制器未公开单会话释放接口。网关启动和每十分钟清理无运行或启动中后端的成员账号，同一账号的启动会等待本轮清理。成员保留原来的运行方式。Windows 的物理删除以及自定义存储、持久全文索引不在已验证范围。[DSH JSONL 文档](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/session/session-persistence-jsonl/README.md)
+
+可选共享在预览生成、读取和发送前重新核验来源权限与轨迹可用性。对话进入回收站或任务轨迹清理后，原有共享预览失效。
+
+任务轨迹副本默认保留 90 天，学习副本默认 30 天，从终态时间起计。隔离部署可用 `GENELOOP_RSI_RAW_RETENTION_DAYS` 和 `GENELOOP_RSI_LEARNING_RETENTION_DAYS` 设置正整天数，学习保留期最多等于原始副本保留期。任务宿主及网关启动和每十分钟执行清理，进行中的任务不清理。用户可见的原生会话历史通过显式清空处理。本候选尚未迁移历史服务的其他运行目录。
+
+离线隔离检查可在 `python -m src.adapters.geneloop_learning_trace --authorized` 的原有输入参数后增加 `--account-structure-policy PRIVATE_FILE`，通过本地私有账号配置生成同口径结构。该配置含账号内工具代号密钥，只供宿主读取。SDK 的正文轨迹派生改为调用方显式 `privacy_diagnostic=True`。Web、成员子进程和 SDK 启动配置禁用 DSH 会话遥测。正常模型和 MCP 请求沿任务权限执行。
+
+## 早期集成与基准
+
+早期公共脱敏集成基线为 `d1863342`，后整合 `cdc3a6a9`（含 PR159、PR160）。现有场景和新增 MCP 场景共用 `src/adapters/geneloop_privacy.py`。在线 TypeScript 复用有界本地 worker，显式 SDK 诊断和离线 CLI 使用同一 worker 的单次模式。直接 Python 调用也使用共同内核，由调用方提供总预算。
+
+R5新增默认关闭的[官方Privacy Filter/CredSweeper候选](research/rsi/privacy-official-tools-r5.md)，由私有宿主配置和字节摘要显式选择，继承公共学习/导出准入。原类别及默认Presidio/Gitleaks规则保留，正常任务仍读原件；NLP依赖因官方异常清理修复更新为固定兼容组合。600条PII及24组语义控制的文本重放改善姓名/地址完整遮盖，但金标外遮盖/正文保留门槛失败；旧R5因依赖故障停止保留部分结果，新版本[完整评测](experiments/privacy-benchmark-20261108-r5.md)及最终回归仍待完成，不能称新后端已验收。默认路径也须携带新增的纯标准库适配模块，附加模型仅选中后端时加载。
+
+2026-11-07 的 [R1 冻结基线](experiments/privacy-benchmark-20261107-r1.md) 保留不变。[R2 实测](experiments/privacy-benchmark-20261107-r2.md) 使用 `d832be12` 修复 JSON 包装、重复键、Unicode 拒绝与协议词问题，并重新执行完整回归和三基准；仍不能据此保证完全匿名化，学习材料继续视为受限数据，独立留出和产品验收未完成。
+
+2026-11-08 的 [R3 诊断](experiments/privacy-diagnosis-20261108-r3.md) 固定已有 10 类文本口径，同时保留全类别压力结果与结构化标识缺口；逐条归因确认规范化导致部分姓名漏检。产品最小修正 `ea819fc6` 保留原命中并补原文姓名，未更换成熟工具或阈值。GLiNER/OpenMed 在独立解释器的对照属于已见样本研究：直接合并有正文遮盖代价，尚未设为默认或加入产品依赖。
+
+[R3完整复测](experiments/privacy-benchmark-20261108-r3.md)另保留293次凭证未知、同准入残留未改善及首次并发回归失败；运行时配置修复后，按相同限时顺序复验通过。它证明局部姓名修复与相应接线，不证明完全匿名化或生产可用性已认证。正常任务继续读取原件，正式服务未切换。
 
 ## 数据流与入口盘点
+
+R3之后的[源码/证据审计与调整方案](research/rsi/privacy-adjustment-plan-r4.md)确认的数字text类型丢失、重复键首次预解析和扫描器运行时信任缺陷，已在R4修复。公共类别/字段规则收敛到版本化策略及schema；运行时核验固定依赖版本，每次扫描核验实际二进制字节。金融/证件补充复用Presidio官方模式和局部上下文，未全局遮盖长数字。模型worker有界复用、取消及SDK原子派生写入已实现；完整质量验收与工程验证须分别看本轮结果，学习副本仍是受限数据，PR保持Draft。
 
 | 边界 | 接线与用途 |
 | --- | --- |
 | Web / 桌面任务 | `dsh_web_tasks.ts`、`dsh_geneloop_tasks.ts` 在任务结算后异步生成 `privacy-learning.json`；真实任务默认尝试准入，mock 须显式诊断开关。桌面列表接收所有完成场景 |
-| SDK / CLI / 研究运行 | `harness_runtime.create_harness` 组合 SDK 公开 run/close，先完成原关闭，再对本次原生事件生成账号私有视图。保留原 observer、结果、取消、费用与 journal；派生视图不是执行见证 |
+| SDK / CLI / 研究运行 | `harness_runtime.create_harness` 组合 SDK 公开 run/close，先完成原关闭，再由后台线程对本次原生事件生成账号私有视图。需要立即读取副本时调用 `wait_for_privacy(timeout=...)` 并核验返回值；线程在解释器结束前完成内存中的有界批次，不写原始队列。保留原 observer、结果、取消、费用与 journal；派生视图不是执行见证 |
 | 离线导入 | `geneloop_learning_trace` 接收选定文件、当前任务起点、终态和有效工具目录，与两个 Web 宿主共用投影器 |
 | Paper/PPT 结构学习 | 原 `rsi_learning_trace` v2 只保留登记工具、参数形状与已见证绑定，无正文和身份值。继续交原编译器及留出认证，保留成熟库兼容 |
 | 轨迹 / 修订学习 | `dsh_trace_rsi_learning.ts`、`dsh_revision_rsi_learning.ts` 的模型可见结果和错误交公共内核。run/call/packet 使用单宿主随机句柄；已有私有审计保存句柄和原标识摘要，不导出映射 |
@@ -25,13 +51,15 @@
 
 - 姓名、邮箱、电话、证件号、银行账号、住址、私有路径、附件名和账号/会话标识等替换为类型化别名；同一材料中相同实体尽量保持关联，文件类型保留。
 - 任务正文、模型回答、工具参数/结果中的语义可进入账号内学习。公式、技术标识、代码、数值和统计要求不整体删除；字段名含身份信息同样处理。
-- 凭证字段或 Gitleaks 命中直接拒绝整份材料。扫描处理前后内容及必要的 Unicode 归一化副本；工具缺失、超限或无法可靠处理同样拒绝，不回退原文或原异常。依赖按清单安装，验证时记录实际版本。
+- 凭证字段或 Gitleaks 命中直接拒绝整份材料。处理前后均将完整 JSON 包、递归解码的字符串及必要的 NFKC 视图合并交给原生 Gitleaks stdin；不只扫描转义后的 JSON。原文仅在内存中组装，限制递归/节点与解码展开量，不截断后放行。工具缺失、超限或无法可靠处理同样拒绝，不回退原文或原异常。依赖按清单安装，验证时记录实际版本。
+- Presidio 在统一的 NFKC 识别视图上检测，使用固定 `regex` 的 Unicode 字素簇将跨度映射回原文；规范化改变文本时，再用同一识别器补原文 `PERSON`，沿用脚本/协议保护并保留规范化的全部命中。未遮盖的字符保持原样，不因两次独立识别结果不同而拒绝整包。无法对齐时仍拒绝。协议词在正文中的完整词边界也受保护，只约束统计 NER，凭证和显式身份字段继续检查。
+- JSON 使用标准解析器的重复键检查，CLI 和嵌套文本一致拒绝重复键及解析深度失败，防止丢弃前值后又原样保留含凭证的原文。普通非 JSON 正文仍走文本脱敏。
 - 已标记或可识别的二进制字段、图像/音视频本体及媒体 base64 数据 URI 不进入视图。当前不宣称识别人脸、声音或图片中的个人信息；任意编码、未发表研究、商业机密和上下文间接身份没有自动识别保证。
 - `admit_publication(JSON)` 要求处理前后相同，否则拒绝。它不改写或重签已认证源码/库字节，也不代替共享授权和对象白名单。
 
-在隔离解释器安装 `requirements-rsi-privacy.txt`，将 `SSS_PYTHON` 指向该解释器，`SSS_RSI_GITLEAKS` 指向核对官方校验表的二进制。运行时不下载模型、不调用外部脱敏 API。所有学习材料仍视为受限数据，不能因通过识别就任意公开。
+在隔离解释器安装 `requirements-rsi-privacy.txt`，将 `SSS_PYTHON` 指向该解释器，`SSS_RSI_GITLEAKS` 指向核对官方校验表的二进制。版本与实际二进制摘要须匹配 `config/rsi-privacy-tools.json`；当前仅登记已核验的Linux/Windows x64，其他平台不能仅靠手填路径通过信任检查。运行时不下载模型、不调用外部脱敏 API。所有学习材料仍视为受限数据，不能因通过识别就任意公开。
 
-Linux/Windows x64 可用 `python scripts/install-rsi-privacy-tools.py --root .local/privacy-tools` 安装固定官方发布包；先核对固定 SHA256，再写入单个二进制并核验版本，拒绝覆盖已有安装。`--archive` 可传离线官方包。脚本只输出可用于 `SSS_RSI_GITLEAKS` 的绝对路径，来源和实际摘要写入私有安装清单。CI 的两个平台都显式安装同一份固定 NLP 依赖与 Gitleaks。其他架构请按官方发布校验表自行安装，尚未由该安装脚本验证。
+Linux/Windows x64 可用 `python scripts/install-rsi-privacy-tools.py --root .local/privacy-tools` 安装固定官方发布包；先核对固定 SHA256，再写入单个二进制并核验版本，拒绝覆盖已有安装。`--archive` 可传离线官方包。脚本只输出可用于 `SSS_RSI_GITLEAKS` 的绝对路径，来源和实际摘要写入私有安装清单。CI 的两个平台都显式安装同一份固定 NLP 依赖与 Gitleaks。其他架构需另外核验官方资产、登记信任表并执行平台验收；Mac包的这项集成尚未完成。
 
 ## 通用离线导入
 
@@ -44,6 +72,8 @@ Linux/Windows x64 可用 `python scripts/install-rsi-privacy-tools.py --root .lo
 ```
 
 私有 v4 视图包含工具结构和脱敏 `content`，不保留原 call ID、时间戳、provider header 或二进制。SDK 输出附私有来源摘要，固定 `execution_witness:false`。无任务起点的旧任务不会猜测起点后共享。旧 v2/v3 仅保留给已有结构编译器和早期诊断，不限定模块覆盖范围。
+
+R7修复将宿主构造的协议元数据与语义值分开处理：完整输入和输出仍经过凭证检查，只有`content[].value`进入正文脱敏。元数据由投影器重建并校验，任务JSON不能自行声明免检字段。学习视图也复用`tool-0`等包内代号，保留顺序和重复关系；宿主通过原事件首次出现顺序和原catalog解析绑定，不导出反解表。仓库已配置的场景ID保留，其他自定义场景记为`generic`。正常执行、结构编译和认证仍读宿主原件。严格共享Schema验证后的纯拓扑只做完整凭证检查，避免NLP破坏协议常量；任意JSON导出仍走原公共准入。
 
 ## 默认私有与可选共享
 
@@ -64,6 +94,8 @@ Linux/Windows x64 可用 `python scripts/install-rsi-privacy-tools.py --root .lo
 
 ## 验证与版本守卫
 
+外部识别基准与工程回归分开记录。[验证方案](research/rsi/privacy-benchmark-v1.md) 和[首轮实测](experiments/privacy-benchmark-20261107-r1.md) 覆盖中文/英文 13000 条与 CredData 11030 文件；凭证超时单列为未知结果，不计作安全拒绝。现有实现复用 Presidio/spaCy 与 Gitleaks，没有独立训练的 GeneLoop PII 模型；项目规则和接线不能据工程测试通过宣称高准确率。
+
 ```sh
 "$SSS_PYTHON" -m pytest -q tests/test_geneloop_privacy.py tests/test_harness_privacy.py tests/test_rsi_learning_trace.py
 node --test tests/test_geneloop_privacy.mjs
@@ -73,3 +105,10 @@ node --test --test-name-pattern='platform privacy|RSI privacy' tests/test_dsh_we
 服务器独立检出加载 `.local/remote-env.sh`，专项禁外网使用实际 Presidio/Gitleaks；全量按正确解释器、Node 兼容配置、字体及 `TESSDATA_PREFIX` 执行 `npm test`、`npm run smoke`、`npm run motif:check`。当前状态见[工程记录](debug/privacy-platform-20261106.md)，未跑完的检查不记为通过。
 
 注册 Paper/PPT 库继续使用 `config/rsi-privacy-code-compat.json` 精确证书/当前摘要对并逐文件核验。私有旧候选按原守卫回退、重新认证。Windows Electron 真实进程用合成协议验交互；实际 NLP 在服务器验证。Issue 143 的 Mac 真实 Coding 仍依赖 DESK-01/04，不能以合成诊断替代。没有新增模型效果、科研质量或节费结论。
+## R10 中文联系信息与凭证复核
+
+公共脱敏按同一 JSON 对象的联系字段或平台字段判断相邻值。联系人记录中的姓名和电话仍使用一致的类别别名。微信、QQ 及登录账号使用 `PRIVATE_ID`，包括有平台标识的 `handle`、`value`。文件摘要、任务统计和无个人身份语境的名称沿用原处理。新增账号覆盖另测，旧 PII 基准的十类口径保留。
+
+详细地址识别使用 [公开行政区划词表](https://github.com/modood/Administrative-divisions-of-China/tree/c49d495b40ac73eb1a66f6eeae5f8fd10696f035) 的省市区正式名称，以及显式收件、寄送、住址语境。源 `dist/pca-code.json` SHA-256 为 `83b7536f853ad16beb4d37b92890a3fd7bb9d33d4f37e7c8885fb948749a9bc4`。从 WTFPL 授权数据提取 3,384 个去重名称，运行时校验派生词表摘要。街路、号院、楼栋、单元、门牌按原文坐标覆盖。重叠跨度保留已检出的字符，按详细地址、格式识别和通用 NER 的证据顺序选择类别。地址识别仍须用中文聊天样本验证无地名锚点和隐含地址的召回。
+
+可选的 `gitleaks+credsweeper-review` 保留 Gitleaks 先查。其余输入由固定版 CredSweeper 运行一次，用其上游低档与中档阈值区分疑似和命中。疑似返回固定原因 `credential_review_required` 并拒绝学习。命中和扫描失败也拒绝。候选原文、密钥、模型分数和复核材料不进入学习副本。用 `scripts/privacy-benchmark/run_trajectory_credentials.py` 在相同的新合成轨迹上分别运行两种扫描器及并用流程。

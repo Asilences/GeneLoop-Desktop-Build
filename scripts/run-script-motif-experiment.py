@@ -226,7 +226,7 @@ def main():
                              'policy':'preserve_structure_allow_semantic_leaf_revisions',
                              'origin':'explicit_current_recovery_requirement_not_inferred_from_history'}
                     if args.resume_current_operation:
-                        from src.adapters.script_motif_compiler import digest
+                        from src.motif_core.offline.compilation.script_motif_compiler import digest
                         scope['execution_obligation']={'kind':'resume_current_operation','tool':value['tool'],
                             'arguments_sha256':digest(value['arguments']),'max_attempts':1}
                         if recovery_goal:

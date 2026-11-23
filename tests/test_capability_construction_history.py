@@ -4,11 +4,11 @@ import json
 from pathlib import Path
 
 import pytest
-from src.adapters.capability_construction_history import capture,build_history,feedback_library,model_context
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_improvement import run_improvement
-from src.adapters.capability_scene import CapabilityImprovementAdapter
-from src.adapters import capability_proposal as pilot
+from src.rsi.learning.capability_construction_history import capture,build_history,feedback_library,model_context
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_improvement import run_improvement
+from src.adapters.harness.capability.capability_scene import CapabilityImprovementAdapter
+from src.adapters.harness.capability import capability_proposal as pilot
 from tests.test_capability_improvement import plan_at,Adapter,put,events
 from tests.test_capability_proposal_loop import inputs,DiagnosticGate,fake_harness
 
@@ -139,7 +139,7 @@ def test_public_adapter_never_infers_research_budget_from_platform_null():
 
 
 def test_reconsidering_uses_original_model_entry_instead_of_replaying_old_fixed_bindings(tmp_path,monkeypatch):
-    from src.adapters.capability_contract import capability_digest
+    from src.capability.graph.capability_contract import capability_digest
     task,catalog,snapshot,proposal=inputs();task_ref=put(tmp_path/'task.json',task)
     history=put(tmp_path/'history.json',build_history([],task_ref))
     library=feedback_library({'snapshot':snapshot,'source_catalog':catalog},history,

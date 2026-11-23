@@ -1,0 +1,28 @@
+{
+  "started_utc": "2026-11-07T13:37:24Z",
+  "driver_sha256": {
+    "run_credentials_bounded.py": "9c3c17826592251fdb87508cb4323b23ac9e5a3ee286016e4def4e912fe017b3",
+    "run_semantics.py": "5fdd09463d1030f8a832aabb318e58bd29dd875dabf7acdcf45378535a077ea8",
+    "run_pii.py": "59c34435825835bc9f96a03ee9f398b83fe368a77a50ab86e06fca035abe8220",
+    "test_credentials.py": "5bc7658e98061bcf3220a1f992289f16f6e40ad8c14d8a8bfc19d0190713a381",
+    "test_deadline_control.py": "97117f1a8421f8083b4e921050b7851bd13d85c0db14137bd84e4fe1efc0e778",
+    "protocol-r1.json": "5d224453c8bd07e94ae91786df4edbaa9c2e48e162152f8fdaaf058697ad4f3c",
+    "protocol-r2.json": "0167283dfb778f96b1ec7cd6df64b2392833b0840901523cefcf5c2bb1fa5749",
+    "credential-budget-r1.json": "0203225cc7f096a6b2e75cc9f46c4118c5aaab5d82764682f1853b5fb43b940c",
+    "evaluation-deps-lock.json": "de1aa46970722415b52f7b1d923b88545729a5cae6c609cd96db05a74d1e2c22",
+    "test_adapters.py": "0096d7a9de183571af780c2458bc7fa0b321554034b72d2a4b380044540f0816",
+    "prepare_creddata.py": "69638c7e1e0ea66548a7f7c53665ac8333d993c3efb5430dc60371c53f44a569",
+    "credential-protocol-r1.json": "934cfd65387b3ca51e991b7b0d70ade68031fc64a8c03a0d8d1a12232c55b4f4",
+    "credential-budget-r2.json": "4bb13cf49fbb0ba5d14fa68580ddf29f42dbb2de21c715a0feff2fe17d3fb6a7",
+    "run_credentials.py": "bf378b31acab4fda8088b82e0776323c144821d9fbe60bbacbbd36fdba773fde",
+    "check_entries.mjs": "4280b257d5b96e96f20f9e3a9031beb87a95a871d738585e33a1db3e9bf71abd",
+    "recover_creddata_files.py": "7576829894c5126f8adb51883dceea018976c15ec1dac72292f41a86aeb1124d",
+    "protocol-r1-evaluator2.json": "2b407ec5681840d663f8bb8bdd7df28be7d9850776b5aa28cd849d9bcf1aa14f",
+    "semantic-cases-r1.json": "312ad74b6acd6f3389ad7037efdff4e4eda71dc76bc02f14e2b617c275e5dd44"
+  },
+  "configs": {
+    "protocol-r2.json": "0167283dfb778f96b1ec7cd6df64b2392833b0840901523cefcf5c2bb1fa5749",
+    "credential-budget-r2.json": "4bb13cf49fbb0ba5d14fa68580ddf29f42dbb2de21c715a0feff2fe17d3fb6a7"
+  },
+  "all_new_module_calls": true
+}

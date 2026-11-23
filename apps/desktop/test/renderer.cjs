@@ -16,6 +16,56 @@ app.whenReady().then(async()=>{
  const menusHidden=()=>desktop.window.webContents.executeJavaScript('document.getElementById("desktop-menus").hidden');
  assert.equal(await menusHidden(),true);
  await until(()=>evaluate('!document.getElementById("workspace").hidden'),'独立界面');
+ await evaluate(`Promise.all([document.fonts.load('14px "GL Sans"'),document.fonts.load('14px "GL Chinese"','工作区'),document.fonts.load('20px "GL Mono"'),document.fonts.load('24px "GL Display"')]).then(()=>document.fonts.ready).then(()=>true)`);
+ assert.equal(await evaluate(`document.body.dataset.brand==='fractal'&&document.fonts.check('14px "GL Chinese"','工作区')&&document.fonts.check('24px "GL Display"')&&getComputedStyle(document.body).getPropertyValue('--blue').trim()==='#ad4e3c'`),true);
+ assert.equal(await evaluate(`[false,true].every(dark=>{const body=document.body,previous=body.hasAttribute('data-ds-dark-theme');body.toggleAttribute('data-ds-dark-theme',dark);const ok=getComputedStyle(document.getElementById('new-session')).backgroundColor===getComputedStyle(document.getElementById('send')).backgroundColor;body.toggleAttribute('data-ds-dark-theme',previous);return ok})`),true,'深浅主题的主操作颜色保持一致');
+ await until(()=>evaluate(`document.querySelector('canvas[data-fractal-art=welcome]')?.dataset.fractalReady==='true'`),'递归品牌图形真实绘制');
+ assert.equal(await evaluate(`getComputedStyle(document.querySelector('.composer')).borderRadius==='22px'&&document.querySelector('.desktop-hero h2 em').textContent==='向前一步。'`),true);
+ desktop.workspace.webContents.debugger.attach('1.3');
+ await desktop.workspace.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ await until(()=>evaluate(`document.querySelector('canvas[data-fractal-art=welcome]')?.dataset.fractalActive==='false'`),'减少动态效果时保留静态图');
+ await desktop.workspace.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ await until(()=>evaluate(`document.querySelector('canvas[data-fractal-art=welcome]')?.dataset.fractalActive==='true'`),'恢复可见欢迎页动效');
+ desktop.workspace.webContents.debugger.detach();
+ await evaluate(`window.previousWelcomeCanvas=document.querySelector('canvas[data-fractal-art=welcome]')`);
+ await until(()=>evaluate(`document.querySelectorAll('#motif-summary [data-summary-card]').length===3`),'鱼缸、A、B分别展示');
+ assert.equal(await evaluate(`[...document.querySelectorAll('#motif-summary [data-summary-card]')].every(card=>card.querySelector('[aria-expanded=true]')&&card.textContent.includes('示例')&&card.textContent.includes('26'))`),true);
+ assert.equal(await evaluate(`document.querySelectorAll('#motif-summary .culture-particle').length===8&&document.querySelectorAll('#motif-hierarchy-content .motif-unit-group').length===3&&document.querySelectorAll('#motif-distribution-content .motif-unit').length===4`),true);
+ await captureWorkspace('motif-example-default.png');
+ await evaluate(`document.querySelector('[data-motif-expand=aquarium]').click()`);
+ assert.equal(await evaluate(`document.querySelector('.motif-detail-dialog[open] .motif-detail-scope').textContent.includes('非工作区结果')&&document.querySelectorAll('.motif-detail-dialog[open] .culture-particle').length===8`),true);
+ await captureWorkspace('motif-aquarium-example-light.png');
+ await evaluate(`document.body.setAttribute('data-ds-dark-theme','')`);
+ await captureWorkspace('motif-aquarium-example-dark.png');
+ await evaluate(`document.body.removeAttribute('data-ds-dark-theme')`);
+ await evaluate(`document.querySelector('.motif-detail-dialog[open]').close();fetch('/api/fixture/motif-restore',{method:'POST'}).then(()=>document.dispatchEvent(new Event('visibilitychange')))`);
+ await until(()=>evaluate(`document.querySelector('[data-summary-card=hierarchy] [data-source]').dataset.source==='account'&&document.querySelector('[data-summary-card=aquarium]').dataset.source==='account'`),'真实来源恢复后自动退出示例');
+ check('Motif 接口 404 时三卡直接展示层级示例，真实来源恢复后自动切换');
+ await evaluate(`document.querySelector('.motif-hierarchy-toggle').click()`);
+ assert.equal(await evaluate(`document.getElementById('motif-hierarchy-content').hidden&&!document.querySelector('.motif-culture').hasAttribute('hidden')`),true,'折叠概念图不折叠鱼缸');
+ await evaluate(`document.querySelector('.motif-summary-toggle').click()`);
+ assert.equal(await evaluate(`document.getElementById('motif-hierarchy-content').hidden&&document.querySelector('.motif-culture').hasAttribute('hidden')`),true);
+ await evaluate(`document.querySelector('.motif-summary-toggle').click();document.querySelector('.motif-hierarchy-toggle').click()`);
+ await evaluate(`document.querySelector('.motif-distribution-toggle').click()`);
+ assert.equal(await evaluate(`document.getElementById('motif-distribution-content').hidden&&!document.getElementById('motif-hierarchy-content').hidden`),true);
+ await evaluate(`document.querySelector('.motif-distribution-toggle').click()`);
+ assert.equal(await evaluate(`document.querySelectorAll('#motif-summary [data-motif-expand]').length`),3);
+ check('鱼缸、A、B三卡独立收起，默认读取当前来源，各有独立放大入口');
+ await captureWorkspace('fractal-welcome-light.png');
+ const brandWindowSize=desktop.window.getSize();desktop.window.setSize(900,700);
+ await until(()=>evaluate('innerWidth<=900'),'原生窗口调整进入网页尺寸');
+ await captureWorkspace('fractal-welcome-compact.png');
+ report.brand_compact=await evaluate(`({width:innerWidth,scroll:document.documentElement.scrollWidth,columns:getComputedStyle(document.querySelector('.desktop-hero')).gridTemplateColumns,historyWidth:document.getElementById('history').clientWidth,container:getComputedStyle(document.getElementById('history')).containerType})`);
+ assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth&&getComputedStyle(document.querySelector('.desktop-hero')).gridTemplateColumns.split(' ').length===1`),true,'窄窗口使用官网式叠加排布，避免横向溢出');
+ report.sidebar_compact=await evaluate(`(()=>{const nav=document.getElementById('workspace-list').getBoundingClientRect(),account=document.querySelector('.sidebar footer').getBoundingClientRect(),summary=document.getElementById('motif-summary');return {navHeight:nav.height,accountBottom:account.bottom,viewport:innerHeight,summaryHeight:summary.clientHeight,summaryContent:summary.scrollHeight,overflow:getComputedStyle(summary).overflowY}})()`);
+ assert.ok(report.sidebar_compact.navHeight>=72&&report.sidebar_compact.accountBottom<=report.sidebar_compact.viewport+1,'三卡片不遮挡工作区列表与账户');
+ desktop.window.setSize(...brandWindowSize);await evaluate(`new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))`);
+ await evaluate(`document.getElementById('workspace').hidden=true;document.getElementById('auth').hidden=false`);
+ await captureWorkspace('fractal-login-light.png');
+ await evaluate(`document.body.setAttribute('data-ds-dark-theme','')`);
+ await captureWorkspace('fractal-login-dark.png');
+ await evaluate(`document.body.removeAttribute('data-ds-dark-theme');document.getElementById('auth').hidden=true;document.getElementById('workspace').hidden=false`);
+ check('分形品牌字体从随包资源加载，登录与工作区使用同一套深浅色');
  await until(async()=>!(await menusHidden()),'工作区左上角菜单');
  assert.deepEqual(await desktop.window.webContents.executeJavaScript(
    `[...document.querySelectorAll('#desktop-menus button')].map(button=>button.textContent)`
@@ -34,6 +84,7 @@ app.whenReady().then(async()=>{
  check('无标题空会话不占历史列表，首页示例只填草稿并保护已有文字');
  await evaluate(`document.querySelector('.session-row').click()`);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'历史双路结果');
+ await until(()=>evaluate(`!window.previousWelcomeCanvas.isConnected&&window.previousWelcomeCanvas.dataset.fractalActive==='false'&&window.previousWelcomeCanvas.width===0`),'离开欢迎页停止动效并释放画布');
  assert.equal(await evaluate(`(()=>{const copy=document.querySelector('.message-meta button[aria-label="复制回复"]');return !!copy?.querySelector('svg')&&!copy.textContent&&getComputedStyle(copy,'::after').content.includes('复制回复')})()`),true);
  assert.equal(await evaluate(`document.querySelector('.workspace-group .workspace-children [data-session-id="history"]')!==null`),true);
  const toggleGroup=`[...document.querySelectorAll('.workspace-row')].find(row=>row.textContent==='诊断工作区')`;
@@ -99,6 +150,18 @@ app.whenReady().then(async()=>{
  await evaluate(`document.querySelector('[data-session-id="history"]').click()`);
  await until(()=>evaluate('document.getElementById("history").textContent.includes("Motif执行结果")'),'返回历史对话');
  assert.equal(await evaluate('document.querySelectorAll(".comparison-result").length'),1);assert.equal(await evaluate('document.querySelector(".comparison-result").previousElementSibling.classList.contains("user")'),true);check('原生日志元数据恢复历史、Markdown与标准/Motif双路结果，结果跟随对应用户消息');
+ await until(()=>evaluate(`document.querySelectorAll('.turn-rail .turn-mark').length===document.querySelectorAll('#history .message.user').length&&document.querySelectorAll('.turn-rail .turn-mark').length>0`),'逐轮对话定位出现');
+ await evaluate(`document.getElementById('turns-toggle').click()`);
+ assert.equal(await evaluate(`document.querySelectorAll('.turn-outline:popover-open .turn-outline-item').length===document.querySelectorAll('#history .message.user').length`),true);
+ await captureWorkspace('conversation-directory.png');
+ assert.equal(await evaluate(`document.querySelector('.turn-outline').matches(':popover-open')`),true,'异步内容绘制不关闭对话目录');
+ await evaluate(`document.querySelector('.turn-outline-item').click();document.getElementById('tools-toggle').click()`);
+ assert.equal(await evaluate(`!document.getElementById('desktop-tools').hidden&&document.querySelectorAll('.primary-rail button').length===5`),true);
+ await captureWorkspace('desktop-workbench.png');
+ assert.equal(await evaluate(`getComputedStyle(document.querySelector('.composer')).borderRadius==='22px'&&getComputedStyle(document.getElementById('send')).borderRadius==='50%'`),true);
+ await evaluate(`document.querySelector('.desktop-tools [aria-label="关闭工作台"]').click()`);
+ check('快捷导航、对话目录和逐轮定位接通，右侧工作台可打开和关闭');
+
  await evaluate(`document.getElementById('deliveries-toggle').click()`);await until(()=>evaluate('document.getElementById("delivery-list").textContent.includes("diagnostic.txt")'),'交付卡片');await evaluate(`document.querySelector('#delivery-list button').click()`);await until(()=>evaluate('document.getElementById("preview").textContent.includes("diagnostic file contents")'),'交付预览');check('任务文件卡片和安全文本预览读取服务器实际字节');
  await evaluate(`fetch('/api/fixture/approval')`);await until(()=>evaluate('Boolean(document.querySelector("dialog"))'),'权限确认');await evaluate(`document.querySelector('dialog .primary').click()`);await until(()=>evaluate('!document.querySelector("dialog")'),'显式确认回复');check('有副作用的请求显示桌面确认，仅点击后回复单次允许');
  await evaluate(`document.querySelector('.composer-add').click();document.querySelector('[data-action=composer-options]').click();`);
@@ -157,6 +220,7 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate(`!document.querySelector('dialog')&&document.querySelector('.context-menu').getBoundingClientRect().bottom<document.getElementById('account-nav').getBoundingClientRect().top`),true);
  await evaluate(`document.querySelector('[data-action=account-settings]').click()`);
  await until(()=>evaluate('document.querySelector("dialog")?.textContent.includes("桌面外观")'),'桌面设置');
+ await captureWorkspace('fractal-settings-light.png');
  assert.equal(await evaluate(`document.querySelectorAll('.theme-card').length`),3);
  await evaluate(`document.querySelector('[data-theme="dark"]').click()`);
  assert.equal(await evaluate(`document.body.hasAttribute('data-ds-dark-theme')&&document.querySelector('[data-theme="dark"]').getAttribute('aria-pressed')==='true'`),true);
@@ -254,13 +318,55 @@ app.whenReady().then(async()=>{
  await motifTab('运行');
  await until(()=>evaluate(`document.querySelector('#workspace-inspector .inspector-current-task').textContent.includes('界面验收（合成）')`),'工作区详情收到实际任务接口数据');
  assert.equal(await evaluate(`document.getElementById('workspace-inspector').hidden`),false);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('#motif-summary [data-motif-total]')].map(x=>x.textContent)`),[String(fixture.motifTotal),String(fixture.motifTotal)]);
+ await evaluate(`window.motifInspectorBefore=document.getElementById('workspace-inspector');document.querySelector('[data-motif-expand=aquarium]').click()`);
+ await until(()=>evaluate(`!!document.querySelector('.motif-detail-dialog[open] .culture-particle[role=button]')`),'鱼缸在居中详情窗打开');
+ assert.equal(await evaluate(`window.motifInspectorBefore===document.getElementById('workspace-inspector')&&!document.getElementById('workspace-inspector').hidden`),true,'详情不取代右侧任务栏');
+ assert.equal(await evaluate(`document.querySelector('.motif-detail-dialog[open] .culture-particle title').textContent===document.querySelector('.motif-detail-dialog[open] .culture-particle').getAttribute('aria-label')`),true);
+ await evaluate(`document.querySelector('.motif-detail-dialog[open] .culture-particle').dispatchEvent(new PointerEvent('pointerenter'));document.querySelector('.motif-detail-dialog[open] .culture-particle').focus()`);
+ assert.equal(await evaluate(`document.querySelector('.motif-aquarium-info h3').textContent===document.querySelector('.motif-detail-dialog[open] .culture-particle').getAttribute('aria-label').split(' · ')[0]`),true,'悬浮与键盘聚焦显示实际节点资料');
+ await evaluate(`document.querySelector('.motif-detail-dialog[open] .culture-particle').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'}));document.querySelector('.motif-detail-maximize').click()`);
+ assert.equal(await evaluate(`document.querySelector('.motif-detail-dialog[open]').classList.contains('maximized')&&document.querySelector('.motif-detail-dialog[open] .culture-particle').getAttribute('aria-pressed')==='true'`),true);
+ await captureWorkspace('motif-aquarium-detail.png');
+ await evaluate(`document.querySelector('.motif-detail-maximize').click();document.querySelector('.motif-detail-dialog[open]').close();document.querySelector('[data-motif-expand=hierarchy]').click()`);
+ await until(()=>evaluate(`!!document.querySelector('.motif-detail-dialog[open][data-motif-detail=hierarchy]')`),'结构演化详情');
+ assert.equal(await evaluate(`document.querySelector('.motif-detail-dialog[open] [data-source]').dataset.source==='account'&&document.querySelector('.motif-detail-dialog[open] [data-motif-total]').textContent==='${fixture.motifTotal}'&&document.querySelector('.motif-detail-dialog[open]').textContent.includes('未分层')`),true);
+ await captureWorkspace('motif-structure-workspace.png');
+ await evaluate(`document.querySelector('.motif-detail-dialog[open] [data-motif-example=hierarchy]').click()`);
+ await until(()=>evaluate(`document.querySelectorAll('.motif-detail-dialog[open] .motif-relation-overlay path').length===5`),'示例仅连接明确列出的组合边');
+ assert.equal(await evaluate(`document.querySelector('.motif-detail-dialog[open] [data-motif-total]').textContent==='8'&&document.querySelector('.motif-detail-dialog[open] [data-status-count=certified]').textContent==='5'&&document.querySelector('.motif-detail-dialog[open]').textContent.includes('非工作区结果')`),true);
+ assert.equal(await evaluate(`document.querySelector('#motif-summary .reuse strong').textContent==='1'&&document.querySelector('[data-summary-card=distribution] [data-motif-total]').textContent==='${fixture.motifTotal}'`),true,'示例不污染鱼缸和另一种卡片');
+ await captureWorkspace('motif-structure-detail.png');
+ await evaluate(`document.body.setAttribute('data-ds-dark-theme','')`);await captureWorkspace('motif-structure-dark.png');
+ await evaluate(`document.body.removeAttribute('data-ds-dark-theme');document.querySelector('.motif-detail-dialog[open]').close();document.querySelector('[data-motif-expand=distribution]').click();document.querySelector('.motif-detail-dialog[open] [data-motif-example=distribution]').click()`);
+ assert.equal(await evaluate(`document.querySelectorAll('.motif-detail-dialog[open] .motif-unit').length===8&&!document.querySelector('.motif-detail-dialog[open] .motif-relation-overlay')`),true,'B独立分布，每个单元一个Motif，不强制连线');
+ await captureWorkspace('motif-distribution-detail.png');
+ await evaluate(`document.querySelector('.motif-detail-dialog[open] [data-motif-example=distribution]').click();document.querySelector('.motif-detail-dialog[open]').close();document.querySelector('[data-motif-expand=hierarchy]').click();document.querySelector('.motif-detail-dialog[open] [data-motif-example=hierarchy]').click();document.querySelector('.motif-detail-dialog[open]').close()`);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('#motif-summary [data-motif-total]')].map(x=>x.textContent)`),[String(fixture.motifTotal),String(fixture.motifTotal)]);
+ check('三种详情居中放大，鱼缸支持实际节点交互，A/B数量一致且示例隔离，右侧任务栏保持原用途');
+ await evaluate(`document.querySelector('section[aria-label="空工作区"] .workspace-more').click();document.querySelector('[data-action=workspace-home]').click()`);
+ assert.deepEqual(await evaluate(`[...document.querySelectorAll('#motif-summary [data-motif-total]')].map(x=>x.textContent)`),[String(fixture.motifTotal),String(fixture.motifTotal)]);
+ await evaluate(`document.querySelector('section[aria-label="诊断工作区"] .workspace-more').click();document.querySelector('[data-action=workspace-home]').click();document.querySelector('[data-motif-expand=distribution]').click()`);
+ await evaluate(`{const s=document.querySelector('.motif-detail-dialog[open] [data-pool-filter=scene]');s.value='ppt';s.dispatchEvent(new Event('change'));}`);
+ assert.equal(await evaluate(`document.querySelector('.motif-detail-dialog[open] [data-motif-total]').textContent`),'2');
+ assert.equal(await evaluate(`document.querySelector('[data-summary-card=distribution] [data-motif-total]').textContent`),String(fixture.motifTotal),'筛选详情不改变总库卡片');
+ assert.equal(await evaluate(`document.querySelector('.motif-detail-dialog[open]').innerText.split(/\\s+/).includes('null')`),false,'空值不显示成文字');
+ await captureWorkspace('motif-pool-filtered.png');
+ await evaluate(`document.querySelector('.motif-detail-dialog[open]').close()`);
+ check('同一Motif跨工作区去重，总量不随切换变化，详情可以按场景筛选');
+
+
+ assert.equal(await evaluate(`getComputedStyle(document.querySelector('.conversation[data-page=workspace-home] .composer')).borderRadius==='22px'&&getComputedStyle(document.querySelector('.run-step-mark')).borderRadius==='1px'&&getComputedStyle(document.querySelector('.workspace-inspector-card')).boxShadow==='none'`),true,'首页圆角输入框保留任务步骤与右栏布局');
+ const railHeights=await evaluate(`(()=>{const left=document.querySelector('.sidebar').getBoundingClientRect(),right=document.getElementById('workspace-inspector').getBoundingClientRect(),card=document.querySelector('.workspace-inspector-card').getBoundingClientRect();return {leftTop:left.top,leftHeight:left.height,rightTop:right.top,rightHeight:right.height,cardTop:card.top,cardHeight:card.height}})()`);
+ assert.ok(Math.abs(railHeights.leftTop-railHeights.rightTop)<2&&Math.abs(railHeights.leftHeight-railHeights.rightHeight)<2,'Sidebars must share the same top and height');
+ assert.ok(Math.abs(railHeights.cardTop-railHeights.rightTop)<2&&railHeights.cardHeight>=railHeights.rightHeight-2,'Inspector content must fill its rail');
  assert.equal(await evaluate(`document.querySelector('.run-plan-progress progress').value===2&&document.querySelector('.run-plan-progress progress').max===3`),true);
  await evaluate(`document.querySelector('.run-task-card>summary').click();fetch('/api/fixture/task-progress',{method:'POST'})`);
  await until(()=>evaluate(`document.querySelector('#workspace-inspector').textContent.includes('2.4s')`),'首页定时读取任务进度');
  assert.equal(await evaluate(`document.querySelector('.run-task-card').open`),false);
  await evaluate(`document.querySelector('.run-task-card>summary').click()`);
  assert.equal(await evaluate(`document.getElementById('workspace-inspector').textContent.includes('另一工作区')`),false);
- await evaluate(`[...document.querySelectorAll('#workspace-inspector button')].find(b=>b.textContent.includes('评估页')).click()`);
+ await evaluate(`[...document.querySelectorAll('#workspace-inspector button')].find(b=>b.textContent.includes('核对任务用量')).click()`);
  assert.equal(await evaluate(`document.querySelector('.motif-workspace [role=tab][aria-selected=true]').textContent`),'评估');
  await motifTab('运行');
  await until(()=>evaluate(`document.getElementById('toast').hidden`),'首页提示自然收起');
@@ -310,17 +416,40 @@ app.whenReady().then(async()=>{
  await desktop.workspace.webContents.capturePage();await new Promise(done=>setTimeout(done,200));
  await captureSummary('motif-summary-collapsed.png');
  await evaluate(`document.querySelector('[aria-label="展开演化摘要"]').click()`);
- await evaluate(`document.querySelector('#motif-summary .motif-evolution-card').click()`);
- await until(()=>evaluate(`document.querySelector('.motif-workspace [role=tab][aria-selected=true]').textContent==='演化'`),'摘要卡片打开工作区演化');
+ await evaluate(`document.querySelector('#motif-summary [data-motif-expand=aquarium]').click();document.querySelector('.motif-detail-dialog[open]').close()`);
  await motifTab('演化');assert.equal(await evaluate(`document.querySelectorAll('.motif-workspace .motif-event').length`),4);
  await motifTab('评估');assert.equal(await evaluate(`document.querySelector('.motif-workspace').textContent.includes('待提供可比基线')`),true);
  assert.equal(await evaluate(`document.querySelector('.motif-workspace').textContent.includes('USD 0.183263')`),true);
+ await until(()=>evaluate(`document.querySelector('.motif-workspace').textContent.includes('最近对照的原始用量')&&document.querySelector('.motif-workspace').textContent.includes('161')`),'原对照接口完成后呈现实际两侧用量');
  await motifTab('版本');assert.equal(await evaluate(`document.querySelector('.motif-workspace').textContent.includes('历史、版本差异和回滚记录待接入')`),true);
+ await evaluate(`{const picker=document.querySelector('select[aria-label="选择 Motif 数据来源"]');picker.value='runtime:ppt';picker.dispatchEvent(new Event('change'));}`);
+ assert.equal(await evaluate(`document.querySelector('.motif-workspace').textContent.includes('runtime_catalog_compatibility')`),false,'只投影版本证据，不暴露整份原始报告');
+ assert.equal(await evaluate(`document.querySelector('.motif-workspace').textContent.includes('兼容来源记录')`),true);
+ await evaluate(`{const picker=document.querySelector('select[aria-label="选择 Motif 数据来源"]');picker.value='workspace';picker.dispatchEvent(new Event('change'));}`);
  await evaluate(`fetch('/api/fixture/motif-update',{method:'POST'}).then(()=>document.dispatchEvent(new Event('visibilitychange')))`);
  await until(()=>evaluate(`document.querySelector('.motif-workspace').textContent.includes('更新诊断')`),'证据更新自动进入当前视图');
  await evaluate(`document.getElementById('motif-nav').click()`);
- await until(()=>evaluate(`!!document.querySelector('#motif-library .motif-item')`),'全局库显示同一份后端证据');
+ await until(()=>evaluate(`document.querySelector('#motif-library .motif-pool-library [data-motif-total]')?.textContent==='${fixture.motifTotal}'`),'全局库默认显示账号去重总库');
  assert.equal(await evaluate(`document.querySelector('.conversation').hidden`),true);
+ const runtimeSource=label=>evaluate(`[...document.querySelectorAll('#motif-library .motif-scope-picker button')].find(b=>b.textContent.includes('${label}')).click()`);
+ await runtimeSource('服务端场景库 · PPT');
+ await until(()=>evaluate(`document.querySelectorAll('#motif-library .motif-item').length===2`),'实际PPT注册库进入前端');
+ assert.equal(await evaluate(`document.getElementById('motif-library').textContent.includes('当前服务已准入')`),true);
+ assert.equal(await evaluate(`[...document.querySelectorAll('#motif-library .motif-stat')].find(row=>row.textContent.includes('实际复用')).querySelector('strong').textContent`),'—');
+ await evaluate(`fetch('/api/fixture/runtime-catalog-fail',{method:'POST'}).then(()=>document.dispatchEvent(new Event('visibilitychange')))`);
+ await until(()=>evaluate(`document.getElementById('motif-library').textContent.includes('场景库接口暂不可用')`),'场景库接口失败明确显示并保留带警告的旧数据');
+ assert.equal(await evaluate(`document.querySelectorAll('#motif-library .motif-item').length`),2);
+ await evaluate(`fetch('/api/fixture/runtime-catalog-fail',{method:'POST'}).then(()=>document.dispatchEvent(new Event('visibilitychange')))`);
+ await until(()=>evaluate(`!document.getElementById('motif-library').textContent.includes('场景库接口暂不可用')`),'目录接口恢复后清除过期警告');
+ await captureWorkspace('registered-motif-library.png');
+ await runtimeSource('服务端场景库 · 论文核验');
+ assert.equal(await evaluate(`document.querySelectorAll('#motif-library .motif-item').length`),1);
+ await runtimeSource('服务端场景库 · 数据分析');
+ assert.equal(await evaluate(`document.querySelectorAll('#motif-library .motif-item').length`),10);
+ assert.equal(await evaluate(`document.getElementById('motif-library').textContent.includes('旧格式已登记')`),true);
+ assert.equal(await evaluate(`[...document.querySelector('#motif-library .motif-content').childNodes].some(row=>row.nodeType===3&&row.textContent==='null')`),false);
+ await evaluate(`[...document.querySelectorAll('#motif-library .motif-scope-picker button')].find(b=>b.textContent==='诊断工作区').click()`);
+ check(fixture.useCatalogFixture?'PPT/Paper/Data 固定目录夹具通过后端协议进入前端':'PPT/Paper/Data 注册库通过后端协议进入前端，旧回执库独立标识');
  await evaluate(`[...document.querySelectorAll('#motif-library button')].find(b=>b.textContent==='公开验收样例').click()`);
  await until(()=>evaluate(`document.getElementById('motif-library').textContent.includes('与当前账号及工作区无关联')`),'公开样例标识');
  await evaluate(`[...document.querySelectorAll('#motif-library button')].find(b=>b.textContent==='返回账户数据').click()`);
@@ -353,7 +482,14 @@ app.whenReady().then(async()=>{
    const source=join(fixture.output,'本机源文件夹'),replacement=join(fixture.output,'更换后的文件夹');
    mkdirSync(source);
    mkdirSync(replacement);
-   const originalPicker=dialog.showOpenDialog;
+   const originalPicker=dialog.showOpenDialog,originalNotice=dialog.showMessageBox;
+   let privacyNotices=0;
+   dialog.showMessageBox=async (parent, options)=>{
+     if(options?.title!=='本机任务的数据处理')return originalNotice(parent,options);
+     assert.match(options.detail,/HTTPS/);
+     privacyNotices++;
+     return {response:0,checkboxChecked:false};
+   };
    let selected=source;
    dialog.showOpenDialog=async()=>({canceled:false,filePaths:[selected]});
    const localRow='[data-local-workspace-id]';
@@ -412,6 +548,7 @@ app.whenReady().then(async()=>{
      if (require('node:fs').existsSync(join(__dirname,'../runtime-bundle/local-worker.mjs'))) {
        await evaluate(`document.getElementById('prompt').value='/data 本机输入框诊断';document.getElementById('composer').requestSubmit()`);
        await until(()=>evaluate(`document.getElementById('history').textContent.includes('当前服务器尚未开放本机模型试用')`),'本机输入框调用模型授权，不触发云端会话发送');
+       assert.equal(privacyNotices,1);
      }
      await desktop.openLocalWorkspace();
      await until(()=>evaluate(`document.querySelector('.local-workspace-home h2')?.textContent==='空工作区'`),'打开已绑定的目录返回原工作区');
@@ -421,7 +558,7 @@ app.whenReady().then(async()=>{
      await until(()=>evaluate(`!document.querySelector('dialog')&&!document.querySelector('.workspace-home .local-folder-card')`),'云端工作区解除文件夹绑定');
      assert.deepEqual(registry(),[]);
      check('已有工作区绑定后复用本机输入框，解除后返回云端首页');
-   }finally{dialog.showOpenDialog=originalPicker;}
+   }finally{dialog.showOpenDialog=originalPicker;dialog.showMessageBox=originalNotice;}
  }
  if(fixture.privacy){
   const openPrivacy=async()=>{
@@ -469,7 +606,10 @@ app.whenReady().then(async()=>{
  }
  await evaluate(`document.getElementById('motif-nav').click()`);
  await until(()=>evaluate(`!!document.querySelector('#motif-library .motif-item')`),'账户证据可见');
+ await evaluate(`document.querySelector('[data-motif-expand=hierarchy]').click()`);
+ assert.equal(await evaluate(`!!document.querySelector('.motif-detail-dialog[open]')`),true);
  await evaluate(`fetch('/api/fixture/motif-logout',{method:'POST'}).then(()=>document.dispatchEvent(new Event('visibilitychange')))`);
+ await until(()=>evaluate(`!document.querySelector('.motif-detail-dialog[open]')`),'认证失效关闭放大详情窗');
  await until(()=>evaluate(`!document.querySelector('#motif-library .motif-item')&&document.querySelector('#motif-library').textContent.includes('请重新登录')`),'认证失效立即清除旧证据');
  assert.equal(await evaluate(`document.getElementById('workspace-inspector').hidden&&!document.getElementById('workspace-inspector').textContent`),true);
  check('认证失效清除只读证据，不保留旧账号的能力详情');

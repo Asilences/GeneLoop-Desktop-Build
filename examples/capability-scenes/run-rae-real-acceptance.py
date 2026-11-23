@@ -17,11 +17,11 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.adapters.capability_contract import validate_capability_snapshot
-from src.adapters.capability_construction_history import amount
-from src.adapters.capability_improvement import read, save, evidence, validate, discover, run_improvement
-from src.adapters.capability_scene import reference
-from src.adapters.capability_proposal import MODEL, MAX_TOKENS
+from src.capability.graph.capability_contract import validate_capability_snapshot
+from src.rsi.learning.capability_construction_history import amount
+from src.rsi.learning.capability_improvement import read, save, evidence, validate, discover, run_improvement
+from src.adapters.harness.capability.capability_scene import reference
+from src.adapters.harness.capability.capability_proposal import MODEL, MAX_TOKENS
 from scenarios.paper_proofreading.frontier.adapter import FrontierAdapter
 from scenarios.paper_proofreading.frontier.budget import FrontierGate
 
@@ -169,7 +169,7 @@ def prepare(source, out, budget, *, observe_builder=False):
 
 
 def collect_attempts(plan, snapshot):
-    from src.adapters.capability_contract import capability_ref
+    from src.capability.graph.capability_contract import capability_ref
     roots = [capability_ref(cap) for cap in snapshot['capabilities'] if cap['implementation']['kind'] == 'composition']
     rows = []
     for folder in sorted(Path(plan['output']).glob('**/attempt-*')):

@@ -6,10 +6,10 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from src.adapters.capability_contract import capability_digest
-from src.adapters.capability_evolution_agent import restore_regions, validate_candidate
-from src.adapters.capability_feedback import file_ref, verify
-from src.adapters.capability_investigation import Investigation
+from src.capability.graph.capability_contract import capability_digest
+from src.rsi.evolution.capability_evolution_agent import restore_regions, validate_candidate
+from src.rsi.feedback.capability_feedback import file_ref, verify
+from src.rsi.evolution.capability_investigation import Investigation
 from tests.test_capability_feedback import fixture
 
 
@@ -135,7 +135,7 @@ def test_repeated_development_exposure_is_idempotent_and_does_not_mask_repairs(t
 
 
 def test_continuation_cannot_silently_drop_capability_refs_used_by_earlier_experience(tmp_path, data):
-    from src.adapters.capability_contract import create_capability_snapshot
+    from src.capability.graph.capability_contract import create_capability_snapshot
     service = make(tmp_path, data)
     with pytest.raises(ValueError, match='capability_not_visible'):
         service.continue_with(tmp_path / 'lost-C',

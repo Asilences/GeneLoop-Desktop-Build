@@ -1,7 +1,7 @@
 """No model calls. Unknown/mixed failures are never successful contrasts."""
 import json
-from src.adapters.negative_outcome import negative_outcome
-from src.adapters.script_negative_compiler import collect_negative,compile_negative
+from src.motif_core.trajectory.negative_outcome import negative_outcome
+from src.motif_core.offline.compilation.script_negative_compiler import collect_negative,compile_negative
 
 def cases():
     return [None,{}, {'exported':False},{'exported':True},{'exported':False,'done':True},

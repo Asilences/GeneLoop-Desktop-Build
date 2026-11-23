@@ -2,36 +2,38 @@ name: Desktop native macOS checks
 on:
   workflow_dispatch:
     inputs:
-      target:
-        type: choice
-        options: [both, arm64, x64]
-        default: both
-      timeout:
-        type: number
-        default: 50
-      armTimeout:
-        type: number
-        default: 13
-      intelTimeout:
-        type: number
-        default: 27
       packageMode:
         type: choice
-        options: [installers, app, tools, delivery, dmg-delivery]
+        options: [installers, app, tools, complete-tools, cli-only, delivery, dmg-delivery]
         default: installers
-concurrency:
-  group: private-macos-checks
-  cancel-in-progress: false
+  push:
+    branches: ['codex/desktop-local-runtime']
+    paths:
+      - 'apps/desktop/**'
+      - 'scenarios/ppt_master/**'
+      - '.github/workflows/desktop-native.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'scenarios/ppt_master/**'
+      - '.github/workflows/desktop-native.yml'
 permissions:
   contents: read
 jobs:
   macos:
+    # Private repositories opt in manually so a review PR does not spend macOS runner minutes.
+    if: ${{ (!github.event.repository.private || github.event_name == 'workflow_dispatch') && inputs.packageMode != 'cli-only' }}
     name: macOS ${{ matrix.arch }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.target == 'arm64' && '{"include":[{"os":"macos-15","arch":"arm64"}]}' || inputs.target == 'x64' && '{"include":[{"os":"macos-15-intel","arch":"x64"}]}' || '{"include":[{"os":"macos-15","arch":"arm64"},{"os":"macos-15-intel","arch":"x64"}]}') }}
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ fromJSON(matrix.arch == 'x64' && inputs.intelTimeout || inputs.armTimeout) }}
+    timeout-minutes: 60
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     defaults:
@@ -50,8 +52,11 @@ jobs:
           python-version: '3.12'
       - run: node -e "if(process.arch !== '${{ matrix.arch }}')process.exit(1)"
       - run: npm ci
-      - run: npm run build && npm run check
+      - run: npm run build
+      - run: npm run check
+        if: ${{ inputs.packageMode != 'complete-tools' }}
       - name: Native file permission checks (no model)
+        if: ${{ inputs.packageMode != 'complete-tools' }}
         run: npm run smoke:native
       - name: Prepare pinned offline tools
         id: tools
@@ -67,23 +72,23 @@ jobs:
           node scripts/check-native-code.mjs
           desktop-tools-bundle/python/bin/geneloop-python scripts/check-native-ocr.py desktop-tools-bundle
       - name: Native Remotion render and full video decode (no model)
-        if: ${{ inputs.packageMode != 'tools' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ inputs.packageMode != 'complete-tools' && inputs.packageMode != 'app' && inputs.packageMode != 'tools' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: npm run runtime:stage && npm run smoke:remotion
       - name: Native PPT template and LibreOffice PDF export (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'complete-tools' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: npm run smoke:ppt
       - name: Native document, table, paper and archive tools (no model)
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'complete-tools' && inputs.packageMode != 'app' && inputs.packageMode != 'delivery' && inputs.packageMode != 'dmg-delivery' }}
         run: node scripts/check-native-scenes.mjs
       - name: Credential scrubbing and cancellation of descendants
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: npm run runtime:stage && node scripts/check-native-process.mjs
       - name: Package on target architecture
         id: package
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
-        run: ${{ (inputs.packageMode == 'app' || inputs.packageMode == 'delivery' || inputs.packageMode == 'dmg-delivery') && 'npm run pack' || 'npm run dist' }}
+        run: ${{ (inputs.packageMode == 'app' || inputs.packageMode == 'complete-tools' || inputs.packageMode == 'delivery' || inputs.packageMode == 'dmg-delivery') && 'npm run pack' || 'npm run dist' }}
       - name: Verify ASAR runtime in packaged app
-        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: |
           export ELECTRON_RUN_AS_NODE=1
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
@@ -92,7 +97,7 @@ jobs:
           export GENELOOP_NATIVE_TOOLS="$PWD/$APP/Contents/Resources/geneloop-tools"
           "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-remotion.mjs
       - name: Verify ASAR PPT in packaged app
-        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: |
           export ELECTRON_RUN_AS_NODE=1
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
@@ -104,15 +109,23 @@ jobs:
           elif [ '${{ inputs.packageMode }}' = 'delivery' ]; then
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-workflows.mjs
           else
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-workflows.mjs
+            "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-common.mjs
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-ppt.mjs
             "$APP/Contents/MacOS/GeneLoop Desktop" scripts/check-native-scenes.mjs
           fi
       - name: Packaged DSH Agent start, tools and cancellation (no model)
-        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode != 'complete-tools' }}
         run: |
           APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
           test -n "$APP"
           node scripts/probe-local-runtime.mjs --installed "$APP"
+      - name: One compact offline check for completed native tools
+        if: ${{ !cancelled() && steps.package.outcome == 'success' && inputs.packageMode == 'complete-tools' }}
+        run: |
+          APP=$(find release -maxdepth 3 -name 'GeneLoop Desktop.app' -type d -print -quit)
+          test -n "$APP"
+          "$APP/Contents/Resources/geneloop-tools/python/bin/geneloop-python" -B scripts/check-native-extras.py "$APP/Contents/Resources/geneloop-tools"
       - name: Create and mount drag-to-Applications DMG
         if: ${{ success() && inputs.packageMode == 'dmg-delivery' }}
         run: |
@@ -154,3 +167,19 @@ jobs:
             apps/desktop/release/SHA256SUMS-*.txt
           retention-days: 1
           compression-level: 0
+  cli:
+    if: ${{ inputs.packageMode == 'cli-only' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install mammoth==1.13.0 markdownify==1.2.3 lxml==6.1.3
+      - run: python -B apps/desktop/scripts/prepare-native-cli-fixture.py
+    # No package build, model API call, artifact upload or paid runner.

@@ -3,7 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import pytest
-from src.adapters.trace_tool_evidence import (SourceReplay, digest, trace_run,
+from src.motif_core.trajectory.trace_tool_evidence import (SourceReplay, digest, trace_run,
     project_inputs, stdout_match_kind, bounded_read)
 
 SOURCE = '''import json

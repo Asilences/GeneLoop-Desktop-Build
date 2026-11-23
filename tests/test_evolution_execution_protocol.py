@@ -4,11 +4,11 @@ import json
 
 import pytest
 
-from src.adapters.capability_feedback import file_ref
-from src.adapters.capability_improvement import save
-from src.adapters.capability_investigation import Investigation
-from src.adapters.capability_evolution_investigation import run_investigation
-from src.adapters.rsi_quality import compare_research_outcomes
+from src.rsi.feedback.capability_feedback import file_ref
+from src.rsi.learning.capability_improvement import save
+from src.rsi.evolution.capability_investigation import Investigation
+from src.rsi.evolution.capability_evolution_investigation import run_investigation
+from src.rsi.feedback.rsi_quality import compare_research_outcomes
 from tests.test_capability_investigation import data, inspect, make, put
 from tests.test_capability_evolution_investigation import candidate
 
@@ -42,7 +42,7 @@ def test_t1_shared_source_family_does_not_increase_independence(tmp_path, data):
 
 
 def file_ref_value(reference):
-    from src.adapters.capability_feedback import verify
+    from src.rsi.feedback.capability_feedback import verify
     return verify(reference)
 
 

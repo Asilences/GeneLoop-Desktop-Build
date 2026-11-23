@@ -1,0 +1,8 @@
+{
+  "baseline_difference_cases": 5,
+  "raw_gitleaks_hits": 5,
+  "decoded_batch_gitleaks_hits": 5,
+  "module_rejected": 5,
+  "source": "same private five-file diagnostic; not population estimate",
+  "helper_sha256": "1404429285784baae03e5d3c4dbd2ffc9e526ea7b2c48592399a8cebbe800cf3"
+}

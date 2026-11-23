@@ -15,18 +15,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.adapters.capability_contract import capability_digest, capability_ref, validate_capability_snapshot
-from src.adapters.capability_evolution import evolve_abstraction, validate_evolution_request
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref, verify
-from src.adapters.capability_improvement import save, validate
-from src.adapters.capability_motif_learning import _checked, learn_capability_motifs
+from src.capability.graph.capability_contract import capability_digest, capability_ref, validate_capability_snapshot
+from src.rsi.evolution.capability_evolution import evolve_abstraction, validate_evolution_request
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref, verify
+from src.rsi.learning.capability_improvement import save, validate
+from src.rsi.learning.capability_motif_learning import _checked, learn_capability_motifs
 
 SOURCES = (
     'scripts/learn-recursive-capabilities.py',
-    'src/adapters/capability_motif_learning.py', 'src/adapters/capability_evolution.py',
-    'src/adapters/capability_feedback.py', 'src/adapters/capability_builder.py',
-    'src/adapters/capability_contract.py', 'src/adapters/dsh_trajectory.py',
-    'src/motif_core/offline/trace_compiler.py', 'src/motif_core/offline/motif_miner.py',
+    'src/rsi/learning/capability_motif_learning.py', 'src/rsi/evolution/capability_evolution.py',
+    'src/rsi/feedback/capability_feedback.py', 'src/capability/builder/capability_builder.py',
+    'src/capability/graph/capability_contract.py', 'src/adapters/harness/dsh_trajectory.py',
+    'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+    'src/motif_core/offline/compilation/trace_compiler.py', 'src/motif_core/offline/mining/motif_miner.py',
     'schemas/capability-v1.schema.json',
 )
 

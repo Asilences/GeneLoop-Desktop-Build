@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 const options={skip:!process.features?.typescript};
 test('RSI defaults On, mode is independent, and unavailable Execute is guarded',options,async()=>{
- const {initialSelection,changeSelection,sceneCatalog}=await import('../src/adapters/harless_settings.ts');
+ const {initialSelection,changeSelection,sceneCatalog}=await import('../src/adapters/web/account/harless_settings.ts');
  const scenes=sceneCatalog([{id:'example',label:'示例',preset:'sss-task',allowed_tools:['mcp__demo__read']}]);
  let state=initialSelection('example','shadow');
  const change=patch=>state=changeSelection(state,patch,scenes,()=>null);
@@ -20,12 +20,12 @@ test('RSI defaults On, mode is independent, and unavailable Execute is guarded',
  assert.throws(()=>change({scene:'../../private'}),/未登记/);assert.throws(()=>change({manifest:'private'}),/只支持/);
 });
 test('Scene catalog rejects duplicate identity, arbitrary presets and invalid tool scope',options,async()=>{
- const {sceneCatalog}=await import('../src/adapters/harless_settings.ts');
+ const {sceneCatalog}=await import('../src/adapters/web/account/harless_settings.ts');
  const scene={id:'example',label:'示例',preset:'sss-task',allowed_tools:['mcp__demo__read']};
  for(const rows of [[scene,scene],[{...scene,preset:'root'}],[{...scene,allowed_tools:['bash']}],[{...scene,id:'../../'}]])assert.throws(()=>sceneCatalog(rows));
 });
 test('PPT binding uses approved current versions and never guesses a source handle', {skip:!process.features?.typescript}, async()=>{
-  const {bindUploadedPptTask,structuralOnlySimilarity}=await import('../src/adapters/harless_rsi_binding.ts');
+  const {bindUploadedPptTask,structuralOnlySimilarity}=await import('../src/adapters/web/learning/harless_rsi_binding.ts');
   const root=realpathSync(mkdtempSync(join(tmpdir(),'ppt-binding-')));mkdirSync(join(root,'inputs'));
   try{
     const path=join(root,'inputs','paper.pdf'),data=Buffer.from('approved PDF bytes');writeFileSync(path,data);
@@ -45,14 +45,6 @@ test('PPT binding uses approved current versions and never guesses a source hand
     assert.notEqual(expectedDeck,version);assert.deepEqual(expanded.bindings,{});
     assert.throws(()=>bindUploadedPptTask(root,inputs,request,{version_fields:{...pages.version_fields,mcp__ppt__render_deck:'input_version'}}),/binding_tools_unsupported/);
     assert.throws(()=>bindUploadedPptTask(root,inputs,request,{version_fields:{...manifest.version_fields,mcp__ppt__pin_deck_pages:'version_sha256'}}),/binding_tools_unsupported/);
-    const {parseStructuredTask}=await import('../src/motif_core/online_skill_runtime.mjs');
-    const certified=JSON.parse(readFileSync(new URL('../motif-libraries/ppt/online-manifest.json',import.meta.url)));
-    for(const instruction of ['上下文\n当前请求','长请求'.repeat(800)]){
-      job.instruction=instruction;writeFileSync(join(root,'job.json'),JSON.stringify(job));
-      const actual=bindUploadedPptTask(root,inputs,request,certified);
-      assert.doesNotThrow(()=>parseStructuredTask(actual,certified));
-      assert.equal(JSON.parse(readFileSync(join(root,'job.json'))).instruction,instruction,'full model request is never truncated');
-    }
     assert.throws(()=>bindUploadedPptTask(root,inputs,{...request,task_id:'foreign-task'},manifest),/job_scope/);
     writeFileSync(path,'changed bytes');
     assert.throws(()=>bindUploadedPptTask(root,inputs,request,manifest),/source_version/);
@@ -60,7 +52,7 @@ test('PPT binding uses approved current versions and never guesses a source hand
   }finally{rmSync(root,{recursive:true,force:true});}
 });
 test('paper upload binding freezes admitted bytes and an observed read continuation', {skip:!process.features?.typescript}, async()=>{
-  const {bindApprovedUploadedReadTask}=await import('../src/adapters/harless_rsi_binding.ts');
+  const {bindApprovedUploadedReadTask}=await import('../src/adapters/web/learning/harless_rsi_binding.ts');
   const root=realpathSync(mkdtempSync(join(tmpdir(),'paper-binding-')));mkdirSync(join(root,'inputs'));
   try{
     const data=Buffer.from('\\documentclass{article}');
@@ -95,7 +87,7 @@ test('paper upload binding freezes admitted bytes and an observed read continuat
     const bounded=bindApprovedUploadedReadTask(root,inputs,longRequest,full,'paper-proofreading');
     assert.ok(bounded.intent.length<=500 && !/[\x00-\x1f]/.test(bounded.intent));
     assert.equal(longRequest.content[0].text,longText,'the model request remains complete');
-    const {parseStructuredTask}=await import('../src/motif_core/online_skill_runtime.mjs');
+    const {parseStructuredTask}=await import('../src/motif_core/runtime/online_skill_runtime.mjs');
     const checked={...full,contracts:Object.fromEntries(Object.keys(full.version_fields).map(name=>
       [name,{observed_anchor:[pin,cite,local].includes(name)}]))};
     assert.doesNotThrow(()=>parseStructuredTask(bounded,checked));
@@ -108,7 +100,7 @@ test('paper upload binding freezes admitted bytes and an observed read continuat
   }finally{rmSync(root,{recursive:true,force:true});}
 });
 test('paper Motif binding admits seventeen approved uploads without a scene quota', {skip:!process.features?.typescript}, async()=>{
-  const {bindApprovedUploadedReadTask}=await import('../src/adapters/harless_rsi_binding.ts');
+  const {bindApprovedUploadedReadTask}=await import('../src/adapters/web/learning/harless_rsi_binding.ts');
   const root=realpathSync(mkdtempSync(join(tmpdir(),'paper-full-binding-')));mkdirSync(join(root,'inputs'));
   try{
     const pin='mcp__paper_checks__pin_paper_sources',read='mcp__paper_checks__read_pinned_paper_sources';

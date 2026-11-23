@@ -13,17 +13,17 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.adapters.capability_contract import validate_capability_snapshot
-from src.adapters.capability_feedback import CapabilityFeedback, file_ref, verify
-from src.adapters.capability_improvement import save
-from src.adapters.capability_evolution_agent import packet, model_view, run, strategy_handler
-from src.adapters.capability_decision_evidence import inspect_decision
+from src.capability.graph.capability_contract import validate_capability_snapshot
+from src.rsi.feedback.capability_feedback import CapabilityFeedback, file_ref, verify
+from src.rsi.learning.capability_improvement import save
+from src.rsi.evolution.capability_evolution_agent import packet, model_view, run, strategy_handler
+from src.adapters.web.learning.capability_decision_evidence import inspect_decision
 from scenarios.paper_proofreading.frontier.budget import FrontierGate
 
 
 def ingest_usage(entries, owner, feedback):
     """Feed verified task-policy observations into the original feedback store."""
-    from src.adapters.capability_strategy_usage import ingest_task_strategy_usage
+    from src.adapters.web.learning.capability_strategy_usage import ingest_task_strategy_usage
     results = []
     for entry in entries:
         # Rebuild original evidence before following its host-owned source path.
@@ -65,7 +65,7 @@ def execute(manifest_ref, output, *, call_model=False, budget_usd='3'):
         save(output / 'effective.json', {'manifest': manifest_ref, 'head_protocol': 'capability_strategy_v1',
              'model': 'deepseek-flash', 'reasoning_effort': 'off', 'max_tokens': 393216,
              'budget_usd': str(budget), 'max_requests': 1, 'cumulative_ledger_reset': False,
-             'code': [file_ref(Path(__file__)), file_ref(ROOT / 'src/adapters/capability_evolution_agent.py')]})
+             'code': [file_ref(Path(__file__)), file_ref(ROOT / 'src/rsi/evolution/capability_evolution_agent.py')]})
         report['packet'] = selection
         if selection['status'] != 'ready':
             report['status'] = selection['status']

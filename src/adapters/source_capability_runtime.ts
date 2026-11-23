@@ -8,10 +8,10 @@ import {randomUUID} from 'node:crypto';
 import {spawn,execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {capabilityDigest,capabilityIdentity,capabilityRef,createCapability,createCapabilitySnapshot,
- mapLegacyLibrary,validateCapabilitySnapshot,type CapabilityRef,type CapabilitySnapshot} from './capability_contract.ts';
-import {decodeSourceLibrary} from './source_program_runtime.ts';
-import {createCapabilityRuntime,type CapabilityBackend,type CapabilityCall} from './capability_runtime.ts';
-import {bytesSha256,rsiRecord,type AdmissionHost} from './rsi_protocol.ts';
+ mapLegacyLibrary,validateCapabilitySnapshot,type CapabilityRef,type CapabilitySnapshot} from '../capability/graph/capability_contract.ts';
+import {decodeSourceLibrary} from '../capability/runtime/source_program_runtime.ts';
+import {createCapabilityRuntime,type CapabilityBackend,type CapabilityCall} from '../capability/runtime/capability_runtime.ts';
+import {bytesSha256,rsiRecord,type AdmissionHost} from '../rsi/protocol/rsi_protocol.ts';
 
 const root=fileURLToPath(new URL('../..',import.meta.url));
 const worker=join(root,'scenarios/remotion_edit/structured/capability_worker.py');
@@ -60,8 +60,8 @@ export type SourceTaskManifest={
 };
 
 function executorDigest(){
- return capabilityDigest(['src/adapters/source_capability_runtime.ts','src/adapters/capability_runtime.ts',
-  'src/adapters/rsi_protocol.ts','src/adapters/source_program_runtime.ts','src/adapters/source_program_bridge.py',
+ return capabilityDigest(['src/adapters/source_capability_runtime.ts','src/capability/runtime/capability_runtime.ts',
+  'src/rsi/protocol/rsi_protocol.ts','src/capability/runtime/source_program_runtime.ts', 'src/capability/graph/source_program_contract.ts','src/adapters/source_program_bridge.py',
   'scripts/materialize-source-program.mjs','scenarios/remotion_edit/server.py',
   'scenarios/remotion_edit/structured/server.py','scenarios/remotion_edit/structured/program_server.py',
   'scenarios/remotion_edit/structured/capability_worker.py'].map(path=>({path,sha256:bytesSha256(readFileSync(join(root,path)))})));

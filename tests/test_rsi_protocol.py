@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.rsi_protocol import validate_record, validate_file, write_record, provider_ledger_record
+from src.rsi.protocol.rsi_protocol import validate_record, validate_file, write_record, provider_ledger_record
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = json.loads((ROOT / 'examples/rsi-protocol-v1/fixtures.json').read_text(encoding='utf-8'))

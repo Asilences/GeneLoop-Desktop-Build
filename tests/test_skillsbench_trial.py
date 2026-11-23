@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.adapters.skillsbench_trial import SkillsBenchTrial, paired_tasks, parse_reward, task_manifest
+from benchmarks.evolution.skillsbench_trial import SkillsBenchTrial, paired_tasks, parse_reward, task_manifest
 
 
 def source(tmp_path, name='task'):

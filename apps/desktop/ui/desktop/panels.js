@@ -85,7 +85,11 @@ export function settingsPanel(context,initial='appearance'){
       if(!value.sessions.length)body.append(node('p',{},'暂无最近删除的对话。'));
       for(const row of value.sessions)body.append(node('div',{class:'settings-row'},node('span',{},row.title||'未命名对话'),button('恢复',guard(()=>context.restoreSession('restore',row.session_id)),'secondary')));
       if(value.sessions.length)body.append(button('清空最近删除',()=>{
-        const confirm=dialog('核对后永久清空',node('div',{},node('p',{},'以下对话清空后无法从应用访问或恢复。服务器底层留存策略保持不变。'),node('ul',{},...value.sessions.map(row=>node('li',{},row.title||'未命名对话')))),[button('确认清空',guard(async()=>{await post('/api/harless/session-trash',{action:'clear',revision:value.revision});confirm.close();await page('trash');}),'primary')]);
+        const confirm=dialog('核对后永久清空',node('div',{},node('p',{},'清空后立即撤销对话访问，并清理服务器上的会话历史和任务轨迹。仍由运行时持有的历史会在释放后重试。'),node('ul',{},...value.sessions.map(row=>node('li',{},row.title||'未命名对话')))),[button('确认清空',guard(async()=>{
+          const result=await post('/api/harless/session-trash',{action:'clear',revision:value.revision});
+          confirm.close();await page('trash');
+          if(result.native_pending)context.toast('对话访问已撤销，部分会话历史等待运行时释放后清理。');
+        }),'primary')]);
       },'secondary'));
     }else if(id==='account'){
       body.append(node('h3',{},'账户与安全'));

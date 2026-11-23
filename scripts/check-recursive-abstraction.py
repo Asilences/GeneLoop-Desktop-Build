@@ -36,8 +36,10 @@ def main():
         ['node', '--test', 'tests/test_capability_discharge.mjs'],
     ]
     files = [*python_tests, 'tests/test_capability_discharge.mjs',
-             'src/adapters/capability_motif_learning.py', 'src/adapters/capability_discharge.ts',
-             'src/adapters/capability_evolution.py', 'src/adapters/capability_builder_application.py']
+             'src/rsi/learning/capability_motif_learning.py', 'src/capability/runtime/capability_discharge.ts',
+             'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+             'src/motif_core/offline/mining/motif_miner.py',
+             'src/rsi/evolution/capability_evolution.py', 'src/rsi/learning/capability_builder_application.py']
     def git_value(*arguments):
         result = subprocess.run(['git', *arguments], cwd=ROOT, text=True, capture_output=True)
         return result.stdout.strip() if result.returncode == 0 else None

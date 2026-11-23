@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.adapters.paper_shadow_compiler import compile_paper_shadow
+from scenarios.paper_proofreading.learning.paper_shadow_compiler import compile_paper_shadow
 
 
 def main():

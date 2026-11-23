@@ -1,5 +1,5 @@
 /** Admission barrier only: the model still chooses all semantic tool arguments. */
-import {digest,observation} from '../motif_core/online_skill_runtime.mjs';
+import {digest,observation} from '../motif_core/runtime/online_skill_runtime.mjs';
 export function createTemporalBarrier(task:any,scope:any,audit:(v:any)=>void){
  const contract=task?.quality?.goal?.temporal,rows:any[]=[],handles=new Map<string,string>(),files=new Map<string,string>(),documents=new Map<string,string>();
  let yielded=false,released=false;

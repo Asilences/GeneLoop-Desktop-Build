@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scenarios/f
 from common import DATA,digest,save,sha,snapshot
 from recovery_tools import recovery_version
 from src.adapters.file_job_budget import job_command,FileJobBudget
-from src.adapters.file_scenario import prepare_scenario
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
 import importlib.util
 sp=importlib.util.spec_from_file_location('workflow_fixed_acceptance',ROOT/'scripts/validate-file-delivery.py');validator=importlib.util.module_from_spec(sp);sp.loader.exec_module(validator)
 

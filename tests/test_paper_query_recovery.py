@@ -1,7 +1,7 @@
 import json
 import pytest
 from src.adapters.paper_query_recovery import words,query_payload,validate_queries,recover_queries
-from src.adapters.native_motif_compiler import digest
+from src.motif_core.offline.compilation.trace.native_motif_compiler import digest
 
 
 def library():

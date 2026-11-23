@@ -2,6 +2,10 @@
 
 先看仓库根目录的 [README](../README.md) 和 [AGENTS.md](../AGENTS.md)。开发接口以 [interfaces.md](interfaces.md) 为准，协作约定见 [collaboration.md](collaboration.md)。
 
+公共脱敏的当前状态见[隐私交接](handoffs/rsi-data-privacy.md)；最新实现、已完成的隔离复测与实施后审计见[R4记录](experiments/privacy-benchmark-20261108-r4.md)。[R3全量基线](experiments/privacy-benchmark-20261108-r3.md)、[规则归因与现成识别器对照](experiments/privacy-diagnosis-20261108-r3.md)及历史失败保留，PR162仍为草稿，识别质量尚未验收。
+
+R3之后的[完整审计与调整实施方案](research/rsi/privacy-adjustment-plan-r4.md)记录入口缺陷、算法/模块分工、实施顺序和预冻结门槛；实现、候选退出和最终验收分别报告。
+
 | 目录 | 内容 |
 | --- | --- |
 | [product/](product/) | 网页、桌面、附件与文件管理的使用和设计说明 |

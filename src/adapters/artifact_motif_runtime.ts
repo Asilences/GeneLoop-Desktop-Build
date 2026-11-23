@@ -5,48 +5,79 @@ import {join, resolve, relative, isAbsolute, extname, posix, basename, dirname} 
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {commandArgv} from './geneloop_shell.ts';
-import {assertComponentSchema,validateComponentParameters,bindComponentConstants} from './ppt_component_schema.ts';
+import {assertComponentSchema,validateComponentParameters,bindComponentConstants} from './ppt/authoring/ppt_component_schema.ts';
 import {canonical} from './paper_rsi_program.ts';
-import {componentCacheKey,readComponentCache,saveComponentCache} from './ppt_component_cache.ts';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {componentCacheKey,readComponentCache,saveComponentCache} from './ppt/runtime/ppt_component_cache.ts';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
+import {bundledPptRoot,pptMasterInstallation,pptResourceProvenance} from './geneloop_skill_installation.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
-export const artifactLocks=['src/adapters/artifact_motif_runtime.ts','src/adapters/artifact_motif_shell.ts','src/adapters/artifact_motif_web.ts','src/adapters/artifact_motif_trace.ts','src/adapters/artifact_motif_compiler.py','src/adapters/geneloop_shell.ts','src/adapters/geneloop_skill_installation.mjs','src/adapters/geneloop_delegation.ts','src/adapters/harless_web_client/index.mjs','src/adapters/dsh_web_tasks.ts','package-lock.json','scripts/learn-artifact-motifs.py','scripts/certify-artifact-motifs.mjs','scripts/run-artifact-motif.mjs','scripts/artifact-motif-web.py'];
+export const artifactLocks=['src/adapters/artifact_motif_runtime.ts','src/adapters/artifact_motif_shell.ts','src/adapters/artifact_motif_web.ts','src/adapters/artifact_motif_trace.ts','src/adapters/artifact_motif_compiler.py','src/adapters/geneloop_shell.ts','src/adapters/geneloop_skill_installation.mjs','src/adapters/geneloop_delegation.ts','src/adapters/web/client/index.mjs','src/adapters/web/dsh_web_tasks.ts','package-lock.json','scripts/learn-artifact-motifs.py','scripts/certify-artifact-motifs.mjs','scripts/run-artifact-motif.mjs','scripts/artifact-motif-web.py'];
 export const hash=(value:any)=>createHash('sha256').update(value).digest('hex');
-artifactLocks.push('src/adapters/ppt_program_learning.ts','src/adapters/ppt_program_learning.py',
- 'src/adapters/harless_ppt_learning.ts','scripts/learn-web-ppt-tasks.py','scripts/harness-web.py',
- 'src/adapters/ppt_program_broker.ts','src/adapters/geneloop_command_broker.ts','src/adapters/geneloop_command_client.mjs');
-artifactLocks.push('src/adapters/ppt_component_learning.py','src/adapters/ppt_component_render.py','src/adapters/ppt_component_literals.py',
- 'src/adapters/ppt_component_cache.ts','scripts/learn-ppt-components.py');
-artifactLocks.push('src/adapters/ppt_component_schema.ts');
-artifactLocks.push('src/adapters/ppt_component_equivalence.py');
+artifactLocks.push('src/adapters/ppt/runtime/ppt_program_learning.ts','src/adapters/ppt/learning/ppt_program_learning.py',
+ 'src/adapters/web/learning/harless_ppt_learning.ts','scripts/learn-web-ppt-tasks.py','scripts/harness-web.py',
+ 'src/adapters/ppt/runtime/ppt_program_broker.ts','src/adapters/geneloop_command_broker.ts','src/adapters/geneloop_command_client.mjs');
+artifactLocks.push('src/adapters/ppt/learning/ppt_component_learning.py','src/adapters/ppt/authoring/ppt_component_render.py','src/adapters/ppt/learning/ppt_component_literals.py',
+ 'src/adapters/ppt/runtime/ppt_component_cache.ts','scripts/learn-ppt-components.py');
+artifactLocks.push('src/adapters/ppt/authoring/ppt_component_schema.ts');
+artifactLocks.push('src/adapters/ppt/runtime/ppt_execution.ts','src/adapters/ppt/runtime/ppt_workflow_runtime.ts',
+ 'src/adapters/ppt/runtime/ppt_workflow_host.ts','src/adapters/ppt/learning/ppt_workflow_learning.py','scenarios/ppt_master/workflow-contracts.json');
+artifactLocks.push('src/adapters/ppt/learning/ppt_component_equivalence.py');
 artifactLocks.push('src/adapters/paper_rsi_program.ts');
 artifactLocks.push('src/adapters/source_program_compiler.py');
-artifactLocks.push('src/adapters/ppt_component_tool.ts','src/adapters/artifact_motif_transport.ts');
-artifactLocks.push('src/adapters/ppt_design_preflight.py','scenarios/ppt_master/design-profiles.json');
-artifactLocks.push('src/adapters/ppt_delivery_pipeline.ts','src/adapters/ppt_delivery_runner.py');
-artifactLocks.push('src/adapters/ppt_delivery_learning.py');
-artifactLocks.push('src/adapters/ppt_delivery_state.ts');
-artifactLocks.push('src/adapters/ppt_capability_broker.ts','src/adapters/artifact_capability_runtime.ts',
+artifactLocks.push('src/adapters/ppt/runtime/ppt_component_tool.ts','src/adapters/artifact_motif_transport.ts');
+artifactLocks.push('src/adapters/ppt/authoring/ppt_design_preflight.py','scenarios/ppt_master/design-profiles.json');
+artifactLocks.push('src/adapters/ppt/delivery/ppt_delivery_pipeline.ts','src/adapters/ppt/delivery/ppt_delivery_runner.py');
+artifactLocks.push('src/adapters/ppt/learning/ppt_delivery_learning.py');
+artifactLocks.push('src/adapters/ppt/delivery/ppt_delivery_state.ts');
+artifactLocks.push('src/adapters/ppt/runtime/ppt_capability_broker.ts','src/adapters/artifact_capability_runtime.ts',
  'scripts/run-artifact-capability.mjs');
 const inside=(base:string,path:string)=>{const r=relative(base,path);return !r.startsWith('..')&&!isAbsolute(r);};
 const contexts=new Map<string,any>();
+export function artifactRuntimePolicy(){
+ const path=join(root,'config/script-runtime-compatibility.json');
+ if(!existsSync(path))return {};
+ const policy=JSON.parse(readFileSync(path,'utf8'));
+ return policy.version===1?policy.artifact??{}:{};
+}
+function assertArtifactCodeLocks(locks:Record<string,string>){
+ let transitions:unknown;
+ for(const path of artifactLocks){
+  const current=hash(readFileSync(join(root,path))),recorded=locks?.[path];
+  if(recorded===current)continue;
+  transitions??=artifactRuntimePolicy().transitions;
+  if(!Array.isArray(transitions)||!transitions.some(row=>
+   (row.current_path??row.path)===path&&row.to_sha256===current&&
+   (row.path===path||recorded===undefined)&&locks?.[row.path]===row.from_sha256))
+   throw Error('artifact_code_changed');
+ }
+}
 export function identity(p:any){return Object.fromEntries(['version','source','inputs','dependencies','input_argument_indices','output_argument_index','argument_count','language','execution_policy'].map(k=>[k,p[k]]));}
-export function loadArtifactLibrary(path:string){
+export function loadArtifactLibrary(path:string,resources:{pptMasterRoot?:string;projectRoot?:string}={}){
  const library=JSON.parse(readFileSync(path,'utf8')), {digest:claimed,...body}=library;
  if(library.kind!=='witnessed_artifact_program_library'||library.version!==1||digest(body)!==claimed||!Array.isArray(library.programs)||library.programs.length>16)throw Error('invalid_artifact_library');
- if(artifactLocks.some(p=>library.code_locks?.[p]!==hash(readFileSync(join(root,p)))))throw Error('artifact_code_changed');
+ assertArtifactCodeLocks(library.code_locks);
  for(const p of library.programs){
+  const trial=library.scene==='ppt'&&p.component?.certification_mode==='functional_trial_v1';
   if(p.id!=='artifact_'+digest(identity(p)).slice(0,24)||p.source_sha256!==hash(p.source)||p.execution_policy!=='fresh_output_network_disabled_v1'||
-   p.certification?.passed!==true||p.certification.distinct_inputs<2||p.certification.source_equivalent!==true||p.certification.program_sha256!==digest(identity(p)))throw Error('uncertified_artifact_program');
-  if(p.dependencies?.ppt_master_package_sha256&&p.dependencies.ppt_master_package_sha256!==JSON.parse(readFileSync(join(root,'scenarios/ppt_master/skill-lock.json'),'utf8')).package_sha256)throw Error('artifact_public_dependency_changed');
+   p.certification?.passed!==true||p.certification.distinct_inputs<2||
+   (!trial&&p.certification.source_equivalent!==true)||
+   (trial&&(p.certification.validation_scope!=='functional_trial_v1'||p.certification.quality_deferred!==true))||
+   p.certification.program_sha256!==digest(identity(p)))throw Error('uncertified_artifact_program');
+  const legacy=p.dependencies?.ppt_master_package_sha256, scripts=p.dependencies?.ppt_resource_scripts_sha256;
+  if(legacy||scripts){
+   const project=resources.projectRoot??root;
+   const installed=pptMasterInstallation(resources.pptMasterRoot??bundledPptRoot(project),project);
+   if(legacy&&![pptResourceProvenance(project).source_package_sha256,installed?.sha256].includes(legacy)||
+      scripts&&scripts!==installed?.scriptsSha256)throw Error('artifact_public_dependency_changed');
+  }
   if(p.component){
    if(library.scene!=='ppt'||p.component.version!==1||p.component.render_mode!=='svg_png_v1'||
       p.component.cache_policy!=='bound_page_output_v1'||p.inputs.length!==1||p.inputs[0].format!=='json'||
       p.certification.component_source_equivalence?.passed!==true)throw Error('component_protocol_changed');
    assertComponentSchema(p.component.parameters_schema);
    const mode=p.component.certification_mode??'preserve';
-   if(!['preserve','font_repair_v1','readability_repair_v1'].includes(mode)||(p.certification.component_source_equivalence.mode??'preserve')!==mode)
+   if(!['preserve','font_repair_v1','readability_repair_v1','functional_trial_v1'].includes(mode)||(p.certification.component_source_equivalence.mode??'preserve')!==mode)
     throw Error('component_certification_mode_changed');
   }
  }
@@ -220,10 +251,10 @@ export function runArtifactProgram(job:any){
  const quote=(s:string)=>"'"+s.replaceAll("'","'\\''")+"'";
  let command=[process.env.SSS_PYTHON??'python3','-I','-B','/work/geneloop_cached_program.py',...argv].map(quote).join(' ');
  if(program.component?.render_mode==='svg_png_v1'){
-  writeFileSync(join(scratch,'geneloop_component_render.py'),readFileSync(new URL('./ppt_component_render.py',import.meta.url)),{mode:0o400,flag:'wx'});
-  writeFileSync(join(scratch,'ppt_design_preflight.py'),readFileSync(new URL('./ppt_design_preflight.py',import.meta.url)),{mode:0o400,flag:'wx'});
+  writeFileSync(join(scratch,'geneloop_component_render.py'),readFileSync(new URL('./ppt/authoring/ppt_component_render.py',import.meta.url)),{mode:0o400,flag:'wx'});
+  writeFileSync(join(scratch,'ppt_design_preflight.py'),readFileSync(new URL('./ppt/authoring/ppt_design_preflight.py',import.meta.url)),{mode:0o400,flag:'wx'});
   const rendering=[process.env.SSS_PYTHON??'python3','-I','-B','/work/geneloop_component_render.py',outputVirtual];
-  if(job.certification&&job.componentReferenceAllowDesignFindings)rendering.push('--reference-design-findings');
+  if(program.component.certification_mode==='functional_trial_v1'||job.certification&&job.componentReferenceAllowDesignFindings)rendering.push('--reference-design-findings');
   command+=' && '+rendering.map(quote).join(' ');
  }
  const layout={work:base,scratch,inputs,outputs:outputMount,temp};

@@ -8,7 +8,7 @@ from script_adaptation_study import frozen,ARMS
 from script_adaptation_learning import load_witness,RUNTIME_FILES
 from workflow_contract import verify_workflow
 from experiment import accounting
-from src.adapters.file_cost_gate import observed_peak_cost
+from src.adapters.deepseek_cost_gate import observed_peak_cost
 
 def audit(exp,partial=False):
     p=json.loads((exp/'protocol.json').read_text());frozen(exp,p,True)

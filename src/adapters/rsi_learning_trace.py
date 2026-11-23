@@ -8,14 +8,14 @@ import argparse
 import hashlib
 import json
 import stat
-from pathlib import Path
+from .filesystem_paths import Path
 
 from jsonschema import Draft202012Validator
 
-from .dsh_event_projection import is_original_tool_result
-from .dsh_trajectory import DshTrace, ToolRecord, extract_dsh_trace, infer_dsh_provenance
-from src.motif_core.offline.edge_compiler import argument_shape
-from .tool_contract_loader import parse_tool_contracts
+from src.adapters.harness.dsh_event_projection import is_original_tool_result
+from src.adapters.harness.dsh_trajectory import DshTrace, ToolRecord, extract_dsh_trace, infer_dsh_provenance
+from src.motif_core.offline.compilation.edge_compiler import argument_shape
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
 from .task_identity import load_trace_identity
 
 ROOT = Path(__file__).resolve().parents[2]

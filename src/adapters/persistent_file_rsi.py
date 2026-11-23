@@ -2,7 +2,7 @@
 from pathlib import Path
 import os
 from .continuous_rsi import ROOT,DATA,STATE_HOME,load_config,initialize,writer_lock
-from src.motif_core.offline.experience_registry import durable,read,sha
+from src.motif_core.reuse.experience_registry import durable,read,sha
 def default_config(real):
     name='daily-files-real-v2' if real else 'daily-files-mock-v2';file=STATE_HOME/(name+'.json')
     with writer_lock(STATE_HOME,'daily-profile'):
@@ -32,8 +32,10 @@ def status(config):
         from .process_state import process_exists
         alive=process_exists(worker['pid'])
     from .experience_library import summary
+    from .daily_decision_learning import summary as program_summary,enabled as programs_enabled
     return {'persistent':True,'provider_mode':cfg['provider_mode'],'learning_enabled':enabled,'library_generation':library['generation'],
       'experience_library':summary(root),
+      'decision_programs':{'enabled':programs_enabled(cfg),**program_summary(root)},
       'active_motifs':len(compatible),'registered_active_motifs':len(active),'version_invalid_motifs':len(active)-len(compatible),'disabled_motifs':sum(e['state']=='disabled' for e in library['entries']),
       'certification':jobs,'worker_running':alive,'recorded_tasks':len(pool),'estimated_cost_usd':sum(v.get('cost_usd',0) for v in pool.values()),
       'reserved_upper_usd':None if any(v['cap_usd'] is None for v in pool.values() if v['status']=='reserved') else sum(v['cap_usd'] for v in pool.values() if v['status']=='reserved'),'learning_cap_usd':cfg['learning_cap_usd'],

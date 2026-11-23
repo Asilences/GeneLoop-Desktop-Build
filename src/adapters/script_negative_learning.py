@@ -10,7 +10,7 @@ from pathlib import Path
 import subprocess
 
 from .script_description_learning import MeteredDescriptionModel, save
-from .script_negative_compiler import collect_negative, compile_negative, RUNTIME_FILES, digest, sha
+from src.motif_core.offline.compilation.script_negative_compiler import collect_negative, compile_negative, RUNTIME_FILES, digest, sha
 
 SYSTEM = """Generate cautious repair guidance for recurring structured tool failures.
 Return JSON only.

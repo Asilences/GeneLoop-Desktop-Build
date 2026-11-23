@@ -18,12 +18,11 @@ from pdf_tools import ROOT,digest,inventory,save_private
 from pdf_dependencies import private_file
 from pdf_window_tools import HERE,WindowScene,window_version
 sys.path.insert(0,str(ROOT))
-from src.adapters.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.adapters.tool_schema_contracts import bind_mcp_descriptions
+from src.adapters.harness.dsh_trajectory import extract_dsh_trace,infer_dsh_provenance,mine_witnessed_parameter_edges
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts, bind_mcp_descriptions
 from src.adapters.task_identity import load_trace_identity,require_distinct_decisions
-from src.motif_core.offline.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif,count_safe_edge_witnesses
-from src.motif_core.offline.library_builder import library_from_certified
+from src.motif_core.offline.compilation.edge_compiler import compile_witnessed_edge_motif,certify_witnessed_edge_motif,count_safe_edge_witnesses
+from src.motif_core.offline.compilation.library_builder import library_from_certified
 
 import importlib.util
 def module(name,path):
@@ -36,8 +35,10 @@ def code_snapshot():
     paths=[HERE/n for n in ('pdf_window_tools.py','pdf-window-contracts.json','pdf-window-scenario.json','pdf-window-task.md',
         'workflow_probe_tools.py','pdf_tools.py','pdf_layout.py','pdf_read_plan.py','explore-workflows.py','window-study.py')]
     paths += [ROOT/n for n in ('scripts/run-scenario.py','scripts/export-online-motif-manifest.py',
-        'src/adapters/dsh_online_motif.mjs','src/motif_core/online_skill_runtime.mjs',
-        'src/motif_core/offline/edge_compiler.py','src/adapters/dsh_trajectory.py')]
+        'src/adapters/harness/motif/dsh_online_motif.mjs','src/motif_core/runtime/online_skill_runtime.mjs',
+        'src/motif_core/trajectory/model.py', 'src/motif_core/offline/mining/trace_mining.py',
+        'src/motif_core/offline/mining/motif_miner.py',
+        'src/motif_core/offline/compilation/edge_compiler.py','src/adapters/harness/dsh_trajectory.py')]
     return {str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 
 
@@ -166,7 +167,7 @@ def learn(out):
     actual_raw={k:{**v,'description':contracts[k].description} for k,v in raw.items()}
     manifest=exporter.export_manifest(library,actual_raw,version_fields={t:'document_version_sha256' for t in artifact['tools']})
     subprocess.run(['node','--input-type=module','-e',
-        "import fs from 'node:fs';import {validateOnlineManifest} from './src/motif_core/online_skill_runtime.mjs';validateOnlineManifest(JSON.parse(fs.readFileSync(0,'utf8')));"],
+        "import fs from 'node:fs';import {validateOnlineManifest} from './src/motif_core/runtime/online_skill_runtime.mjs';validateOnlineManifest(JSON.parse(fs.readFileSync(0,'utf8')));"],
         cwd=ROOT,text=True,input=json.dumps(manifest),capture_output=True,check=True)
     directory.mkdir(mode=0o700)
     save_private(directory/'library.json',library);save_private(directory/'online-manifest.json',manifest)

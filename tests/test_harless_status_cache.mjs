@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createStatusCache} from '../src/adapters/harless_status_cache.ts';
+import {createStatusCache} from '../src/adapters/web/sessions/harless_status_cache.ts';
 
 test('overlapping UI polls share one scan, scoped by configuration and refreshed after expiry', async () => {
   let clock = 0;

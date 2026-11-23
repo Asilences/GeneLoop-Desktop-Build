@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "kind": "public_ppt_preview_continuations",
+  "programs": [
+    {
+      "id": "ppt_flow_9f55843764648345663d8578",
+      "ir": {
+        "version": 1,
+        "anchor": {
+          "tool": "build_ppt",
+          "schema_sha256": "413db16dec819b76dea8a817de5459ba6b159619333bdbb2a5904666d29cab53"
+        },
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "collection": [
+          "review_pages"
+        ],
+        "kind": "observed_anchor_read_map",
+        "collection_min": 1,
+        "collection_max": 64,
+        "step": {
+          "id": "item",
+          "tool": "read_image",
+          "schema_sha256": "d044cc739c128ab039ff6f762d70232af7645cb9978e08a6d6e0749c0185a7c5",
+          "bindings": {
+            "file_path": [
+              "path"
+            ]
+          }
+        }
+      },
+      "certification": {
+        "training_decisions": 2,
+        "independent_replay_decisions": 1,
+        "training_lengths": [
+          5,
+          6
+        ],
+        "replay_lengths": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "ppt_flow_b230f6896c1959db50b2f1d0",
+      "ir": {
+        "version": 1,
+        "kind": "observed_anchor_read_continuation",
+        "anchor": {
+          "tool": "patch_ppt",
+          "schema_sha256": "4cb01d79c1a172b39c9c95d92d6f372632d0ae2a2a1c7f32f600a2581af1ccc6"
+        },
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "collection": [
+          "review_pages"
+        ],
+        "collection_length": 1,
+        "steps": [
+          {
+            "id": "step_0",
+            "tool": "read_image",
+            "schema_sha256": "d044cc739c128ab039ff6f762d70232af7645cb9978e08a6d6e0749c0185a7c5",
+            "bindings": {
+              "file_path": [
+                "review_pages",
+                0,
+                "path"
+              ]
+            }
+          }
+        ]
+      },
+      "certification": {
+        "training_decisions": 2,
+        "independent_replay_decisions": 1,
+        "training_lengths": [],
+        "replay_lengths": []
+      }
+    },
+    {
+      "id": "ppt_flow_54cddb6f544daae9e4e7c6cf",
+      "ir": {
+        "version": 1,
+        "kind": "observed_anchor_read_continuation",
+        "anchor": {
+          "tool": "patch_ppt",
+          "schema_sha256": "4cb01d79c1a172b39c9c95d92d6f372632d0ae2a2a1c7f32f600a2581af1ccc6"
+        },
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "collection": [
+          "review_pages"
+        ],
+        "collection_length": 2,
+        "steps": [
+          {
+            "id": "step_0",
+            "tool": "read_image",
+            "schema_sha256": "d044cc739c128ab039ff6f762d70232af7645cb9978e08a6d6e0749c0185a7c5",
+            "bindings": {
+              "file_path": [
+                "review_pages",
+                0,
+                "path"
+              ]
+            }
+          },
+          {
+            "id": "step_1",
+            "tool": "read_image",
+            "schema_sha256": "d044cc739c128ab039ff6f762d70232af7645cb9978e08a6d6e0749c0185a7c5",
+            "bindings": {
+              "file_path": [
+                "review_pages",
+                1,
+                "path"
+              ]
+            }
+          }
+        ]
+      },
+      "certification": {
+        "training_decisions": 2,
+        "independent_replay_decisions": 1,
+        "training_lengths": [],
+        "replay_lengths": []
+      }
+    },
+    {
+      "id": "ppt_flow_a5eebd76e0cfb3675b349c79",
+      "ir": {
+        "version": 1,
+        "anchor": {
+          "tool": "patch_ppt",
+          "schema_sha256": "4cb01d79c1a172b39c9c95d92d6f372632d0ae2a2a1c7f32f600a2581af1ccc6"
+        },
+        "success": [
+          "mechanical_status"
+        ],
+        "success_value": "passed",
+        "empty_findings": [
+          "findings"
+        ],
+        "collection": [
+          "review_pages"
+        ],
+        "kind": "observed_anchor_read_map",
+        "collection_min": 1,
+        "collection_max": 64,
+        "step": {
+          "id": "item",
+          "tool": "read_image",
+          "schema_sha256": "d044cc739c128ab039ff6f762d70232af7645cb9978e08a6d6e0749c0185a7c5",
+          "bindings": {
+            "file_path": [
+              "path"
+            ]
+          }
+        }
+      },
+      "certification": {
+        "training_decisions": 2,
+        "independent_replay_decisions": 1,
+        "training_lengths": [
+          2,
+          4
+        ],
+        "replay_lengths": [
+          5
+        ]
+      }
+    }
+  ]
+}

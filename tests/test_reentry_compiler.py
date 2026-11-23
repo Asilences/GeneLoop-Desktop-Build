@@ -2,8 +2,8 @@
 import copy,json
 import pytest
 from tests.test_collection_compiler import make,TOOLS,CT,common
-from src.motif_core.offline.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
-from src.motif_core.offline.reentry_compiler import reentry_witness,compile_reentry,certify_reentry
+from src.motif_core.offline.compilation.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
+from src.motif_core.offline.compilation.reentry_compiler import reentry_witness,compile_reentry,certify_reentry
 
 def parent_policy(make):
  ws=[]

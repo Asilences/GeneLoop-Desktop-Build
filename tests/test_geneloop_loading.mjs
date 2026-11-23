@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../src/adapters/geneloop_brand.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../src/adapters/web/geneloop_brand.js', import.meta.url), 'utf8');
 function sourceOf(value) {
   const listeners = new Set();
   return { getSnapshot: () => value, subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
@@ -46,7 +46,7 @@ test('head loader waits for ready list, current history and committed comparison
   const f = setup(), load = f.window.__geneLoopPageLoad;
   assert.equal(f.cover.hidden, false);
   assert.equal(f.cover.attributes.role, 'status');
-  assert.equal(f.cover.children[0].children[0].src, '/assets/geneloop-spiral.svg?v=1');
+  assert.equal(f.cover.children[0].src, '/assets/geneloop-spiral.svg?v=3');
   const state = f.session('a'); f.install(); f.install();
   assert.equal(f.records.length, 1, 'installer is idempotent');
   f.list.set({ phase: 'ready', current: 'a' });
@@ -108,7 +108,7 @@ test('blank ready page, failed history and stalled boot have an exit without a r
   const failed = setup(), state = failed.session('failed', 'loading'); failed.install();
   failed.list.set({ phase: 'ready', current: 'failed' });
   state.set({ openState: 'error' }); assert.equal(failed.cover.hidden, true, 'native error remains reachable');
-  assert.equal(failed.cover.children.length, 2, 'only the logo and loading label are shown');
+  assert.equal(failed.cover.children.length, 3, 'the logo, fractal artwork and loading label are shown');
   assert.doesNotMatch(source, /显示已加载内容/);
   const stalled = setup(), timeout = [...stalled.timers.values()][0];
   assert.equal(timeout.delay, 20000); timeout.fn();
@@ -125,7 +125,7 @@ test('loading is accessible without animation and teardown removes public subscr
   assert.match(css, /button:focus-visible/);
   assert.match(css, /data-loading=true.*visibility:hidden;pointer-events:none/);
   assert.match(css, /position:absolute;inset:0;z-index:20/);
-  assert.match(css, /loading-mark img\{width:20px;height:30px/);
+  assert.match(css, /loading-logo\{width:24px;height:24px/);
   assert.equal(f.cover.attributes['aria-live'], 'polite');
   f.disposers.reverse().forEach(dispose => dispose?.());
   assert.equal(state.count(), 0); assert.equal(f.list.count(), 0); assert.equal(f.cover.hidden, true);

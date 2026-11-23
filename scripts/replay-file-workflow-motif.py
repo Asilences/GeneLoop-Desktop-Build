@@ -8,7 +8,7 @@ from common import DATA,PREFIX,digest,sha,save,snapshot
 from workflow_learning import dependencies,candidate_lock,load_case
 from src.adapters.file_job_budget import job_command
 sp=importlib.util.spec_from_file_location('workflow_replay_mcp',ROOT/'scripts/check-file-workflows.py');helpers=importlib.util.module_from_spec(sp);sp.loader.exec_module(helpers)
-from src.motif_core.offline.plan_compiler import native_rows
+from src.motif_core.offline.compilation.plan_compiler import native_rows
 
 class Bridge:
     def __init__(self,kind,policy,task,schemas,out):

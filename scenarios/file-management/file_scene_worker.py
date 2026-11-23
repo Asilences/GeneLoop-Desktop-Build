@@ -14,11 +14,11 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from src.adapters.continuous_rsi import PRIVATE_HOME, private, load_config, read, sha
-from src.motif_core.offline.experience_registry import durable, digest
+from src.motif_core.reuse.experience_registry import durable, digest
 from management_prepare import prepare
 from management_tools import tree
 from management_web import default_config, dispatch
-from src.adapters.file_scenario import prepare_scenario
+from src.adapters.scenario import prepare_file_scenario as prepare_scenario
 from src.adapters.operation_runner import execute
 
 
@@ -70,7 +70,7 @@ def run(value):
     args = SimpleNamespace(call_model=True, rsi_resume=value.get('resume_origin'),
         rsi_config=config, scenario=directory / 'management/scenario.json',
         model=request['model'], budget_usd=request['budget_usd'],
-        max_steps=cfg['limits']['max_steps'], max_output=cfg['limits']['max_output'] or 393216)
+        max_steps=cfg['limits']['max_steps'], max_output=cfg['limits']['max_output'])
     scenario = read(args.scenario)
     scenario['acceptance_guard']['max_repairs'] = cfg['limits']['max_repairs']
     durable(args.scenario, scenario)

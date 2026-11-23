@@ -1,0 +1,57 @@
+{
+  "id": "privacy-r5-local-official-tools-20261108",
+  "scope": "isolated research candidate; no default runtime replacement before quality gates",
+  "base": "copy of immutable r3 model-venv, Python 3.12.15; verify copied torch 2.5.1+cpu and onnxruntime 1.20.1",
+  "tier": {"cpus_initial": 4, "gpus": 0, "memory_gib_initial": 16},
+  "pip_phases": [
+    ["wheel==0.45.1", "numpy==1.26.4", "onnxruntime==1.20.1", "tiktoken==0.9.0"],
+    ["credsweeper==1.19.6"],
+    ["opf==0.1.0 from verified official source; no dependencies; no build isolation"]
+  ],
+  "constraints": {"torch": "2.5.1+cpu", "numpy": "1.26.4", "onnxruntime": "1.20.1", "tiktoken": "0.9.0"},
+  "common_contract_environment": {
+    "base": "new Python 3.12 venv; actual imported product NLP purelib precedes existing runtime and new tools purelib, all read-only",
+    "precedent": "same resolution method as r4 person-venv; verify actual imports and kernel again",
+    "actual_numpy_expected": "2.4.6",
+    "actual_spacy_expected": "3.8.7",
+    "actual_regex_expected": "2026.9.29",
+    "isolated_onnx_overlay": "onnxruntime==1.26.0 official cp312 manylinux_2_27 wheel, before product imports; old 1.20.1 ML probe failed and is retained",
+    "production_environment_modified": false
+  },
+  "sources": {
+    "opf": {
+      "repository": "https://github.com/openai/privacy-filter",
+      "revision": "f7f00ca7fb869683eb732c010299d901457f19c3",
+      "license": "Apache-2.0",
+      "model_repository": "openai/privacy-filter",
+      "model_revision": "7ffa9a043d54d1be65afb281eddf0ffbe629385b",
+      "model_subtree": "original",
+      "model_safetensors_sha256": "9c262cbe68a0c8a50590a648ef8341a2b7d3be1fa11dfb79893fe0b03ce57b5c",
+      "device": "cpu",
+      "decode": "official viterbi and published calibration; no tuning on benchmark",
+      "context_window_length": 4096,
+      "coverage": "official overlapping windows over complete text; validate offsets and tokenizer roundtrip; no prefix scoring",
+      "weights_format": "safetensors only; no checkpoint Python execution"
+    },
+    "credsweeper": {
+      "version": "1.19.6",
+      "wheel_sha256": "ac52dd7a49e01d65c9e186cd1994d36724c5bdd135b71a531b67e9789a7c6de6",
+      "license": "MIT",
+      "training_overlap": "upstream training uses CredData; old corpus is regression evidence, not independent validation"
+    }
+  },
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "OMP_NUM_THREADS": "4",
+    "OPENBLAS_NUM_THREADS": "4",
+    "MKL_NUM_THREADS": "4",
+    "HF_HUB_OFFLINE": "1 after model staging",
+    "TIKTOKEN_CACHE_DIR": "isolated model cache",
+    "OPF_TORCH_COMPILE": "0",
+    "OPF_MOE_TRITON": "0"
+  },
+  "validation": ["exact dependency and source receipts", "seeded real CPU forward and detection witness", "fresh reader executes documented witness verbatim"],
+  "cloud_model_requests": 0,
+  "user_data_uploaded": false,
+  "production_modified": false
+}

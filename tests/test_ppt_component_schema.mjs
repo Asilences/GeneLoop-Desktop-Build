@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {assertComponentSchema,validateComponentParameters,bindComponentConstants,normalizeComponentSchema} from '../src/adapters/ppt_component_schema.ts';
+import {assertComponentSchema,validateComponentParameters,bindComponentConstants,normalizeComponentSchema} from '../src/adapters/ppt/authoring/ppt_component_schema.ts';
 
 test('only explicit structural constants are filled without historical content defaults',()=>{
  const schema={type:'object',properties:{wrap:{type:'number',const:64},title:{type:'string'}},required:['title']};

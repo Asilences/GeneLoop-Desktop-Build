@@ -3,7 +3,7 @@
  */
 import {isAgentLoopRequest} from '@deepseek-ai/dsh-llm';
 import {renderGoalRoundPrompt} from '@deepseek-ai/dsh-goal-round-driver';
-import {digest} from '../motif_core/online_skill_runtime.mjs';
+import {digest} from '../motif_core/runtime/online_skill_runtime.mjs';
 import {assertContextUserEnvelope} from './geneloop_context.ts';
 
 export const GOAL_GUIDANCE=`A goal can be created or rearmed only by an explicit human /goal command with a positive integer round count. Do not infer permission to create a goal or change its objective or round count. During an admitted goal, use get_goal and update_goal to mark verified completion or a concrete persistent blocker under the native goal policy. All continuation rounds use this same task, workspace, tool permissions and meter. The chosen round count is finite; it is not an unlimited run.`;

@@ -1,0 +1,887 @@
+{
+  "verified_utc": "2026-11-07T14:52:39Z",
+  "rule_commit": "d832be12fabc76fc995b358e15a110a506ba4711",
+  "method_commit": "ca083357342fd1f7f4e8238d6f8f72add94ab95c",
+  "rules_unchanged_since_freeze": true,
+  "r1_baseline_results_unchanged": true,
+  "pii": {
+    "zh_formal": {
+      "records": 5000,
+      "unique_ids": 5000,
+      "same_native_predictions_and_gold_as_r1": true,
+      "by_gold_type": {
+        "native": {
+          "PERSON": {
+            "gold_entities": 5310,
+            "fully_covered_entities": 3616
+          },
+          "PHONE_NUMBER": {
+            "gold_entities": 4400,
+            "fully_covered_entities": 3036
+          },
+          "LOCATION": {
+            "gold_entities": 1429,
+            "fully_covered_entities": 313
+          },
+          "EMAIL_ADDRESS": {
+            "gold_entities": 931,
+            "fully_covered_entities": 931
+          },
+          "IDENTITY_NUMBER": {
+            "gold_entities": 2275,
+            "fully_covered_entities": 529
+          },
+          "CREDIT_CARD": {
+            "gold_entities": 862,
+            "fully_covered_entities": 433
+          },
+          "LICENSE_PLATE": {
+            "gold_entities": 455,
+            "fully_covered_entities": 111
+          }
+        },
+        "core": {
+          "PERSON": {
+            "gold_entities": 5310,
+            "fully_covered_entities": 2928
+          },
+          "PHONE_NUMBER": {
+            "gold_entities": 4400,
+            "fully_covered_entities": 3966
+          },
+          "LOCATION": {
+            "gold_entities": 1429,
+            "fully_covered_entities": 398
+          },
+          "EMAIL_ADDRESS": {
+            "gold_entities": 931,
+            "fully_covered_entities": 931
+          },
+          "IDENTITY_NUMBER": {
+            "gold_entities": 2275,
+            "fully_covered_entities": 1826
+          },
+          "CREDIT_CARD": {
+            "gold_entities": 862,
+            "fully_covered_entities": 202
+          },
+          "LICENSE_PLATE": {
+            "gold_entities": 455,
+            "fully_covered_entities": 4
+          }
+        }
+      },
+      "module_accepted_timing": {
+        "n": 5000,
+        "p50_seconds": 3.253753039520234,
+        "p95_seconds": 3.574823488481343,
+        "max_seconds": 4.141594592481852
+      },
+      "module_rejected_timing": {
+        "n": 0
+      },
+      "module_type_sums_match": true,
+      "matched_admitted_cohort": {
+        "documents": 4432,
+        "gold_entities": 13775,
+        "r1_literal_residual_entities": 4130,
+        "r2_literal_residual_entities": 4034
+      },
+      "admission_transitions": {
+        "accepted_to_accepted": 4432,
+        "accepted_to_rejected": 0,
+        "rejected_to_accepted": 568,
+        "rejected_to_rejected": 0
+      }
+    },
+    "zh_chat": {
+      "records": 3000,
+      "unique_ids": 3000,
+      "same_native_predictions_and_gold_as_r1": true,
+      "by_gold_type": {
+        "native": {
+          "PERSON": {
+            "gold_entities": 3010,
+            "fully_covered_entities": 1801
+          },
+          "PHONE_NUMBER": {
+            "gold_entities": 2261,
+            "fully_covered_entities": 1805
+          },
+          "IDENTITY_NUMBER": {
+            "gold_entities": 782,
+            "fully_covered_entities": 305
+          },
+          "CREDIT_CARD": {
+            "gold_entities": 504,
+            "fully_covered_entities": 282
+          },
+          "EMAIL_ADDRESS": {
+            "gold_entities": 493,
+            "fully_covered_entities": 486
+          },
+          "LOCATION": {
+            "gold_entities": 255,
+            "fully_covered_entities": 54
+          },
+          "LICENSE_PLATE": {
+            "gold_entities": 239,
+            "fully_covered_entities": 50
+          }
+        },
+        "core": {
+          "PERSON": {
+            "gold_entities": 3010,
+            "fully_covered_entities": 1353
+          },
+          "PHONE_NUMBER": {
+            "gold_entities": 2261,
+            "fully_covered_entities": 1954
+          },
+          "IDENTITY_NUMBER": {
+            "gold_entities": 782,
+            "fully_covered_entities": 447
+          },
+          "CREDIT_CARD": {
+            "gold_entities": 504,
+            "fully_covered_entities": 100
+          },
+          "EMAIL_ADDRESS": {
+            "gold_entities": 493,
+            "fully_covered_entities": 493
+          },
+          "LOCATION": {
+            "gold_entities": 255,
+            "fully_covered_entities": 0
+          },
+          "LICENSE_PLATE": {
+            "gold_entities": 239,
+            "fully_covered_entities": 6
+          }
+        }
+      },
+      "module_accepted_timing": {
+        "n": 3000,
+        "p50_seconds": 3.224307701922953,
+        "p95_seconds": 3.5372843835502863,
+        "max_seconds": 3.9532277043908834
+      },
+      "module_rejected_timing": {
+        "n": 0
+      },
+      "module_type_sums_match": true,
+      "matched_admitted_cohort": {
+        "documents": 2930,
+        "gold_entities": 7329,
+        "r1_literal_residual_entities": 2912,
+        "r2_literal_residual_entities": 2909
+      },
+      "admission_transitions": {
+        "accepted_to_accepted": 2930,
+        "accepted_to_rejected": 0,
+        "rejected_to_accepted": 70,
+        "rejected_to_rejected": 0
+      }
+    },
+    "en_test": {
+      "records": 5000,
+      "unique_ids": 5000,
+      "same_native_predictions_and_gold_as_r1": true,
+      "by_gold_type": {
+        "native": {
+          "PRIVATE_ID": {
+            "gold_entities": 2814,
+            "fully_covered_entities": 704
+          },
+          "EMAIL_ADDRESS": {
+            "gold_entities": 1049,
+            "fully_covered_entities": 1048
+          },
+          "PHONE_NUMBER": {
+            "gold_entities": 904,
+            "fully_covered_entities": 772
+          },
+          "LOCATION": {
+            "gold_entities": 1847,
+            "fully_covered_entities": 209
+          },
+          "MEDICAL_RECORD_NUMBER": {
+            "gold_entities": 2658,
+            "fully_covered_entities": 591
+          },
+          "DATE_TIME": {
+            "gold_entities": 3805,
+            "fully_covered_entities": 3428
+          },
+          "LICENSE_PLATE": {
+            "gold_entities": 579,
+            "fully_covered_entities": 240
+          },
+          "CREDIT_CARD": {
+            "gold_entities": 663,
+            "fully_covered_entities": 522
+          },
+          "IDENTITY_NUMBER": {
+            "gold_entities": 1730,
+            "fully_covered_entities": 1132
+          },
+          "PERSON": {
+            "gold_entities": 3209,
+            "fully_covered_entities": 2472
+          },
+          "FINANCIAL_ACCOUNT": {
+            "gold_entities": 426,
+            "fully_covered_entities": 252
+          },
+          "BIOMETRIC_IDENTIFIER": {
+            "gold_entities": 137,
+            "fully_covered_entities": 36
+          },
+          "IP_ADDRESS": {
+            "gold_entities": 962,
+            "fully_covered_entities": 957
+          },
+          "CREDENTIAL": {
+            "gold_entities": 124,
+            "fully_covered_entities": 10
+          },
+          "VEHICLE_IDENTIFIER": {
+            "gold_entities": 98,
+            "fully_covered_entities": 16
+          },
+          "CERTIFICATE_LICENSE_NUMBER": {
+            "gold_entities": 124,
+            "fully_covered_entities": 21
+          },
+          "COMPANY_NAME": {
+            "gold_entities": 185,
+            "fully_covered_entities": 100
+          },
+          "HEALTH_PLAN_BENEFICIARY_NUMBER": {
+            "gold_entities": 41,
+            "fully_covered_entities": 10
+          },
+          "PRIVATE_REFERENCE": {
+            "gold_entities": 23,
+            "fully_covered_entities": 21
+          }
+        },
+        "core": {
+          "PRIVATE_ID": {
+            "gold_entities": 2814,
+            "fully_covered_entities": 229
+          },
+          "EMAIL_ADDRESS": {
+            "gold_entities": 1049,
+            "fully_covered_entities": 1049
+          },
+          "PHONE_NUMBER": {
+            "gold_entities": 904,
+            "fully_covered_entities": 770
+          },
+          "LOCATION": {
+            "gold_entities": 1847,
+            "fully_covered_entities": 239
+          },
+          "MEDICAL_RECORD_NUMBER": {
+            "gold_entities": 2658,
+            "fully_covered_entities": 292
+          },
+          "DATE_TIME": {
+            "gold_entities": 3805,
+            "fully_covered_entities": 52
+          },
+          "LICENSE_PLATE": {
+            "gold_entities": 579,
+            "fully_covered_entities": 194
+          },
+          "CREDIT_CARD": {
+            "gold_entities": 663,
+            "fully_covered_entities": 367
+          },
+          "IDENTITY_NUMBER": {
+            "gold_entities": 1730,
+            "fully_covered_entities": 1095
+          },
+          "PERSON": {
+            "gold_entities": 3209,
+            "fully_covered_entities": 2314
+          },
+          "FINANCIAL_ACCOUNT": {
+            "gold_entities": 426,
+            "fully_covered_entities": 225
+          },
+          "BIOMETRIC_IDENTIFIER": {
+            "gold_entities": 137,
+            "fully_covered_entities": 17
+          },
+          "IP_ADDRESS": {
+            "gold_entities": 962,
+            "fully_covered_entities": 957
+          },
+          "CREDENTIAL": {
+            "gold_entities": 124,
+            "fully_covered_entities": 40
+          },
+          "VEHICLE_IDENTIFIER": {
+            "gold_entities": 98,
+            "fully_covered_entities": 7
+          },
+          "CERTIFICATE_LICENSE_NUMBER": {
+            "gold_entities": 124,
+            "fully_covered_entities": 7
+          },
+          "COMPANY_NAME": {
+            "gold_entities": 185,
+            "fully_covered_entities": 12
+          },
+          "HEALTH_PLAN_BENEFICIARY_NUMBER": {
+            "gold_entities": 41,
+            "fully_covered_entities": 5
+          },
+          "PRIVATE_REFERENCE": {
+            "gold_entities": 23,
+            "fully_covered_entities": 23
+          }
+        }
+      },
+      "module_accepted_timing": {
+        "n": 4958,
+        "p50_seconds": 3.2483694264665246,
+        "p95_seconds": 3.5827882597222924,
+        "max_seconds": 4.194407245144248
+      },
+      "module_rejected_timing": {
+        "n": 42,
+        "p50_seconds": 1.6072266856208444,
+        "p95_seconds": 1.8707071989774704,
+        "max_seconds": 1.8919782703742385
+      },
+      "module_type_sums_match": true,
+      "matched_admitted_cohort": {
+        "documents": 4958,
+        "gold_entities": 21233,
+        "r1_literal_residual_entities": 12015,
+        "r2_literal_residual_entities": 11255
+      },
+      "admission_transitions": {
+        "accepted_to_accepted": 4958,
+        "accepted_to_rejected": 5,
+        "rejected_to_accepted": 0,
+        "rejected_to_rejected": 37
+      }
+    }
+  },
+  "credential": {
+    "files": 11030,
+    "unique_files": 11030,
+    "all_new_module_calls": true,
+    "statuses": {
+      "accepted": 8840,
+      "rejected": 2101,
+      "evaluation_timeout": 89
+    },
+    "accepted_unextractable_positive_rows": 18,
+    "accepted_positive_files": 2034,
+    "native_flagged_accepted_files_with_literal_residual": 0,
+    "accepted_timing": {
+      "n": 8840,
+      "p50_seconds": 3.621410435065627,
+      "p95_seconds": 11.165036790072918,
+      "max_seconds": 121.64743666537106
+    },
+    "rejected_timing": {
+      "n": 2101,
+      "p50_seconds": 1.6187510341405869,
+      "p95_seconds": 13.388819238170981,
+      "max_seconds": 64.16440439969301
+    },
+    "matched_admitted_cohort": {
+      "files": 8718,
+      "extractable_positive_rows": 5008,
+      "r1_literal_residual_rows": 2779,
+      "r2_literal_residual_rows": 2597
+    },
+    "status_transitions": {
+      "accepted_to_accepted": 8718,
+      "rejected_to_rejected": 1755,
+      "accepted_to_rejected": 344,
+      "accepted_to_evaluation_timeout": 58,
+      "rejected_to_accepted": 114,
+      "evaluation_timeout_to_evaluation_timeout": 29,
+      "rejected_to_evaluation_timeout": 2,
+      "evaluation_timeout_to_rejected": 2,
+      "evaluation_timeout_to_accepted": 8
+    }
+  },
+  "cloud_requests": 0,
+  "production_service_touched": false,
+  "duplicate_json_control": {
+    "previous_candidate_accepted_ambiguous_source": true,
+    "final_candidate_rejected": true
+  },
+  "additional_dependencies": {
+    "numpy": "2.4.6",
+    "thinc": "8.3.11",
+    "phonenumbers": "9.0.42",
+    "tldextract": "5.4.0",
+    "jsonschema": "4.26.0",
+    "pydantic": "2.13.5"
+  },
+  "python_harness_dependencies": {
+    "deepseek-harness-sdk": "0.1.5rc1"
+  },
+  "node_harness_dependencies": {
+    "@deepseek-ai/dsh": "0.1.5-rc.3",
+    "@deepseek-ai/dsh-llm": "0.1.5-rc.3"
+  },
+  "dependency_file_sha256": {
+    "requirements.txt": "a05e4acdb8f2ae0691551227d2afc1e0ed040807c5ccf24e9b6417ff4573379b",
+    "requirements-rsi-privacy.txt": "2eb9a727c88f2b259fd7e2a3187f2fb961ffd269d43481af64b9d380c10cfc9b",
+    "package-lock.json": "6808b7712dfa33b7caf6ba3c0d481fca04e3fa1d4ada6de933b43482d94260b7"
+  },
+  "metadata_unchanged": true,
+  "all_inputs_match_r1": true,
+  "method_source_checks": {
+    "check_entries.mjs": "4280b257d5b96e96f20f9e3a9031beb87a95a871d738585e33a1db3e9bf71abd",
+    "credential-budget-r1.json": "0203225cc7f096a6b2e75cc9f46c4118c5aaab5d82764682f1853b5fb43b940c",
+    "credential-budget-r2.json": "4bb13cf49fbb0ba5d14fa68580ddf29f42dbb2de21c715a0feff2fe17d3fb6a7",
+    "credential-protocol-r1.json": "934cfd65387b3ca51e991b7b0d70ade68031fc64a8c03a0d8d1a12232c55b4f4",
+    "evaluation-deps-lock.json": "de1aa46970722415b52f7b1d923b88545729a5cae6c609cd96db05a74d1e2c22",
+    "prepare_creddata.py": "69638c7e1e0ea66548a7f7c53665ac8333d993c3efb5430dc60371c53f44a569",
+    "protocol-r1-evaluator2.json": "2b407ec5681840d663f8bb8bdd7df28be7d9850776b5aa28cd849d9bcf1aa14f",
+    "protocol-r1.json": "5d224453c8bd07e94ae91786df4edbaa9c2e48e162152f8fdaaf058697ad4f3c",
+    "protocol-r2.json": "0167283dfb778f96b1ec7cd6df64b2392833b0840901523cefcf5c2bb1fa5749",
+    "recover_creddata_files.py": "7576829894c5126f8adb51883dceea018976c15ec1dac72292f41a86aeb1124d",
+    "run_credentials.py": "bf378b31acab4fda8088b82e0776323c144821d9fbe60bbacbbd36fdba773fde",
+    "run_credentials_bounded.py": "9c3c17826592251fdb87508cb4323b23ac9e5a3ee286016e4def4e912fe017b3",
+    "run_pii.py": "59c34435825835bc9f96a03ee9f398b83fe368a77a50ab86e06fca035abe8220",
+    "run_semantics.py": "5fdd09463d1030f8a832aabb318e58bd29dd875dabf7acdcf45378535a077ea8",
+    "semantic-cases-r1.json": "312ad74b6acd6f3389ad7037efdff4e4eda71dc76bc02f14e2b617c275e5dd44",
+    "test_adapters.py": "0096d7a9de183571af780c2458bc7fa0b321554034b72d2a4b380044540f0816",
+    "test_credentials.py": "5bc7658e98061bcf3220a1f992289f16f6e40ad8c14d8a8bfc19d0190713a381",
+    "test_deadline_control.py": "97117f1a8421f8083b4e921050b7851bd13d85c0db14137bd84e4fe1efc0e778"
+  },
+  "semantic_originals_unchanged": true,
+  "entry_coverage": {
+    "groups": {
+      "web_host": {
+        "passed": 9,
+        "total": 9
+      },
+      "geneloop_host": {
+        "passed": 9,
+        "total": 9
+      },
+      "web_offline_share": {
+        "passed": 9,
+        "total": 9
+      },
+      "scene_projection": {
+        "passed": 9,
+        "total": 9
+      },
+      "sdk_native": {
+        "passed": 1,
+        "total": 1
+      },
+      "sdk_shutdown": {
+        "passed": 3,
+        "total": 3
+      }
+    },
+    "supplement_passed": 10,
+    "supplement_source_sha256": "428b5d883ad53206940f46d0239ac8b397a4b684f8a2894ce2f7942fa662b2c6",
+    "construction_export_source_sha256": "66ad480ebbf2ed23222dbaedb9550ef7dfc0b4dde35968e1f3552de21c4ee89f"
+  },
+  "regression": {
+    "python": {
+      "total": 3354,
+      "passed": 3140,
+      "skipped": 214,
+      "failed": 0
+    },
+    "node": {
+      "tests": 1731,
+      "pass": 1722,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 9,
+      "todo": 0,
+      "duration_ms": 439517.571433
+    },
+    "commands": [
+      {
+        "name": "collect",
+        "returncode": 0,
+        "started": "2026-11-07T13:01:55.491771+00:00",
+        "finished": "2026-11-07T13:02:14.115550+00:00"
+      },
+      {
+        "name": "continuation",
+        "returncode": 0,
+        "started": "2026-11-07T13:02:14.173600+00:00",
+        "finished": "2026-11-07T13:02:14.326579+00:00"
+      },
+      {
+        "name": "node-full",
+        "returncode": 0,
+        "started": "2026-11-07T13:02:14.370971+00:00",
+        "finished": "2026-11-07T13:09:34.280666+00:00"
+      },
+      {
+        "name": "python-a",
+        "returncode": 0,
+        "started": "2026-11-07T13:02:14.366523+00:00",
+        "finished": "2026-11-07T13:16:27.941999+00:00"
+      },
+      {
+        "name": "python-c",
+        "returncode": 0,
+        "started": "2026-11-07T13:02:14.369215+00:00",
+        "finished": "2026-11-07T13:16:51.784536+00:00"
+      },
+      {
+        "name": "python-b",
+        "returncode": 0,
+        "started": "2026-11-07T13:02:14.366845+00:00",
+        "finished": "2026-11-07T13:21:47.997942+00:00"
+      },
+      {
+        "name": "python-d",
+        "returncode": 0,
+        "started": "2026-11-07T13:02:14.369041+00:00",
+        "finished": "2026-11-07T13:22:15.164203+00:00"
+      },
+      {
+        "name": "smoke",
+        "returncode": 0,
+        "started": "2026-11-07T13:22:15.214669+00:00",
+        "finished": "2026-11-07T13:22:54.518591+00:00"
+      },
+      {
+        "name": "motif",
+        "returncode": 0,
+        "started": "2026-11-07T13:22:54.519162+00:00",
+        "finished": "2026-11-07T13:23:33.430736+00:00"
+      }
+    ],
+    "coverage": {
+      "commit": "d832be12fabc76fc995b358e15a110a506ba4711",
+      "collection_sha256": "6750aee628ad3b280867b1e335d0b85dd749aefc5847a7fb77d544e4646ac5ef",
+      "expected_cases": 3354,
+      "files": 288,
+      "groups": {
+        "a": {
+          "files": [
+            "tests/test_capability_evolution_investigation.py"
+          ],
+          "expected_cases": 37
+        },
+        "b": {
+          "files": [
+            "tests/test_evolution_benchmark_gene.py",
+            "tests/test_evolution_execution_protocol.py"
+          ],
+          "expected_cases": 97
+        },
+        "c": {
+          "files": [
+            "tests/test_builder_program_learning.py",
+            "tests/test_capability_abstraction_view.py",
+            "tests/test_capability_acquisition_repair.py",
+            "tests/test_capability_authoring.py",
+            "tests/test_capability_builder.py",
+            "tests/test_capability_builder_application.py",
+            "tests/test_capability_composition_projection.py",
+            "tests/test_capability_composition_source.py",
+            "tests/test_capability_construction_history.py",
+            "tests/test_capability_container_compat.py",
+            "tests/test_capability_contract.py",
+            "tests/test_capability_decision_evidence.py",
+            "tests/test_capability_evolution.py",
+            "tests/test_capability_evolution_agent.py",
+            "tests/test_capability_evolution_inputs.py",
+            "tests/test_capability_evolution_runtime.py",
+            "tests/test_capability_feedback.py",
+            "tests/test_capability_goal_proposal.py",
+            "tests/test_capability_improvement.py",
+            "tests/test_capability_investigation.py",
+            "tests/test_capability_learned_candidate.py",
+            "tests/test_capability_learning.py",
+            "tests/test_capability_materials.py",
+            "tests/test_capability_motif_learning.py",
+            "tests/test_capability_observations.py",
+            "tests/test_capability_opportunities.py",
+            "tests/test_capability_output_verifier.py",
+            "tests/test_capability_program_composition.py",
+            "tests/test_capability_program_encoding.py",
+            "tests/test_capability_proposal_loop.py",
+            "tests/test_capability_proposal_source.py",
+            "tests/test_capability_scene.py",
+            "tests/test_capability_scene_program.py",
+            "tests/test_capability_script_extraction.py",
+            "tests/test_capability_selection.py",
+            "tests/test_capability_shape_diagnostics.py",
+            "tests/test_capability_source_authoring.py",
+            "tests/test_capability_strategy.py",
+            "tests/test_capability_strategy_application.py",
+            "tests/test_capability_strategy_usage.py"
+          ],
+          "expected_cases": 548
+        },
+        "d": {
+          "files": [
+            "tests/test_artifact_motif_compiler.py",
+            "tests/test_artifact_motif_learning.py",
+            "tests/test_arxiv_metadata.py",
+            "tests/test_authorized_plan.py",
+            "tests/test_auto_rsi.py",
+            "tests/test_benchmark_capability_publication.py",
+            "tests/test_benchmark_capability_tools.py",
+            "tests/test_benchmark_dependency_profile.py",
+            "tests/test_benchmark_script_materials.py",
+            "tests/test_catalog_metadata.py",
+            "tests/test_ci_failure_annotations.py",
+            "tests/test_collection_compiler.py",
+            "tests/test_common_search_gate.py",
+            "tests/test_compile_dsh_motif_library_contracts.py",
+            "tests/test_continuation_policy.py",
+            "tests/test_continuous_rsi.py",
+            "tests/test_control_flow.py",
+            "tests/test_crossref_metadata.py",
+            "tests/test_decision_quality_feedback.py",
+            "tests/test_deepseek_cost_gate.py",
+            "tests/test_deepseek_cost_gate_stream.py",
+            "tests/test_distributed_motif_library.py",
+            "tests/test_dsh_task_identity.py",
+            "tests/test_dsh_trajectory.py",
+            "tests/test_dynamic_code_nodes.py",
+            "tests/test_efficiency_rsi_measurement.py",
+            "tests/test_efficiency_rsi_registry.py",
+            "tests/test_entry_compiler.py",
+            "tests/test_evidence_projection_compiler.py",
+            "tests/test_evidence_report.py",
+            "tests/test_evolution_benchmark.py",
+            "tests/test_evolution_benchmark_cli.py",
+            "tests/test_evolution_benchmark_summary.py",
+            "tests/test_evolution_cycle.py",
+            "tests/test_experience_library.py",
+            "tests/test_export_online_motif_manifest.py",
+            "tests/test_fallback_rsi.py",
+            "tests/test_file_acceptance_repair.py",
+            "tests/test_file_chat_native.py",
+            "tests/test_file_lock.py",
+            "tests/test_file_management.py",
+            "tests/test_file_management_library_publication.py",
+            "tests/test_file_native_sdk.py",
+            "tests/test_file_public_seed.py",
+            "tests/test_file_report_contract.py",
+            "tests/test_file_scene_account.py",
+            "tests/test_file_task_contract.py",
+            "tests/test_file_web_scene.py",
+            "tests/test_file_workflow_contract.py",
+            "tests/test_five_user_stress.py",
+            "tests/test_frontier_authoring_view.py",
+            "tests/test_frontier_budget.py",
+            "tests/test_frontier_feedback.py",
+            "tests/test_frontier_final_projects.py",
+            "tests/test_frontier_freeze.py",
+            "tests/test_frontier_function.py",
+            "tests/test_frontier_oracle.py",
+            "tests/test_frontier_program_training.py",
+            "tests/test_frontier_request.py",
+            "tests/test_frontier_shape_repair.py",
+            "tests/test_frontier_study_profiles.py",
+            "tests/test_geneloop_member_native_boot.py",
+            "tests/test_geneloop_native_boot.py",
+            "tests/test_geneloop_pdf.py",
+            "tests/test_geneloop_presentation.py",
+            "tests/test_geneloop_privacy.py",
+            "tests/test_geneloop_retry_metering.py",
+            "tests/test_geneloop_service.py",
+            "tests/test_geneloop_session_event_repair.py",
+            "tests/test_general_tool_replay.py",
+            "tests/test_general_tools.py",
+            "tests/test_general_tools_native.py",
+            "tests/test_harless_attachment_text.py",
+            "tests/test_harless_models.py",
+            "tests/test_harless_owner_access.py",
+            "tests/test_harless_paper_product_bundle.py",
+            "tests/test_harless_product_prompt.py",
+            "tests/test_harless_rsi_bundle.py",
+            "tests/test_harless_scenarios.py",
+            "tests/test_harness_mcp_loop.py",
+            "tests/test_harness_privacy.py",
+            "tests/test_harness_web_public_origin.py",
+            "tests/test_harness_web_resume.py",
+            "tests/test_image_cost_accounting.py",
+            "tests/test_inventory_entry.py",
+            "tests/test_literature_agent.py",
+            "tests/test_literature_citation_references.py",
+            "tests/test_literature_evidence_comparison.py",
+            "tests/test_literature_evidence_review.py",
+            "tests/test_literature_notes.py",
+            "tests/test_literature_pdf.py",
+            "tests/test_literature_pdf_acceptance.py",
+            "tests/test_literature_pdf_catalog.py",
+            "tests/test_literature_pdf_evidence.py",
+            "tests/test_literature_pdf_incremental.py",
+            "tests/test_literature_pdf_repair.py",
+            "tests/test_literature_pdf_review.py",
+            "tests/test_literature_read_plan_normalization.py",
+            "tests/test_literature_session_tools.py",
+            "tests/test_literature_web_binding.py",
+            "tests/test_literature_window.py",
+            "tests/test_literature_workflow_probe.py",
+            "tests/test_management_backup.py",
+            "tests/test_management_entry.py",
+            "tests/test_management_goals.py",
+            "tests/test_management_legacy.py",
+            "tests/test_management_native_schema.py",
+            "tests/test_management_quality_v5.py",
+            "tests/test_management_reading.py",
+            "tests/test_management_recertification.py",
+            "tests/test_management_temporal.py",
+            "tests/test_management_tools.py",
+            "tests/test_model_api.py",
+            "tests/test_model_transport_capacity.py",
+            "tests/test_motif_controller.py",
+            "tests/test_motif_failure_feedback.py",
+            "tests/test_motif_links.py",
+            "tests/test_motif_output_projection.py",
+            "tests/test_motif_read_semantic.py",
+            "tests/test_multimodal_learning_evidence.py",
+            "tests/test_native_budget.py",
+            "tests/test_native_motif_compiler.py",
+            "tests/test_native_recovery_source_closure.py",
+            "tests/test_negative_constraints.py",
+            "tests/test_negative_fields.py",
+            "tests/test_negative_outcome.py",
+            "tests/test_object_reference_candidates.py",
+            "tests/test_operation_graph.py",
+            "tests/test_operation_tools.py",
+            "tests/test_operation_v2.py",
+            "tests/test_paper_capability.py",
+            "tests/test_paper_checks.py",
+            "tests/test_paper_citation_budget.py",
+            "tests/test_paper_evolution_pilot.py",
+            "tests/test_paper_flow_shadow_compiler.py",
+            "tests/test_paper_proofreading_legacy.py",
+            "tests/test_paper_query_recovery.py",
+            "tests/test_paper_reference_continuation.py",
+            "tests/test_paper_reference_records.py",
+            "tests/test_paper_shadow_compiler.py",
+            "tests/test_parallel_requests.py",
+            "tests/test_parameter_learning.py",
+            "tests/test_parameter_motif_compiler.py",
+            "tests/test_pdf_vision_gate.py",
+            "tests/test_plan_compiler.py",
+            "tests/test_ppt_annotation_repair.py",
+            "tests/test_ppt_capability_budget.py",
+            "tests/test_ppt_capability_learning.py",
+            "tests/test_ppt_component_equivalence.py",
+            "tests/test_ppt_component_learning.py",
+            "tests/test_ppt_component_literals.py",
+            "tests/test_ppt_converted_source.py",
+            "tests/test_ppt_delivery_learning.py",
+            "tests/test_ppt_deployment.py",
+            "tests/test_ppt_design_preflight.py",
+            "tests/test_ppt_evaluation.py",
+            "tests/test_ppt_learning_evidence.py",
+            "tests/test_ppt_master.py",
+            "tests/test_ppt_numeric_evidence.py",
+            "tests/test_ppt_page_learning.py",
+            "tests/test_ppt_program_learning.py",
+            "tests/test_probe_motif_compiler.py",
+            "tests/test_provider_retry.py",
+            "tests/test_ptc_event_projection.py",
+            "tests/test_rae_real_acceptance.py",
+            "tests/test_recursive_learning_cli.py",
+            "tests/test_recursive_paper_candidate.py",
+            "tests/test_reentry_compiler.py",
+            "tests/test_reexport_cordis_inject_compat.py",
+            "tests/test_reexport_file_cost_metadata_compat.py",
+            "tests/test_reexport_member_path_compat.py",
+            "tests/test_reexport_native_capabilities_compat.py",
+            "tests/test_reexport_native_recovery_compat.py",
+            "tests/test_reexport_private_command_compat.py",
+            "tests/test_reexport_shared_invite_compat.py",
+            "tests/test_reexport_transport_framing_compat.py",
+            "tests/test_report_patch_evidence.py",
+            "tests/test_report_session_intake.py",
+            "tests/test_research_decision_portfolio.py",
+            "tests/test_research_decision_portfolio_v2.py",
+            "tests/test_research_harness.py",
+            "tests/test_reuse_compiler.py",
+            "tests/test_reuse_form_measurement.py",
+            "tests/test_reuse_form_preview.py",
+            "tests/test_reuse_form_rsi.py",
+            "tests/test_reuse_snapshot.py",
+            "tests/test_revision_rsi_controller.py",
+            "tests/test_revision_tool_evidence.py",
+            "tests/test_rsi_learning_trace.py",
+            "tests/test_rsi_optimization.py",
+            "tests/test_rsi_protocol.py",
+            "tests/test_rsi_quality.py",
+            "tests/test_scenario.py",
+            "tests/test_scene_file_delivery.py",
+            "tests/test_scene_images.py",
+            "tests/test_script_adaptation_learning.py",
+            "tests/test_script_cost_breakdown.py",
+            "tests/test_script_dataflow_compiler.py",
+            "tests/test_script_description_learning.py",
+            "tests/test_script_evidence.py",
+            "tests/test_script_learning_boundaries.py",
+            "tests/test_script_learning_wiring.py",
+            "tests/test_script_motif_accounting.py",
+            "tests/test_script_motif_compiler.py",
+            "tests/test_script_negative.py",
+            "tests/test_script_negative_learning.py",
+            "tests/test_script_reuse_learning.py",
+            "tests/test_script_takeover_breakdown.py",
+            "tests/test_search_response_trace.py",
+            "tests/test_shadow_evaluation.py",
+            "tests/test_skill_infinity_baseline.py",
+            "tests/test_skillsbench_trial.py",
+            "tests/test_source_capability_worker.py",
+            "tests/test_source_program_bridge.py",
+            "tests/test_source_program_compiler.py",
+            "tests/test_source_program_mcp.py",
+            "tests/test_source_program_review.py",
+            "tests/test_source_program_witness.py",
+            "tests/test_strategy_evolution_cli.py",
+            "tests/test_terminal_compiler.py",
+            "tests/test_tool_schema_contracts.py",
+            "tests/test_trace_compiled_read_motif.py",
+            "tests/test_trace_control_text_audit.py",
+            "tests/test_trace_paths.py",
+            "tests/test_trace_rsi_batch_compiler.py",
+            "tests/test_trace_rsi_batch_score.py",
+            "tests/test_trace_rsi_effect_guards.py",
+            "tests/test_trace_rsi_motif_compiler.py",
+            "tests/test_trace_rsi_schema_adaptation.py",
+            "tests/test_trace_rsi_state_compiler.py",
+            "tests/test_trace_tool_evidence.py",
+            "tests/test_unlimited_cost_budget.py",
+            "tests/test_unlimited_output_budget.py",
+            "tests/test_uploaded_scenes.py",
+            "tests/test_versioned_evidence_guard.py",
+            "tests/test_video_motif_release.py",
+            "tests/test_video_program_bundle.py",
+            "tests/test_video_web.py",
+            "tests/test_video_web_programs.py",
+            "tests/test_web_paper_learning.py",
+            "tests/test_web_ppt_learning.py",
+            "tests/test_web_request_limits.py",
+            "tests/test_web_task_budget.py",
+            "tests/test_witnessed_chain_motif.py",
+            "tests/test_witnessed_edge_motif.py"
+          ],
+          "expected_cases": 2672
+        }
+      }
+    }
+  },
+  "post_verifier_sha256": "94122f3375b2ea7fe65c25e30b44b6234fcc4dfff76d478e698af0c7395d4a0f"
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {validatePlanPolicy,validatePlanTask,createPlanController,planEffects} from '../src/motif_core/authorized_plan_policy.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {validatePlanPolicy,validatePlanTask,createPlanController,planEffects} from '../src/motif_core/runtime/policies/authorized_plan_policy.ts';
 const names=['preview_actions','authorize_plan','execute_plan'].map(n=>'mcp__test__'+n),obs=v=>({value:{structuredContent:v}});
 function fixture(){
  const tools=names.map(name=>({name,parameters:{}})),graph={preview_tool:names[0],authorize_tool:names[1],execute_tool:names[2],max_actions:6,allowed_ops:['copy','move','quarantine'],stop:'after_verified_execution_or_semantic_recovery'};

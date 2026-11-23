@@ -38,8 +38,12 @@ def test_correct_files_with_forged_receipt_still_fail(case):
 def test_prior_failure_archive_cannot_be_overwritten(case):
  value=receipt(case);check(case,0,value);prior=(case['private']/'archive/round-00/result.json').read_bytes()
  code,result=check(case,0,value);assert code==2 and result['fatal'];assert (case['private']/'archive/round-00/result.json').read_bytes()==prior
-def test_round_outside_bound_cannot_execute(case):
- code,result=check(case,3,receipt(case));assert code==2 and result['fatal'];assert not (case['private']/'archive').exists()
+def test_negative_round_cannot_execute(case):
+ code,result=check(case,-1,receipt(case));assert code==2 and result['fatal'];assert not (case['private']/'archive').exists()
+
+def test_positive_round_is_not_a_second_hidden_repair_quota(case):
+ code,result=check(case,3,receipt(case));assert code==0 and not result['passed']
+ assert (case['private']/'archive/round-03/result.json').is_file()
 
 def test_old_report_cannot_complete_new_file_effects(case):
  value=receipt(case);move_correct(case);code,result=check(case,0,value)

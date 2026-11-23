@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_contract import create_capability_snapshot
-from src.adapters.capability_feedback import file_ref, CapabilityFeedback
-from src.adapters.capability_strategy import (
+from src.capability.graph.capability_contract import create_capability_snapshot
+from src.rsi.feedback.capability_feedback import file_ref, CapabilityFeedback
+from src.rsi.evolution.capability_strategy import (
     create_strategy, validate_strategy, strategy_ref, admit_strategy, strategy_context,
 )
 from tests.test_capability_feedback import fixture

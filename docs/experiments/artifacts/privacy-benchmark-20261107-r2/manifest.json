@@ -1,0 +1,42 @@
+{
+  "pii-summary.json": {
+    "sha256": "7ce4c6e78fe61406b7d816f15bc2c779db13da49d103ab273f900be6f0bc5cb8",
+    "bytes": 250400
+  },
+  "credential-summary.json": {
+    "sha256": "2e8146e96fd7e5fbc6ef7f54ad85214ced8c5461e35a2a26c0bdd5b16fb9f0e5",
+    "bytes": 5046
+  },
+  "semantic-summary.json": {
+    "sha256": "4dea86067a038c069b8f6c2de149b1e522c025e7b0edd19da7edbe9226859683",
+    "bytes": 6412
+  },
+  "entry-summary.json": {
+    "sha256": "09a2d325daf2cf5e073841b539a48950ec01ce901da648d54dce5a3e26017d39",
+    "bytes": 5049
+  },
+  "environment.json": {
+    "sha256": "4723965d3db577dd0fc38b83eadee970c6d0d23d8e0f95384932ba028564d100",
+    "bytes": 1162
+  },
+  "verification.json": {
+    "sha256": "d96968185e9bd460bf52816e9988d16e326790ddcce9d27455d71611be3d335e",
+    "bytes": 32963
+  },
+  "native-scan-summary.json": {
+    "sha256": "899bd0225283ba65ae154025fa365f59469acd355bdbc2bc2aa6837ce77f99b5",
+    "bytes": 564
+  },
+  "transport-check.json": {
+    "sha256": "e7464206b56a455c59eb90d985954b0ee9dc4ae5870601855c6af5a4c0275c5c",
+    "bytes": 284
+  },
+  "execution.json": {
+    "sha256": "c55d67b42592e98c2c10560d6831036030d0ab883bbc9b1e6bd039e2744812e6",
+    "bytes": 2054
+  },
+  "entry-coverage.json": {
+    "sha256": "cd9f6f0cbbad2ad7a7f0da089ff102d72377b7366ebfc04b616707963791c1bb",
+    "bytes": 6286
+  }
+}

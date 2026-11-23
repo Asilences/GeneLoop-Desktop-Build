@@ -4,8 +4,8 @@ import argparse,json,copy
 from datetime import datetime,timezone
 import time
 from pathlib import Path
-from src.adapters.capability_scene import reference,ROOT
-from src.adapters.capability_improvement import evidence
+from src.adapters.harness.capability.capability_scene import reference,ROOT
+from src.rsi.learning.capability_improvement import evidence
 from scenarios.paper_proofreading.frontier.oracle import bibliography,latex,audit,compare,canonical,sha
 
 

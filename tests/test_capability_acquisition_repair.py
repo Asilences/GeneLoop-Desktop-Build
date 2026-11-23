@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.capability_contract import capability_ref,create_capability_snapshot
-from src.adapters.capability_builder import compile_proposal
-from src.adapters.capability_improvement import run_improvement,read
+from src.capability.graph.capability_contract import capability_ref,create_capability_snapshot
+from src.capability.builder.capability_builder import compile_proposal
+from src.rsi.learning.capability_improvement import run_improvement,read
 from tests.test_capability_improvement import plan_at,Adapter,put,events
 
 

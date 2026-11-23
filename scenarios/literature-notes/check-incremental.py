@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from mcp import Client, StdioServerParameters
 from src.adapters.deepseek_cost_gate import State, create_server
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 from src.adapters.scenario import prepare_scenario
 

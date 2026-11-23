@@ -1,6 +1,6 @@
 /** Native source-form storage reuses F02's authoritative update validation. */
 import {readFileSync} from 'node:fs';
-import {bytesSha256,decodeRsiRecord,validateRsiUpdate} from '../src/adapters/rsi_protocol.ts';
+import {bytesSha256,decodeRsiRecord,validateRsiUpdate} from '../src/rsi/protocol/rsi_protocol.ts';
 const input=JSON.parse(readFileSync(0,'utf8'));
 const candidate=decodeRsiRecord(input.candidate),report=decodeRsiRecord(input.report);
 const host={versions:input.versions,candidateSha256:candidate.sha256,payloadSha256:input.payload_sha256,

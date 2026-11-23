@@ -1,6 +1,6 @@
 import pytest
 from src.adapters.source_program_compiler import compile_source_program, source_library
-from src.adapters.script_motif_compiler import sha
+from src.motif_core.offline.compilation.script_motif_compiler import sha
 
 
 def sample():

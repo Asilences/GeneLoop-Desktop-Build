@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT))
 from src.adapters.paper_bibliography import bib_records
-from src.adapters.capability_contract import capability_digest
+from src.capability.graph.capability_contract import capability_digest
 
 
 def verify(manifest,trace,specification):

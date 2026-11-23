@@ -7,13 +7,13 @@ an inference about the model's fundamental capability boundary.
 import argparse,json,time
 from decimal import Decimal
 from pathlib import Path
-from src.adapters.capability_scene import ROOT,reference
-from src.adapters.capability_improvement import evidence,read,save
-from src.adapters.capability_contract import capability_digest
-from src.adapters.capability_materials import CapabilityMaterials
-from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
-from src.adapters.efficiency_rsi_measurement import measure_study,digest as study_digest
-from src.adapters.rsi_protocol import envelope
+from src.adapters.harness.capability.capability_scene import ROOT,reference
+from src.rsi.learning.capability_improvement import evidence,read,save
+from src.capability.graph.capability_contract import capability_digest
+from src.capability.runtime.capability_materials import CapabilityMaterials
+from src.rsi.feedback.efficiency_rsi_registry import StudyRequestRegistry
+from src.rsi.feedback.efficiency_rsi_measurement import measure_study,digest as study_digest
+from src.rsi.protocol.rsi_protocol import envelope
 from scenarios.paper_proofreading.frontier.execute import execute
 from scenarios.paper_proofreading.frontier.oracle import evaluate,sha
 from scenarios.paper_proofreading.frontier.feedback import record_final_feedback

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from pathlib import Path
+from .filesystem_paths import Path
 
 
 DECISION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,99}$")

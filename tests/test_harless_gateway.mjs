@@ -146,34 +146,53 @@ test('Scene deployment mounts code read-only and keeps user data and credentials
   assert.ok(!linked.mounts.some(row=>row.source===join(root,'release')),'never expose a whole release checkout');
 });
 
+test('native paper and video member scenes bind no MCP client', t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),'harless-native-scenes-')));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  for(const name of ['src','scripts','scenarios','python/bin'])mkdirSync(join(root,name),{recursive:true});
+  const python=join(root,'python/bin/python');writeFileSync(python,'test dependency file');
+  writeFileSync(join(root,'python/pyvenv.cfg'),'diagnostic installation marker');
+  const deployment={projectRoot:root,pythonExecutable:python,pythonRoots:[join(root,'python')]};
+  const scenes=[{id:'paper-proofreading',adapter:'workspace',allowed_tools:['mcp__paper_checks__list_inputs'],
+    environment_references:{},native_environment:{},mcp_rows:[]},
+    {id:'video-editing',adapter:'video',allowed_tools:['mcp__remotion__list_assets'],
+      environment_references:{},mcp_rows:[]}];
+  const result=memberSceneDeployment({scenes},deployment);
+  assert.deepEqual(result.scenes.map(scene=>scene.mcp_rows),[[],[]]);
+  assert.deepEqual(result.allowed_tools,scenes.flatMap(scene=>scene.allowed_tools));
+  const changed=structuredClone(scenes);changed[0].native_environment.HARLESS_PDF_TOOLCHAIN_ROOT='/owner/private';
+  assert.throws(()=>memberSceneDeployment({scenes:changed},deployment),/reviewed installations/);
+});
+
 test('native member resources use only verified namespace mounts while host resources stay unchanged', t => {
   const root=realpathSync(mkdtempSync(join(tmpdir(),'harless-native-resources-')));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
-  for(const name of ['scenarios/ppt_master','python/bin','approved-skill','renderer/program','renderer/share','fonts'])
+  for(const name of ['scenarios/ppt_master/third_party/ppt-master-desktop','python/bin','renderer/program','renderer/share','fonts'])
     mkdirSync(join(root,name),{recursive:true});
   const python=join(root,'python/bin/python');writeFileSync(python,'public diagnostic Python');
   writeFileSync(join(root,'python/pyvenv.cfg'),'diagnostic installation');
-  const skillRoot=join(root,'approved-skill'),raw='---\nname: ppt-master\ndescription: Diagnostic public skill.\n---\nPublic diagnostic content.\n';
-  writeFileSync(join(skillRoot,'SKILL.md'),raw);
+  const raw='---\nname: ppt-master\ndescription: Diagnostic public skill.\n---\nPublic diagnostic content.\n';
   const files={'SKILL.md':createHash('sha256').update(raw).digest('hex')};
-  writeFileSync(join(root,'scenarios/ppt_master/skill-lock.json'),JSON.stringify({schema_version:1,version:'6.6.0',files,
-    package_sha256:createHash('sha256').update(JSON.stringify(files)).digest('hex')}));
+  const bundle_sha256=createHash('sha256').update(JSON.stringify(files)).digest('hex');
+  const skillRoot=join(root,'.local/ppt-resources',bundle_sha256);
+  mkdirSync(skillRoot,{recursive:true});writeFileSync(join(skillRoot,'SKILL.md'),raw);
+  writeFileSync(join(root,'scenarios/ppt_master/third_party/ppt-master-desktop/PROVENANCE.json'),JSON.stringify({schema_version:1,file_count:1,bundle_sha256}));
   const rendererRoot=join(root,'renderer'),fontRoot=join(root,'fonts');
   writeFileSync(join(rendererRoot,'program/soffice.bin'),'diagnostic renderer');
   writeFileSync(join(fontRoot,'NotoSansCJKsc-Regular.otf'),'public diagnostic font');
   writeFileSync(join(fontRoot,'fonts-static.conf'),'public diagnostic configuration');
-  const scene={id:'chat',adapter:'workspace',allowed_tools:[],mcp_rows:[{name:'@deepseek-ai/dsh-mcp-client',
+  const scene={id:'chat',adapter:'workspace',ppt_execution_strategy:'ppt_master',allowed_tools:[],mcp_rows:[{name:'@deepseek-ai/dsh-mcp-client',
     config:{serverName:'workspace',transport:'stdio',command:python,cwd:root,args:[join(root,'scenarios/general/server.py')]}}]};
   const policy={scenes:[scene],command_resources:{projectRoot:'/unmounted/host',pptMasterRoot:'/unvalidated/skill',
     rendererRoot:'/unvalidated/renderer',fontRoot:'/unvalidated/fonts',unapproved:'never-inherit'}};
-  const deployment={projectRoot:root,pythonExecutable:python,pythonRoots:[join(root,'python')],pptMasterRoot:skillRoot,rendererRoot,fontRoot};
+  const deployment={projectRoot:root,pythonExecutable:python,pythonRoots:[join(root,'python')],pptMasterRoot:'/retired-skill',rendererRoot,fontRoot};
   const before=structuredClone({policy,deployment}),result=memberSceneDeployment(policy,deployment);
   assert.deepEqual(result.native_resources,{projectRoot:'/app',pptMasterRoot:'/opt/geneloop/ppt-master',rendererRoot,fontRoot});
   assert.ok(result.mounts.some(m=>m.source===skillRoot&&m.target===result.native_resources.pptMasterRoot));
   assert.ok(result.mounts.some(m=>m.source===join(root,'scenarios')&&m.target==='/app/scenarios'));
   for(const field of ['rendererRoot','fontRoot'])assert.ok(result.mounts.some(m=>m.source===deployment[field]&&m.target===result.native_resources[field]));
   assert.deepEqual({policy,deployment},before,'owner configuration and host broker resources must not be rewritten');
-  assert.deepEqual(memberSceneDeployment(policy,{...deployment,pptMasterRoot:undefined,rendererRoot:undefined,fontRoot:undefined}).native_resources,
+  assert.deepEqual(memberSceneDeployment({...policy,scenes:[{...scene,ppt_execution_strategy:undefined}]},{...deployment,rendererRoot:undefined,fontRoot:undefined}).native_resources,
     {projectRoot:'/app'},'an inherited skill path never grants a mount when the validated deployment has no skill');
 });
 
@@ -319,6 +338,22 @@ async function fixture(t, handleUpstream) {
   return { dir, seen, config, request, upstream, base, get gateway() { return gateway; },
     async restart() { await close(gateway.server); gateway = createGateway(config); port = await listen(gateway.server); } };
 }
+
+test('account pages can load the checked-in brand script and fonts before login', async t => {
+  const f = await fixture(t);
+  const script = await f.request('/assets/geneloop-i18n.js');
+  assert.equal(script.status, 200);
+  assert.match(script.headers.get('content-type'), /javascript/);
+  await script.text();
+  const font = await f.request('/assets/fonts/SpaceGrotesk.ttf');
+  assert.equal(font.status, 200);
+  assert.match(font.headers.get('content-type'), /font/);
+  assert.equal((await font.arrayBuffer()).byteLength, Number(font.headers.get('content-length')));
+  const head = await f.request('/assets/fonts/SpaceGrotesk.ttf', {method: 'HEAD'});
+  assert.equal(head.headers.get('content-length'), font.headers.get('content-length'));
+  assert.equal(await head.text(), '');
+  assert.equal((await f.request('/assets/geneloop-i18n.js', { method: 'POST', body: {} })).status, 405);
+});
 
 test('disconnecting an HTTP event stream releases its backend subscription without ending sibling streams', { timeout: 5000 }, async t => {
   const active = new Map(), stopped = [];
@@ -628,7 +663,7 @@ test('two invited users register and remain authenticated concurrently', async t
 test('stale member plugin paths fail during gateway startup', async t => {
   const f = await fixture(t);
   assert.throws(() => createGateway({ ...f.config, sourceDir: join(f.dir, 'new-checkout', 'src'),
-    memberPatch: [{ insert: [{ name: 'file:///old-checkout/src/adapters/dsh_web_tasks.ts' }] }] }),
+    memberPatch: [{ insert: [{ name: 'file:///old-checkout/src/adapters/web/dsh_web_tasks.ts' }] }] }),
   /Plugin is outside source directory/);
 });
 

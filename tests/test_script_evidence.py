@@ -2,7 +2,7 @@
 import importlib.util
 from pathlib import Path
 import pytest
-from src.adapters.script_motif_compiler import extract, compile_script
+from src.motif_core.offline.compilation.script_motif_compiler import extract, compile_script
 spec=importlib.util.spec_from_file_location('script_http',Path(__file__).resolve().parents[1]/'scripts/fetch-script-evidence.py')
 http=importlib.util.module_from_spec(spec);spec.loader.exec_module(http)
 
@@ -48,7 +48,7 @@ def test_vector_cache_preserves_order_and_evicts_without_caching_decisions():
     assert cache.resolve(['a','ccc'],encode)==[[1],[3]]
 
 def test_saved_script_in_outputs_uses_the_same_virtual_mapping_as_runtime(tmp_path):
-    from src.adapters.script_motif_compiler import virtual_host
+    from src.motif_core.offline.compilation.script_motif_compiler import virtual_host
     source_dir=tmp_path/'outputs/code/unz';source_dir.mkdir(parents=True)
     (source_dir/'query.py').write_text('import sys\nprint(sys.argv[1:])')
     assert virtual_host(tmp_path,'/work/outputs/unz/query.py')==source_dir/'query.py'

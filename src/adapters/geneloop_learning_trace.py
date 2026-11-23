@@ -2,18 +2,74 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
 from pathlib import Path
 import re
 import stat
-from jsonschema import Draft202012Validator
+import os
+import subprocess
+import sys
+from uuid import uuid4
+from jsonschema import Draft202012Validator, ValidationError
 
-from .dsh_event_projection import is_original_tool_result
-from .geneloop_privacy import MAX_BYTES, PrivacyRejected, admit_publication, learning_view
+from src.adapters.harness.dsh_event_projection import is_original_tool_result
+from .geneloop_privacy import MAX_BYTES, PrivacyRejected, admit_publication, check_material, learning_view, decode_material_json
+from .rsi_gitleaks_worker import gitleaks_transaction
 
 SCENE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 TOOL = re.compile(r"^[A-Za-z][A-Za-z0-9_.:/-]{0,255}$")
 MAX_EVENTS = 20_000
+
+
+def _opaque_topology(sample):
+    # Reuse the public sharing convention. The owning host resolves a tool-N
+    # through its immutable event order/catalog; no reverse map leaves the host.
+    aliases = {}
+    nodes = []
+    for node in sample['nodes']:
+        name = node['tool']
+        if name is not None:
+            name = aliases.setdefault(name, 'tool-' + str(len(aliases)))
+        nodes.append({**node, 'tool': name})
+    configured = json.loads((Path(__file__).resolve().parents[2] / 'config/harless-scenes.json').read_text(encoding='utf-8'))
+    scenes = {row['id'] for row in configured['scenes']} | {'chat', 'coding', 'sdk', 'generic'}
+    return {**sample, 'scene': sample['scene'] if sample['scene'] in scenes else 'generic', 'nodes': nodes}
+
+
+@gitleaks_transaction()
+def _validated_learning_view(original):
+    """Content may redact; protocol and binding metadata must remain usable.
+
+    Never restore a detector-modified identifier from the private original.
+    Reject the derived view when its host-created structure no longer matches.
+    """
+    # Input protocol, including identifiers about to become opaque, still passes
+    # the credential gate. Only this host projector constructs trusted metadata.
+    check_material(original)
+    envelope = _opaque_topology(original)
+    properties = {key: {'const': value} for key, value in envelope.items() if key != 'content'}
+    properties['content'] = {
+        'type': 'array', 'minItems': len(original['content']), 'maxItems': len(original['content']),
+        'prefixItems': [
+            {'type': 'object', 'required': list(row), 'additionalProperties': False,
+             'properties': {key: {} if key == 'value' else {'const': value} for key, value in row.items()}}
+            for row in original['content']
+        ],
+    }
+    values = learning_view([row['value'] for row in original['content']])
+    if not isinstance(values, list) or len(values) != len(original['content']):
+        raise PrivacyRejected('policy_rejected')
+    visible = {**envelope, 'content': [{**row, 'value': value}
+                for row, value in zip(original['content'], values)]}
+    try:
+        Draft202012Validator({'type': 'object', 'required': list(original),
+                              'properties': properties, 'additionalProperties': False}).validate(visible)
+    except ValidationError:
+        raise PrivacyRejected('policy_rejected') from None
+    check_material(visible)
+    return visible
 
 
 def private_json(path):
@@ -35,12 +91,10 @@ def _content(parts):
         if not isinstance(part, dict):
             raise PrivacyRejected()
         if part.get("type") == "text" and isinstance(part.get("text"), str):
-            text = part["text"]
-            try:
-                text = json.loads(text)
-            except ValueError:
-                pass
-            output.append(text)
+            # Text keeps its native type, including numeric-looking prose.
+            # The common boundary alone handles embedded JSON; pre-parsing here
+            # would discard duplicate fields or bypass text recognition via int.
+            output.append(part["text"])
         elif part.get("type") not in ("tool-call", "tool-result"):
             output.append({"content_omitted": "binary_or_unsupported"})
     return output
@@ -67,7 +121,7 @@ def project(events, scene, status, allowed_tools, *, semantic=True):
             node = len(calls)
             calls[call] = (node, name if name in approved else None)
             if semantic:
-                arguments = json.loads(data.get("arguments", "null"))
+                arguments = decode_material_json(data.get("arguments", "null"))
                 material.append({"type": "tool/call", "node": node, "value": arguments})
         elif is_original_tool_result(event):
             message = data.get("message", {})
@@ -99,7 +153,7 @@ def project(events, scene, status, allowed_tools, *, semantic=True):
         # All content and field keys use one engine; names/paths are not left
         # untouched in assistant replies, nested tool arguments or observations.
         result["content"] = material
-        return learning_view(result)
+        return _validated_learning_view(result)
     return result
 
 
@@ -120,38 +174,91 @@ def sharing_object(sample, allowed_tools):
             raise PrivacyRejected()
     # Custom scene/MCP identifiers can themselves disclose a person's name or
     # an internal service. Public topology uses sample-local IDs for every scene.
-    aliases={}
-    nodes=[]
-    for node in sample['nodes']:
-        tool=node['tool']
-        if tool is not None:
-            if tool not in aliases:aliases[tool]='tool-'+str(len(aliases))
-            tool=aliases[tool]
-        nodes.append({'tool':tool,'outcome':node['outcome']})
-    public={**sample,'scene':'generic','nodes':nodes}
+    public={**_opaque_topology(sample),'scene':'generic'}
     value = {"format": "geneloop.rsi-shared-object/v1", "kind": "tool_flow", "trace": public}
     schema=Path(__file__).resolve().parents[2]/'schemas/rsi-shared-tool-flow.schema.json'
     Draft202012Validator(json.loads(schema.read_text(encoding='utf-8'))).validate(value)
-    return admit_publication(value)
+    # Every remaining value is constrained by the strict topology schema and
+    # created here, including opaque tool IDs. Generic prose NLP would corrupt
+    # these constants. There is no user content or caller-selected skip list.
+    check_material(value)
+    return value
 
 
-def import_trace(path, scene, status, start, allowed_tools, *, semantic=True):
+def _read_events(path,start):
     lines = private_json(path).splitlines()
     if type(start) is not int or not 0 <= start <= len(lines):
         raise PrivacyRejected()
-    events = [json.loads(line) for line in lines[start:] if line.strip()]
-    return project(events, scene, status, allowed_tools, semantic=semantic)
+    return [decode_material_json(line) for line in lines[start:] if line.strip()]
+
+
+def import_trace(path, scene, status, start, allowed_tools, *, semantic=True):
+    return project(_read_events(path,start), scene, status, allowed_tools, semantic=semantic)
+
+
+def _catalog_tools(catalog_path):
+    catalog=decode_material_json(private_json(catalog_path))
+    return list(dict.fromkeys([*catalog.get('allowed_tools',[]),
+        *[tool['name'] for tool in catalog.get('tools',[]) if isinstance(tool,dict) and 'name' in tool]]))
+
+
+def prepare_structure_trace(path, scene, status, start, catalog_path, tool_key):
+    if not isinstance(tool_key, str) or not re.fullmatch('[a-f0-9]{64}', tool_key):
+        raise PrivacyRejected('invalid_input')
+    trace = project(_read_events(path, start), scene, status, _catalog_tools(catalog_path), semantic=False)
+    key = bytes.fromhex(tool_key)
+    for node in trace['nodes']:
+        if node['tool'] is not None:
+            node['tool'] = 'tool-' + hmac.new(key, node['tool'].encode(), hashlib.sha256).hexdigest()
+    # Custom scene names are host metadata and can contain customer identifiers.
+    configured = json.loads((Path(__file__).resolve().parents[2] / 'config/harless-scenes.json').read_text(encoding='utf-8'))
+    if scene not in {row['id'] for row in configured['scenes']} | {'chat', 'coding', 'sdk'}:
+        trace['scene'] = 'generic'
+    return trace
+
+
+def prepare_trace(path,scene,status,start,catalog_path,share=False):
+    allowed = _catalog_tools(catalog_path)
+    # One immutable in-memory source for semantic admission and shared topology.
+    events=_read_events(path,start)
+    view=project(events,scene,status,allowed,semantic=True)
+    return sharing_object(project(events,scene,status,allowed,semantic=False),allowed) if share else view
+
+
+def _write_view(output,view):
+    temporary=output/('.privacy-learning-'+uuid4().hex+'.tmp')
+    try:
+        with temporary.open('x',encoding='utf-8') as stream:
+            temporary.chmod(0o600)
+            json.dump(view,stream,ensure_ascii=False,allow_nan=False)
+        os.link(temporary,output/'privacy-learning.json')
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _run_worker_once(operation,value):
+    """One bounded host-owned operation, shared by SDK and offline adapters."""
+    from .rsi_privacy_tools import privacy_worker_environment
+    identity=str(uuid4())
+    request={'id':identity,'operation':operation,'value':value}
+    body=(json.dumps(request,ensure_ascii=False,allow_nan=False)+'\n').encode()
+    if len(body)>MAX_BYTES+4096:raise PrivacyRejected('input_limit')
+    completed=subprocess.run([sys.executable,'-B','-m','src.adapters.geneloop_privacy_worker','--authorized','--once'],
+        input=body,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,check=True,timeout=120,
+        cwd=Path(__file__).resolve().parents[2],env=privacy_worker_environment())
+    response=decode_material_json(completed.stdout)
+    if response.get('id')!=identity or response.get('ok') is not True:
+        raise PrivacyRejected(response.get('reason','processing_failed'))
+    return response['value']
 
 
 def capture_run(output, scene, status, allowed_tools, start=0):
     """Offline/SDK admission uses exactly the same projector as the Web hosts."""
-    output = Path(output)
+    output = Path(output).absolute()
     try:
-        view = import_trace(output / "agent-events.jsonl", scene, status, start, allowed_tools)
-        target = output / "privacy-learning.json"
-        with target.open("x", encoding="utf-8") as stream:
-            target.chmod(0o600)
-            json.dump(view, stream, ensure_ascii=False, allow_nan=False)
+        view = _run_worker_once('import',{'input':str(output/'agent-events.jsonl'),'scene':scene,
+            'status':status,'start':start,'allowed_tools':allowed_tools})
+        _write_view(output,view)
         return True
     except Exception:
         marker = output / "privacy-learning-rejected"
@@ -166,16 +273,13 @@ def capture_native_events(output, events, *, session_id, status):
     output = Path(output)
     output.mkdir(parents=True, mode=0o700, exist_ok=False)
     try:
-        tools = list(dict.fromkeys(event['data']['name'] for event in events
-                                  if event.get('type') == 'tool/call'))
-        view = project(events, 'sdk', status, tools)
-        (output/'privacy-learning.json').write_text(json.dumps(view,ensure_ascii=False,allow_nan=False),encoding='utf-8')
-        (output/'privacy-learning.json').chmod(0o600)
+        view=_run_worker_once('native_project',{'events':events,'status':status})
         source = {'session_id':session_id,'events_sha256':hashlib.sha256(
             json.dumps(events,sort_keys=True,ensure_ascii=False).encode()).hexdigest(),
             'scope':'native_invocation','execution_witness':False}
         (output/'source-private.json').write_text(json.dumps(source),encoding='utf-8')
         (output/'source-private.json').chmod(0o600)
+        _write_view(output,view)
         return True
     except Exception:
         (output/'privacy-learning-rejected').touch(mode=0o600)
@@ -190,22 +294,27 @@ def main():
     parser.add_argument("--status", required=True)
     parser.add_argument("--start", type=int, required=True)
     parser.add_argument("--catalog", type=Path, required=True)
-    parser.add_argument("--share-object", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--share-object", action="store_true")
+    mode.add_argument("--account-structure-policy", type=Path,
+                      help="Read the tool alias key from the owning account's private RSI settings")
+    parser.add_argument("--diagnostic-reason", action="store_true",
+                        help="Print only the fixed public rejection reason; never upstream details")
     args = parser.parse_args()
     try:
-        catalog = json.loads(private_json(args.catalog))
-        allowed = list(dict.fromkeys([*catalog.get("allowed_tools", []),
-            *[tool["name"] for tool in catalog.get("tools", []) if isinstance(tool, dict) and "name" in tool]]))
-        result = import_trace(args.input, args.scene, args.status, args.start, allowed,
-                              semantic=not args.share_object)
-        if args.share_object:
-            # A failed semantic/credential check closes the source as well;
-            # structure sharing is not a fallback around failed admission.
-            import_trace(args.input, args.scene, args.status, args.start, allowed, semantic=True)
-            result = sharing_object(result, allowed)
+        value = {'input': str(args.input.absolute()), 'scene': args.scene, 'status': args.status,
+                 'start': args.start, 'catalog': str(args.catalog.absolute())}
+        if args.account_structure_policy:
+            policy = decode_material_json(private_json(args.account_structure_policy.absolute()))
+            if policy.get('version') != 1 or policy.get('enabled') is not True:
+                raise PrivacyRejected('policy_rejected')
+            result = _run_worker_once('structure', {**value, 'tool_key': policy['toolKey']})
+        else:
+            result = _run_worker_once('project', {**value, 'share': args.share_object})
         print(json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")))
-    except Exception:
-        parser.exit(1, "geneloop_privacy_rejected\n")
+    except Exception as error:
+        reason = error.reason if isinstance(error, PrivacyRejected) else 'processing_failed'
+        parser.exit(1, "geneloop_privacy_rejected" + (":" + reason if args.diagnostic_reason else "") + "\n")
 
 
 if __name__ == "__main__":

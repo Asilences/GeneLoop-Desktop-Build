@@ -10,7 +10,7 @@ import hashlib
 
 def presentation_structure(data: bytes):
     try:
-        from .harless_attachment_text import _archive, _xml, _require_part, _relationships, _paragraphs, P, A, R
+        from src.adapters.web.attachments.harless_attachment_text import _archive, _xml, _require_part, _relationships, _paragraphs, P, A, R
     except ImportError:
         from harless_attachment_text import _archive, _xml, _require_part, _relationships, _paragraphs, P, A, R
 

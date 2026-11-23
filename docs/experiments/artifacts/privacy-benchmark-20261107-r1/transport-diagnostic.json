@@ -1,0 +1,9 @@
+{
+  "purpose": "diagnostic only; 5 shortest currently completed mismatch files, not an independent benchmark or secret-value attribution",
+  "selected_from_records_written": 5866,
+  "cases_tested": 5,
+  "raw_hit_json_clean": 5,
+  "module_accepted_rechecks": 5,
+  "code_sha256": "b1cfb374e127138147bef11dd2b31978d0ea829ef31adad34f072bd3387cbfbb",
+  "cloud_requests": 0
+}

@@ -144,7 +144,7 @@ def test_offline_collection_requires_tool_receipt_and_matching_artifact(review_s
     scene, _ = review_scene
     receipt = scene.submit_claim_review(report(scene))
     module = collector()
-    import src.adapters.dsh_trajectory as trajectory
+    import src.adapters.harness.dsh_trajectory as trajectory
     records = []
     monkeypatch.setattr(trajectory, 'extract_dsh_trace', lambda *a, **kw: SimpleNamespace(records=records))
     with tempfile.TemporaryDirectory(dir=ROOT / '.local/runs') as temporary:
@@ -163,7 +163,7 @@ def test_offline_collection_revalidates_sources_after_the_paid_run(review_scene,
     scene, directory = review_scene
     receipt = scene.submit_claim_review(report(scene))
     module = collector()
-    import src.adapters.dsh_trajectory as trajectory
+    import src.adapters.harness.dsh_trajectory as trajectory
     monkeypatch.setattr(trajectory, 'extract_dsh_trace', lambda *a, **kw:
                         SimpleNamespace(records=[SimpleNamespace(name=module.REVIEW_TOOL, observation=receipt)]))
     make_pdf(directory / 'B.pdf', ['Changed after review publication.'])

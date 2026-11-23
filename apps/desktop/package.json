@@ -1,6 +1,6 @@
 {
   "name": "geneloop-desktop",
-  "version": "0.3.0-preview.14",
+  "version": "0.4.1",
   "private": true,
   "description": "GeneLoop Desktop：本地界面与桌面宿主，连接 GeneLoop 执行服务",
   "author": "GeneLoop contributors",
@@ -8,26 +8,36 @@
   "type": "module",
   "main": "dist/main.js",
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.19"
   },
   "scripts": {
     "build": "tsc && node scripts/build-motif-evidence.mjs && node scripts/prepare-assets.mjs",
     "dev": "npm run build && electron .",
-    "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs ../../tests/test_desktop_frontend.mjs",
+    "check": "tsc --noEmit && node --test ../../tests/test_desktop_shell.mjs ../../tests/test_desktop_frontend.mjs ../../tests/test_desktop_motif_pool.mjs",
     "smoke": "npm run build && node scripts/check-local-ui.mjs",
     "smoke:packaged": "node scripts/check-package.mjs",
     "smoke:account": "npm run build && node scripts/check-account-login.mjs",
     "smoke:renderer": "npm run build && node scripts/check-renderer.mjs",
     "check:installer": "node scripts/check-installer-processes.mjs",
-    "pack": "npm run build && npm run runtime:stage && electron-builder --dir --publish never",
-    "dist": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs",
+    "check:installer-payload": "node scripts/check-installer-payload.mjs",
+    "check:installer-transaction": "node scripts/check-installer-transaction.mjs",
+    "check:tool-parity": "node scripts/audit-web-tool-parity.mjs --check",
+    "smoke:common": "node scripts/check-native-common.mjs",
+    "smoke:resources": "node scripts/check-native-budget.mjs",
+    "pack": "npm run build && npm run runtime:stage && electron-builder --config electron-builder.config.cjs --dir --publish never",
+    "dist": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs --complete",
+    "dist:lite": "npm run build && npm run runtime:stage && node scripts/build-installer.mjs --lightweight",
     "check:motif": "node scripts/build-motif-evidence.mjs && node --test ../../tests/test_desktop_motif_library.mjs",
     "smoke:local-workspace": "npm run build && npm run runtime:stage && node scripts/check-local-workspace.mjs",
     "runtime:stage": "node scripts/stage-local-runtime.mjs",
     "tools:stage": "node scripts/stage-desktop-tools.mjs",
+    "tools:office": "node scripts/stage-office-kit.mjs",
+    "tools:complete": "node scripts/prepare-complete-tools.mjs",
+    "tools:packs": "node scripts/build-tool-packs.mjs",
     "smoke:native": "node scripts/check-native-platform.mjs",
     "smoke:remotion": "node scripts/check-native-remotion.mjs",
-    "smoke:ppt": "node scripts/check-native-ppt.mjs"
+    "smoke:ppt": "node scripts/check-native-ppt.mjs",
+    "smoke:ppt-scope": "node scripts/check-ppt-authoring-scope.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.1.5-rc.3",
@@ -96,7 +106,7 @@
     "dmg": {
       "title": "${productName} ${version}",
       "format": "UDZO",
-      "backgroundColor": "#f7f7fa",
+      "backgroundColor": "#fafbfb",
       "window": {
         "width": 540,
         "height": 380

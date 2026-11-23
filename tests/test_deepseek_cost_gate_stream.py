@@ -13,7 +13,7 @@ from pathlib import Path
 from src.adapters.deepseek_cost_gate import (
     State, StreamUsage, create_server, observed_peak_cost, reservation,
 )
-from src.adapters.web_task_budget import TaskBudgetRegistry
+from src.adapters.web.web_task_budget import TaskBudgetRegistry
 
 
 BODY = b'{"model":"deepseek-flash","max_tokens":100,"messages":[],"stream":true}'
@@ -138,6 +138,10 @@ class CostGateStreamTests(unittest.TestCase):
         self.release.set()
         self.assertEqual(response.read(), LAST)
         row = self.settled()
+        import hashlib
+        self.assertEqual(row['request_fingerprint']['body_sha256'], hashlib.sha256(self.bodies[0]).hexdigest())
+        self.assertEqual(row['request_fingerprint']['body_bytes'], len(self.bodies[0]))
+        self.assertEqual(row['request_fingerprint']['semantics'], 'local_wire_shape_not_provider_cache_evidence')
         self.assertTrue(row['streamed'])
         self.assertEqual(row['response_bytes'], len(FIRST + LAST))
         self.assertEqual(row['response_usage'], USAGE)

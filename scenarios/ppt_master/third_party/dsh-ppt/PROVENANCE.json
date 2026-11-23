@@ -1,0 +1,34 @@
+{
+  "repository": "https://github.com/STARDUSTLC666/dsh-ppt",
+  "commit": "f2263f5260cf9453d1ad5d3c9a85c55ee3999c70",
+  "version": "0.20.5",
+  "license": "MIT",
+  "files": {
+    "deck-advanced.mjs": "c757fd58086fc68cf2bf8766adeb3d6a2edb87a2eb8f0ec3bd7cc66f45d3dd7f",
+    "deck-core.mjs": "98f7d096eb15fb4232c5419a617d6c587007e55a37c7b3af8db3554b4fb354d5",
+    "deck-data-math.mjs": "7f4b08f15bd1e7ad8943f32993408458d5c8e8a9fc74dde51b3e913e8e2beb20",
+    "deck-data-view.mjs": "6b3daf14f3ed6ec866dcbe832f5d0ce5e650948bd2b8bd8049255a53ec526746",
+    "deck-data.mjs": "649fd2dee4f3e91759d8443802bc8ce8f5fe98361962630c769e94fd1d6e5163",
+    "deck-delivery.mjs": "dadf7a7ec4d13261366e6b96e54f2f1160f1f6e243aed248ceb60e811d302f6c",
+    "deck-media.mjs": "3d34871ce86fb7c32c320a5d94332c230d5d261da11ffd9cd9757e5ec0883101",
+    "deck-render.mjs": "056493b7aff59eb8cb43f3794550e129b605857472a2f00fa9450d677c47869f",
+    "deck-visual.mjs": "246f67517b4d8322d815099bb77ed422b1bbf0c12d8b69bf6f216c675afb70e5"
+  },
+  "modifications": [
+    "deck-core.mjs: preserve literal structured slide text and table cells; Markdown parser remains unchanged.",
+    "deck-advanced.mjs: bind complete GeneLoop palette; bar/column value axes include zero.",
+    "deck-core.mjs: table header text contrasts with actual accent."
+  ],
+  "scope": "execution modules only; no plugin, Skill, model calls, workbench, updater or resident service",
+  "adapted_sha256": {
+    "deck-advanced.mjs": "968f8ede8fbf2eddb62c0d1db0c4ccccf42e75ac5dcf4225cd60821d97f2f1ac",
+    "deck-core.mjs": "7777732e19fa88c4ded717ab519c0cac2640ee3e173d0d73e9f9d83f907dab1f",
+    "deck-data-math.mjs": "7f4b08f15bd1e7ad8943f32993408458d5c8e8a9fc74dde51b3e913e8e2beb20",
+    "deck-data-view.mjs": "6b3daf14f3ed6ec866dcbe832f5d0ce5e650948bd2b8bd8049255a53ec526746",
+    "deck-data.mjs": "649fd2dee4f3e91759d8443802bc8ce8f5fe98361962630c769e94fd1d6e5163",
+    "deck-delivery.mjs": "dadf7a7ec4d13261366e6b96e54f2f1160f1f6e243aed248ceb60e811d302f6c",
+    "deck-media.mjs": "3d34871ce86fb7c32c320a5d94332c230d5d261da11ffd9cd9757e5ec0883101",
+    "deck-render.mjs": "056493b7aff59eb8cb43f3794550e129b605857472a2f00fa9450d677c47869f",
+    "deck-visual.mjs": "246f67517b4d8322d815099bb77ed422b1bbf0c12d8b69bf6f216c675afb70e5"
+  }
+}

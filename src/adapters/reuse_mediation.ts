@@ -9,7 +9,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools';
 import {createProbeFrontier,probeOutcome} from './probe_frontier.ts';
-import {digest,observation,syntheticToolStreamBatch} from '../motif_core/online_skill_runtime.mjs';
+import {digest,observation,syntheticToolStreamBatch} from '../motif_core/runtime/online_skill_runtime.mjs';
 
 const sha=(v:any)=>createHash('sha256').update(v).digest('hex');
 const copy=(v:any)=>JSON.parse(JSON.stringify(v));
@@ -48,7 +48,7 @@ export function reuseSyntaxCorrection(command:string,verb='geneloop-reuse'){
 export function loadReuseLibrary(path:string){
  const library=JSON.parse(readFileSync(path,'utf8')),{digest:expected,...body}=library;
  const root=fileURLToPath(new URL('../../',import.meta.url));
- const locks=['src/adapters/reuse_compiler.py','src/adapters/probe_motif_compiler.py','src/adapters/probe_frontier.ts','src/adapters/reuse_mediation.ts','src/adapters/script_motif_web.ts','src/adapters/script_motif_runtime.ts','src/adapters/script_execution_frontier.ts','scripts/compile-reuse-library.py'];
+ const locks=['src/motif_core/offline/compilation/reuse_compiler.py','src/motif_core/offline/compilation/trace/probe_motif_compiler.py','src/adapters/probe_frontier.ts','src/adapters/reuse_mediation.ts','src/adapters/script_motif_web.ts','src/adapters/script_motif_runtime.ts','src/adapters/script_execution_frontier.ts','scripts/compile-reuse-library.py'];
  if(library.kind!=='native_reuse_contract_library'||library.version!==1||expected!==digest(body)||!Array.isArray(library.contracts)||library.contracts.length>128||locks.some(p=>library.code_locks?.[p]!==sha(readFileSync(join(root,p)))))throw Error('invalid_reuse_library');
  for(const c of library.contracts)if(!c.tool?.startsWith('mcp__')||!/^[a-f0-9]{64}$/.test(c.schema_sha256)||new Set(c.certification?.witnesses?.map((w:any)=>w.task_id)).size<2)throw Error('uncertified_reuse_contract');
  for(const c of library.probe_contracts??[])if(!library.contracts.some((t:any)=>t.tool===c.tool&&t.schema_sha256===c.schema_sha256)||!c.axes?.length||c.axes.length>32||c.axes.some((a:any)=>!Array.isArray(a.path)||a.path.length>16||a.path.some((k:any)=>typeof k!=='string'||forbidden.has(k))||new Set(a.witnesses?.map((w:any)=>w.task_id)).size<2||!a.witnesses.some((w:any)=>w.probe_succeeded))||!Number.isInteger(c.max_probes)||c.max_probes<1||c.max_probes>24||!c.success_fields?.length||c.success_fields.some((k:any)=>c.failure[k]!==false))throw Error('uncertified_probe_contract');

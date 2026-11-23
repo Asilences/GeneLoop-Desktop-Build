@@ -7,9 +7,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
-import {createCapability,capabilityRef,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
-import {createCapabilityDischarge,dischargeVerificationPayload} from '../src/adapters/capability_discharge.ts';
-import {bytesSha256,validateRsiRecord} from '../src/adapters/rsi_protocol.ts';
+import {createCapability,capabilityRef,createCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
+import {createCapabilityDischarge,dischargeVerificationPayload} from '../src/capability/runtime/capability_discharge.ts';
+import {bytesSha256,validateRsiRecord} from '../src/rsi/protocol/rsi_protocol.ts';
 import {diagnosticHost,fixtureRecord} from '../examples/rsi-protocol-v1/host.mjs';
 
 const clone=structuredClone,sha=bytesSha256;

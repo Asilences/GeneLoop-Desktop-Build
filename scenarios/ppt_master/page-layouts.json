@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "canvas": [
+    1280,
+    720
+  ],
+  "layouts": [
+    "cover",
+    "section",
+    "bullets",
+    "two_column",
+    "image_text",
+    "bar_chart",
+    "closing"
+  ],
+  "geometry": {
+    "margin_x": 88,
+    "right_column_x": 672,
+    "image_box": [
+      88,
+      208,
+      512,
+      320
+    ]
+  },
+  "provenance": {
+    "repository": "https://github.com/presenton/presenton",
+    "commit": "bf5179fc712c4e5d225511f46960478f80879da7",
+    "path": "templates/general/template.json",
+    "sha256": "cf84c907a38bb50595f9afa3197888d7d40e9c889626da4789bf3bf068c7418a",
+    "license": "Apache-2.0",
+    "adaptations": [
+      "white content canvas",
+      "CJK typography",
+      "content-free layout geometry",
+      "no embedded stock assets or placeholder facts"
+    ]
+  },
+  "adaptation": "Selected General split-page geometry and Slide-maker page roles implemented as deterministic native SVG compositions. User text, images, facts and notes are supplied per invocation."
+}

@@ -50,14 +50,15 @@ def prepare(args,output,endpoint):
     original(args,output,endpoint)
     path=output/'host.patch.yml';patch=json.loads(path.read_text())
     replacements={
-        (ROOT/'src/adapters/harless_web_client/index.mjs').as_uri():(ROOT/'src/adapters/script_motif_web.ts').as_uri(),
+        (ROOT/'src/adapters/web/client/index.mjs').as_uri():(ROOT/'src/adapters/script_motif_web.ts').as_uri(),
         (ROOT/'src/adapters/geneloop_shell.ts').as_uri():(ROOT/'src/adapters/script_motif_shell.ts').as_uri(),
     }
-    if os.environ.get('SSS_RETRIEVAL_EVIDENCE')=='1':
-        replacements[(ROOT/'src/adapters/geneloop_web_search.ts').as_uri()]=(ROOT/'src/adapters/retrieval_web_search.ts').as_uri()
+    retrieval=os.environ.get('SSS_RETRIEVAL_EVIDENCE')=='1'
     for row in patch:
         for plugin in row.get('insert',[]):
             if plugin.get('name') in replacements:plugin['name']=replacements[plugin['name']]
+            if retrieval and plugin.get('id')=='geneloop-web-search':
+                plugin.setdefault('config',{})['retrievalEvidence']=True
     web.save(path,patch)
     effective=output/'effective-config.json'
     if effective.exists():

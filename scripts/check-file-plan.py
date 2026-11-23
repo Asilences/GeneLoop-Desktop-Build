@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scenarios/f
 from common import PREFIX,DATA,digest,save,snapshot
 from plan_study import scope,expected_actions
 from src.adapters.scenario import prepare_scenario
-from src.adapters.harness_runtime import create_harness
+from src.adapters.harness.harness_runtime import create_harness
 from src.adapters.native_budget import NativeBudgetGuard
 class Provider(BaseHTTPRequestHandler):
  def log_message(self,*a):pass
@@ -44,7 +44,7 @@ def main():
   with create_harness(root=ROOT,patches=(prepared['patch'],),env=env,cwd=str(out),runtime_cwd=str(out),provider='deepseek-official',model='deepseek-flash',max_tokens=4000,request_timeout_seconds=120) as client:result=client.run('Local explicit task-copy capability check.',session_id=task['session_id'],on_notification=guard.on_notification)
   save(out/'events.json',result.events);log=[json.loads(l) for l in (out/'.local/online-motif'/(hashlib.sha256(task['session_id'].encode()).hexdigest()+'.jsonl')).read_text().splitlines()];verified=sum(r['kind']=='plan_model_request_bypassed_verified' for r in log)
   assert result.finish_reason=='completed' and len(server.requests)==(6 if a.stale else 4) and verified==(0 if a.stale else 2) and server.other==0
-  from src.motif_core.offline.plan_compiler import effect_snapshot
+  from src.motif_core.offline.compilation.plan_compiler import effect_snapshot
   assert snapshot(work)==effect_snapshot(scope(spec),expected_actions(spec))
   r={'real_api_requests':0,'mock_http_requests':len(server.requests),'verified_continuations':verified,'stale_input_fallback':a.stale,'byte_effects_verified':True,'scripted_selection_not_training':True,'output':str(out)};save(out/'outcome.json',r);print(json.dumps(r))
  finally:server.shutdown();server.server_close();worker.join(timeout=5)

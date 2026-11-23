@@ -27,12 +27,12 @@ sys.path.insert(0, str(ROOT))
 from src.adapters.model_api import (model_api_root, model_catalog_snapshot,
     model_api_key_configured, model_sdk_key, model_ids)
 from src.adapters.scenario import prepare_scenario
-from src.adapters.harless_scenarios import prepare_scene_registry
-from src.adapters.harless_product_prompt import product_persona, product_system_prompt
-from src.adapters.harless_models import model_options, price_basis
+from src.adapters.web.scenes.harless_scenarios import prepare_scene_registry
+from src.adapters.web.tasks.harless_product_prompt import product_persona, product_system_prompt
+from src.adapters.web.tasks.harless_models import model_options, price_basis
 from src.adapters.deepseek_cost_gate import (State, create_server, normalize_request_limit,
     request_limit_argument, cost_cap_argument, PEAK_USD_PER_MILLION, CACHE_HIT_PEAK_USD_PER_MILLION)
-from src.adapters.web_task_budget import TaskBudgetRegistry, create_control_server
+from src.adapters.web.web_task_budget import TaskBudgetRegistry, create_control_server
 
 
 def save(path, value):
@@ -254,16 +254,17 @@ def prepare(args, output, endpoint):
             selected.update({key: policy[key] for key in ('manifest', 'task', 'certified_input_sha256')})
         policy.update(scenes=scenes, allowed_tools=selected.get('allowed_tools', prepared['allowed_tools']),
                       scene_registry_sha256=hashlib.sha256(registry.read_bytes()).hexdigest())
-        if os.environ.get('GENELOOP_PPT_MASTER_ROOT'):
+        if any(scene.get('ppt_execution_strategy') == 'ppt_master' and not scene.get('unavailable_reason') for scene in scenes):
+            from scenarios.ppt_master.package import bundled_root
             policy['command_resources'] = {'projectRoot': str(ROOT),
-                'pptMasterRoot': os.environ['GENELOOP_PPT_MASTER_ROOT']}
+                'pptMasterRoot': str(bundled_root())}
             for field, variable in (('rendererRoot', 'HARLESS_PAPER_RENDERER_ROOT'),
                                     ('fontRoot', 'HARLESS_PPT_FONT_ROOT')):
                 if os.environ.get(variable):
                     policy['command_resources'][field] = os.environ[variable]
     save(output / 'policy.json', policy)
     disabled = ['llm-deepseek', 'session-title-llm',
-                'compaction-basic', 'session-log-deepseek', 'goal', 'goal-round-driver']
+                'compaction-basic', 'session-log-deepseek', 'session-telemetry-otel', 'goal', 'goal-round-driver']
     if not args.frozen:
         disabled += ['bash-sandbox', 'pwsh-sandbox', 'web-search-deepseek']
     patch = [{'id': name, 'disabled': True} for name in disabled]
@@ -287,8 +288,8 @@ def prepare(args, output, endpoint):
     patch += [{'id': 'agent-presets', 'config': {'default': 'sss-task',
         'includeShippedRoot': False, 'includeUserRoot': False,
         'roots': [{'path': str(output / 'presets'), 'trust': 'system'}]}},
-        {'insert': [{'id': 'sss-web-policy', 'name': (ROOT / 'src/adapters/dsh_web_policy.ts' if args.frozen else
-            ROOT / 'src/adapters/harless_web_client/index.mjs').as_uri()}]}]
+        {'insert': [{'id': 'sss-web-policy', 'name': (ROOT / 'src/adapters/web/dsh_web_policy.ts' if args.frozen else
+            ROOT / 'src/adapters/web/client/index.mjs').as_uri()}]}]
     if not args.frozen:
         patch.append({'insert': [
             {'id': 'geneloop-shell', 'name': (ROOT / 'src/adapters/artifact_motif_shell.ts').as_uri()},
@@ -326,17 +327,17 @@ def prepare(args, output, endpoint):
         git_diff_sha256=hashlib.sha256(subprocess.check_output(['git', 'diff', '--binary'], cwd=ROOT)).hexdigest())
     snapshot['host_patch_sha256'] = hashlib.sha256((output / 'host.patch.yml').read_bytes()).hexdigest()
     snapshot['files_sha256'] = {str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else 'private-scenario-config': hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in [scenario, ROOT / 'config/harness-web.json', ROOT / 'src/adapters' /
+        for path in [scenario, ROOT / 'config/harness-web.json', ROOT / 'src/adapters/web' /
                      ('dsh_web_policy.ts' if args.frozen else 'dsh_web_tasks.ts'),
-                     ROOT / 'src/adapters/deepseek_cost_gate.py', ROOT / 'src/adapters/harless_models.py', ROOT / 'scripts/harness-web.py',
-                     ROOT / 'config/geneloop-persona.json', ROOT / 'src/adapters/harless_product_prompt.py',
+                     ROOT / 'src/adapters/deepseek_cost_gate.py', ROOT / 'src/adapters/web/tasks/harless_models.py', ROOT / 'scripts/harness-web.py',
+                     ROOT / 'config/geneloop-persona.json', ROOT / 'src/adapters/web/tasks/harless_product_prompt.py',
                      ROOT / 'scripts/motif-example.py', ROOT / 'package-lock.json',
-                     *([] if args.frozen else [ROOT / 'src/adapters/web_task_request.ts',
-                       ROOT / 'src/adapters/web_task_budget.py', ROOT / 'src/adapters/harless_product_prompt.ts',
-                       ROOT / 'src/adapters/harless_settings.ts', ROOT / 'src/adapters/harless_scenarios.py',
-                       ROOT / 'src/adapters/harless_web_client/index.mjs',
-                       ROOT / 'src/adapters/harless_web_client/package.json',
-                       ROOT / 'src/adapters/harless_web_client/client.js',
+                     *([] if args.frozen else [ROOT / 'src/adapters/web/web_task_request.ts',
+                       ROOT / 'src/adapters/web/web_task_budget.py', ROOT / 'src/adapters/web/tasks/harless_product_prompt.ts',
+                       ROOT / 'src/adapters/web/account/harless_settings.ts', ROOT / 'src/adapters/web/scenes/harless_scenarios.py',
+                       ROOT / 'src/adapters/web/client/index.mjs',
+                       ROOT / 'src/adapters/web/client/package.json',
+                       ROOT / 'src/adapters/web/client/client.js',
                        registry])]}
     if policy.get('manifest'):
         snapshot['manifest_sha256'] = hashlib.sha256(Path(policy['manifest']).read_bytes()).hexdigest()
@@ -488,7 +489,7 @@ def main():
     for server in servers:
         threading.Thread(target=server.serve_forever, daemon=True).start()
     prepare(args, output, f'http://127.0.0.1:{gate.server_port}/v1')
-    env = {**os.environ, 'DSH_HOME': str(output / 'dsh'), 'SSS_WEB_POLICY': str(output / 'policy.json'),
+    env = {**os.environ, 'DSH_TELEMETRY_DISABLED': '1', 'DSH_HOME': str(output / 'dsh'), 'SSS_WEB_POLICY': str(output / 'policy.json'),
            'DEEPSEEK_API_KEY': model_sdk_key() if args.real_model and model_api_key_configured() else 'sss-mock-only',
            'DEEPSEEK_BASE_URL': f'http://127.0.0.1:{gate.server_port}/v1',
            'SSS_ONLINE_MOTIF_MANIFEST': '', 'SSS_ONLINE_MOTIF_TASK': ''}

@@ -8,8 +8,8 @@ import argparse,hashlib,json,os,re,sys
 from collections import Counter,defaultdict
 from pathlib import Path
 ROOT=Path(os.environ.get('GENELOOP_CODE_ROOT',str(Path(__file__).resolve().parents[2]))).resolve();sys.path.insert(0,str(ROOT))
-from src.adapters.dsh_trajectory import ToolContract,extract_dsh_trace,mine_dsh_traces
-from src.motif_core.offline.library_builder import build_read_motif_library
+from src.adapters.harness.dsh_trajectory import ToolContract,extract_dsh_trace,mine_dsh_traces
+from src.motif_core.offline.compilation.library_builder import build_read_motif_library
 BASE=Path(os.environ.get('REMOTION_EXPERIMENT_ROOT',str(ROOT/'.local/experiments/remotion-motivation-20261027-v1'))).resolve()
 def readlines(path):return [json.loads(x) for x in path.read_text().splitlines()] if path.exists() else []
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -26,8 +26,17 @@ def classify(call):
     return 'other_shell'
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--tasks',type=Path,default=ROOT/'scenarios/remotion_edit/tasks.json');ap.add_argument('--split-file',type=Path);ap.add_argument('--output-dir',type=Path,default=BASE/'analysis');args=ap.parse_args()
-    tasks=json.loads(args.tasks.read_text());OUT=args.output_dir;OUT.mkdir(parents=True,exist_ok=True)
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--tasks', type=Path, nargs='+', default=[ROOT / 'scenarios/remotion_edit/tasks.json'])
+    ap.add_argument('--split-file', type=Path)
+    ap.add_argument('--output-dir', type=Path, default=BASE / 'analysis')
+    args = ap.parse_args()
+    registries = [path.read_bytes() for path in args.tasks]
+    tasks = [task for registry in registries for task in json.loads(registry)]
+    if len({task['id'] for task in tasks}) != len(tasks):
+        ap.error('task registries must have distinct task IDs')
+    registry_bytes = registries[0] if len(registries) == 1 else json.dumps(tasks, ensure_ascii=False, indent=2).encode('utf-8')
+    OUT=args.output_dir;OUT.mkdir(parents=True,exist_ok=True)
     ledgers=readlines(BASE/'cost-ledger.jsonl'); rows_by_id={r['request_id']:r for r in ledgers}
     requests={int(p.stem):json.loads(p.read_text()) for p in (BASE/'requests').glob('*.json')}
     per_task={t['id']:[] for t in tasks};attribution={}
@@ -89,7 +98,7 @@ def main():
         compiler.update(status='compiled',candidates=len(mine_dsh_traces(train)),certified_artifacts=len(library['artifacts']),rejected=library['rejected'],library_digest=library['library_digest'])
     settled=[r for r in ledgers if r.get('observed_peak_usd') is not None]
     total={'experiment_id':'remotion-motivation-20261027-v1','tasks':summaries,'compiler':compiler,
-      'all_real_requests_including_failed_probe':len(requests),'task_registry_sha256':sha(args.tasks),'registry_task_count':len(tasks),'ledger_rows':len(ledgers),
+      'all_real_requests_including_failed_probe':len(requests),'task_registry_sha256':hashlib.sha256(registry_bytes).hexdigest(),'registry_task_count':len(tasks),'ledger_rows':len(ledgers),
       'observed_cost_usd_including_failed_probe':sum(r['observed_peak_usd'] for r in settled),
       'diagnostic_probe_requests':len(diagnostic_ids),'diagnostic_probe_cost_usd':sum(r.get('observed_peak_usd') or 0 for r in ledgers if r['request_id'] in diagnostic_ids),
       'unknown_or_pending_request_ids':sorted(set(requests)-set(r['request_id'] for r in settled)),

@@ -4,23 +4,289 @@
     {
       "path": "src/adapters/script_motif_runtime.ts",
       "from_sha256": "61d679a1f971f9efb16a2711c583b35ac005301341a282a9c8ee5e630a2df870",
-      "to_sha256": "9cef4d6a5e4dba6f66006af4e4f010e71a513e3ec48669a563155986d1d9958b",
-      "reason": "仅将整文件锁检查改为执行兼容策略；程序身份、证书、绑定、沙箱及回执逻辑保持原样",
+      "to_sha256": "909dc2e5790b364459bc55748c227ca413a7606209e8c52af1f800c54518a109",
+      "reason": "\u4ec5\u5c06\u6574\u6587\u4ef6\u9501\u68c0\u67e5\u6539\u4e3a\u6267\u884c\u517c\u5bb9\u7b56\u7565\uff1b\u7a0b\u5e8f\u8eab\u4efd\u3001\u8bc1\u4e66\u3001\u7ed1\u5b9a\u3001\u6c99\u7bb1\u53ca\u56de\u6267\u903b\u8f91\u4fdd\u6301\u539f\u6837",
+      "validation": "tests/test_script_capability_runtime.mjs"
+    },
+    {
+      "path": "src/adapters/script_motif_runtime.ts",
+      "from_sha256": "9cef4d6a5e4dba6f66006af4e4f010e71a513e3ec48669a563155986d1d9958b",
+      "to_sha256": "909dc2e5790b364459bc55748c227ca413a7606209e8c52af1f800c54518a109",
+      "reason": "\u539f\u6267\u884c\u7248\u672c\u8fc1\u81f3\u5f53\u524d\u6e90\u7801\u76ee\u5f55\uff0c\u5e76\u66f4\u65b0\u6a21\u5757\u5165\u53e3\u3002",
       "validation": "tests/test_script_capability_runtime.mjs"
     },
     {
       "path": "src/adapters/script_motif_runtime.ts",
       "from_sha256": "0111a59d3aa3d1a2dbde74b1c16c79b7aab32edd79bf48ba5c0bb91076570afb",
-      "to_sha256": "9cef4d6a5e4dba6f66006af4e4f010e71a513e3ec48669a563155986d1d9958b",
-      "reason": "旧程序继续使用16000字节上限；新程序仅能使用证书中显式认证的65536上限，增加受认证JSON值输入元数据校验，绑定与沙箱保持原样",
+      "to_sha256": "909dc2e5790b364459bc55748c227ca413a7606209e8c52af1f800c54518a109",
+      "reason": "\u65e7\u7a0b\u5e8f\u7ee7\u7eed\u4f7f\u752816000\u5b57\u8282\u4e0a\u9650\uff1b\u65b0\u7a0b\u5e8f\u4ec5\u80fd\u4f7f\u7528\u8bc1\u4e66\u4e2d\u663e\u5f0f\u8ba4\u8bc1\u768465536\u4e0a\u9650\uff0c\u589e\u52a0\u53d7\u8ba4\u8bc1JSON\u503c\u8f93\u5165\u5143\u6570\u636e\u6821\u9a8c\uff0c\u7ed1\u5b9a\u4e0e\u6c99\u7bb1\u4fdd\u6301\u539f\u6837",
       "validation": "tests/test_script_capability_runtime.mjs tests/test_script_receipt_envelope.mjs"
     },
     {
       "path": "src/adapters/reuse_mediation.ts",
       "from_sha256": "9551379850c3c16ce1f62bdae738c119493520b734b7588f78b337e3e16a99c3",
-      "to_sha256": "7c2a08564ac5192e21b8762c1a866494007366ad01120d0510ad7098fb68e18d",
-      "reason": "PR127仅将当前任务复用来源读取容量从20MiB固定值改为统一FILE_MAX_BYTES；Script原生输入自身16000000字节上限、来源哈希、路径、权限、绑定和执行逻辑不变。旧程序与证书保留，仅兼容此精确执行版本对。",
-      "validation": "tests/test_script_capability_runtime.mjs tests/test_reuse_mediation.mjs；本轮真实科研材料无模型重放另见docs/experiments/creation-feedback-20261103.md"
+      "to_sha256": "994255eb11bbc943047fb0d5e7616965a30e4843ad139c69fe7fc233a691c64a",
+      "reason": "PR127\u4ec5\u5c06\u5f53\u524d\u4efb\u52a1\u590d\u7528\u6765\u6e90\u8bfb\u53d6\u5bb9\u91cf\u4ece20MiB\u56fa\u5b9a\u503c\u6539\u4e3a\u7edf\u4e00FILE_MAX_BYTES\uff1bScript\u539f\u751f\u8f93\u5165\u81ea\u8eab16000000\u5b57\u8282\u4e0a\u9650\u3001\u6765\u6e90\u54c8\u5e0c\u3001\u8def\u5f84\u3001\u6743\u9650\u3001\u7ed1\u5b9a\u548c\u6267\u884c\u903b\u8f91\u4e0d\u53d8\u3002\u65e7\u7a0b\u5e8f\u4e0e\u8bc1\u4e66\u4fdd\u7559\uff0c\u4ec5\u517c\u5bb9\u6b64\u7cbe\u786e\u6267\u884c\u7248\u672c\u5bf9\u3002",
+      "validation": "tests/test_script_capability_runtime.mjs tests/test_reuse_mediation.mjs\uff1b\u672c\u8f6e\u771f\u5b9e\u79d1\u7814\u6750\u6599\u65e0\u6a21\u578b\u91cd\u653e\u53e6\u89c1docs/experiments/creation-feedback-20261103.md"
+    },
+    {
+      "path": "src/adapters/reuse_mediation.ts",
+      "from_sha256": "7c2a08564ac5192e21b8762c1a866494007366ad01120d0510ad7098fb68e18d",
+      "to_sha256": "994255eb11bbc943047fb0d5e7616965a30e4843ad139c69fe7fc233a691c64a",
+      "reason": "\u539f\u6267\u884c\u7248\u672c\u8fc1\u81f3\u5f53\u524d\u6e90\u7801\u76ee\u5f55\uff0c\u5e76\u66f4\u65b0\u6a21\u5757\u5165\u53e3\u3002",
+      "validation": "tests/test_script_capability_runtime.mjs tests/test_reuse_mediation.mjs\uff1b\u672c\u8f6e\u771f\u5b9e\u79d1\u7814\u6750\u6599\u65e0\u6a21\u578b\u91cd\u653e\u53e6\u89c1docs/experiments/creation-feedback-20261103.md"
+    },
+    {
+      "path": "src/adapters/harness/learning/dsh_learned_script.ts",
+      "from_sha256": "93b671871b150025eac10df665dc4bae9b2ab79b4ee464765c6e3a24925d814d",
+      "to_sha256": "976bb8363f69eafc65f3e8297ded142939d9bb83cceaae193a0c8d9a9cfcca75",
+      "reason": "\u6587\u4ef6\u590d\u5236\u7a0b\u5e8f\u5171\u7528\u6267\u884c\u5668\u3002\u4fdd\u6301\u8be5\u683c\u5f0f\u7684\u53c2\u6570\u3001\u5b9e\u9645\u56de\u6267\u548c\u8ba4\u8bc1\u89c4\u5219\u3002",
+      "validation": "tests/test_learned_script.mjs tests/test_script_adaptation.mjs tests/test_experience_selection.mjs"
+    },
+    {
+      "path": "src/adapters/harness/learning/dsh_learned_script_v2.ts",
+      "from_sha256": "77c3f09e3038cc5ac57046ea61eded478f4f0509ac5302a0973fa99872c7cbe4",
+      "to_sha256": "976bb8363f69eafc65f3e8297ded142939d9bb83cceaae193a0c8d9a9cfcca75",
+      "reason": "\u6587\u4ef6\u590d\u5236\u7a0b\u5e8f\u5171\u7528\u6267\u884c\u5668\u3002\u4fdd\u6301\u8be5\u683c\u5f0f\u7684\u53c2\u6570\u3001\u5b9e\u9645\u56de\u6267\u548c\u8ba4\u8bc1\u89c4\u5219\u3002",
+      "validation": "tests/test_learned_script.mjs tests/test_script_adaptation.mjs tests/test_experience_selection.mjs"
+    },
+    {
+      "path": "src/adapters/script_motif_runtime.ts",
+      "from_sha256": "52af525f281bb1114f21e635341d7a50a2e0e06cd25ad844932a4c262f31a770",
+      "to_sha256": "909dc2e5790b364459bc55748c227ca413a7606209e8c52af1f800c54518a109",
+      "reason": "\u7f16\u8bd1\u5668\u548c\u7eaf\u5224\u5b9a\u7b56\u7565\u8fc1\u5165 Motif Core\u3002\u7a0b\u5e8f\u8eab\u4efd\u3001\u6743\u9650\u3001\u6267\u884c\u548c\u56de\u6267\u6cbf\u7528\u73b0\u6709\u5b9e\u73b0\u3002",
+      "validation": "tests/test_script_capability_runtime.mjs tests/test_script_receipt_envelope.mjs"
+    },
+    {
+      "path": "src/adapters/script_negative_runtime.ts",
+      "from_sha256": "11163fead396102ddfbf761dacba904141b1a6210ea6ccbf694bc46638bd1886",
+      "to_sha256": "6e9f9caa72a1c1e1a450bb4387620a0391c11f2269878df4ec38c1d77340d644",
+      "reason": "\u7f16\u8bd1\u5668\u548c\u7eaf\u5224\u5b9a\u7b56\u7565\u8fc1\u5165 Motif Core\u3002\u7a0b\u5e8f\u8eab\u4efd\u3001\u6743\u9650\u3001\u6267\u884c\u548c\u56de\u6267\u6cbf\u7528\u73b0\u6709\u5b9e\u73b0\u3002",
+      "validation": "tests/test_script_capability_runtime.mjs tests/test_script_negative.mjs"
+    },
+    {
+      "path": "src/adapters/reuse_mediation.ts",
+      "from_sha256": "a62ef3098677c4f536c4dc2d12e72f30841f49a1e123a1b8f01604a367143ae0",
+      "to_sha256": "994255eb11bbc943047fb0d5e7616965a30e4843ad139c69fe7fc233a691c64a",
+      "reason": "\u7f16\u8bd1\u5668\u548c\u7eaf\u5224\u5b9a\u7b56\u7565\u8fc1\u5165 Motif Core\u3002\u7a0b\u5e8f\u8eab\u4efd\u3001\u6743\u9650\u3001\u6267\u884c\u548c\u56de\u6267\u6cbf\u7528\u73b0\u6709\u5b9e\u73b0\u3002",
+      "validation": "tests/test_script_capability_runtime.mjs tests/test_reuse_mediation.mjs"
+    },
+    {
+      "path": "scripts/script-motif-web.py",
+      "from_sha256": "ae76c7da4dcee4523683c5258a9c1696736c810f8f1efed3104fc0a18810a183",
+      "to_sha256": "4c8a05b3ba7db63175d99b8cff454af28b9c14a36ad10109adb705ff47e2a9de",
+      "reason": "\u53ef\u9009\u68c0\u7d22\u8bc1\u636e\u6cbf\u7528\u539f\u5b9e\u9a8c\u914d\u7f6e\uff0c\u4e0e\u9ed8\u8ba4 Web \u5165\u53e3\u5171\u7528\u641c\u7d22\u6ce8\u518c\u3002",
+      "validation": "tests/test_retrieval_evidence.mjs tests/test_geneloop_capabilities.mjs tests/test_script_capability_runtime.mjs"
+    },
+    {
+      "path": "src/adapters/script_motif_web.ts",
+      "from_sha256": "2ec06d907eb1e899ad3720fda57cae275183026e32bb0be4670f43b845c26ac4",
+      "to_sha256": "b394050eb95999173578dbca2679b1acb540ea1745982fe2ba16a681a56af0df",
+      "reason": "\u4e24\u6761\u5bbf\u4e3b\u8def\u5f84\u5171\u7528\u8f68\u8ff9\u8bb0\u5f55\u3002Script \u4fdd\u7559\u539f\u6587\u5b57\u8303\u56f4\u3001\u6df1\u5ea6\u3001\u5bb9\u91cf\u548c\u5931\u8d25\u5904\u7406\u3002",
+      "validation": "tests/test_reuse_trace.mjs tests/test_script_capability_runtime.mjs"
     }
-  ]
+  ],
+  "artifact": {
+    "transitions": [
+      {
+        "path": "src/adapters/artifact_motif_trace.ts",
+        "from_sha256": "73952281c67739652d09655f2f2ad084fce5e1d5cc5dcd5718feafa8a9426d0b",
+        "to_sha256": "672618702292ab11233d17206ed851ad01e4fc4fe38d9b46647e27e99c76b529"
+      },
+      {
+        "path": "src/adapters/artifact_motif_runtime.ts",
+        "from_sha256": "f48f081975bb8c6b1a8eafee57b1c9bcc8db0da61e191f116b62f99de210b0fb",
+        "to_sha256": "e36de58b97a2c5655d8af8a58178345913ecdaec7d632de82712f019160ebde3"
+      },
+      {
+        "path": "src/adapters/artifact_capability_runtime.ts",
+        "from_sha256": "04e76ffffa96b0620058fb4794960b014e262f7c1abcd72b4bcffea01145953c",
+        "to_sha256": "64dad822861c97a496ac01468cd71bf60da9ef213cf18682dbd2a74fa8afb985"
+      },
+      {
+        "path": "src/adapters/web/learning/harless_ppt_learning.ts",
+        "from_sha256": "a14d1b94f3b642d339b6719fb6451d16d27e0e37b000465beba8e22e525b9388",
+        "to_sha256": "4d7580ec3b9f5cc4536e68bd4ffc5c6fd2d9083a82ff1118902f3e076cad441b"
+      },
+      {
+        "path": "scenarios/ppt_master/workflow-contracts.json",
+        "from_sha256": "5c14b34a10a463591dea77ce545fa0785d87b7f3e680777b6bd4d181046d5bd7",
+        "to_sha256": "58ceb3e3480461229178906fdf4d5b7336f2af78b200325c221f1fa237a06e8a"
+      },
+      {
+        "path": "scripts/certify-artifact-motifs.mjs",
+        "from_sha256": "256f9409b34a0f6332b458e0b221266101adbd438546ba75884dffddb0dc7dbf",
+        "to_sha256": "bacce40cb7d6ff1539fb80519a7fc8d27f06ea23f39f69528873afcd4f05f5e4"
+      },
+      {
+        "path": "scripts/learn-ppt-components.py",
+        "from_sha256": "6dacf531fcbe2cdea8f1b3d9c3ae56925f2f19e4eccc3947d39222a1e80aac41",
+        "to_sha256": "f84e10ee5f32bd7b660484603d1131d327a85ebad8c800bbb6f0615e272708e0"
+      },
+      {
+        "path": "scripts/learn-web-ppt-tasks.py",
+        "from_sha256": "32ea59d4c2ddbe8217e394a726b8f88d91d27792c746cd12fb4553c25d99a93e",
+        "to_sha256": "96771d43ddffab8e903c7df87e129061f91f37d5a0e8526390f8b3a5ffb91f8d"
+      },
+      {
+        "path": "scripts/run-artifact-capability.mjs",
+        "from_sha256": "8bfed12b6400fc9ae8ba2b800dbd696c6b897750474c17aff7d79c74eddfc7c3",
+        "to_sha256": "f7b07401d67da9016744344f4d80f0b78221583a30641c7708151ef72577b031"
+      },
+      {
+        "path": "src/adapters/artifact_capability_runtime.ts",
+        "from_sha256": "1444d611069f04e7f49b6e56d85ec3da6c1baafc45445988549951a58bda03ed",
+        "to_sha256": "64dad822861c97a496ac01468cd71bf60da9ef213cf18682dbd2a74fa8afb985"
+      },
+      {
+        "path": "src/adapters/artifact_motif_runtime.ts",
+        "from_sha256": "48d4653d8a9408a3743d07a2579f34aba810badf5bab95d5be79fb1918678142",
+        "to_sha256": "e36de58b97a2c5655d8af8a58178345913ecdaec7d632de82712f019160ebde3"
+      },
+      {
+        "path": "src/adapters/geneloop_command_broker.ts",
+        "from_sha256": "8720aa6703d4c17bb10dff14a5020f654d2f8f22fad1b1befbb3f0d80585e309",
+        "to_sha256": "2c3c5fbbfbc96ab2b4483a09863c5e4cdb9d05a8aed48568194d12fcce383442"
+      },
+      {
+        "path": "src/adapters/ppt_component_render.py",
+        "from_sha256": "b17964447fc25902e6a2c2dabf9cc0ac75336878fd387a0a07feb78f9164a681",
+        "to_sha256": "b17964447fc25902e6a2c2dabf9cc0ac75336878fd387a0a07feb78f9164a681",
+        "current_path": "src/adapters/ppt/authoring/ppt_component_render.py"
+      },
+      {
+        "path": "src/adapters/ppt_component_schema.ts",
+        "from_sha256": "9eac333294f600bd1e4283f1a0e6c033e2c4535ee33422d66aad828c72ab7a2c",
+        "to_sha256": "9eac333294f600bd1e4283f1a0e6c033e2c4535ee33422d66aad828c72ab7a2c",
+        "current_path": "src/adapters/ppt/authoring/ppt_component_schema.ts"
+      },
+      {
+        "path": "src/adapters/ppt_design_preflight.py",
+        "from_sha256": "a6dcc8e10911a1b969df80f40194be0d8639c648e26d4f04c74914244fcd7a86",
+        "to_sha256": "a6dcc8e10911a1b969df80f40194be0d8639c648e26d4f04c74914244fcd7a86",
+        "current_path": "src/adapters/ppt/authoring/ppt_design_preflight.py"
+      },
+      {
+        "path": "src/adapters/ppt_delivery_pipeline.ts",
+        "from_sha256": "e5de956ae11a1077ba9bd1867393c272c62bdf9547e61891014c069d560e9c97",
+        "to_sha256": "76d791a9b043d79d43eac6efa0f0304fbbb00aaed99b91522ad17a66bb511dc4",
+        "current_path": "src/adapters/ppt/delivery/ppt_delivery_pipeline.ts"
+      },
+      {
+        "path": "src/adapters/ppt_delivery_runner.py",
+        "from_sha256": "8d0dd64349a015a0030a55e0ebdfef185d3829a4bc5e58cfc09feb0143770a71",
+        "to_sha256": "08c09c68617960c61585deb30f3eb43e8d6d676db2d5444c56c79f4aedabfc4b",
+        "current_path": "src/adapters/ppt/delivery/ppt_delivery_runner.py"
+      },
+      {
+        "path": "src/adapters/ppt_delivery_state.ts",
+        "from_sha256": "02a2bf04604d4a5786ccbf3779efd93eed98a64970173806dea9bca0f4982571",
+        "to_sha256": "e485c29f404a3a3d66f4f8c7a367fca75e882f2818206beb382f049f1a85a88c",
+        "current_path": "src/adapters/ppt/delivery/ppt_delivery_state.ts"
+      },
+      {
+        "path": "src/adapters/ppt_component_equivalence.py",
+        "from_sha256": "9ce6255cf0c5255e3bccb641c4cd6e6d38ab4b4c0638792455f2ca027a6a5043",
+        "to_sha256": "21a1d6a6620067585d621da309c74852da9efff36e3fbfa433b7d9d7d36d03c6",
+        "current_path": "src/adapters/ppt/learning/ppt_component_equivalence.py"
+      },
+      {
+        "path": "src/adapters/ppt_component_learning.py",
+        "from_sha256": "37c19fd64759c2db895bdc84e39c161d53f7192a0deab9feb973bc4200cd4d40",
+        "to_sha256": "f8c8f397ed82b8f3a86c1bd6c125e1791593d44a62206a87a25d0294185ca629",
+        "current_path": "src/adapters/ppt/learning/ppt_component_learning.py"
+      },
+      {
+        "path": "src/adapters/ppt_component_literals.py",
+        "from_sha256": "0a3035702bbfed1fbc11dfc111ca79570a1e84905d6badb1d0e14efeef7392eb",
+        "to_sha256": "0a3035702bbfed1fbc11dfc111ca79570a1e84905d6badb1d0e14efeef7392eb",
+        "current_path": "src/adapters/ppt/learning/ppt_component_literals.py"
+      },
+      {
+        "path": "src/adapters/ppt_delivery_learning.py",
+        "from_sha256": "30db2fe91840f01dd12ef1b511182a94292efc0cbf44259f8936cc7518c5e9dd",
+        "to_sha256": "c5c27100646d881cc23b715feb2a7930bd5d218c345a05e2abcc915e33c79b14",
+        "current_path": "src/adapters/ppt/learning/ppt_delivery_learning.py"
+      },
+      {
+        "path": "src/adapters/ppt_program_learning.py",
+        "from_sha256": "d3bd48263ff940d93bca9e844276131a8a15931897f47ecad683db2c18e3f405",
+        "to_sha256": "52985fbf559f71129bb5ab0858e6841db7354fd5a1b25f060f1f88bfc399c93d",
+        "current_path": "src/adapters/ppt/learning/ppt_program_learning.py"
+      },
+      {
+        "path": "src/adapters/ppt_workflow_learning.py",
+        "from_sha256": "d3d1d6391ea9d9422275eda9549c743dabfafb93a29ea8db84a3c3b34f7a4102",
+        "to_sha256": "8cb5e2798095d90ca9caf27feeaa8eade6a8b83a6c5858e152176f642ba9ea75",
+        "current_path": "src/adapters/ppt/learning/ppt_workflow_learning.py"
+      },
+      {
+        "path": "src/adapters/ppt_capability_broker.ts",
+        "from_sha256": "6d704dffc4a96e0477011a8791d406b05ad8e8befb099725fd979f7dd3eb9ba1",
+        "to_sha256": "5e95a0c40b5057aa45ef49dd12bf4dad8e3d3f9ec63951ed63f3c1deb361ee59",
+        "current_path": "src/adapters/ppt/runtime/ppt_capability_broker.ts"
+      },
+      {
+        "path": "src/adapters/ppt_component_cache.ts",
+        "from_sha256": "e45a227681765f76cc4caa3f0684d6f251e51542fbad38606e6f62f4a79f60a6",
+        "to_sha256": "b2f292c3dd1d4af080b725a7a63d5d6e2826181e5874e8eedbd72f42a90cdee4",
+        "current_path": "src/adapters/ppt/runtime/ppt_component_cache.ts"
+      },
+      {
+        "path": "src/adapters/ppt_component_tool.ts",
+        "from_sha256": "7dbf8ea8b3857c9824ebc1b9e099a71f50a7883fd22ce67baab2bc0fcf6f716f",
+        "to_sha256": "58eb952ccb1c44ab61a396eafaaa29bb91a5e418e28d7a61b854b90f46cc2cef",
+        "current_path": "src/adapters/ppt/runtime/ppt_component_tool.ts"
+      },
+      {
+        "path": "src/adapters/ppt_execution.ts",
+        "from_sha256": "0a4d1a725c8435379171ccb0b5519f0ea30eed88a8fdc9e21dc532ffda64317a",
+        "to_sha256": "ff69a537b545f3b4c7998f6d25cff30f28ddcd6f1a0416063707e5e4aab152ae",
+        "current_path": "src/adapters/ppt/runtime/ppt_execution.ts"
+      },
+      {
+        "path": "src/adapters/ppt_program_broker.ts",
+        "from_sha256": "9f9fb48ad4726128f88a59973a335f066956a1802c5befeb097d70aa01310fad",
+        "to_sha256": "60a9cf0501b8ea71b490250c56ff98535101432248d6ce6485eb6658454c9e84",
+        "current_path": "src/adapters/ppt/runtime/ppt_program_broker.ts"
+      },
+      {
+        "path": "src/adapters/ppt_program_learning.ts",
+        "from_sha256": "b8bcc8c11df93c79864ac8197c22127431530d6a6c861b64365acfec3c6e481f",
+        "to_sha256": "0a4609a30a64f44fb66dc7447cff0c9bba2dd1d79144ef03d2d86f57a0a8919f",
+        "current_path": "src/adapters/ppt/runtime/ppt_program_learning.ts"
+      },
+      {
+        "path": "src/adapters/ppt_workflow_host.ts",
+        "from_sha256": "7dbff2073b4449b816ed49fe75453ebfad093a8d480a4fcca188d8471cd2dc3f",
+        "to_sha256": "e60e3e88af8f2589895573168685cc24291697a4b4ac91db4976295bc6d34068",
+        "current_path": "src/adapters/ppt/runtime/ppt_workflow_host.ts"
+      },
+      {
+        "path": "src/adapters/ppt_workflow_runtime.ts",
+        "from_sha256": "c15b0399625d12d6c03ec58da4e82a3782a175e8041cb53267fa7f69d1566b60",
+        "to_sha256": "5be34af6caa94d5a900599aed25573490aea4d5a0fd5340a4e2a54a1d0793e96",
+        "current_path": "src/adapters/ppt/runtime/ppt_workflow_runtime.ts"
+      },
+      {
+        "path": "src/adapters/web/dsh_web_tasks.ts",
+        "from_sha256": "90422d00d74aa4ba77252fa33880ddb82c5aabc6732cbf5f710ebc58c0b48877",
+        "to_sha256": "26ca902869f58c49c2e1b353406ca2f80cc96e0646370fba895c8890061f7436"
+      },
+      {
+        "path": "src/adapters/web/learning/harless_ppt_learning.ts",
+        "from_sha256": "d1e55c2b668400c6f100e67ad05ca89284139008109ee3e37759622c6c37834f",
+        "to_sha256": "4d7580ec3b9f5cc4536e68bd4ffc5c6fd2d9083a82ff1118902f3e076cad441b"
+      }
+    ],
+    "implementation_transitions": [
+      {
+        "from_sha256": "1607faf07e3820baccb4a8a925612ed096f66ecb9d74fecffc9fc639dd6812f5",
+        "to_sha256": "ecf81f47d2120b27716af723c4cb68257dcd8eb20fb20e121bbe5aa0733fdd9e"
+      }
+    ],
+    "implementation_equivalents": {
+      "8de651e65bc67352d5752c407b03b2263d99927944cbd44382c2344a8a0328ab": "ecf81f47d2120b27716af723c4cb68257dcd8eb20fb20e121bbe5aa0733fdd9e"
+    }
+  }
 }

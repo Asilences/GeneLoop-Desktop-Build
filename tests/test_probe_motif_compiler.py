@@ -1,6 +1,6 @@
 """Synthetic diagnostics of mining admission, not task effectiveness."""
 import json
-from src.adapters.probe_motif_compiler import compile_probes, collect, failure_signature, proper_subsequence
+from src.motif_core.offline.compilation.trace.probe_motif_compiler import compile_probes, collect, failure_signature, proper_subsequence
 
 
 def rows():

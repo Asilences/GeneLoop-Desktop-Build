@@ -9,8 +9,8 @@ import { Context } from '@deepseek-ai/cordis';
 import { createScope, scopeOf } from '@deepseek-ai/dsh-scope';
 import { SystemPrompt, renderPrompt, PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '@deepseek-ai/dsh-system-prompt';
 import { apply as mountPersona } from '@deepseek-ai/dsh-persona';
-import { bindProductPrompt, productPersona } from '../src/adapters/harless_product_prompt.ts';
-import { sessionPreset, sessionWorkspace } from '../src/adapters/harless_task_scope.ts';
+import { bindProductPrompt, productPersona } from '../src/adapters/web/tasks/harless_product_prompt.ts';
+import { sessionPreset, sessionWorkspace } from '../src/adapters/web/attachments/harless_task_scope.ts';
 
 test('new and resumed agent scopes suppress deployment facts and keep scene/tool instructions', async () => {
   const ctx = new Context(), prompt = new SystemPrompt(ctx, {});
@@ -83,13 +83,13 @@ test('member startup mounts only public product policy and every certified publi
   const profile=memberProductProfile();
   assert.deepEqual(profile.persona,productPersona());
   assert.deepEqual(profile.sandboxArgs.slice(0,3),['--dir','/app/config','--ro-bind']);
-  assert.equal(profile.sandboxArgs.length,20);
   assert.equal(profile.sandboxArgs[4],'/app/config/geneloop-persona.json');
   assert.deepEqual(JSON.parse(readFileSync(profile.sandboxArgs[3],'utf8')),productPersona());
   assert.deepEqual([profile.sandboxArgs[7],profile.sandboxArgs[10]],['/app/config/geneloop-capabilities.json','/app/config/geneloop-capabilities.md']);
   assert.equal(profile.sandboxArgs[13],'/app/config/pdf-ocr-assets.json');
   assert.equal(profile.sandboxArgs[16],'/app/config/geneloop-transport.json');
   assert.equal(profile.sandboxArgs[19],'/app/config/motif-evidence-v1.schema.json');
+  assert.equal(profile.sandboxArgs[22],'/app/config/motif-evidence-v2.schema.json');
   assert.deepEqual(JSON.parse(readFileSync(profile.sandboxArgs[15],'utf8')),{schema_version:1,model_request_max_bytes:134217728});
   const targets=new Set();
   for(let i=2;i<profile.sandboxArgs.length;i+=3){assert.equal(profile.sandboxArgs[i],'--ro-bind');targets.add(profile.sandboxArgs[i+2]);}
@@ -102,6 +102,14 @@ test('member startup mounts only public product policy and every certified publi
     for(const path of Object.keys(cert.code_locks??{}))if(path.startsWith('config/'))
       assert.ok(targets.has('/app/'+path),'certified public dependency must exist inside member namespace: '+path);
   }
-  assert.deepEqual([...targets].sort(),['geneloop-persona.json','geneloop-capabilities.json','geneloop-capabilities.md','pdf-ocr-assets.json','geneloop-transport.json','motif-evidence-v1.schema.json'].map(name=>'/app/config/'+name).sort(),
+  const expectedPublicFiles = [
+    'geneloop-persona.json', 'geneloop-capabilities.json', 'geneloop-capabilities.md',
+    'pdf-ocr-assets.json', 'geneloop-transport.json', 'motif-evidence-v1.schema.json',
+    'motif-evidence-v2.schema.json', 'rsi-privacy-tools.json', 'geneloop-privacy-policy-v1.json',
+    'harless-scenes.json', 'rsi-privacy-candidate-tools.json', 'rsi-gitleaks-worker-tools.json', 'privacy-cn-administrative-names.txt',
+    'rsi-privacy-code-compat.json', 'script-runtime-compatibility.json', 'kouri-models.json',
+  ];
+  assert.equal(profile.sandboxArgs.length, 2 + expectedPublicFiles.length * 3);
+  assert.deepEqual([...targets].sort(),expectedPublicFiles.map(name=>'/app/config/'+name).sort(),
     'never mount private config siblings');
 });

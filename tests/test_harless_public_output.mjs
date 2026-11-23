@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AssistantStreamAccumulator, expandAssistantStream } from '@deepseek-ai/dsh-llm';
 import { publicText, createPublicTextStream, createPublicStreamProjection, publicSessionEvent,
-  publicTaskView, protectPublicSessionOutput } from '../src/adapters/harless_public_output.ts';
+  publicTaskView, protectPublicSessionOutput } from '../src/adapters/web/tasks/harless_public_output.ts';
 
 const secret = '/home/operator/deployment/source/main.py';
 test('product prose hides host paths and old product names without changing model names or URLs', () => {

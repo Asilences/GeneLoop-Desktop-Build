@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 from benchmarks.research_report_agent_v3.intake import materialize
-from src.adapters.harless_attachment_text import extract_attachment
+from src.adapters.web.attachments.harless_attachment_text import extract_attachment
 from scenarios.data_analysis.table_inputs import extract_tables
 from scenarios.data_analysis.image_tables import image_table_layout
 

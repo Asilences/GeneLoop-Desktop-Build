@@ -4,13 +4,13 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,realpathSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 import {scriptCodeLocks,programIdentity,loadScriptLibrary} from '../src/adapters/script_motif_runtime.ts';
 import {scriptProvenanceLocks} from '../src/adapters/script_runtime_compatibility.ts';
 import {buildScriptCapabilities,runScriptCapability} from '../src/adapters/script_capability_runtime.ts';
-import {capabilityDigest,capabilityRef,createCapability,createCapabilitySnapshot} from '../src/adapters/capability_contract.ts';
-import {bytesSha256 as sha} from '../src/adapters/rsi_protocol.ts';
-import {extendCapabilitySeed} from '../src/adapters/capability_materials.ts';
+import {capabilityDigest,capabilityRef,createCapability,createCapabilitySnapshot} from '../src/capability/graph/capability_contract.ts';
+import {bytesSha256 as sha} from '../src/rsi/protocol/rsi_protocol.ts';
+import {extendCapabilitySeed} from '../src/adapters/harness/capability/capability_materials.ts';
 
 function fixture(t){
  const dir=realpathSync(mkdtempSync(join(tmpdir(),'script-capability-')));t.after(()=>rmSync(dir,{recursive:true,force:true}));
@@ -39,6 +39,26 @@ test('old exact runtime hash is whitelisted; compiler provenance does not revoke
  for(const path of scriptProvenanceLocks)f.body.code_locks[path]='a'.repeat(64);
  assert.equal(f.saveLibrary().capabilities.length,1);
  f.body.code_locks[transition.path]='b'.repeat(64);
+ assert.throws(f.saveLibrary,/script_runtime_changed/);
+});
+test('libraries carrying the original compiler paths keep their certified Script capabilities',t=>{
+ const f=fixture(t);
+ for(const name of ['script_motif_compiler.py','script_dataflow_compiler.py']){
+  const canonical='src/motif_core/offline/compilation/'+name;
+  f.body.code_locks['src/adapters/'+name]=f.body.code_locks[canonical];
+  delete f.body.code_locks[canonical];
+ }
+ assert.equal(f.saveLibrary().capabilities.length,1);
+ delete f.body.code_locks['src/adapters/script_dataflow_compiler.py'];
+ assert.throws(f.saveLibrary,/script_runtime_changed/);
+});
+test('the original field runtime path still requires its exact execution digest',t=>{
+ const f=fixture(t),canonical='src/motif_core/runtime/policies/negative_field_runtime.ts';
+ const historical='src/adapters/negative_field_runtime.ts';
+ f.body.code_locks[historical]=f.body.code_locks[canonical];
+ delete f.body.code_locks[canonical];
+ assert.equal(f.saveLibrary().capabilities.length,1);
+ f.body.code_locks[historical]='f'.repeat(64);
  assert.throws(f.saveLibrary,/script_runtime_changed/);
 });
 test('unknown sandbox versions, changed program identity and invalid certificates remain rejected',t=>{

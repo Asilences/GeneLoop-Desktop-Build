@@ -4,8 +4,8 @@ import { mkdtempSync, realpathSync, writeFileSync, readFileSync, rmSync, symlink
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { digest } from '../src/motif_core/online_skill_runtime.mjs';
-import { createParameterInterceptor, completeRead, crossrefArguments, crossrefResult } from '../src/adapters/dsh_parameter_motif.ts';
+import { digest } from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import { createParameterInterceptor, completeRead, crossrefArguments, crossrefResult } from '../src/adapters/harness/motif/dsh_parameter_motif.ts';
 
 const hash = p => createHash('sha256').update(readFileSync(p)).digest('hex');
 const response = path => ({content:[{type:'text',text:'<path>'+path+'</path>\n<content>\n'+readFileSync(path,'utf8').replace(/\n$/,'').split('\n').map((s,i)=>(i+1)+': '+s).join('\n')+'\n</content>'}]});
@@ -96,7 +96,7 @@ for (const bad of ['wrong_id','missing_authors','wrong_status','timeout']) test(
   }finally{rmSync(f.dir,{recursive:true,force:true})}
 });
 
-import { createSelectedParameterInterceptor } from '../src/adapters/dsh_parameter_motif.ts';
+import { createSelectedParameterInterceptor } from '../src/adapters/harness/motif/dsh_parameter_motif.ts';
 function selectedFixture(mode='execute') {
   const f=fixture(mode);
   const binding=JSON.parse(readFileSync(join(f.dir,'binding.json'),'utf8'));

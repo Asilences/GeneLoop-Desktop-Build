@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scenarios/file-management'))
 from auto_rsi import opportunity, learn_candidate, fresh_material_from_observed_task
 import auto_rsi
-from src.motif_core.offline.experience_registry import ExperienceRegistry, read, durable, digest, sha
+from src.motif_core.reuse.experience_registry import ExperienceRegistry, read, durable, digest, sha
 
 
 def test_final_holdout_cannot_trigger_learning():

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { createOnlineInterceptor } from '../src/adapters/dsh_online_motif.mjs';
-import { validateOnlineManifest, parseStructuredTask } from '../src/motif_core/online_skill_runtime.mjs';
+import { createOnlineInterceptor } from '../src/adapters/harness/motif/dsh_online_motif.mjs';
+import { validateOnlineManifest, parseStructuredTask } from '../src/motif_core/runtime/online_skill_runtime.mjs';
 
 const bundle = new URL('../examples/motif-library/research-portfolio-v1/', import.meta.url);
 const json = (name) => JSON.parse(readFileSync(new URL(name, bundle), 'utf8'));

@@ -1,0 +1,165 @@
+"""Native entry to the existing scene MCP servers, never an Agent loop.
+
+The Electron host supplies a private snapshot. This entry never receives the
+original workspace path or model credentials. Public MCP schemas/validation,
+semantic decision boundaries and receipt stores remain owned by each scene.
+"""
+from pathlib import Path
+import importlib
+import json
+import os
+import sys
+
+
+def native_audit_pdf(report, target):
+    """Render the already-finalized audit with the existing report engine.
+
+    This is a fixed portable renderer, not the Linux learned-renderer package
+    or its certification. It does not infer reference status or rewrite prose.
+    """
+    import hashlib
+    import shutil
+    from benchmarks.research_report_agent_v2.document_engine import build_document
+    from scenarios.paper_proofreading.document_tools.paper_renderer import audit_pdf_content_coverage
+    sections = []
+    for key, value in report.items():
+        rows = value if isinstance(value, list) else [value]
+        paragraphs = [json.dumps(row, ensure_ascii=False, indent=2) if isinstance(row, (dict, list))
+                      else str(row) for row in rows]
+        if paragraphs:
+            sections.append({'heading': key, 'paragraphs': paragraphs})
+    result = build_document({'title': '参考文献与论文材料核验', 'subtitle': '本机审校报告',
+                             'sections': sections, 'figures': [], 'metrics': [],
+                             'requirements': {'style': 'brief', 'page_mode': 'auto', 'pages': None}},
+                            target / 'layout')
+    if not result['quality_passed']:
+        raise ValueError('native_audit_pdf_layout_failed')
+    output = target / 'reference-check-report.pdf'
+    shutil.copyfile(result['path'], output)
+    return {'renderer': 'existing_document_engine_native_v1',
+            'renderer_motif_certified': False, 'semantic_quality_accepted': False,
+            'pdf_sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
+            'content_coverage': audit_pdf_content_coverage(output, report)}
+
+
+def create(kind, work):
+    work = Path(work).resolve(strict=True)
+    if work.name != 'work' or '.local' not in work.parts or work.is_symlink():
+        raise ValueError('native_private_work_required')
+    if os.environ.get('GENELOOP_NATIVE_SKILL_RUNTIME') == '1':
+        from src.adapters.desktop.desktop_skill_runtime import install
+        install()
+    settings = json.loads((work / 'native-settings.json').read_text(encoding='utf-8')) if (work / 'native-settings.json').exists() else {}
+    inputs = work / 'inputs'
+    if kind == 'gateway':
+        from mcp.server import MCPServer
+        from mcp.types import ToolAnnotations
+        from src.adapters.general_tools import NAMES
+        from src.adapters.desktop.desktop_native_providers import NativeGateway
+        gateway = NativeGateway(work, {'native_task': True}, private_root=work.parent,
+                          public_registry=work / 'native-providers.json', config=work / 'no-private-providers.json')
+        server = MCPServer('GeneLoop native general tool gateway')
+        for name in NAMES:
+            server.add_tool(getattr(gateway, name), name=name,
+                            annotations=ToolAnnotations(readOnlyHint=name in ('discover_tools', 'describe_tool', 'inspect_tool_result')))
+        return server
+    if kind == 'workspace':
+        from scenarios.general.server import create_server
+        return create_server(inputs)
+    if kind == 'management':
+        from mcp.server import MCPServer
+        from mcp.types import ToolAnnotations
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scenarios/file-management'))
+        from management_tools import ManagementScene, TOOLS
+        class NativeManagementScene(ManagementScene):
+            def gateway(self):
+                if not hasattr(self, '_native_gateway'):
+                    from src.adapters.desktop.desktop_native_providers import NativeGateway
+                    original = super().gateway()
+                    self._native_gateway = NativeGateway(original.workspace, original.scope, guard=original.guard,
+                        private_root=work.parent, public_registry=work / 'native-providers.json', config=work / 'no-private-providers.json')
+                return self._native_gateway
+
+            async def describe_tool(self, provider_id: str, tool_name: str = ''):
+                """Inspect the chosen provider catalog or one named tool."""
+                return await super().describe_tool(provider_id, tool_name)
+        scene = NativeManagementScene(settings['management_task'], work / 'management-results')
+        server = MCPServer('GeneLoop native complete management')
+        for name in TOOLS:
+            server.add_tool(getattr(scene, name), name=name, annotations=ToolAnnotations(readOnlyHint=name not in ('execute_plan','restore_plan','submit_report','build_index','execute_tool_call')))
+        def authorize_native_plan(plan_id: str, approval_event_id: str, session_id: str, direction: str):
+            # Host-only: omitted from the model's tool catalog. The native host
+            # calls it only after the actual user has confirmed this plan.
+            proof = {'outcome': 'allowed-once', 'task_sha256': scene.input_digest,
+                     'approval_event_id': approval_event_id, 'session_id': session_id}
+            if direction == 'restore':
+                scene.approve_restore(plan_id, scene.restore_sha(plan_id), proof)
+            elif direction == 'execute':
+                scene.approve(plan_id, scene.plans[plan_id]['plan_sha256'], proof)
+            else:
+                raise ValueError('unknown native confirmation direction')
+            return {'approved': True}
+        server.add_tool(authorize_native_plan, name='_native_authorize_plan')
+        return server
+    if kind == 'paper':
+        from scenarios.paper_proofreading.server import create_server
+        return create_server(inputs, native_renderer=native_audit_pdf)
+    if kind == 'report':
+        os.environ.update(HARLESS_REPORT_WORKSPACE=str(work), HARLESS_PRIVATE_ROOT=str(work.parent))
+        return importlib.import_module('scenarios.data_analysis.report_session').server
+    if kind == 'general':
+        from src.adapters.desktop.desktop_general import create_server
+        return create_server(work)
+    if kind == 'ppt':
+        from scenarios.research_ppt.web_scope import configure_web_scope
+        configure_web_scope(work / 'job.json', work)
+        from scenarios.research_ppt.delivery_server import create_server
+        return create_server(work / 'job.json')
+    if kind == 'skill':
+        from scenarios.ppt_master.server import SkillReader, create_server
+        from src.adapters.desktop.desktop_skill_runtime import read_skill_lock
+        skill = Path(os.environ['GENELOOP_PPT_MASTER_ROOT']).resolve(strict=True)
+        reader = SkillReader(skill, lock=read_skill_lock(skill))
+        sys.argv = [sys.argv[0], str(inputs)]
+        return create_server(skill_reader=reader)
+    if kind == 'files':
+        from mcp.server import MCPServer
+        from mcp.types import ToolAnnotations
+        # Existing module names are retained; this directory is app-owned.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scenarios/file-management'))
+        from common import digest
+        from plan_tools import PlanScene
+        class NativePlanScene(PlanScene):
+            def parse(self, path):
+                if path.suffix.lower() == '.pdf':
+                    import hashlib
+                    import pymupdf
+                    from src.adapters.geneloop_pdf import read_pdf
+                    from src.adapters.desktop.desktop_general import verify_native_ocr
+                    verify_native_ocr()
+                    data = path.read_bytes()
+                    with pymupdf.open(stream=data, filetype='pdf') as pdf:
+                        count = min(2, len(pdf))
+                    rows = [read_pdf(data, page_number=page)['pages'][0] for page in range(1, count + 1)]
+                    return 'readable', '\n'.join(row['text'] for row in rows), {
+                        'parser': 'native_pymupdf', 'scope': 'first two physical pages',
+                        'native_adapter_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+                return super().parse(path)
+        os.environ['FM_WEB_WORKSPACE'] = str(work)
+        spec = settings['file_task']
+        spec['workspace'] = str(inputs)
+        scene = NativePlanScene(spec, work / 'file-results' / (spec['task_id'] + '-' + digest(spec)[:16]))
+        server = MCPServer('GeneLoop native file management')
+        names = ('read_task', 'list_files', 'pin_file', 'read_file', 'hash_files', 'build_index',
+                 'search_index', 'compare_snapshot', 'preview_actions', 'authorize_plan',
+                 'execute_plan', 'restore_plan', 'submit_report')
+        for name in names:
+            server.add_tool(getattr(scene, name), name=name,
+                            annotations=ToolAnnotations(readOnlyHint=name not in
+                                ('build_index', 'execute_plan', 'restore_plan', 'submit_report')))
+        return server
+    raise ValueError('native_workflow_not_supported')
+
+
+if __name__ == '__main__':
+    create(sys.argv[1], Path(sys.argv[2])).run(transport='stdio')

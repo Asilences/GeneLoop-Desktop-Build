@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "releases": {
+    "win32-x64": {
+      "toolsetId": "21e5190b5076c9c28586e197e1aca8754e4638800ea7f7d0424062f554d00ebf",
+      "baseUrl": "https://github.com/Asilences/GeneLoop-Desktop-Build/releases/download/desktop-tools-win32-x64-21e5190b5076c9c28586e197/"
+    },
+    "darwin-arm64": {
+      "toolsetId": "e7501f7addace900aadcab91fc9719b43d434e7b2db99bcdc393aabeb786fdc6",
+      "baseUrl": "https://github.com/Asilences/GeneLoop-Desktop-Build/releases/download/desktop-tools-darwin-arm64-e7501f7addace900aadcab91/"
+    },
+    "darwin-x64": {
+      "toolsetId": "6fec674c7143bd4dc0dabc16ae60d41903ee70bb952f3aba2c66a8a1f96b5dde",
+      "baseUrl": "https://github.com/Asilences/GeneLoop-Desktop-Build/releases/download/desktop-tools-darwin-x64-6fec674c7143bd4dc0dabc16/"
+    }
+  }
+}

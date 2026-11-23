@@ -11,7 +11,7 @@ from workflow_learning import dependencies
 from experiment import accounting
 from script_reuse_learning import learn,certify
 WORKFLOWS=('FM05','FM17')
-EXTRA=['src/adapters/dsh_learned_script.ts','scripts/audit-script-reuse.py','scripts/check-script-reuse-sdk.py',
+EXTRA=['src/adapters/harness/learning/dsh_learned_script.ts','scripts/audit-script-reuse.py','scripts/check-script-reuse-sdk.py',
        'tests/test_learned_script.mjs','tests/test_script_reuse_learning.py','scripts/project.mjs']
 
 def make_template(exp,role,wid,condition,index=0):
@@ -93,8 +93,8 @@ def prepare(training_parent=None):
             if o['arm']!='H' or not o['normal_harness_only'] or o['learning_performed']:raise ValueError('only normal original model exploration may import')
             rec={'experiment':str(old),'protocol_sha256':sha(old/'protocol.json'),'outcome_file':str(f),'outcome_sha256':sha(f),'task_id':c['task_id']}
             imports.append(rec);tasks.append({**c,'origin_experiment':str(old)})
-    patch=exp/'control.patch.yml';patch.write_text(json.dumps([{'insert':[{'id':'sss-workflow-experiment','name':(ROOT/'src/adapters/dsh_workflow_experiment.ts').as_uri()},
-          {'id':'sss-learned-copy-script','name':(ROOT/'src/adapters/dsh_learned_script.ts').as_uri()}]}]))
+    patch=exp/'control.patch.yml';patch.write_text(json.dumps([{'insert':[{'id':'sss-workflow-experiment','name':(ROOT/'src/adapters/harness/learning/dsh_workflow_experiment.ts').as_uri()},
+          {'id':'sss-learned-copy-script','name':(ROOT/'src/adapters/harness/learning/dsh_learned_script.ts').as_uri()}]}]))
     launcher=exp/'launcher.py';launcher.write_text("import importlib.util\ns=importlib.util.spec_from_file_location('public_runner',"+repr(str(ROOT/'scripts/run-file-scenario.py'))+");m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\noriginal=m.create_harness\ndef wrapped(**kwargs):\n kwargs['patches']=tuple(kwargs['patches'])+("+repr(str(patch))+",)\n return original(**kwargs)\nm.create_harness=wrapped\nraise SystemExit(m.main())\n")
     old=Path(json.loads((ROOT/'.local/file-management/workflow-holdout-current.json').read_text())['experiment']);op=json.loads((old/'protocol.json').read_text())
     paths=sorted(set(source_code())|set(h.EXTRA)|set(EXTRA))
@@ -140,12 +140,13 @@ def run(exp,c,p,execute=False):
     if c['role']=='holdout':
         if sha(exp/'holdout.json')!=json.loads((exp/'holdout-lock.json').read_text())['sha256']:raise ValueError('holdout changed')
         held=json.loads((exp/'holdout.json').read_text());assert held['certificate_sha256']==sha(exp/'certificate.json')
-    out,spec,env,policy=h.instantiate(exp,c,p);start=time.monotonic();env.pop('SSS_LEARNED_SCRIPT_BINDING',None)
+    out,spec,env,policy=h.instantiate(exp,c,p);start=time.monotonic()
+    for name in ('SSS_LEARNED_SCRIPT_BINDING','SSS_LEARNED_SCRIPT_V2_BINDING'):env.pop(name,None)
     if not execute:save(out/'preview.json',{'paid':False,'effects_enabled':False,'task':c['task_id']});return
     if c['arm']=='L':
         rec=next(r for r in json.loads((exp/'candidate-lock.json').read_text())['scripts'] if r['workflow_id']==c['workflow_id'])
         b={'role':c['role'],'script_file':rec['path'],'script_file_sha256':rec['sha256'],'task_file':str(out/'input.json'),'task_file_sha256':sha(out/'input.json'),
-           'runtime_sha256':sha(ROOT/'src/adapters/dsh_learned_script.ts'),'prompt_sha256':sha(Path(c['template_dir'])/'prompt.md'),'audit_file':str(out/'learned-script-audit.jsonl')}
+           'runtime_sha256':sha(ROOT/'src/adapters/harness/learning/dsh_learned_script.ts'),'prompt_sha256':sha(Path(c['template_dir'])/'prompt.md'),'audit_file':str(out/'learned-script-audit.jsonl')}
         if c['role']=='holdout':b.update(certificate_file=str(exp/'certificate.json'),certificate_sha256=sha(exp/'certificate.json'))
         save(out/'learned-binding.json',b);env['SSS_LEARNED_SCRIPT_BINDING']=str(out/'learned-binding.json')
     zero=c['arm']=='S';receipt=None;error=None

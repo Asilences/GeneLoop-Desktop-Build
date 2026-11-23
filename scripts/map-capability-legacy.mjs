@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** Fixed offline JSON bridge. Never executes or imports candidate source. */
-import {mapLegacyLibrary} from '../src/adapters/capability_contract.ts';
+import {mapLegacyLibrary} from '../src/capability/graph/capability_contract.ts';
 try {
  const chunks=[];let size=0;
  for await(const chunk of process.stdin){size+=chunk.length;if(size>6_000_000)throw Error('capability_legacy_bridge_too_large');chunks.push(chunk);}

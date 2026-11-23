@@ -1,0 +1,20 @@
+{
+  "format": "geneloop.privacy-evaluation-policy/v1",
+  "purpose": "RSI learning copies; normal authorized tasks and private originals remain unchanged",
+  "basis": ["docs/rsi-data-privacy.md", "scripts/privacy-benchmark/protocol-r2.json"],
+  "declared_text_scope_reference": "protocol-r2.json#/supported_text_tags",
+  "evaluation_only": true,
+  "protected_text_categories": ["PERSON", "PHONE_NUMBER", "EMAIL_ADDRESS", "LOCATION", "IDENTITY_NUMBER", "CREDIT_CARD", "FINANCIAL_ACCOUNT", "IP_ADDRESS", "PRIVATE_REFERENCE", "CREDENTIAL"],
+  "structured_field_contract": "src.adapters.geneloop_privacy.IDENTITY_FIELDS and SECRET_FIELDS",
+  "structured_ids_with_incomplete_free_text_support": ["PRIVATE_ID"],
+  "conditional_on_identity_context": ["DATE_TIME", "AGE", "NRP", "ORGANIZATION", "COMPANY_NAME", "MEDICAL_RECORD_NUMBER", "HEALTH_PLAN_BENEFICIARY_NUMBER", "CERTIFICATE_LICENSE_NUMBER", "BIOMETRIC_IDENTIFIER", "LICENSE_PLATE", "VEHICLE_IDENTIFIER"],
+  "conditional_does_not_mean_allowed_disclosure": true,
+  "unmapped_types": "report separately as unresolved; never silently count as non-sensitive",
+  "secrets": "explicit credential field or Gitleaks hit rejects the entire material; scanner failures reject",
+  "binary_media": "omit recognized payloads; no face/voice identification guarantee",
+  "preserve": ["task semantics", "equations", "code and protocol vocabulary", "numerical requirements", "local alias relationships", "private original bytes", "version and evidence guards"],
+  "reporting": ["all-label pressure view", "declared-text-scope view", "per-category support and complete coverage", "gold-complement masking proxy", "task invariants", "admission and literal residuals", "unknown outcomes and latency"],
+  "development_checks": ["frozen R2 reproduction before ablation", "gold never passed to recognizers", "report per-entity gains and losses", "report every added non-gold masked character", "keep credential and failure rejection", "test original and normalized coordinate/alias consistency"],
+  "production_quality_gate": "not yet certified; requires per-category numerical targets and independent task/identity-risk evaluation",
+  "retrospective_selection_is_not_independent_validation": true
+}

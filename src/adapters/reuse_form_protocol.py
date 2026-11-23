@@ -5,7 +5,7 @@ is inactive here; the source runtime is the separately versioned matcher.
 """
 import hashlib,json,shutil,subprocess
 from pathlib import Path
-from .rsi_protocol import envelope
+from src.rsi.protocol.rsi_protocol import envelope
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -17,9 +17,12 @@ def sha(value):return hashlib.sha256(value.encode()).hexdigest()
 def form_update_bundle(proposal,verdict,library,measurements,previous,payload_sha256):
     version=lambda value:{'id':'form-'+value[:24],'sha256':value}
     base=version(previous['proposal_digest'] if previous else sha('reuse-form/genesis'))
-    runtime=ROOT/'src/adapters/source_program_runtime.ts'
+    matcher_files=('src/capability/runtime/source_program_runtime.ts',
+                   'src/capability/graph/source_program_contract.ts')
+    matcher_digest=sha(encoded({path:hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
+                                for path in matcher_files}))
     versions={'motif':{'id':'legacy-tool-motif-inactive','sha256':sha('legacy-tool-motif-inactive')},
-        'matcher':{'id':'source-program-runtime','sha256':hashlib.sha256(runtime.read_bytes()).hexdigest()},'reuse_form':base}
+        'matcher':{'id':'source-program-runtime','sha256':matcher_digest},'reuse_form':base}
     feedback_id='form-feedback-'+proposal['evidence_sha256'][:24]
     training={p.get('source_witness',{}).get('task_id') for p in library['programs']}-{None}
     training.add(feedback_id)

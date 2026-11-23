@@ -8,7 +8,7 @@ from common import snapshot
 from operation_tools_v2 import OperationSceneV2
 from src.adapters.operation_runner import initialize_job
 from src.adapters.operation_budget import OperationBudget,command
-from src.motif_core.offline.operation_graph import discover_graphs,certify_graph,catalog,CONTRACT
+from src.motif_core.offline.compilation.operation_graph import discover_graphs,certify_graph,catalog,CONTRACT
 
 @pytest.fixture
 def case(tmp_path,monkeypatch):
@@ -57,7 +57,14 @@ def test_durable_budget_and_two_transport_retries_do_not_reset():
     r=b.book(body);assert r;assert b.claim_provider_retry();command(job,'pause')
     charged=b.reserved_usd;b.recover(version,__import__('os').getpid())
     assert b.request_count==1 and b.reserved_usd==charged and b.claim_provider_retry() and not b.claim_provider_retry()
-    assert b.book(body) and b.book(body) is None
+    second=b.book(body);assert second and b.book(body) is None
+    from src.adapters.model_usage import cost_evidence
+    usage={'prompt_tokens':10,'prompt_cache_hit_tokens':4,'prompt_cache_miss_tokens':6,
+           'completion_tokens':2,'total_tokens':12}
+    observed,_=b.settle(second[0],second[1],200,usage)
+    usage_receipt=cost_evidence(second[1],usage,b.rates,b.cache_rates)
+    assert usage_receipt['status']=='complete'
+    assert observed==pytest.approx(usage_receipt['reported_component_proxy_usd'],abs=1e-9)
     rows=[json.loads(l) for l in b.record.read_text().splitlines()];assert len(rows)==1 and rows[0]['original_reservation_retained']
     command(job,'cancel')
     with pytest.raises(ValueError,match='recoverable'):b.recover(version,__import__('os').getpid())
@@ -87,8 +94,8 @@ def test_recovered_trace_keeps_exact_original_events(tmp_path):
     with pytest.raises(ValueError,match='erased'):verify_original_events(record,tmp_path,[])
 
 def test_restored_task_keeps_its_limits_when_new_task_defaults_are_lower():
-    from src.adapters.file_cost_gate import State
-    from src.adapters.file_web_task_budget import TaskBudgetRegistry
+    from src.adapters.deepseek_cost_gate import FileState as State
+    from src.adapters.web.web_task_budget import FileTaskBudgetRegistry as TaskBudgetRegistry
     root=ROOT/'.local/operation-v2-tests'/uuid4().hex;tid=uuid4().hex;directory=root/'old'/tid;directory.mkdir(parents=True)
     task=directory/'input.json';task.write_text('{}');job=directory/'operation-job.json';ledger=directory/'ledger.jsonl'
     command(job,'init',{'task_file':str(task),'delivery_root':str(directory/'delivery'),'execution_version_sha256':'b'*64,

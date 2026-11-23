@@ -21,7 +21,7 @@ const port = reservation.address().port;
 await new Promise(done => reservation.close(done));
 const server = `http://127.0.0.1:${port}`;
 const username = 'desktop-diagnostic', password = 'Diagnostic-' + randomUUID(), salt = randomUUID();
-const gateway = createGateway({ dataDir: join(output, 'db'), publicOrigin: server, accountHtml: join(repo, 'src/adapters/harless_account.html') });
+const gateway = createGateway({ dataDir: join(output, 'db'), publicOrigin: server, accountHtml: join(repo, 'src/adapters/web/account/harless_account.html') });
 gateway.db.users.push({ id: 'owner', username, displayName: '桌面合成账号', role: 'owner', createdAt: new Date().toISOString(), passwordHash: 'scrypt-v1$' + salt + '$' + scryptSync(password, salt, 64, { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }).toString('hex') });
 gateway.save();
 const requests = [];

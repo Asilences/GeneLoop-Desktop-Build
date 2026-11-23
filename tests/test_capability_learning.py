@@ -7,8 +7,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 import pytest
-from src.adapters.capability_materials import CapabilityMaterials
-from src.adapters.capability_scene import reference
+from src.capability.runtime.capability_materials import CapabilityMaterials
+from src.adapters.harness.capability.capability_scene import reference
 from tests.test_capability_improvement import put
 from tests.test_source_program_bridge import library
 from scenarios.remotion_edit.structured import capability_learning as module

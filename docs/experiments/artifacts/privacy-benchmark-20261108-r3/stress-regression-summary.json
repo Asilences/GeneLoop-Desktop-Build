@@ -1,0 +1,102 @@
+{
+  "run_id": "privacy-transport-regression-stress-20261108",
+  "commit": "4f6adedbc1f854f9f9bbd9e323fb3f460bd65afa",
+  "overall_exit_code": 1,
+  "python": {
+    "a": {
+      "cases": 37,
+      "failed": 0,
+      "skipped": 0
+    },
+    "b": {
+      "cases": 97,
+      "failed": 0,
+      "skipped": 0
+    },
+    "c": {
+      "cases": 548,
+      "failed": 0,
+      "skipped": 1
+    },
+    "d": {
+      "cases": 2675,
+      "failed": 0,
+      "skipped": 213
+    }
+  },
+  "node": {
+    "tests": 1732,
+    "pass": 1718,
+    "fail": 3,
+    "cancelled": 2,
+    "skipped": 9,
+    "todo": 0,
+    "duration_ms": 768287.982924
+  },
+  "failed_or_cancelled_cases": [
+    "platform privacy GeneLoop task settlement: ppt",
+    "platform privacy GeneLoop task settlement: coding",
+    "RSI privacy: ppt structural Web settlement and offline import agree",
+    "platform privacy Web/offline/share agree: ppt",
+    "platform privacy Web/offline/share agree: paper-proofreading"
+  ],
+  "commands": [
+    {
+      "name": "collect",
+      "returncode": 0,
+      "started": "2026-11-07T18:24:28.309220+00:00",
+      "finished": "2026-11-07T18:24:48.921094+00:00"
+    },
+    {
+      "name": "continuation",
+      "returncode": 0,
+      "started": "2026-11-07T18:24:48.967938+00:00",
+      "finished": "2026-11-07T18:24:49.189397+00:00"
+    },
+    {
+      "name": "node-full",
+      "returncode": 1,
+      "started": "2026-11-07T18:24:49.236346+00:00",
+      "finished": "2026-11-07T18:37:37.976993+00:00"
+    },
+    {
+      "name": "python-c",
+      "returncode": 0,
+      "started": "2026-11-07T18:24:49.235205+00:00",
+      "finished": "2026-11-07T18:38:40.565467+00:00"
+    },
+    {
+      "name": "python-a",
+      "returncode": 0,
+      "started": "2026-11-07T18:24:49.219647+00:00",
+      "finished": "2026-11-07T18:40:55.099379+00:00"
+    },
+    {
+      "name": "python-d",
+      "returncode": 0,
+      "started": "2026-11-07T18:24:49.235362+00:00",
+      "finished": "2026-11-07T18:44:00.800925+00:00"
+    },
+    {
+      "name": "python-b",
+      "returncode": 0,
+      "started": "2026-11-07T18:24:49.234960+00:00",
+      "finished": "2026-11-07T18:45:45.712281+00:00"
+    },
+    {
+      "name": "smoke",
+      "returncode": 0,
+      "started": "2026-11-07T18:45:45.735037+00:00",
+      "finished": "2026-11-07T18:46:26.675476+00:00"
+    },
+    {
+      "name": "motif",
+      "returncode": 0,
+      "started": "2026-11-07T18:46:26.676217+00:00",
+      "finished": "2026-11-07T18:47:07.134257+00:00"
+    }
+  ],
+  "bulk_credential_benchmark_overlapped": true,
+  "not_a_passing_full_regression": true,
+  "log_sha256": "5a2541533eda562c7a1f86fcd52a600ac88f1738517e46896c60638e92cbee5d"
+}

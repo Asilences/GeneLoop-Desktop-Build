@@ -2,7 +2,7 @@
 import json
 import re
 from pathlib import Path, PurePosixPath
-from .script_motif_compiler import sha, digest
+from src.motif_core.offline.compilation.script_motif_compiler import sha, digest
 
 
 def restore_boundary(task, boundary, output):

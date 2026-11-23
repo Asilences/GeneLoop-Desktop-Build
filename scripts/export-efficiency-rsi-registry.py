@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.adapters.efficiency_rsi_registry import StudyRequestRegistry
+from src.rsi.feedback.efficiency_rsi_registry import StudyRequestRegistry
 
 
 def main():

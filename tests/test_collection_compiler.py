@@ -6,8 +6,8 @@ from pathlib import Path
 import sys
 import pytest
 from tests.test_file_management import fm,common
-from src.adapters.tool_contract_loader import parse_tool_contracts
-from src.motif_core.offline.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
+from src.motif_core.offline.compilation.tool_contracts import parse_tool_contracts
+from src.motif_core.offline.compilation.collection_compiler import collection_witness,compile_collection_motif,certify_collection_motif,export_collection_policy
 
 prior={k:sys.modules.get(k) for k in ('common','file_tools')}
 sys.modules['common']=common;sys.modules['file_tools']=fm

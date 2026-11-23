@@ -6,11 +6,11 @@ selected frames, not independent human review or a full-video quality claim.
 import argparse,hashlib,json,os,random,shutil,subprocess,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[3];sys.path.insert(0,str(ROOT))
-from src.adapters.rsi_protocol import envelope
-from src.adapters.script_motif_compiler import digest
-from src.adapters.rsi_quality import quality_status,verify_quality_files
+from src.rsi.protocol.rsi_protocol import envelope
+from src.motif_core.offline.compilation.script_motif_compiler import digest
+from src.rsi.feedback.rsi_quality import quality_status,verify_quality_files
 from scenarios.remotion_edit.structured.review_program_runs import VISUAL_CHECKS,failed_artifact_review
-from src.motif_core.offline.experience_registry import durable,read,sha
+from src.motif_core.reuse.experience_registry import durable,read,sha
 
 
 def prepare(output,trials,destination,protocol,seed):

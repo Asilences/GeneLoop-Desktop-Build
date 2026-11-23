@@ -1,0 +1,20 @@
+{
+  "study": "agentic-vbench-method-interface-pair-20261110-v2",
+  "evaluation_role": "independent_normal_video_successor_paired",
+  "tasks": {"agentic-vbench-assembly-task14": "sealed_successor_paired"},
+  "selection_basis": "Next sequential official task after already-exposed Task13; chosen before reading materials, storyboard or scoring answers. No quality-based task replacement.",
+  "source_scope": "Prior Task2 configured-manifest source and Task6 independent native validation; Task13 is exposed development feedback and cannot become a new source or unseen result.",
+  "prerequisites": ["public method fix pinned and old source reprocessed through original learning/certification", "native value-entry compatibility passed", "new library snapshot frozen before either arm"],
+  "library_revision_policy": "Use a newly registered parameter representation after a real Task6 held-input check; on explicit no_change retain the re-certified original C. Keep original stores and failures. Choose the frozen library before either Task14 arm, not from successor scores.",
+  "order": ["reuse", "baseline_empty_store"],
+  "timeout_seconds_per_arm": 900,
+  "quality": "unchanged official video verifier; local execution/adoption separately recorded",
+  "model": "gpt-6-luna",
+  "reasoning_effort": "none",
+  "max_completion_tokens": 128000,
+  "registered_tool_order": ["execute", "read_image", "capability_list", "capability_call"],
+  "expected_wire_tool_order": ["capability_call", "capability_list", "execute", "read_image"],
+  "shared_policy": "Identical new labelled-normalized-temporal evidence and explicit video-stream duration inputs; original JSON-value binding enabled in both arms, empty catalog in Baseline.",
+  "adoption": "Optional, no forced capability call; failure, refusal, unknown cost and recovery remain in original cumulative ledger.",
+  "expansion": "One independent normal video pair after the explicit overnight authorization; no oracle-selected clips or relaxed quality."
+}

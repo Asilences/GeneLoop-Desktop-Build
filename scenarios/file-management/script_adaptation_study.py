@@ -12,8 +12,8 @@ from experiment import accounting
 from script_adaptation_learning import learn,certify,RUNTIME_FILES
 PROFILES=('FM05:min','FM05:max','FM17:all','FM17:filtered')
 ARMS=('H','S','M','L1','L2')
-EXTRA=['src/adapters/dsh_learned_script.ts','src/adapters/dsh_learned_script_v2.ts','src/adapters/dsh_script_repair_probe.ts',
-       'src/motif_core/terminal_receipt_policy.ts','scripts/audit-script-adaptation.py','scripts/check-script-adaptation-sdk.py',
+EXTRA=['src/adapters/harness/learning/dsh_learned_script.ts','src/adapters/harness/learning/dsh_script_repair_probe.ts',
+       'src/motif_core/runtime/policies/terminal_receipt_policy.ts','scripts/audit-script-adaptation.py','scripts/check-script-adaptation-sdk.py',
        'tests/test_script_adaptation.mjs','tests/test_script_adaptation_learning.py','scripts/project.mjs']
 
 def template(exp,role,profile,layout,i,label):
@@ -109,10 +109,9 @@ def prepare(training_parent=None):
     if training_parent:
         imported,imports,protected=imported_evidence(training_parent.resolve());tasks+=imported
     patch=exp/'control.patch.yml';patch.write_text(json.dumps([{'insert':[
-      {'id':'sss-workflow-experiment','name':(ROOT/'src/adapters/dsh_workflow_experiment.ts').as_uri()},
-      {'id':'sss-learned-copy-script','name':(ROOT/'src/adapters/dsh_learned_script.ts').as_uri()},
-      {'id':'sss-learned-copy-script-v2','name':(ROOT/'src/adapters/dsh_learned_script_v2.ts').as_uri()},
-      {'id':'sss-script-repair-probe','name':(ROOT/'src/adapters/dsh_script_repair_probe.ts').as_uri()}]}]))
+      {'id':'sss-workflow-experiment','name':(ROOT/'src/adapters/harness/learning/dsh_workflow_experiment.ts').as_uri()},
+      {'id':'sss-learned-copy-script','name':(ROOT/'src/adapters/harness/learning/dsh_learned_script.ts').as_uri()},
+      {'id':'sss-script-repair-probe','name':(ROOT/'src/adapters/harness/learning/dsh_script_repair_probe.ts').as_uri()}]}]))
     launcher=exp/'launcher.py';launcher.write_text("import importlib.util\ns=importlib.util.spec_from_file_location('public_runner',"+repr(str(ROOT/'scripts/run-file-scenario.py'))+");m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\noriginal=m.create_harness\ndef wrapped(**kwargs):\n kwargs['patches']=tuple(kwargs['patches'])+("+repr(str(patch))+",)\n return original(**kwargs)\nm.create_harness=wrapped\nraise SystemExit(m.main())\n")
     paths=sorted(set(source_code())|set(h.EXTRA)|set(EXTRA))
     for n in paths:q=exp/'frozen-source'/n;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/n,q)
@@ -184,7 +183,7 @@ def bind(exp,c,p,out,spec,env,free=False):
     v1=c['arm']=='L1';record=next(r for r in (p['v1_scripts'] if v1 else json.loads((exp/'candidate-lock.json').read_text())['scripts']) if (r['workflow_id']==c['workflow_id'] if v1 else r['profile_id']==c['profile_id']))
     b={'role':'free' if free else 'holdout' if v1 else c['role'],'script_file':record['path'],'script_file_sha256':record['sha256'],
        'task_file':str(out/'input.json'),'task_file_sha256':sha(out/'input.json'),'prompt_sha256':c['prompt_sha256'],
-       'runtime_sha256':sha(ROOT/('src/adapters/dsh_learned_script.ts' if v1 else 'src/adapters/dsh_learned_script_v2.ts')),'audit_file':str(out/'script-audit.jsonl')}
+       'runtime_sha256':sha(ROOT/'src/adapters/harness/learning/dsh_learned_script.ts'),'audit_file':str(out/'script-audit.jsonl')}
     if b['role']=='holdout':
         cert=Path(p['parent'])/'certificate.json' if v1 else exp/'certificate-v2.json';b.update(certificate_file=str(cert),certificate_sha256=sha(cert))
     save(out/'script-binding.json',b);env['SSS_LEARNED_SCRIPT_BINDING' if v1 else 'SSS_LEARNED_SCRIPT_V2_BINDING']=str(out/'script-binding.json')

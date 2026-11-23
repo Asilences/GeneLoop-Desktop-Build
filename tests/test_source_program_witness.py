@@ -2,7 +2,7 @@
 import importlib.util,json
 from pathlib import Path
 import pytest
-from src.adapters.script_motif_compiler import sha
+from src.motif_core.offline.compilation.script_motif_compiler import sha
 
 FILE=Path(__file__).resolve().parents[1]/'scenarios/remotion_edit/structured/learn_programs.py'
 spec=importlib.util.spec_from_file_location('source_learner',FILE)

@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {markAgentLoopRequest} from '@deepseek-ai/dsh-llm';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {createCollectionController,validateCollectionPolicy,validateCollectionTask} from '../src/motif_core/collection_read_policy.ts';
-import {createCollectionGate} from '../src/adapters/dsh_entry_motif.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {createCollectionController,validateCollectionPolicy,validateCollectionTask} from '../src/motif_core/runtime/policies/collection_read_policy.ts';
+import {createCollectionGate} from '../src/adapters/harness/motif/dsh_entry_motif.ts';
 const names=['select','pin','read','gather'].map(n=>'mcp__test__'+n);
 function fixture(n=13){
  const [source,pin,read,gather]=names;

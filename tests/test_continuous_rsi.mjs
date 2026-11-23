@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createTaskObserver} from '../src/adapters/dsh_continuous_rsi.ts';
-import {selectExperience} from '../src/adapters/dsh_experience.ts';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
+import {createTaskObserver} from '../src/adapters/harness/learning/dsh_continuous_rsi.ts';
+import {selectExperience} from '../src/adapters/harness/learning/dsh_experience.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
 
 test('task lifecycle sends a notification once, never claims task acceptance',()=>{
  const emitted=[],o=createTaskObserver({session_id:'task',allowed_tools:['mcp__file_management__select_files'],task_sha256:'a',binding_sha256:'b'},r=>emitted.push(r));

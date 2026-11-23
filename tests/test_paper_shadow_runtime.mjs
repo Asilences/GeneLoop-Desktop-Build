@@ -8,7 +8,7 @@ function fixture() {
     continuation:{tool:'check_paper_triage',arguments:{},read_only:true},artifact_role:'registered_triage_report',
     artifact_relative_path:'triage.json',handoff:'after_check_or_any_guard_failure'};
   const source_version='b'.repeat(64),code=Object.fromEntries(['src/adapters/paper_triage_validation.ts',
-    'src/adapters/dsh_paper_delivery_check.ts','schemas/paper-citation-triage.schema.json'].map(p=>[p,'a'.repeat(64)]));
+    'src/adapters/harness/paper/dsh_paper_delivery_check.ts','schemas/paper-citation-triage.schema.json'].map(p=>[p,'a'.repeat(64)]));
   const tools=Object.fromEntries(['write','edit','check_paper_triage'].map(t=>[t,'c'.repeat(64)]));
   const witness={run_id:'train',session_id:'training',input_version:'d'.repeat(64),report_sha256:'e'.repeat(64),
     anchor_request:2,check_request:3,check_status:'passed'};

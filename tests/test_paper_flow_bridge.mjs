@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {digest} from '../src/motif_core/online_skill_runtime.mjs';
-import {createPaperFlowShadowObserver,validatePaperFlowBridge} from '../src/adapters/harless_paper_flow_shadow.ts';
+import {digest} from '../src/motif_core/runtime/online_skill_runtime.mjs';
+import {createPaperFlowShadowObserver,validatePaperFlowBridge} from '../src/adapters/web/scenes/harless_paper_flow_shadow.ts';
 
 const P='mcp__paper_checks__';
 const names=['pin_paper_citations','read_pinned_paper_citations','read_pinned_citation_records',

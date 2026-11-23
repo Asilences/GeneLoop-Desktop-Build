@@ -4,7 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 import pytest
 from src.adapters import continuous_rsi as rsi
-from src.motif_core.offline.experience_registry import digest,sha,durable,check_motif_certificate
+from src.adapters.file_management.experience_certification import check_motif_certificate
+from src.motif_core.reuse.experience_registry import digest, sha, durable
 
 @pytest.fixture
 def configuration(tmp_path,monkeypatch):
@@ -141,9 +142,10 @@ def test_busy_worker_catches_up_sealed_notifications(configuration,monkeypatch):
     def drain_once(cfg,root):
         calls.append(len(sealed))
         if len(calls)==1:sealed.append({'session_id':'arrived-while-busy','role':'ordinary'})
-        return {'records':len(sealed)}
+        return {'records':len(sealed),'activations':[{'policy_digest':'first-pass-program'}] if len(calls)==1 else [],'repair_explorations':[]}
     monkeypatch.setattr(learner,'_drain_locked',drain_once)
-    assert learner.drain(path)=={'records':2}
+    result=learner.drain(path)
+    assert result['records']==2 and result['activations']==[{'policy_digest':'first-pass-program'}] and result['passes']==2
     assert calls==[1,2]
     assert not (Path(cfg['state_root'])/'worker.lock').exists()
 

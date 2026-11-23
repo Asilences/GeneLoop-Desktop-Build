@@ -1,0 +1,9 @@
+{
+  "name": "geneloop-ppt-deck-engine",
+  "private": true,
+  "version": "0.20.5-geneloop.1",
+  "type": "module",
+  "dependencies": {
+    "@office-kit/pptx": "0.21.0"
+  }
+}
