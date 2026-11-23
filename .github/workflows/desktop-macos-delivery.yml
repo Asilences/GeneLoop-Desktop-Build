@@ -55,6 +55,16 @@ jobs:
         run: node -e "if(process.platform!=='darwin'||process.arch!=='${{ matrix.arch }}')process.exit(1)"
       - run: npm ci
       - run: npm run build
+      - name: Prepare Intel cryptography static build dependencies
+        if: matrix.arch == 'x64' && inputs.phase == 'complete'
+        run: |
+          # Current Presidio requires cryptography 50; upstream no longer ships
+          # its Intel Mac wheel. Keep the pinned privacy package version.
+          # https://cryptography.io/en/latest/installation/#building-cryptography-on-macos
+          brew list --versions openssl@3 || brew install openssl@3
+          rustc --version
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+          echo "OPENSSL_STATIC=1" >> "$GITHUB_ENV"
       - name: Prepare complete native tools
         if: inputs.phase != 'repack' && inputs.phase != 'complete'
         env:

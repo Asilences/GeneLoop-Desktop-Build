@@ -40,7 +40,8 @@ export function stageRsiPrivacy(bundle){
   }
   const local=join(cache,'requirements-local.txt');writeFileSync(local,lines.join('\n')+'\n');
   run(process.env.SSS_PYTHON||(process.platform==='win32'?'python':'python3'),['-m','pip','--python',python,'install','--disable-pip-version-check','--no-compile',
-    '--only-binary=:all:','--target',site,'--upgrade',...(proxy?['--proxy',proxy]:[]),'-r',local]);
+    '--only-binary=:all:',...(process.platform==='darwin'&&process.arch==='x64'?['--no-binary=cryptography']:[]),
+    '--target',site,'--upgrade',...(proxy?['--proxy',proxy]:[]),'-r',local]);
   writeFileSync(marker,wanted);
  }
  // Verify the installed versions, not only the marker.
