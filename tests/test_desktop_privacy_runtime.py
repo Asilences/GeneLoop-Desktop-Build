@@ -40,3 +40,17 @@ def test_packaged_ppt_resources_keep_long_paths_and_digest_checks(tmp_path):
     target.write_bytes(b'changed')
     with pytest.raises(ValueError, match='file_changed'):
         verify_desktop_skill(root)
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows extended-path private evidence')
+def test_private_evidence_long_path_keeps_shared_checks(tmp_path):
+    from src.adapters.filesystem_paths import Path
+    from src.adapters.desktop.desktop_rsi import private_json
+    root = Path(tmp_path) / ('task-' + 'a' * 95) / ('evidence-' + 'b' * 95)
+    root.mkdir(parents=True)
+    path = root / 'events.jsonl'
+    path.write_bytes(b'{"type":"tool/call"}\n')
+    assert len(str(path)) > 260
+    assert private_json(path) == path.read_bytes()
+    with pytest.raises(ValueError):
+        private_json(root)

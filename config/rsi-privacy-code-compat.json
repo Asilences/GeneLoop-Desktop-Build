@@ -1,4 +1,8 @@
 {
+  "scenarios/ppt_master/package.py": {
+    "certified": "533559e2b19787245c03b77cc243fe44f4db3054ad033a35f42619e8fce9ea04",
+    "current": "2fde138e8ca6ff1025b7849b92432b1ab42dd9d5707bdb276e14e3f7255275f6"
+  },
   "src/adapters/geneloop_command_broker.ts": {
     "certified": "bbc3f55e9098cbbe664f3e4d65e7c88fa647f8b975526ec118ed531325f75e86",
     "current": "2c3c5fbbfbc96ab2b4483a09863c5e4cdb9d05a8aed48568194d12fcce383442",
@@ -577,7 +581,7 @@
     "scripts/harless_gateway.mjs": {
       "path": "scripts/harless_gateway.mjs",
       "from_sha256": "1a1b360bd294a0ce0a01acfc7eace8f5460fc831023fa388577633cf86e71e9f",
-      "to_sha256": "b8f22e2ae99b263faf7d5209bc3ebc7ea3fda44b14c0c103859e6788e1e9d2fc"
+      "to_sha256": "1700c84753bf8a7f5d64eb478af40c1bc7a93a2b79d4b401b25cbfa42c3d112a"
     },
     "scripts/learn-web-paper-document-motif.py": {
       "path": "scripts/learn-web-paper-document-motif.py",
@@ -681,7 +685,7 @@
     "scripts/harless_gateway.mjs": {
       "path": "scripts/harless_gateway.mjs",
       "from_sha256": "1a1b360bd294a0ce0a01acfc7eace8f5460fc831023fa388577633cf86e71e9f",
-      "to_sha256": "b8f22e2ae99b263faf7d5209bc3ebc7ea3fda44b14c0c103859e6788e1e9d2fc"
+      "to_sha256": "1700c84753bf8a7f5d64eb478af40c1bc7a93a2b79d4b401b25cbfa42c3d112a"
     },
     "scripts/learn-ppt-master-motif.py": {
       "path": "scripts/learn-ppt-master-motif.py",

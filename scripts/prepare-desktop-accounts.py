@@ -9,7 +9,8 @@ from geneloop_service import load_plan, private_file, read, same_data, save
 def prepare(plan_path, output, account_ids):
     plan = load_plan(plan_path)
     gateway = read(plan['gateway_config'])
-    if not gateway.get('apiKey') or not gateway.get('memberPolicy', {}).get('control_token'):
+    model_key = plan['gateway']['env'].get('KOURI_API_KEY') or gateway.get('apiKey')
+    if not model_key or not gateway.get('memberPolicy', {}).get('control_token'):
         raise RuntimeError('Desktop model access requires the configured model and budget controller')
     if any(type(gateway.get(key)) is not int or not 1 <= gateway[key] <= 65535
            for key in ('upstreamControlPort', 'upstreamBrokerPort')):

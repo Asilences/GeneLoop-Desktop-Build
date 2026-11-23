@@ -16,7 +16,7 @@ site=Path(__file__).resolve().parents[4]/'privacy'/'site'
 from src.adapters.desktop.desktop_privacy_runtime import prepare
 prepare(site)
 
-from src.adapters.geneloop_learning_trace import project, private_json, sharing_object
+from src.adapters.geneloop_learning_trace import project, private_json as shared_private_json, sharing_object
 from src.adapters.geneloop_privacy import check_material
 from src.adapters.harness.dsh_trajectory import ToolContract, extract_dsh_trace, mine_dsh_traces, infer_dsh_provenance
 from src.motif_core.offline.compilation.trace_compiler import compile_read_motif, certify_read_motif, artifact_signature
@@ -37,6 +37,13 @@ VERSION = hashlib.sha256(b''.join((Path(__file__).parents[3]/p).read_bytes() for
 
 def digest(v):
     return hashlib.sha256(json.dumps(v, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
+
+
+def private_json(path):
+    # Preserve the shared byte/size/link checks while handing it a Win32 IO path.
+    # pathlib otherwise copies a PurePath's logical spelling and loses __fspath__.
+    return shared_private_json(os.fspath(Path(path)))
+
 
 def read(path):
     return json.loads(private_json(path))

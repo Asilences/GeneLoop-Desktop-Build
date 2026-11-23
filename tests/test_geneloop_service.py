@@ -108,6 +108,20 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(service.read(self.config), config)
         self.assertEqual(service.load_plan(self.plan_file), self.plan)
 
+    def test_desktop_candidate_accepts_gateway_environment_without_copying_key(self):
+        self.test_desktop_candidate_reuses_accounts_and_budget_controller()
+        config = service.read(self.config)
+        del config['apiKey']
+        service.save(self.config, config)
+        with self.assertRaisesRegex(RuntimeError, 'configured model'):
+            desktop.prepare(self.plan_file, self.root / 'env-plan', ['existing'])
+        self.plan['gateway']['env']['KOURI_API_KEY'] = 'synthetic-environment-credential'
+        service.save(self.plan_file, self.plan)
+        path = desktop.prepare(self.plan_file, self.root / 'env-plan', ['existing'])
+        candidate = service.load_plan(path)
+        self.assertNotIn('apiKey', service.read(candidate['gateway_config']))
+        self.assertEqual(candidate['gateway']['env'], self.plan['gateway']['env'])
+
     def test_snapshot_keeps_digest_and_is_independent_of_original_files(self):
         lifecycle = service.Lifecycle(self.plan)
         destination = self.root / 'snapshot'

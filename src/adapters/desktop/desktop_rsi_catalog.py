@@ -7,8 +7,7 @@ from collections import Counter
 from functools import lru_cache
 from hashlib import sha256
 
-from src.adapters.desktop.desktop_rsi import CONTRACTS, VERSION, artifact_signature, read, root_path
-from src.adapters.geneloop_learning_trace import private_json
+from src.adapters.desktop.desktop_rsi import CONTRACTS, VERSION, artifact_signature, read, root_path, private_json
 
 MOTIF_ID = re.compile(r'motif-[0-9a-f]{24}')
 ATTEMPT_ID = re.compile(r'[0-9a-f]{32}')
